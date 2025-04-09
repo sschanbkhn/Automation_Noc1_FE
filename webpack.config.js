@@ -18,14 +18,14 @@ const config = {
   devServer: {
     contentBase: resolve(__dirname, 'dist'),
     compress: true,
-    port: 9000,
+    port: 80,
     historyApiFallback: true,
   },
   entry: {
     index: './src/index.tsx',
   },
   output: {
-    publicPath: devMode ? 'http://localhost:9000/' : '',
+    publicPath: devMode ? 'http://localhost:80/' : '',
     path: resolve(__dirname, 'dist'),    
     filename: devMode ? '[name].js' : 'javascripts/[name].js'
   },
