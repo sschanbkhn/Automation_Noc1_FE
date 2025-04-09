@@ -254,8 +254,8 @@ const Login = (props: Props) => {
             <section className="section register min-vh-100 d-flex flex-column align-items-center justify-content-center py-4">
                 <div className="container">
                 <div className="row justify-content-center">
-                <div className="col-lg-8 col-md-6 d-flex flex-column align-items-center justify-content-center">
-                <img src={speedtestvnpt} alt="" style={{width:"100%"}} />  
+                <div className="col-lg-7 col-md-4 d-flex flex-column align-items-center justify-content-center">
+                <img src={speedtestvnpt} alt="" style={{width:"70%"}} />  
                     </div>
                     <div className="col-lg-4 col-md-6 d-flex flex-column align-items-center justify-content-center">
                     <div className="card mb-3">
@@ -300,7 +300,8 @@ const Login = (props: Props) => {
                             </div>                             */}
                             <div className="col-12">
                             <p className="small mb-0">Bạn chưa có tài khoản? 
-                                <a href="#" onClick={() => { navigate('/register'); }}>&ensp;Đăng ký tài khoản</a>
+                                {/* <a href="#" onClick={() => { navigate('/register'); }}>&ensp;Đăng ký tài khoản</a> */}
+                                <a href="#">&ensp;Đăng ký tài khoản</a>
                                 &ensp;*&ensp;
                                 <a href="#" onClick={() => {setDialogVisible_RestorePassword(true)}}>Khôi phục mật khẩu</a>
                             </p>
