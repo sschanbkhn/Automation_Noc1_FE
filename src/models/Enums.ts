@@ -36,4 +36,4 @@ export enum ControlType {
     RadioButton = "RadioButton",
     UploadFile = "UploadFile"
 }
-export const AppName = "Network App"
+export const AppName = "Automation VNPT NET"
