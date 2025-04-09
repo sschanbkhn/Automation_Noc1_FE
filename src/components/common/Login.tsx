@@ -255,7 +255,7 @@ const Login = (props: Props) => {
                 <div className="container">
                 <div className="row justify-content-center">
                 <div className="col-lg-7 col-md-4 d-flex flex-column align-items-center justify-content-center">
-                <img src={speedtestvnpt} alt="" style={{width:"70%"}} />  
+                <img src={speedtestvnpt} alt="" style={{width:"100%"}} />  
                     </div>
                     <div className="col-lg-4 col-md-6 d-flex flex-column align-items-center justify-content-center">
                     <div className="card mb-3">
