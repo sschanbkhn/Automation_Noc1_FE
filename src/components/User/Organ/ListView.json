@@ -1,0 +1,50 @@
+{
+    "DataGrid": {
+        "Key": "OrganList",
+        "Title": "Danh sách đơn vị/phòng ban",
+        "ColumnDefs": [
+            {                
+                "Key": "Code",
+                "Title": "Mã",                
+                "Align": "center"    
+            },
+            {
+                "Key": "Name",
+                "Title": "Tên",                
+                "Align": "center"   
+            },
+            {
+                "Key": "Type",
+                "Title": "Loại",             
+                "Options": [{ "value": 0, "label": "Đơn vị" },{ "value": 1, "label": "Phòng ban" }],   
+                "Align": "center"   
+            }
+        ],
+        "ActionDefs": [
+            {
+                "Key": "Create", 
+                "Title": "",
+                "Type": "Button",
+                "TitleTooltip": "Thêm mới",
+                "Icon": "plus",
+                "Action": "onClickCreate"
+            },
+            {
+                "Key": "Update", 
+                "Title": "",
+                "Type": "Button",
+                "TitleTooltip": "Sửa",
+                "Icon": "edit",
+                "Action": "onClickUpdate"
+            },
+            {
+                "Key": "Delete", 
+                "Title": "",
+                "Type": "Button",
+                "TitleTooltip": "Xóa",
+                "Icon": "delete",
+                "Action": "onClickDelete"
+            }
+        ]
+    } 
+}

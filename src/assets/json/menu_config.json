@@ -1,0 +1,163 @@
+{
+    "Menu": [
+        {
+            "code": "Home",
+            "name" : "Trang chủ",
+            "url": "/",
+            "icon": "bi bi-grid"
+        },
+        {
+            "code": "User",
+            "name" : "Người dùng",
+            "url": "/user",
+            "icon": "bi bi-person",
+            "subMenu": [
+                {
+                    "code": "Organ",
+                    "name" : "Cơ cấu tổ chức",
+                    "url": "/co-cau-to-chuc",
+                    "icon": "bi bi-grid"
+                },
+                {
+                    "code": "Account",
+                    "name" : "Tài khoản",
+                    "url": "/tai-khoan",
+                    "icon": "bi bi-grid"
+                },
+                {
+                    "code": "Role",
+                    "name" : "Vai trò",
+                    "url": "/role",
+                    "icon": "bi bi-grid"
+                },
+                {
+                    "code": "Permission",
+                    "name" : "Phân quyền",
+                    "url": "/permission",
+                    "icon": "bi bi-grid"
+                }
+            ]
+        },
+        {
+            "code": "System",
+            "name" : "Hệ thống",
+            "url": "/system",
+            "icon": "bi bi-gear",
+            "subMenu": [
+                {
+                    "code": "Config",
+                    "name" : "Cấu hình chung",
+                    "url": "/config",
+                    "icon": "bi bi-grid"
+                },
+                {
+                    "code": "ConfigEmailSms",
+                    "name" : "Cấu hình Email Sms",
+                    "url": "/config-email-sms",
+                    "icon": "bi bi-grid"
+                }
+            ]
+        },
+        {
+            "code": "Category",
+            "name" : "Danh mục",
+            "url": "/category",
+            "icon": "bi bi-justify",
+            "subMenu": [
+                {
+                    "code": "CategoryStatus",
+                    "name" : "Trạng thái",
+                    "url": "/status",
+                    "icon": "bi bi-grid"
+                },
+                {
+                    "code": "CategoryAlarmCode",
+                    "name" : "Mã cảnh báo",
+                    "url": "/alarm-code",
+                    "icon": "bi bi-grid"
+                },
+                {
+                    "code": "CategoryAlarmLevel",
+                    "name" : "Mức độ cảnh báo",
+                    "url": "/alarm-level",
+                    "icon": "bi bi-grid"
+                },
+                {
+                    "code": "CategoryAlarmType",
+                    "name" : "Loại cảnh báo",
+                    "url": "/alarm-type",
+                    "icon": "bi bi-grid"
+                }
+            ]
+        },
+        {
+            "code": "Network",
+            "name" : "Quản lý mạng",
+            "url": "/user",
+            "icon": "bi bi-speedometer",
+            "subMenu": [
+                {
+                    "code": "LinksMaps",
+                    "name" : "Bản đồ cabman",
+                    "url": "/link-cabman",
+                    "icon": "bi bi-grid"
+                }, 
+                {
+                    "code": "CableManagement",
+                    "name" : "Hạ tầng cáp",
+                    "url": "/cable-management",
+                    "icon": "bi bi-grid"
+                },                
+                {
+                    "code": "ConfigurationLogs",
+                    "name" : "Cấu hình mạng",
+                    "url": "/configuration-logs",
+                    "icon": "bi bi-grid"
+                },
+                {
+                    "code": "CurenAlarm",
+                    "name" : "Cảnh Báo Hiện Tại",
+                    "url": "/curen-alarm",
+                    "icon": "bi bi-grid"
+                },
+                {
+                    "code": "HistoryCurenAlarm",
+                    "name" : "Lịch sử cảnh báo",
+                    "url": "/history-curen-alarm",
+                    "icon": "bi bi-grid"
+                },
+                {
+                    "code": "DevicePorts",
+                    "name" : "Cổng trên thiết bị",
+                    "url": "/device-ports",
+                    "icon": "bi bi-grid"
+                },
+                {
+                    "code": "Devices",
+                    "name" : "Thiết bị",
+                    "url": "/devices",
+                    "icon": "bi bi-grid"
+                },
+                {
+                    "code": "DeviceTypes",
+                    "name" : "Loại thiết bị",
+                    "url": "/device-types",
+                    "icon": "bi bi-grid"
+                },
+                {
+                    "code": "Manufacturers",
+                    "name" : "Nhà sản xuất",
+                    "url": "/manufacturers",
+                    "icon": "bi bi-grid"
+                },
+                {
+                    "code": "NetworkLinks",
+                    "name" : "Liên kết mạng",
+                    "url": "/networkLinks",
+                    "icon": "bi bi-grid"
+                }
+            ]
+        }
+       
+    ]
+}

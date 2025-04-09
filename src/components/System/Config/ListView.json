@@ -1,0 +1,28 @@
+{
+    "DataGrid": {
+        "Key": "RoleList",
+        "Title": "Danh sách Cấu hình",
+        "ColumnDefs": [
+            {                
+                "Key": "Code",
+                "Title": "Mã",                
+                "Align": "center"    
+            },
+            {
+                "Key": "Value",
+                "Title": "Giá trị",                
+                "Align": "center"   
+            }
+        ],
+        "ActionDefs": [
+            {
+                "Key": "Update", 
+                "Title": "",
+                "Type": "Button",
+                "TitleTooltip": "Sửa",
+                "Icon": "edit",
+                "Action": "onClickUpdate"
+            }
+        ]
+    } 
+}
