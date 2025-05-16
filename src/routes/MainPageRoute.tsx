@@ -15,6 +15,12 @@ import Setting from 'components/common/Setting';
 import Support from 'components/common/Support';
 import { CableManagement, ConfigurationLogs, CurenAlarm, DevicePorts, Devices, DeviceTypes, HistoryCurenAlarm, Manufacturers, NetworkLinks } from 'components/Network';
 import MapComponent from 'components/Network/LinksMaps/Map';
+import Charts from 'uielements/charts/Charts';
+import CenterDashboard from '../DashboardAutomation/CenterDashboard';
+import RoomDashboard from '../DashboardAutomation/RoomDashboard';
+import DashboardRnocSummary from '../DashboardAutomation/DashboardRnoc/DashboardRnocSummary';
+import DashboardRnocRoom from '../DashboardAutomation/DashboardRnoc/DashboardRnocRoom';
+
 interface Props {
     Apps: any
 }
@@ -24,7 +30,8 @@ const MainPageRoute = (props: Props) => {
         switch(code)
         {
             case "Home":
-                return <Home />;
+                // return <Home />;
+                return <CenterDashboard />;
             case "Config":
                 return <Config />;
             case "Account":
@@ -64,7 +71,14 @@ const MainPageRoute = (props: Props) => {
                 return <Manufacturers />;  
             case "NetworkLinks":
                 return <NetworkLinks />; 
- 
+            case "CenterDashboard":
+                return <CenterDashboard />;
+            case "RoomDashboard":
+                return <RoomDashboard />;
+            case "DashboardRnoc":
+                return <DashboardRnocSummary />;
+            case "DashboardRnocRoom":
+                return <DashboardRnocRoom />;
                             
             default:
                 return <Page404 />;                                                                                                         
@@ -110,6 +124,9 @@ const MainPageRoute = (props: Props) => {
     return(
         <Routes>
             {RouteRender()}
+            <Route path="/dashboard/field/:fieldName" element={<RoomDashboard />} />
+            <Route path="/dashboard" element={<CenterDashboard />} />
+            <Route path="/dashboard/room/:roomId" element={<RoomDashboard />} />
             <Route key="Profile" path="/profile" element={<Profile />} />
             <Route key="Setting" path="/setting" element={<Setting />} />
             <Route key="Support" path="/support" element={<Support />} />

@@ -91,73 +91,139 @@
             ]
         },
         {
-            "code": "Network",
-            "name" : "Quản lý mạng",
+            "code": "NetworkRnoc",
+            "name" : "Automation RNOC",
             "url": "/user",
-            "icon": "bi bi-speedometer",
+            "icon": "bi bi-activity",
             "subMenu": [
                 {
+                    "code": "DashboardRnoc",
+                    "name" : "DashboardRnoc",
+                    "url": "/dashboardrnoc",
+                    "icon": "bi bi-grid"
+                }, 
+                {
+                    "code": "DashboardRnocRoom",
+                    "name" : "DashboardRnocRoom",
+                    "url": "/dashboardrnocroom",
+                    "icon": "bi bi-grid"
+                },
+                {
                     "code": "LinksMaps",
-                    "name" : "Bản đồ cabman",
+                    "name" : "Tự động audit",
                     "url": "/link-cabman",
                     "icon": "bi bi-grid"
                 }, 
                 {
                     "code": "CableManagement",
-                    "name" : "Hạ tầng cáp",
+                    "name" : "Tối ưu cell di động",
                     "url": "/cable-management",
                     "icon": "bi bi-grid"
                 },                
                 {
                     "code": "ConfigurationLogs",
-                    "name" : "Cấu hình mạng",
+                    "name" : "Tự động thực hiện reset cell",
                     "url": "/configuration-logs",
                     "icon": "bi bi-grid"
                 },
                 {
                     "code": "CurenAlarm",
-                    "name" : "Cảnh Báo Hiện Tại",
+                    "name" : "Phát hiện bất thường site 0",
                     "url": "/curen-alarm",
                     "icon": "bi bi-grid"
                 },
                 {
                     "code": "HistoryCurenAlarm",
-                    "name" : "Lịch sử cảnh báo",
+                    "name" : "Tự động khai báo trạm 5G",
                     "url": "/history-curen-alarm",
                     "icon": "bi bi-grid"
                 },
                 {
                     "code": "DevicePorts",
-                    "name" : "Cổng trên thiết bị",
+                    "name" : "Công cụ tiết kiệm điện",
                     "url": "/device-ports",
                     "icon": "bi bi-grid"
                 },
                 {
                     "code": "Devices",
-                    "name" : "Thiết bị",
+                    "name" : "Công cụ tự động báo cáo cấu hình",
                     "url": "/devices",
-                    "icon": "bi bi-grid"
-                },
-                {
-                    "code": "DeviceTypes",
-                    "name" : "Loại thiết bị",
-                    "url": "/device-types",
-                    "icon": "bi bi-grid"
-                },
-                {
-                    "code": "Manufacturers",
-                    "name" : "Nhà sản xuất",
-                    "url": "/manufacturers",
-                    "icon": "bi bi-grid"
-                },
-                {
-                    "code": "NetworkLinks",
-                    "name" : "Liên kết mạng",
-                    "url": "/networkLinks",
                     "icon": "bi bi-grid"
                 }
             ]
+        },
+        {
+            "code": "NetworkSnoc",
+            "name" : "Automation SNOC",
+            "url": "/user",
+            "icon": "bi bi-cpu",
+            "subMenu": [
+                {
+                    "code": "LinksMaps",
+                    "name" : "Hỗ trợ quản lý cấu hình",
+                    "url": "/link-cabman",
+                    "icon": "bi bi-grid"
+                }, 
+                {
+                    "code": "CableManagement",
+                    "name" : "Khai báo, chỉnh sửa bản ghi DNS",
+                    "url": "/cable-management",
+                    "icon": "bi bi-grid"
+                },                
+                {
+                    "code": "ConfigurationLogs",
+                    "name" : "Bảo dưỡng, healh check",
+                    "url": "/configuration-logs",
+                    "icon": "bi bi-grid"
+                }
+            ]
+        },
+        {
+            "code": "NetworkInoc",
+            "name" : "Automation INOC",
+            "url": "/user",
+            "icon": "bi bi-globe",
+            "subMenu": [
+                {
+                    "code": "LinksMaps",
+                    "name" : "Cân chỉnh internet quốc tế ",
+                    "url": "/link-cabman",
+                    "icon": "bi bi-grid"
+                }, 
+                {
+                    "code": "CableManagement",
+                    "name" : "Giới hạn kiểm soát lưu lượng",
+                    "url": "/cable-management",
+                    "icon": "bi bi-grid"
+                },                
+                {
+                    "code": "ConfigurationLogs",
+                    "name" : "Kiểm soát số phiên pppoe",
+                    "url": "/configuration-logs",
+                    "icon": "bi bi-grid"
+                },
+                {
+                    "code": "ConfigurationLogs",
+                    "name" : "Xử lý cảnh báo phần cứng",
+                    "url": "/configuration-logs",
+                    "icon": "bi bi-grid"
+                }
+            ]
+        },
+        {
+            "code": "NetworkTnoc",
+            "name" : "Automation TNOC",
+            "url": "/user",
+            "icon": "bi bi-tools",
+            "subMenu": [
+                {
+                    "code": "LinksMaps",
+                    "name" : "Reset xử lý lỗi phần cứng",
+                    "url": "/link-cabman",
+                    "icon": "bi bi-grid"
+                }
+               
+            ]
         }
-       
     ]
 }

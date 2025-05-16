@@ -41,7 +41,7 @@ const config = {
       'routes': resolve(__dirname, './src/routes'),
       'services': resolve(__dirname, './src/services'),
       'models': resolve(__dirname, './src/models'),   
-          
+      'uielements': resolve(__dirname, './src/uielements')
     }
   },
   module: {
@@ -105,7 +105,7 @@ const config = {
   },
   plugins: [    
     new HtmlWebpackPlugin({
-      title: 'Network APP',
+      title: 'Automation APP',
       template: 'src/index.html',
     }),
     new TsconfigPathsPlugin({ configFile: "./tsconfig.json" }),
