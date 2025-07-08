@@ -10,7 +10,7 @@ const Footer = (props: Props) => {
         <>
             <footer id="footer" className="footer">
                 <div className="copyright">
-                © Bản quyền thuộc về <strong><span>NOC1 - KTM/VNPTNET</span></strong>. 
+                © Bản quyền thuộc về <strong><span>Tổng công ty Hạ Tầng Mạng VNPTNET</span></strong>. 
                 </div>
             </footer>
             <a href="#" className="back-to-top d-flex align-items-center justify-content-center"><i className="bi bi-arrow-up-short" /></a>

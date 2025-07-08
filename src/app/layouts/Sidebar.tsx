@@ -15,10 +15,21 @@ const Sidebar = (props: Props) => {
       for(let i = 0;i < subMenu.length;i++)
       {
         if(IsMenuOfUser(subMenu[i])) {
-          html_subMenu.push(<NavLink key={"subMenu" + i} className="nav-link" to={subMenu[i].url}><i className={subMenu[i].icon} />{subMenu[i].name}</NavLink>);
+          if(subMenu[i].subMenu && subMenu[i].subMenu.length > 0) {
+            html_subMenu.push(
+              <li key={"subMenuLi" + i} className="nav-item">
+                <a className="nav-link collapsed" data-bs-target={"#" + subMenu[i].code + "-nav"} data-bs-toggle="collapse" href="#">
+                  <i className={subMenu[i].icon}></i><span>{subMenu[i].name}</span><i className="bi bi-chevron-down ms-auto"></i>
+                </a>
+                {DrawSubMenu(subMenu[i].code + "-nav", subMenu[i].subMenu)}
+              </li>
+            );
+          } else {
+            html_subMenu.push(<li key={"subMenu" + i}><NavLink className="nav-link" to={subMenu[i].url}><i className={subMenu[i].icon} />{subMenu[i].name}</NavLink></li>);
+          }
         }
       }
-      return <ul id={id} className="nav-content collapse " data-bs-parent="#sidebar-nav">{html_subMenu}</ul>;
+      return <ul id={id} className="nav-content collapse submenu-indent" data-bs-parent="#sidebar-nav">{html_subMenu}</ul>;
     }
     const DrawMenu = () => {
       let menu:any = menu_config.Menu;

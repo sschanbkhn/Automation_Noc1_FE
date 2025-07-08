@@ -92,27 +92,27 @@
         },
         {
             "code": "NetworkRnoc",
-            "name" : "Automation RNOC",
+            "name" : "AU Vô tuyến",
             "url": "/user",
             "icon": "bi bi-activity",
             "subMenu": [
                 {
                     "code": "DashboardRnoc",
-                    "name" : "DashboardRnoc",
+                    "name" : "Dashboard",
                     "url": "/dashboardrnoc",
                     "icon": "bi bi-grid"
                 }, 
                 {
                     "code": "DashboardRnocRoom",
-                    "name" : "DashboardRnocRoom",
+                    "name" : "Dashboard detail",
                     "url": "/dashboardrnocroom",
                     "icon": "bi bi-grid"
                 },
                 {
-                    "code": "LinksMaps",
-                    "name" : "Tự động audit",
-                    "url": "/link-cabman",
-                    "icon": "bi bi-grid"
+                    "code": "DashboardR001",
+                    "name" : "Tự động đánh giá cấu hình Vô tuyến",
+                    "url": "/tu-dong-danh-gia-cau-hinh-vo-tuyen",
+                    "icon": "bi bi-bar-chart"
                 }, 
                 {
                     "code": "CableManagement",
@@ -145,23 +145,23 @@
                     "icon": "bi bi-grid"
                 },
                 {
-                    "code": "Devices",
+                    "code": "ConfigReport",
                     "name" : "Công cụ tự động báo cáo cấu hình",
-                    "url": "/devices",
+                    "url": "/",
                     "icon": "bi bi-grid"
                 }
             ]
         },
         {
             "code": "NetworkSnoc",
-            "name" : "Automation SNOC",
+            "name" : "AU Chuyển mạch",
             "url": "/user",
             "icon": "bi bi-cpu",
             "subMenu": [
                 {
-                    "code": "LinksMaps",
+                    "code": "NornirPlatformView",
                     "name" : "Hỗ trợ quản lý cấu hình",
-                    "url": "/link-cabman",
+                    "url": "/NornirPlatformView",
                     "icon": "bi bi-grid"
                 }, 
                 {
@@ -180,7 +180,7 @@
         },
         {
             "code": "NetworkInoc",
-            "name" : "Automation INOC",
+            "name" : "AU IP",
             "url": "/user",
             "icon": "bi bi-globe",
             "subMenu": [
@@ -197,9 +197,9 @@
                     "icon": "bi bi-grid"
                 },                
                 {
-                    "code": "ConfigurationLogs",
+                    "code": "ucppoe",
                     "name" : "Kiểm soát số phiên pppoe",
-                    "url": "/configuration-logs",
+                    "url": "/ucppoe",
                     "icon": "bi bi-grid"
                 },
                 {
@@ -212,7 +212,7 @@
         },
         {
             "code": "NetworkTnoc",
-            "name" : "Automation TNOC",
+            "name" : "AU truyền dẫn",
             "url": "/user",
             "icon": "bi bi-tools",
             "subMenu": [
@@ -220,6 +220,21 @@
                     "code": "LinksMaps",
                     "name" : "Reset xử lý lỗi phần cứng",
                     "url": "/link-cabman",
+                    "icon": "bi bi-grid"
+                }
+               
+            ]
+        },
+         {
+            "code": "Anm",
+            "name" : "AU ANM",
+            "url": "/user",
+            "icon": "bi bi-tools",
+            "subMenu": [
+                {
+                    "code": "anm_uc1",
+                    "name" : "Demo Uc1",
+                    "url": "/link-uc1",
                     "icon": "bi bi-grid"
                 }
                

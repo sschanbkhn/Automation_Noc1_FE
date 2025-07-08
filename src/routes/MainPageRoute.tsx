@@ -20,6 +20,11 @@ import CenterDashboard from '../DashboardAutomation/CenterDashboard';
 import RoomDashboard from '../DashboardAutomation/RoomDashboard';
 import DashboardRnocSummary from '../DashboardAutomation/DashboardRnoc/DashboardRnocSummary';
 import DashboardRnocRoom from '../DashboardAutomation/DashboardRnoc/DashboardRnocRoom';
+import ScheduleTriggerForm from 'components/RNOC1/R009';
+import Anm_uc1 from 'components/ANM/UC1';
+import DashboardR001 from 'components/RNOC1/R001';
+import Ucppoe from 'components/INOC1/I003';
+import NornirPlatformView from 'components/SNOC/components/NornirPlatformView';
 
 interface Props {
     Apps: any
@@ -51,8 +56,8 @@ const MainPageRoute = (props: Props) => {
             case "CategoryAlarmType":
                 return <CategoryAlarmType />;
 
-            case "LinksMaps":
-                return <MapComponent />;
+            case "DashboardR001":
+                return <DashboardR001 />;
             case "CableManagement":
                 return <CableManagement />;                
             case "ConfigurationLogs":
@@ -69,8 +74,8 @@ const MainPageRoute = (props: Props) => {
                 return <DeviceTypes />;
             case "Manufacturers":
                 return <Manufacturers />;  
-            case "NetworkLinks":
-                return <NetworkLinks />; 
+            case "NornirPlatformView":
+                return <NornirPlatformView />; 
             case "CenterDashboard":
                 return <CenterDashboard />;
             case "RoomDashboard":
@@ -79,7 +84,12 @@ const MainPageRoute = (props: Props) => {
                 return <DashboardRnocSummary />;
             case "DashboardRnocRoom":
                 return <DashboardRnocRoom />;
-                            
+            case "ScheduleTriggerForm":
+                return <ScheduleTriggerForm />;
+            case "anm_uc1":
+                return <Anm_uc1 />;
+            case "ucppoe":
+                return <Ucppoe />;
             default:
                 return <Page404 />;                                                                                                         
         }        
@@ -131,7 +141,8 @@ const MainPageRoute = (props: Props) => {
             <Route key="Setting" path="/setting" element={<Setting />} />
             <Route key="Support" path="/support" element={<Support />} />
             <Route key="401" path="/page401" element={<Page401 />} />
-            <Route key="404" path="/page404" element={<Page404 />} />       
+            <Route key="404" path="/page404" element={<Page404 />} />
+            <Route path="/schedule-trigger-form" element={<ScheduleTriggerForm />} />
         </Routes>
     )
 }

@@ -27,7 +27,7 @@
     "axios": "^0.21.1",
     "bootstrap": "^5.0.1",
     "bootstrap-icons": "^1.8.3",
-    "chart.js": "^4.4.2",
+    "chart.js": "^4.5.0",
     "chartjs-plugin-datalabels": "^2.2.0",
     "datatables.net": "^1.12.1",
     "datatables.net-dt": "^1.12.1",
@@ -36,6 +36,7 @@
     "element-theme-default": "^1.4.13",
     "es5-ext": "^0.10.62",
     "fast-glob": "^3.2.11",
+    "file-saver": "^2.0.5",
     "gapi-script": "^1.2.0",
     "google-map-react": "^2.2.1",
     "history": "^5.3.0",
@@ -47,7 +48,7 @@
     "react": "^17.0.1",
     "react-apexcharts": "^1.7.0",
     "react-bootstrap": "^2.10.2",
-    "react-chartjs-2": "^5.2.0",
+    "react-chartjs-2": "^5.3.0",
     "react-dom": "^17.0.1",
     "react-facebook-login": "^4.1.1",
     "react-google-login": "^5.2.2",
@@ -61,7 +62,8 @@
     "recharts": "^2.15.2",
     "redux": "^4.2.0",
     "redux-thunk": "^2.4.1",
-    "uuid": "^8.3.2"
+    "uuid": "^8.3.2",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@babel/core": "^7.12.16",

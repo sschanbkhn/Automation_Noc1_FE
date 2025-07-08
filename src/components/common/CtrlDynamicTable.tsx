@@ -162,6 +162,9 @@ const CtrlDynamicTable = forwardRef((props: Props, ref) => {
     }
     const THeadContentRender = () => {
         let tHs = [], columnDefs:IColumnDefs[] = props.columnDefs;
+        if (!Array.isArray(columnDefs) || columnDefs.length === 0) {
+            return <tr><th className={'text-center'}>Không có cột dữ liệu</th></tr>;
+        }
         for(let i = 0;i < columnDefs.length;i++)
         {            
             tHs.push(<th style={{ width: "300px" }} className={'text-center'} key={i}>{columnDefs[i].Title}</th>);

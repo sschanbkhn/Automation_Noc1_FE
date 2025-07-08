@@ -29,7 +29,7 @@ export default function CenterDashboard() {
   return (
     
     <div className={styles.dashboardContainer}>
-      <div className={styles.dashboardTitle}>Dashboard Tổng Quan</div>
+      <div className={styles.dashboardTitle}>Automation Dashboard</div>
       {/* Card tổng hợp */}
       <div className={styles.summaryCards}>
         <div className={styles.card}>
