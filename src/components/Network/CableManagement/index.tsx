@@ -63,7 +63,7 @@ const CableManagementList = (props: Props) => {
     const DialogMemo = useMemo(() => {
         return <>
         {dialogVisible == true ?
-            <CtrlDialog size="small" title={cableManagementId ? "Sửa hạ tầng cáp": "Tạo mới hạ tầng cáp"} dialogVisible={dialogVisible} onCancel={() => setDialogVisible(false)}>
+            <CtrlDialog size="small" title={cableManagementId ? "test thu sửa": "Tạo mới hạ tầng cáp"} dialogVisible={dialogVisible} onCancel={() => setDialogVisible(false)}>
                 <CableManagementForm Options={state.Options} Id={cableManagementId} ReloadTableItems = {ReloadTableItems} />
             </CtrlDialog>
             :<div></div>
