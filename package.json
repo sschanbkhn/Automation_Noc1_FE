@@ -36,6 +36,7 @@
     "element-theme-default": "^1.4.13",
     "es5-ext": "^0.10.62",
     "fast-glob": "^3.2.11",
+    "feather-icons": "^4.29.2",
     "file-saver": "^2.0.5",
     "gapi-script": "^1.2.0",
     "google-map-react": "^2.2.1",
