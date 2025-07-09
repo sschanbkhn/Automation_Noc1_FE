@@ -344,82 +344,85 @@ export default function DashboardR001() {
         {/* Biểu đồ tổng hợp vendor */}
         <div className="flex flex-col md:flex-row gap-4 md:gap-8 mb-4">
           <table width="100%" style={{borderCollapse:'collapse', marginTop: 8}}>
-            <tr>
-              <td>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold mb-2 text-base md:text-lg">Số lượng trạm theo Vendor</h3>
-                  <div style={{width: '100%', maxWidth: 420, margin: '0 auto'}}>
-                    <Bar
-                      data={{
-                        labels: vendorLabels,
-                        datasets: [
-                          {
-                            label: 'Tổng số trạm',
-                            data: vendorData,
-                            backgroundColor: ['#1890ff', '#52c41a', '#faad14'],
-                          }
-                        ]
-                      }}
-                      options={{
-                        onClick: handleVendorBarClick,
-                        plugins: {
-                          tooltip: {
-                            callbacks: {
-                              label: ctx => `Số lượng: ${ctx.parsed.y}`
+            <tbody>
+              <tr>
+                <td>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold mb-2 text-base md:text-lg">Số lượng trạm theo Vendor</h3>
+                    <div style={{width: '100%', maxWidth: 420, margin: '0 auto'}}>
+                      <Bar
+                        data={{
+                          labels: vendorLabels,
+                          datasets: [
+                            {
+                              label: 'Tổng số trạm',
+                              data: vendorData,
+                              backgroundColor: ['#1890ff', '#52c41a', '#faad14'],
                             }
-                          }
-                        },
-                        maintainAspectRatio: false,
-                        responsive: true,
-                        scales: { x: { ticks: { font: { size: 12 } } }, y: { ticks: { font: { size: 12 } } } }
-                      }}
-                      height={220}
-                    />
-                  </div>
-                  <div className="text-xs text-gray-500 mt-2">* Click vào cột để xem chi tiết theo công nghệ</div>
-                </div>
-              </td>
-              <td style={{verticalAlign:'top'}}>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold mb-2 text-base md:text-lg">Số lượng trạm sai file config</h3>
-                  <div style={{width: '100%', maxWidth: 420, margin: '0 auto'}}>
-                    <Bar
-                      data={{
-                        labels: vendorLabels,
-                        datasets: [
-                          {
-                            label: 'Trạm sai file config',
-                            data: vendorErrorData,
-                            backgroundColor: ['#ff4d4f', '#faad14', '#1890ff'],
-                          }
-                        ]
-                      }}
-                      options={{
-                        onClick: handleErrorBarClick,
-                        plugins: {
-                          tooltip: {
-                            callbacks: {
-                              label: ctx => `Số lượng: ${ctx.parsed.y}`
+                          ]
+                        }}
+                        options={{
+                          onClick: handleVendorBarClick,
+                          plugins: {
+                            tooltip: {
+                              callbacks: {
+                                label: ctx => `Số lượng: ${ctx.parsed.y}`
+                              }
                             }
-                          }
-                        },
-                        maintainAspectRatio: false,
-                        responsive: true,
-                        scales: { x: { ticks: { font: { size: 12 } } }, y: { ticks: { font: { size: 12 } } } }
-                      }}
-                      height={220}
-                    />
+                          },
+                          maintainAspectRatio: false,
+                          responsive: true,
+                          scales: { x: { ticks: { font: { size: 12 } } }, y: { ticks: { font: { size: 12 } } } }
+                        }}
+                        height={220}
+                      />
+                    </div>
+                    <div className="text-xs text-gray-500 mt-2">* Click vào cột để xem chi tiết theo công nghệ</div>
                   </div>
-                  <div className="text-xs text-gray-500 mt-2 mb-2">* Click vào cột để drill-down theo công nghệ</div>
-                </div>
-              </td>
-            </tr>
+                </td>
+                <td style={{verticalAlign:'top'}}>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold mb-2 text-base md:text-lg">Số lượng trạm sai file config</h3>
+                    <div style={{width: '100%', maxWidth: 420, margin: '0 auto'}}>
+                      <Bar
+                        data={{
+                          labels: vendorLabels,
+                          datasets: [
+                            {
+                              label: 'Trạm sai file config',
+                              data: vendorErrorData,
+                              backgroundColor: ['#ff4d4f', '#faad14', '#1890ff'],
+                            }
+                          ]
+                        }}
+                        options={{
+                          onClick: handleErrorBarClick,
+                          plugins: {
+                            tooltip: {
+                              callbacks: {
+                                label: ctx => `Số lượng: ${ctx.parsed.y}`
+                              }
+                            }
+                          },
+                          maintainAspectRatio: false,
+                          responsive: true,
+                          scales: { x: { ticks: { font: { size: 12 } } }, y: { ticks: { font: { size: 12 } } } }
+                        }}
+                        height={220}
+                      />
+                    </div>
+                    <div className="text-xs text-gray-500 mt-2 mb-2">* Click vào cột để drill-down theo công nghệ</div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
           </table>
         </div>
         {/* Bảng độc lập: Danh sách trạm bị sai */}
         <table width="100%" style={{borderCollapse:'collapse', marginTop: 8}}>
-          <tr>
-            <td width="50%" style={{verticalAlign:'top'}}>
+          <tbody>
+            <tr>
+              <td width="50%" style={{verticalAlign:'top'}}>
             {selectedVendor && showVendorStationList && (
                 <div className="mt-8">
                   <h4 className="font-semibold mb-2 text-base md:text-lg">Danh sách trạm của Vendor: {selectedVendor}</h4>
@@ -588,6 +591,7 @@ export default function DashboardR001() {
         )}
             </td>
           </tr>
+        </tbody>
         </table>
        
         {/* Drill-down: công nghệ */}
