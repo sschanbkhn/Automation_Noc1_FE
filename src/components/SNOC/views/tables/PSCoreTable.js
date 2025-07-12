@@ -155,7 +155,7 @@ const PSCoreTableContent = () => {
                         >
                           <td>{(currentPage - 1) * pageSize + index + 1}</td>
                           <td>{item.host}</td>
-                          <td>{new Date(item.created_at).toLocaleString()}</td>
+                          <td>{new Date(item.starttime).toLocaleString()}</td>
                           <td>{item.status}</td>
                           <td>
                             <ul className="mb-0 ps-3">
