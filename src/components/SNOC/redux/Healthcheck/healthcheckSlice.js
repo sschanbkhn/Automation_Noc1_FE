@@ -1,40 +1,105 @@
-// src/redux/Healthcheck/psCoreSlice.js
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
-import { API_SERVER } from "../../config/constant";
+import snocApi from "../../api/snocApiWithAutoToken";
 import { showTemporaryAlert } from "../Alert/alertSlice";
+
+export const fetchHealthcheckSchedules = createAsyncThunk(
+  "pscore/fetchHealthcheckSchedules",
+  async (_, { dispatch, rejectWithValue }) => {
+    try {
+      const response = await snocApi.get("/nornirps/schedulerhealth/list/");
+      return response.data; // là mảng các task
+    } catch (error) {
+      const message =
+        error?.response?.data?.detail ||
+        "Lỗi khi tải danh sách lịch healthcheck";
+      dispatch(showTemporaryAlert({ message, type: "error" }));
+      return rejectWithValue(error?.response?.data);
+    }
+  }
+);
 
 export const createHealthcheckSchedule = createAsyncThunk(
   "pscore/createHealthcheckSchedule",
   async (
-    { name, selectedPlatform, selectedDevices, cron, startTime },
-    { getState, dispatch, rejectWithValue }
+    { name, platform, node_names, cron, start_time },
+    { dispatch, rejectWithValue }
   ) => {
     try {
-      const { account } = getState();
+      console.log("🛰 Payload gửi từ slice:", {
+        name,
+        platform,
+        node_names,
+        cron,
+        start_time,
+      });
+      const response = await snocApi.post("/nornirps/schedulerhealth/", {
+        name,
+        platform,
+        node_names,
+        cron,
+        start_time,
+      });
 
-      const response = await axios.post(
-        `${API_SERVER}nornirps/schedulerhealth/`,
-        {
-          name,
-          platform: selectedPlatform,
-          node_names: selectedDevices,
-          cron,
-          start_time: startTime, // ISO format: '2025-07-08T10:00:00Z'
-        },
-        {
-          headers: {
-            Authorization: `${account.token}`,
-          },
-        }
-      );
       dispatch(
         showTemporaryAlert({ message: "Đặt lịch thành công!", type: "success" })
       );
       return response.data;
     } catch (error) {
       const message = error?.response?.data?.detail || "Lỗi khi đặt lịch";
-      dispatch(showTemporaryAlert({ message, type: "danger" }));
+      dispatch(showTemporaryAlert({ message, type: "error" }));
+      return rejectWithValue(error?.response?.data);
+    }
+  }
+);
+
+// Xóa lịch
+export const deleteHealthcheckSchedule = createAsyncThunk(
+  "pscore/deleteHealthcheckSchedule",
+  async (id, { dispatch, rejectWithValue }) => {
+    try {
+      await snocApi.delete(`/nornirps/schedulerhealth/${id}/delete/`);
+      dispatch(fetchHealthcheckSchedules());
+      dispatch(
+        showTemporaryAlert({
+          message: "Đã xóa lịch thành công",
+          type: "success",
+        })
+      );
+      return id;
+    } catch (error) {
+      const message = error?.response?.data?.detail || "Lỗi khi xóa lịch";
+      dispatch(showTemporaryAlert({ message, type: "error" }));
+      return rejectWithValue(error?.response?.data);
+    }
+  }
+);
+
+// Cập nhật lịch
+export const updateHealthcheckSchedule = createAsyncThunk(
+  "pscore/updateHealthcheckSchedule",
+  async (
+    { id, name, platform, node_names, cron, start_time },
+    { dispatch, rejectWithValue }
+  ) => {
+    try {
+      await snocApi.put(`/nornirps/schedulerhealth/${id}/update/`, {
+        name,
+        platform,
+        node_names,
+        cron,
+        start_time,
+      });
+      dispatch(fetchHealthcheckSchedules());
+      dispatch(
+        showTemporaryAlert({
+          message: "Đã cập nhật lịch thành công",
+          type: "success",
+        })
+      );
+      return id;
+    } catch (error) {
+      const message = error?.response?.data?.detail || "Lỗi khi cập nhật lịch";
+      dispatch(showTemporaryAlert({ message, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
   }
@@ -44,30 +109,23 @@ export const fetchPSCoreStatus = createAsyncThunk(
   "pscore/fetchPSCoreStatus",
   async (
     { host, page = 1, platform = [], option = "" },
-    { getState, rejectWithValue, dispatch }
+    { rejectWithValue, dispatch }
   ) => {
     try {
-      const { account } = getState();
       const params = new URLSearchParams();
       if (host) params.append("host", host);
       if (option) params.append("option", option);
       params.append("page", page);
       platform.forEach((p) => params.append("platform", p));
 
-      const response = await axios.get(
-        `${API_SERVER}nornirps/healthcheck/history/?${params.toString()}`,
-        {
-          headers: {
-            Authorization: `${account.token}`,
-          },
-        }
+      const response = await snocApi.get(
+        `/nornirps/healthcheck/history/?${params.toString()}`
       );
-
       return response.data;
     } catch (error) {
       const msg =
         error?.response?.data?.detail || "Không thể tải dữ liệu PS Core";
-      dispatch(showTemporaryAlert({ message: msg, type: "danger" }));
+      dispatch(showTemporaryAlert({ message: msg, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
   }
@@ -77,30 +135,23 @@ export const fetchLatestHealthcheckView = createAsyncThunk(
   "pscore/fetchLatestHealthcheckView",
   async (
     { host, page = 1, platform = [], option = "" },
-    { getState, rejectWithValue, dispatch }
+    { rejectWithValue, dispatch }
   ) => {
     try {
-      const { account } = getState();
       const params = new URLSearchParams();
       if (host) params.append("host", host);
       if (option) params.append("option", option);
       params.append("page", page);
       platform.forEach((p) => params.append("platform", p));
 
-      const response = await axios.get(
-        `${API_SERVER}nornirps/healthcheck/latest/?${params.toString()}`,
-        {
-          headers: {
-            Authorization: `${account.token}`,
-          },
-        }
+      const response = await snocApi.get(
+        `/nornirps/healthcheck/latest/?${params.toString()}`
       );
-
       return response.data;
     } catch (error) {
       const msg =
         error?.response?.data?.detail || "Không thể tải dữ liệu PS Core";
-      dispatch(showTemporaryAlert({ message: msg, type: "danger" }));
+      dispatch(showTemporaryAlert({ message: msg, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
   }
@@ -108,27 +159,20 @@ export const fetchLatestHealthcheckView = createAsyncThunk(
 
 export const fetchSystemStatus = createAsyncThunk(
   "pscore/fetchSystemStatus",
-  async (_, { getState, rejectWithValue, dispatch }) => {
+  async (_, { rejectWithValue, dispatch }) => {
     try {
-      const { account } = getState();
-
-      const response = await axios.get(`${API_SERVER}nornirps/systemhealth/`, {
-        headers: {
-          Authorization: `${account.token}`,
-        },
-      });
+      const response = await snocApi.get("/nornirps/systemhealth/");
       dispatch(
         showTemporaryAlert({
           message: "Get System health successfully!",
           type: "success",
         })
       );
-      console.log(response.data);
       return response.data;
     } catch (error) {
       const msg =
-        error?.response?.data?.detail || "Không thể tải dữ liệu System Healch";
-      dispatch(showTemporaryAlert({ message: msg, type: "danger" }));
+        error?.response?.data?.detail || "Không thể tải dữ liệu System Health";
+      dispatch(showTemporaryAlert({ message: msg, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
   }
@@ -138,43 +182,29 @@ export const GenericHealthCheckView = createAsyncThunk(
   "healthcheck/GenericHealthCheckView",
   async (
     { selectedPlatform, selectedDevice },
-    { getState, rejectWithValue, dispatch }
+    { rejectWithValue, dispatch }
   ) => {
-    // console.log(subData)
     try {
-      // dispatch(clearGenericHealthCheckView());
-      const { account } = getState();
-
-      const response = await axios.post(
-        API_SERVER + "nornirps/GenericHealthCheckView/",
-        {
-          selectedPlatform: selectedPlatform,
-          selectedDevice: selectedDevice, // Add profile value here
-        },
-        {
-          headers: {
-            Authorization: `${account.token}`,
-          },
-        }
-      );
+      const response = await snocApi.post("/nornirps/GenericHealthCheckView/", {
+        selectedPlatform,
+        selectedDevice,
+      });
       dispatch(
         showTemporaryAlert({
           message: "Nodes is healthcheck successfully!",
           type: "success",
         })
       );
-      console.log(response.data);
       return response.data;
     } catch (error) {
       const errorMessage =
         error?.response?.data?.detail || "Failed to healthcheck nodes.";
-
-      dispatch(showTemporaryAlert({ message: errorMessage, type: "danger" }));
-
+      dispatch(showTemporaryAlert({ message: errorMessage, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
   }
 );
+
 const psCoreSlice = createSlice({
   name: "pscore",
   initialState: {
@@ -187,11 +217,21 @@ const psCoreSlice = createSlice({
     healthchecknodes: [],
     status: "idle",
     error: null,
-    refresh: false, // Add a refresh state
-    systemStatus: {}, // <-- thêm dòng này
+    refresh: false,
+    systemStatus: {},
     scheduleCreating: false,
+    scheduledTasks: [],
+    loadingScheduledTasks: false,
   },
-  reducers: {},
+  reducers: {
+    updateLastRunAt: (state, action) => {
+      const { name, last_run_at } = action.payload;
+      const task = state.scheduledTasks.find((t) => t.name === name);
+      if (task) {
+        task.last_run_at = last_run_at;
+      }
+    }, // ← kiểm tra dấu phẩy ở đây
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchPSCoreStatus.pending, (state) => {
@@ -229,8 +269,7 @@ const psCoreSlice = createSlice({
       })
       .addCase(fetchSystemStatus.fulfilled, (state, action) => {
         state.loading = false;
-        // Nếu bạn muốn lưu kết quả system health
-        state.systemStatus = action.payload; // <-- cần thêm vào initialState nữa
+        state.systemStatus = action.payload;
       })
       .addCase(fetchSystemStatus.rejected, (state) => {
         state.loading = false;
@@ -244,13 +283,14 @@ const psCoreSlice = createSlice({
         state.loading = false;
         state.status = "succeeded";
         state.healthchecknodes = action.payload;
-        state.refresh = !state.refresh; // Toggle refresh state on sub creations
+        state.refresh = !state.refresh;
       })
-      .addCase(GenericHealthCheckView.rejected, (state, action) => {
+      .addCase(GenericHealthCheckView.rejected, (state) => {
         state.loading = false;
         state.refresh = !state.refresh;
         state.healthchecknodes = [];
       })
+      // --- Tạo lịch ---
       .addCase(createHealthcheckSchedule.pending, (state) => {
         state.scheduleCreating = true;
       })
@@ -259,8 +299,42 @@ const psCoreSlice = createSlice({
       })
       .addCase(createHealthcheckSchedule.rejected, (state) => {
         state.scheduleCreating = false;
+      })
+      // --- Xóa lịch ---
+      .addCase(deleteHealthcheckSchedule.pending, (state) => {
+        state.scheduleCreating = true; // Có thể dùng chung loading flag
+      })
+      .addCase(deleteHealthcheckSchedule.fulfilled, (state) => {
+        state.scheduleCreating = false;
+      })
+      .addCase(deleteHealthcheckSchedule.rejected, (state) => {
+        state.scheduleCreating = false;
+      })
+
+      // --- Cập nhật lịch ---
+      .addCase(updateHealthcheckSchedule.pending, (state) => {
+        state.scheduleCreating = true;
+      })
+      .addCase(updateHealthcheckSchedule.fulfilled, (state) => {
+        state.scheduleCreating = false;
+      })
+      .addCase(updateHealthcheckSchedule.rejected, (state) => {
+        state.scheduleCreating = false;
+      })
+      // --- featch  lịch ---
+
+      .addCase(fetchHealthcheckSchedules.pending, (state) => {
+        state.loadingScheduledTasks = true;
+      })
+      .addCase(fetchHealthcheckSchedules.fulfilled, (state, action) => {
+        state.loadingScheduledTasks = false;
+        state.scheduledTasks = action.payload || [];
+      })
+      .addCase(fetchHealthcheckSchedules.rejected, (state) => {
+        state.loadingScheduledTasks = false;
+        state.scheduledTasks = [];
       });
   },
 });
-
+export const { updateLastRunAt } = psCoreSlice.actions;
 export default psCoreSlice.reducer;

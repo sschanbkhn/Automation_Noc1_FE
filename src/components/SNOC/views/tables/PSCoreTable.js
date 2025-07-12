@@ -1,6 +1,5 @@
-// src/pages/PSCoreTable.js
 import React, { useEffect, useState, useRef } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { Provider, useDispatch, useSelector } from "react-redux";
 import {
   Row,
   Col,
@@ -16,42 +15,8 @@ import {
   fetchLatestHealthcheckView,
 } from "../../redux/Healthcheck/healthcheckSlice";
 import { SERVER_MEDIA } from "./../../config/constant";
-import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
-
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
-
-const exportToExcel = () => {
-  if (sortedItems.length === 0) return;
-
-  const dataToExport = sortedItems.map((item, index) => {
-    const row = {
-      STT: index + 1,
-      Host: item.host,
-      "Thời gian": new Date(item.created_at).toLocaleString(),
-      "Trạng thái": item.status,
-      "Ghi chú": Array.isArray(item.notes)
-        ? item.notes.map((n) => n.note).join("; ")
-        : "",
-      "File kết quả": item.result_file
-        ? `${SERVER_MEDIA}/download${item.result_file}`
-        : "",
-    };
-    return row;
-  });
-
-  const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Healthcheck");
-
-  const excelBuffer = XLSX.write(workbook, {
-    bookType: "xlsx",
-    type: "array",
-  });
-  const data = new Blob([excelBuffer], { type: "application/octet-stream" });
-  saveAs(data, "healthcheck_export.xlsx");
-};
-
+import snocStore, { RootState, AppDispatch } from "../../store/snocStore";
+import Alert from "../../components/Alert/Alert";
 const statusRowClass = {
   OK: "",
   Warning: "table-warning",
@@ -60,13 +25,16 @@ const statusRowClass = {
   Unknown: "table-secondary",
 };
 
-const PSCoreTable = () => {
+const PSCoreTableContent = () => {
   const dispatch = useDispatch();
   const {
     lastestitems = [],
     loading = false,
     count = 0,
   } = useSelector((state) => state.pscore || {});
+  const rawState = useSelector((state) => state);
+  console.log("Redux full state:", rawState);
+  console.log("lastestitems", lastestitems);
   const [host, setHost] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState({ key: "", direction: "asc" });
@@ -105,11 +73,6 @@ const PSCoreTable = () => {
     setSortConfig({ key, direction });
   };
 
-  const getIcon = (key) => {
-    if (sortConfig.key !== key) return <FaSort />;
-    return sortConfig.direction === "asc" ? <FaSortUp /> : <FaSortDown />;
-  };
-
   const sortedItems = [...lastestitems].sort((a, b) => {
     const valA = a[sortConfig.key];
     const valB = b[sortConfig.key];
@@ -118,34 +81,6 @@ const PSCoreTable = () => {
     if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
     return 0;
   });
-
-  const toFriendlyName = (key) => {
-    switch (key) {
-      case "host":
-        return "Host";
-      case "created_at":
-        return "Thời gian";
-      case "status":
-        return "Trạng thái";
-      case "notes":
-        return "Ghi chú";
-      case "result_file":
-        return "File kết quả";
-      default:
-        return key;
-    }
-  };
-
-  const formatDate = (value) => new Date(value).toLocaleString();
-
-  const renderCell = (value, key) => {
-    if (Array.isArray(value)) {
-      return value.map((v) => v.note).join("; ");
-    }
-    return value;
-  };
-
-  const excludedFields = ["id"];
 
   return (
     <React.Fragment>
@@ -162,40 +97,6 @@ const PSCoreTable = () => {
             <Button variant="primary" type="submit" zize="sm">
               Tìm kiếm
             </Button>
-            <ExcelFile
-              element={
-                <Button
-                  variant="success"
-                  className="ms-2"
-                  onClick={exportToExcel}
-                >
-                  Export Excel
-                </Button>
-              }
-              filename="healthcheck_export"
-            >
-              <ExcelSheet data={sortedItems} name="Healthcheck">
-                {sortedItems.length > 0 &&
-                  Object.keys(sortedItems[0])
-                    .filter((key) => !excludedFields.includes(key))
-                    .map((key) => (
-                      <ExcelColumn
-                        key={key}
-                        label={toFriendlyName(key)}
-                        value={(row) => {
-                          const cellValue = row[key];
-                          return typeof cellValue === "boolean"
-                            ? cellValue
-                              ? "Yes"
-                              : "No"
-                            : key.includes("date") || key.includes("time")
-                            ? formatDate(cellValue)
-                            : renderCell(cellValue, key);
-                        }}
-                      />
-                    ))}
-              </ExcelSheet>
-            </ExcelFile>
           </Form>
         </Col>
       </Row>
@@ -228,19 +129,19 @@ const PSCoreTable = () => {
                           onClick={() => handleSort("host")}
                           style={{ cursor: "pointer" }}
                         >
-                          Host {getIcon("host")}
+                          Host
                         </th>
                         <th
                           onClick={() => handleSort("created_at")}
                           style={{ cursor: "pointer" }}
                         >
-                          Thời gian {getIcon("created_at")}
+                          Thời gian
                         </th>
                         <th
                           onClick={() => handleSort("status")}
                           style={{ cursor: "pointer" }}
                         >
-                          Trạng thái {getIcon("status")}
+                          Trạng thái
                         </th>
                         <th>Ghi chú</th>
                         <th>File kết quả</th>
@@ -307,5 +208,13 @@ const PSCoreTable = () => {
     </React.Fragment>
   );
 };
+
+const PSCoreTable = () => (
+  <Provider store={snocStore}>
+    <Alert />
+
+    <PSCoreTableContent />
+  </Provider>
+);
 
 export default PSCoreTable;

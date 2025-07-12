@@ -40,8 +40,15 @@ import Anm_uc1 from "components/ANM/UC1";
 import DashboardR001 from "components/RNOC1/R001";
 import Ucppoe from "components/INOC1/I003";
 import NornirPlatformView from "components/SNOC/components/NornirPlatformView";
-import PSCoreTable from "components/SNOC/views/tables/PSCoreTable";
 import DashOrigin from "components/SNOC/views/dashboard/DashOrigin";
+
+import PSCoreTable from "components/SNOC/views/tables/PSCoreTable";
+import CsTable from "components/SNOC/views/tables/CsTable";
+import SignalTable from "components/SNOC/views/tables/SignalTable";
+import OcsTable from "components/SNOC/views/tables/OcsTable";
+import HistoricalReporting from "components/SNOC/views/tables/HistoricalReporting";
+import Healthcheck from "components/SNOC/views/forms/Healthcheck";
+import Schedule from "components/SNOC/views/forms/Schedule";
 interface Props {
   Apps: any;
 }
@@ -107,6 +114,14 @@ const MainPageRoute = (props: Props) => {
         return <Ucppoe />;
       case "hc-dashboard":
         return <DashOrigin />;
+      case "hc-schedule":
+        return <Schedule />;
+      // case "hc-checks":
+      //   return <Healthcheck />;
+      case "hc-history":
+        return <HistoricalReporting />;
+      case "hc-settings":
+        return <DashOrigin />;
       default:
         return <Page404 />;
     }
@@ -162,7 +177,11 @@ const MainPageRoute = (props: Props) => {
       <Route key="401" path="/page401" element={<Page401 />} />
       <Route key="404" path="/page404" element={<Page404 />} />
       <Route path="/schedule-trigger-form" element={<ScheduleTriggerForm />} />
-      {/* <Route path="/healthcheck/ps-core" element={<PSCoreTable />} /> */}
+      <Route path="/healthcheck/ps-core" element={<PSCoreTable />} />
+      <Route path="/healthcheck/cs-core" element={<CsTable />} />
+      <Route path="/healthcheck/signal" element={<SignalTable />} />
+
+      <Route path="/healthcheck/ocs" element={<OcsTable />} />
     </Routes>
   );
 };

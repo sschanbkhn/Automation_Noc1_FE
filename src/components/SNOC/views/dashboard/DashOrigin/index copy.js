@@ -5,15 +5,16 @@ import { useNavigate } from "react-router-dom";
 import { fetchSystemStatus } from "./../../../redux/Healthcheck/healthcheckSlice";
 import snocStore from "../../../store/snocStore";
 
+// Màu sặc sỡ hơn dùng các class *-emphasis
 const statusColorClass = {
-  Normal: "success",
-  Warning: "warning",
-  Error: "danger",
-  Unknown: "secondary",
+  Normal: "success-emphasis",
+  Warning: "warning-emphasis",
+  Error: "danger-emphasis",
+  Unknown: "secondary-emphasis",
 };
 
 const statusIcon = {
-  Normal: "✅",
+  Normal: "✔️",
   Warning: "⚠️",
   Error: "❌",
   Unknown: "❓",
@@ -110,12 +111,20 @@ const SystemHealthContent = () => {
                         {loading ? (
                           <Spinner animation="border" size="sm" />
                         ) : (
-                          <span
-                            className={`badge bg-${statusColorClass[status]} fs-6 py-2 px-3`}
-                          >
-                            <span className="fs-5">{statusIcon[status]}</span>{" "}
-                            {status}
-                          </span>
+                          <div className="d-flex align-items-center gap-2">
+                            <div
+                              className={`rounded-circle bg-${statusColorClass[status]} d-flex justify-content-center align-items-center`}
+                              style={{
+                                width: 36,
+                                height: 36,
+                                fontSize: 18,
+                                color: "#fff",
+                              }}
+                            >
+                              {statusIcon[status]}
+                            </div>
+                            <span className="fs-6">{status}</span>
+                          </div>
                         )}
                       </div>
 
@@ -125,7 +134,7 @@ const SystemHealthContent = () => {
                             ([label, childStatus]) => (
                               <div
                                 key={label}
-                                className="d-flex align-items-center gap-2 border px-3 py-2 rounded bg-light"
+                                className="d-flex align-items-center gap-2"
                                 style={{ cursor: "pointer" }}
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -139,9 +148,17 @@ const SystemHealthContent = () => {
                                   );
                                 }}
                               >
-                                <span className="fs-5">
+                                <div
+                                  className={`rounded-circle bg-${statusColorClass[childStatus]} d-flex justify-content-center align-items-center`}
+                                  style={{
+                                    width: 28,
+                                    height: 28,
+                                    fontSize: 14,
+                                    color: "#fff",
+                                  }}
+                                >
                                   {statusIcon[childStatus]}
-                                </span>
+                                </div>
                                 <span className="fw-semibold fs-6">
                                   {label}
                                 </span>
