@@ -15,8 +15,25 @@ import {
 } from "../../redux/Healthcheck/healthcheckSlice";
 import snocStore from "../../store/snocStore";
 import useScheduleWebSocket from "../../hooks/useScheduleWebSocket";
+
+const StatusBadge = ({ status }) => {
+  const map = {
+    success: { label: "Thành công", color: "success", icon: "✅" },
+    failed: { label: "Thất bại", color: "danger", icon: "❌" },
+    warning: { label: "Cảnh báo", color: "warning", icon: "⚠️" },
+    partial: { label: "Một phần", color: "secondary", icon: "🟡" },
+    null: { label: "Chưa chạy", color: "secondary", icon: "⏳" },
+  };
+  const s = map[status] || map.null;
+  return (
+    <span className={`badge bg-${s.color}`}>
+      {s.icon} {s.label}
+    </span>
+  );
+};
+
 const SchedulekContent = () => {
-  useScheduleWebSocket(); // ✅ Kích hoạt nhận WebSocket update
+  useScheduleWebSocket();
   const dispatch = useDispatch();
   const { platforms, devices } = useSelector((state) => state.platformDevice);
   const { scheduleCreating, scheduledTasks = [] } = useSelector(
@@ -70,7 +87,6 @@ const SchedulekContent = () => {
   };
 
   const handleSubmitSchedule = () => {
-    console.log("🔔 handleSubmitSchedule bắt đầu");
     const selectedNames = selectedDevices.map((d) => d.value);
 
     if (
@@ -81,13 +97,6 @@ const SchedulekContent = () => {
       !startTime
     ) {
       alert("Vui lòng nhập đầy đủ thông tin");
-      console.log("⛔ Dữ liệu thiếu:", {
-        name,
-        selectedPlatform,
-        selectedDevices,
-        cronExpression,
-        startTime,
-      });
       return;
     }
 
@@ -103,7 +112,7 @@ const SchedulekContent = () => {
       cron: cronExpression,
       start_time: startTime,
     };
-    console.log("Payload:", payload);
+
     if (editingTask) {
       dispatch(
         updateHealthcheckSchedule({ id: editingTask.id, ...payload })
@@ -112,7 +121,7 @@ const SchedulekContent = () => {
         setEditingTask(null);
       });
     } else {
-      dispatch(createHealthcheckSchedule({ ...payload })).then(() =>
+      dispatch(createHealthcheckSchedule(payload)).then(() =>
         dispatch(fetchHealthcheckSchedules())
       );
     }
@@ -271,40 +280,46 @@ const SchedulekContent = () => {
               <thead>
                 <tr>
                   <th
-                    style={{ cursor: "pointer" }}
                     onClick={() => handleSort("name")}
+                    style={{ cursor: "pointer" }}
                   >
                     Tên{renderSortIcon("name")}
                   </th>
                   <th
-                    style={{ cursor: "pointer" }}
                     onClick={() => handleSort("platform")}
+                    style={{ cursor: "pointer" }}
                   >
                     Platform{renderSortIcon("platform")}
                   </th>
                   <th
-                    style={{ cursor: "pointer" }}
                     onClick={() => handleSort("cron")}
+                    style={{ cursor: "pointer" }}
                   >
                     Cron{renderSortIcon("cron")}
                   </th>
                   <th
-                    style={{ cursor: "pointer" }}
                     onClick={() => handleSort("node_names")}
+                    style={{ cursor: "pointer" }}
                   >
                     Thiết bị{renderSortIcon("node_names")}
                   </th>
                   <th
-                    style={{ cursor: "pointer" }}
                     onClick={() => handleSort("enabled")}
+                    style={{ cursor: "pointer" }}
                   >
                     Trạng thái{renderSortIcon("enabled")}
                   </th>
                   <th
-                    style={{ cursor: "pointer" }}
                     onClick={() => handleSort("last_run_at")}
+                    style={{ cursor: "pointer" }}
                   >
                     Chạy gần nhất{renderSortIcon("last_run_at")}
+                  </th>
+                  <th
+                    onClick={() => handleSort("last_run_status")}
+                    style={{ cursor: "pointer" }}
+                  >
+                    Kết quả{renderSortIcon("last_run_status")}
                   </th>
                   <th>Thao tác</th>
                 </tr>
@@ -312,7 +327,7 @@ const SchedulekContent = () => {
               <tbody>
                 {filteredTasks.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center">
+                    <td colSpan={8} className="text-center">
                       Không có lịch nào
                     </td>
                   </tr>
@@ -325,6 +340,9 @@ const SchedulekContent = () => {
                       <td>{s.node_names?.join(", ")}</td>
                       <td>{s.enabled ? "🟢 Bật" : "🔴 Tắt"}</td>
                       <td>{s.last_run_at || "Chưa chạy"}</td>
+                      <td>
+                        <StatusBadge status={s.last_run_status} />
+                      </td>
                       <td>
                         <Button
                           variant="warning"

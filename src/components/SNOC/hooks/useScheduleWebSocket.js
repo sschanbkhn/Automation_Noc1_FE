@@ -16,7 +16,9 @@ const useScheduleWebSocket = () => {
         dispatch(
           updateLastRunAt({
             name: data.schedule_name,
+            status: data.status,
             last_run_at: data.last_run_at,
+            
           })
         );
       } else {
@@ -34,7 +36,7 @@ const socket = new WebSocket("ws://localhost:8000/ws/healthcheck/");
 
 socket.onopen = () => console.log("✅ Connected to backend WebSocket");
 socket.onmessage = (e) => {
-  console.log("📡 Message:", e.data);
+  console.log("📡 Message from backend:", e.data);
 };
 socket.onerror = (err) => console.error("❌ WebSocket error:", err);
 socket.onclose = () => console.warn("⚠️ WebSocket closed");

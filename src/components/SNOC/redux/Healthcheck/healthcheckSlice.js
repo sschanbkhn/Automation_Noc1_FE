@@ -225,9 +225,10 @@ const psCoreSlice = createSlice({
   },
   reducers: {
     updateLastRunAt: (state, action) => {
-      const { name, last_run_at } = action.payload;
+      const { name, last_run_at, status } = action.payload;
       const task = state.scheduledTasks.find((t) => t.name === name);
       if (task) {
+        task.last_run_status = status;
         task.last_run_at = last_run_at;
       }
     }, // ← kiểm tra dấu phẩy ở đây

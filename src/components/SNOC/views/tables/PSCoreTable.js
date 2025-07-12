@@ -54,7 +54,7 @@ const PSCoreTableContent = () => {
       fetchLatestHealthcheckView({
         host: searchHostRef.current,
         page: currentPage,
-        platform: ["pgw_ericsson_combo"],
+        platform: ["pgw_ericsson_combo", "pgwu_ericsson_combo"],
       })
     );
   }, [dispatch, currentPage]);
@@ -106,7 +106,7 @@ const PSCoreTableContent = () => {
           <Card>
             <Card.Header>
               <Card.Title as="h5">
-                PS Core - Danh sách bản ghi healthcheck
+                PS Core - Danh sách bản ghi healthcheck gần đây nhất
               </Card.Title>
             </Card.Header>
             <Card.Body>
