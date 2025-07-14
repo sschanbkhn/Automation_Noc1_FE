@@ -40,15 +40,23 @@ import Anm_uc1 from "components/ANM/UC1";
 import DashboardR001 from "components/RNOC1/R001";
 import Ucppoe from "components/INOC1/I003";
 import NornirPlatformView from "components/SNOC/components/NornirPlatformView";
-import DashOrigin from "components/SNOC/views/dashboard/DashOrigin";
+import DashOrigin from "components/SNOC/views/dashboard/DashOrigin/SystemHealthDashboard";
 
-import PSCoreTable from "components/SNOC/views/tables/PSCoreTable";
-import CsTable from "components/SNOC/views/tables/CsTable";
-import SignalTable from "components/SNOC/views/tables/SignalTable";
-import OcsTable from "components/SNOC/views/tables/OcsTable";
-import HistoricalReporting from "components/SNOC/views/tables/HistoricalReporting";
-import Healthcheck from "components/SNOC/views/forms/Healthcheck";
-import Schedule from "components/SNOC/views/forms/Schedule";
+import PSCoreTable from "components/SNOC/views/tables/health/PSCoreTable";
+import CsTable from "components/SNOC/views/tables/health/CsTable";
+import SignalTable from "components/SNOC/views/tables/health/SignalTable";
+import OcsTable from "components/SNOC/views/tables/health/OcsTable";
+import HistoricalReporting from "components/SNOC/views/tables/health/HistoricalReporting";
+import Healthcheck from "components/SNOC/views/forms/health/Healthcheck";
+import Schedule from "components/SNOC/views/forms/health/Schedule";
+import DnsLacracrnc from "components/SNOC/views/forms/dns/Dnslacracrnc";
+import TACConfigPanel from "components/SNOC/views/forms/dns/TACConfigPanel";
+import DnsConfigDashboard from "components/SNOC/views/dashboard/DashOrigin/DnsConfigDashboard";
+import SbcDashboardWithNavbar from "components/SNOC/views/dashboard/DashOrigin/SbcDashboardWithNavbar";
+import CreateConnectionForm from "components/SNOC/views/forms/sbc/CreateConnectionForm";
+import DeclareNumberForm from "components/SNOC/views/forms/sbc/DeclareNumberForm";
+import RoutingDeclarationForm from "components/SNOC/views/forms/sbc/RoutingDeclarationForm";
+import RequestHistoryTable from "components/SNOC/views/forms/sbc/RequestHistoryTable";
 interface Props {
   Apps: any;
 }
@@ -116,12 +124,18 @@ const MainPageRoute = (props: Props) => {
         return <DashOrigin />;
       case "hc-schedule":
         return <Schedule />;
-      // case "hc-checks":
-      //   return <Healthcheck />;
+      case "hc-checks":
+        return <Healthcheck />;
       case "hc-history":
         return <HistoricalReporting />;
-      case "hc-settings":
-        return <DashOrigin />;
+      case "hc-dashboard-dns":
+        return <DnsConfigDashboard />;
+      case "hc-tacs":
+        return <TACConfigPanel />;
+      case "hc-lacracrnc":
+        return <DnsLacracrnc />;
+      case "hc-dashboard-sbc":
+        return <SbcDashboardWithNavbar />;
       default:
         return <Page404 />;
     }
@@ -177,11 +191,33 @@ const MainPageRoute = (props: Props) => {
       <Route key="401" path="/page401" element={<Page401 />} />
       <Route key="404" path="/page404" element={<Page404 />} />
       <Route path="/schedule-trigger-form" element={<ScheduleTriggerForm />} />
+      <Route path="/app/dashboard/origin" element={<DashOrigin />} />
+      <Route path="/healthcheck/devices" element={<DashOrigin />} />
+      <Route path="/healthcheck/schedule" element={<Schedule />} />
+      <Route path="/healthcheck/checks" element={<Healthcheck />} />
+      <Route path="/healthcheck/history" element={<HistoricalReporting />} />
       <Route path="/healthcheck/ps-core" element={<PSCoreTable />} />
       <Route path="/healthcheck/cs-core" element={<CsTable />} />
       <Route path="/healthcheck/signal" element={<SignalTable />} />
 
       <Route path="/healthcheck/ocs" element={<OcsTable />} />
+      <Route path="/app/dashboard/dns" element={<DnsConfigDashboard />} />
+      <Route path="/dns/tacs" element={<TACConfigPanel />} />
+      <Route path="/dns/lacracrnc" element={<DnsLacracrnc />} />
+      <Route path="/sbc/dashboard" element={<SbcDashboardWithNavbar />} />
+      <Route
+        path="/sbc/CreateConnectionForm"
+        element={<CreateConnectionForm />}
+      />
+      <Route path="/sbc/DeclareNumberForm" element={<DeclareNumberForm />} />
+      <Route
+        path="/sbc/RoutingDeclarationForm"
+        element={<RoutingDeclarationForm />}
+      />
+      <Route
+        path="/sbc/RequestHistoryTable"
+        element={<RequestHistoryTable />}
+      />
     </Routes>
   );
 };

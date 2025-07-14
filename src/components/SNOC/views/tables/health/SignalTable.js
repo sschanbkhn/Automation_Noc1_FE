@@ -10,9 +10,10 @@ import {
   Button,
   Pagination,
 } from "react-bootstrap";
-import { fetchLatestHealthcheckView } from "../../redux/Healthcheck/healthcheckSlice";
-import { SERVER_MEDIA } from "./../../config/constant";
-import snocStore, { RootState, AppDispatch } from "../../store/snocStore";
+import { fetchLatestHealthcheckView } from "../../../redux/Healthcheck/healthcheckSlice";
+import { SERVER_MEDIA } from "../../../config/constant";
+import snocStore, { RootState, AppDispatch } from "../../../store/snocStore";
+import { signalPlatforms } from "../../../config/platformList";
 
 const statusRowClass = {
   OK: "",
@@ -22,7 +23,7 @@ const statusRowClass = {
   Unknown: "table-secondary",
 };
 
-const OcsTableContent = () => {
+const SignalTableContent = () => {
   const dispatch = useDispatch();
   const {
     lastestitems = [],
@@ -48,7 +49,7 @@ const OcsTableContent = () => {
       fetchLatestHealthcheckView({
         host: searchHostRef.current,
         page: currentPage,
-        platform: ["ocs_sdp"],
+        platform: signalPlatforms,
       })
     );
   }, [dispatch, currentPage]);
@@ -100,7 +101,7 @@ const OcsTableContent = () => {
           <Card>
             <Card.Header>
               <Card.Title as="h5">
-                OCS - Danh sách bản ghi healthcheck
+                Báo hiệu - Danh sách bản ghi healthcheck
               </Card.Title>
             </Card.Header>
             <Card.Body>
@@ -203,10 +204,10 @@ const OcsTableContent = () => {
   );
 };
 
-const OcsTable = () => (
+const SignalTable = () => (
   <Provider store={snocStore}>
-    <OcsTableContent />
+    <SignalTableContent />
   </Provider>
 );
 
-export default OcsTable;
+export default SignalTable;

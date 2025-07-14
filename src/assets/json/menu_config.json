@@ -223,6 +223,38 @@
       ]
     },
     {
+      "code": "hc-dashboard-dns",
+      "name": "DNS Automation",
+      "url": "/app/dashboard/dns",
+      "icon": "bi bi-cpu",
+      "subMenu": [
+        {
+          "code": "hc-dashboard-dns",
+          "name": "Dashboard Dns",
+          "url": "/app/dashboard/dns",
+          "icon": "bi bi-house"
+        },
+        {
+          "code": "hc-tacs",
+          "name": "Tacs",
+          "url": "/dns/tacs",
+          "icon": "bi bi-cpu"
+        },
+        {
+          "code": "hc-lacracrnc",
+          "name": "Lacracrnc",
+          "url": "/dns/lacracrnc",
+          "icon": "bi bi-calendar"
+        }
+      ]
+    },
+    {
+      "code": "hc-dashboard-sbc",
+      "name": "SBC Automation",
+      "url": "/app/dashboard/sbc",
+      "icon": "bi bi-cpu"
+    },
+    {
       "code": "NetworkInoc",
       "name": "AU IP",
       "url": "/user",

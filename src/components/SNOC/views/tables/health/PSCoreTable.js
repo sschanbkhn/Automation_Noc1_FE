@@ -13,10 +13,11 @@ import {
 import {
   fetchPSCoreStatus,
   fetchLatestHealthcheckView,
-} from "../../redux/Healthcheck/healthcheckSlice";
-import { SERVER_MEDIA } from "./../../config/constant";
-import snocStore, { RootState, AppDispatch } from "../../store/snocStore";
-import Alert from "../../components/Alert/Alert";
+} from "../../../redux/Healthcheck/healthcheckSlice";
+import { SERVER_MEDIA } from "../../../config/constant";
+import snocStore, { RootState, AppDispatch } from "../../../store/snocStore";
+import Alert from "../../../components/Alert/Alert";
+import { pgwPlatforms } from "../../../config/platformList";
 const statusRowClass = {
   OK: "",
   Warning: "table-warning",
@@ -54,7 +55,7 @@ const PSCoreTableContent = () => {
       fetchLatestHealthcheckView({
         host: searchHostRef.current,
         page: currentPage,
-        platform: ["pgw_ericsson_combo", "pgwu_ericsson_combo"],
+        platform: pgwPlatforms,
       })
     );
   }, [dispatch, currentPage]);

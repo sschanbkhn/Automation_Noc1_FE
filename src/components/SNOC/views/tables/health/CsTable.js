@@ -10,22 +10,23 @@ import {
   Button,
   Pagination,
 } from "react-bootstrap";
-import { fetchPSCoreStatus } from "../../redux/Healthcheck/healthcheckSlice";
-import { SERVER_MEDIA } from "./../../config/constant";
-import snocStore, { RootState, AppDispatch } from "../../store/snocStore";
+import { fetchLatestHealthcheckView } from "../../../redux/Healthcheck/healthcheckSlice";
+import { SERVER_MEDIA } from "../../../config/constant";
+import snocStore, { RootState, AppDispatch } from "../../../store/snocStore";
+import { csPlatforms } from "../../../config/platformList";
 
 const statusRowClass = {
-  OK: "table-success",
+  OK: "",
   Warning: "table-warning",
   Error: "table-danger",
   NOK: "table-danger",
   Unknown: "table-secondary",
 };
 
-const HistoricalReportingContent = () => {
+const CsTableContent = () => {
   const dispatch = useDispatch();
   const {
-    items = [],
+    lastestitems = [],
     loading = false,
     count = 0,
   } = useSelector((state) => state.pscore || {});
@@ -40,12 +41,16 @@ const HistoricalReportingContent = () => {
     const trimmedHost = host.trim();
     searchHostRef.current = trimmedHost;
     setCurrentPage(1);
-    dispatch(fetchPSCoreStatus({ host: trimmedHost, page: 1 }));
+    dispatch(fetchLatestHealthcheckView({ host: trimmedHost, page: 1 }));
   };
 
   useEffect(() => {
     dispatch(
-      fetchPSCoreStatus({ host: searchHostRef.current, page: currentPage })
+      fetchLatestHealthcheckView({
+        host: searchHostRef.current,
+        page: currentPage,
+        platform: csPlatforms,
+      })
     );
   }, [dispatch, currentPage]);
 
@@ -63,7 +68,7 @@ const HistoricalReportingContent = () => {
     setSortConfig({ key, direction });
   };
 
-  const sortedItems = [...items].sort((a, b) => {
+  const sortedItems = [...lastestitems].sort((a, b) => {
     const valA = a[sortConfig.key];
     const valB = b[sortConfig.key];
 
@@ -96,7 +101,7 @@ const HistoricalReportingContent = () => {
           <Card>
             <Card.Header>
               <Card.Title as="h5">
-                Historical Reporting - Danh sách bản ghi healthcheck
+                CS Core - Danh sách bản ghi healthcheck
               </Card.Title>
             </Card.Header>
             <Card.Body>
@@ -199,10 +204,10 @@ const HistoricalReportingContent = () => {
   );
 };
 
-const HistoricalReporting = () => (
+const CsTable = () => (
   <Provider store={snocStore}>
-    <HistoricalReportingContent />
+    <CsTableContent />
   </Provider>
 );
 
-export default HistoricalReporting;
+export default CsTable;

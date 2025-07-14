@@ -15,10 +15,11 @@ import Select from "react-select";
 import {
   fetchPlatforms,
   fetchDevicesByPlatform,
-} from "../../redux/Healthcheck/platformDeviceSlice";
-import { GenericHealthCheckView } from "../../redux/Healthcheck/healthcheckSlice";
-import { SERVER_MEDIA } from "./../../config/constant";
-import snocStore, { RootState, AppDispatch } from "../../store/snocStore";
+} from "../../../redux/Healthcheck/platformDeviceSlice";
+import { GenericHealthCheckView } from "../../../redux/Healthcheck/healthcheckSlice";
+import { SERVER_MEDIA } from "../../../config/constant";
+import snocStore, { RootState, AppDispatch } from "../../../store/snocStore";
+import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
 
 const HealthcheckContent = () => {
   const dispatch = useDispatch();
@@ -86,6 +87,7 @@ const HealthcheckContent = () => {
 
   return (
     <>
+      <TopNavbarHealth />
       <Row>
         <Col sm={12}>
           <Card>
