@@ -147,7 +147,7 @@
         {
           "code": "ConfigReport",
           "name": "Công cụ tự động báo cáo cấu hình",
-          "url": "/",
+          "url": "/config-report",
           "icon": "bi bi-grid"
         }
       ]
@@ -159,43 +159,26 @@
       "icon": "bi bi-cpu",
       "subMenu": [
         {
-          "code": "NornirPlatformView",
-          "name": "Hỗ trợ quản lý cấu hình",
-          "url": "/NornirPlatformView",
-          "icon": "bi bi-grid"
-        },
-        {
-          "code": "CableManagement",
-          "name": "Khai báo, chỉnh sửa bản ghi DNS",
-          "url": "/cable-management",
-          "icon": "bi bi-grid"
-        },
-        {
-          "code": "ConfigurationLogs",
-          "name": "Bảo dưỡng, healh check",
-          "url": "/configuration-logs",
-          "icon": "bi bi-grid"
-        }
+            "code": "hc-dashboard",
+            "name": "Healthcheck Automation",
+            "url": "/app/dashboard/origin",
+            "icon": "bi bi-cpu"
+          },
+          {
+            "code": "hc-dashboard-dns",
+            "name": "DNS Automation",
+            "url": "/app/dashboard/dns",
+            "icon": "bi bi-cpu"
+          },
+          {
+            "code": "hc-dashboard-sbc",
+            "name": "SBC Automation",
+            "url": "/app/dashboard/sbc",
+            "icon": "bi bi-cpu"
+          }
       ]
     },
-    {
-      "code": "hc-dashboard",
-      "name": "Healthcheck Automation",
-      "url": "/app/dashboard/origin",
-      "icon": "bi bi-cpu"
-    },
-    {
-      "code": "hc-dashboard-dns",
-      "name": "DNS Automation",
-      "url": "/app/dashboard/dns",
-      "icon": "bi bi-cpu"
-    },
-    {
-      "code": "hc-dashboard-sbc",
-      "name": "SBC Automation",
-      "url": "/app/dashboard/sbc",
-      "icon": "bi bi-cpu"
-    },
+    
     {
       "code": "NetworkInoc",
       "name": "AU IP",

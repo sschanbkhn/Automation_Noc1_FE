@@ -57,6 +57,7 @@ import CreateConnectionForm from "components/SNOC/views/forms/sbc/CreateConnecti
 import DeclareNumberForm from "components/SNOC/views/forms/sbc/DeclareNumberForm";
 import RoutingDeclarationForm from "components/SNOC/views/forms/sbc/RoutingDeclarationForm";
 import RequestHistoryTable from "components/SNOC/views/forms/sbc/RequestHistoryTable";
+import ConfigReport from "components/RNOC1/R009";
 interface Props {
   Apps: any;
 }
@@ -85,7 +86,8 @@ const MainPageRoute = (props: Props) => {
         return <CategoryAlarmLevel />;
       case "CategoryAlarmType":
         return <CategoryAlarmType />;
-
+      case "ConfigReport":
+        return <ConfigReport />;
       case "DashboardR001":
         return <DashboardR001 />;
       case "CableManagement":
