@@ -19,10 +19,10 @@ const TopNavbar = () => {
             Dashboard
           </NavLink>
           <NavLink to="/dns/lacracrnc" className={getLinkClass}>
-            3G
+            RNC
           </NavLink>
           <NavLink to="/dns/tacs" className={getLinkClass}>
-            4G
+            TAC
           </NavLink>
           <NavLink to="/dns/apn" className={getLinkClass}>
             Apn

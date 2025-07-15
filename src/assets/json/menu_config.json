@@ -179,74 +179,16 @@
       ]
     },
     {
-      "code": "Healthcheck",
+      "code": "hc-dashboard",
       "name": "Healthcheck Automation",
-      "url": "/healthcheck",
-      "icon": "bi bi-cpu",
-      "subMenu": [
-        {
-          "code": "hc-dashboard",
-          "name": "Dashboard",
-          "url": "/app/dashboard/origin",
-          "icon": "bi bi-house"
-        },
-        {
-          "code": "hc-devices",
-          "name": "Devices",
-          "url": "/healthcheck/devices",
-          "icon": "bi bi-cpu"
-        },
-        {
-          "code": "hc-schedule",
-          "name": "Schedule",
-          "url": "/healthcheck/schedule",
-          "icon": "bi bi-calendar"
-        },
-        {
-          "code": "hc-checks",
-          "name": "Health Checks",
-          "url": "/healthcheck/checks",
-          "icon": "bi bi-activity"
-        },
-        {
-          "code": "hc-history",
-          "name": "Historical Reporting",
-          "url": "/healthcheck/history",
-          "icon": "bi bi-clock"
-        },
-        {
-          "code": "hc-settings",
-          "name": "Settings",
-          "url": "/healthcheck/settings",
-          "icon": "bi bi-gear"
-        }
-      ]
+      "url": "/app/dashboard/origin",
+      "icon": "bi bi-cpu"
     },
     {
       "code": "hc-dashboard-dns",
       "name": "DNS Automation",
       "url": "/app/dashboard/dns",
-      "icon": "bi bi-cpu",
-      "subMenu": [
-        {
-          "code": "hc-dashboard-dns",
-          "name": "Dashboard Dns",
-          "url": "/app/dashboard/dns",
-          "icon": "bi bi-house"
-        },
-        {
-          "code": "hc-tacs",
-          "name": "Tacs",
-          "url": "/dns/tacs",
-          "icon": "bi bi-cpu"
-        },
-        {
-          "code": "hc-lacracrnc",
-          "name": "Lacracrnc",
-          "url": "/dns/lacracrnc",
-          "icon": "bi bi-calendar"
-        }
-      ]
+      "icon": "bi bi-cpu"
     },
     {
       "code": "hc-dashboard-sbc",
