@@ -6,7 +6,7 @@ const useScheduleWebSocket = () => {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    const socket = new WebSocket("ws://localhost:8000/ws/healthcheck/");
+    const socket = new WebSocket("ws://10.155.43.201:8000/ws/healthcheck/");
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
@@ -32,7 +32,7 @@ const useScheduleWebSocket = () => {
 
 export default useScheduleWebSocket;
 
-const socket = new WebSocket("ws://localhost:8000/ws/healthcheck/");
+const socket = new WebSocket("ws://10.155.43.201:8000/ws/healthcheck/");
 
 socket.onopen = () => console.log("✅ Connected to backend WebSocket");
 socket.onmessage = (e) => {

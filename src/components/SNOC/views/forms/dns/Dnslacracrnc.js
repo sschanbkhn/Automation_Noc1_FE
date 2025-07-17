@@ -6,8 +6,10 @@ import {
   fetchDnsCheckResult3G,
   clearDnsResult,
 } from "../../../redux/Dns/dnsSlice";
+import { Provider } from "react-redux";
+import snocStore, { RootState, AppDispatch } from "../../../store/snocStore";
 
-const Dnslacracrnc = () => {
+const DnslacracrncContent = () => {
   const dispatch = useDispatch();
   const [selectedNode, setSelectedNode] = useState("dnsgn");
   const [selectedMme, setSelectedMme] = useState("mmee1d");
@@ -20,7 +22,8 @@ const Dnslacracrnc = () => {
     dns2b = [],
     loading = false,
   } = useSelector((state) => state.dns || {});
-
+  const dnsState = useSelector((state) => state.dns);
+  console.log("💥 Toàn bộ state.dns:", dnsState);
   const handleCheck = () => {
     dispatch(
       fetchDnsCheckResult3G({
@@ -159,7 +162,7 @@ const Dnslacracrnc = () => {
               <Form.Control
                 as="textarea"
                 rows={30}
-                value={dns1b.join("\n")}
+                value={dns1b.map((line) => line.trim()).join("\n")}
                 readOnly
               />
             </Form.Group>
@@ -179,7 +182,7 @@ const Dnslacracrnc = () => {
               <Form.Control
                 as="textarea"
                 rows={30}
-                value={dns2b.join("\n")}
+                value={dns2b.map((line) => line.trim()).join("\n")}
                 readOnly
               />
             </Form.Group>
@@ -189,5 +192,11 @@ const Dnslacracrnc = () => {
     </>
   );
 };
+
+const Dnslacracrnc = () => (
+  <Provider store={snocStore}>
+    <DnslacracrncContent />
+  </Provider>
+);
 
 export default Dnslacracrnc;

@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { fetchSystemStatus } from "../../../redux/Healthcheck/healthcheckSlice";
 import snocStore from "../../../store/snocStore";
 import TopNavbarHealth from "./TopNavbarHealth";
+import BlankLayout from "../../../layouts/BlankLayout";
 const statusColorClass = {
   Normal: "success",
   Warning: "warning",
