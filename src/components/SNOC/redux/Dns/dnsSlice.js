@@ -3,12 +3,20 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import snocApi from "../../api/snocApiWithAutoToken";
 import { showTemporaryAlert } from "../Alert/alertSlice";
 
-// Gọi API tạo command tạm thời từ TAC/MME/SGW
+// Gọi API tạo command tạm thời từ TAC/MME/SGW/PGW5G
 export const fetchGenerateTmpCommandTAC = createAsyncThunk(
   "dns/fetchGenerateTmpCommandTAC",
-  async ({ tacList, mmeList, sgwList }, { rejectWithValue, dispatch }) => {
+  async (
+    { tacList, mmeList, sgwList, pgw5gList }, // ✅ thêm pgw5gList
+    { rejectWithValue, dispatch }
+  ) => {
     try {
-      console.log("📥 [Generate TMP] Input:", { tacList, mmeList, sgwList });
+      console.log("📥 [Generate TMP] Input:", {
+        tacList,
+        mmeList,
+        sgwList,
+        pgw5gList,
+      });
 
       const params = new URLSearchParams();
 
@@ -22,6 +30,10 @@ export const fetchGenerateTmpCommandTAC = createAsyncThunk(
 
       if (Array.isArray(sgwList)) {
         sgwList.forEach((s) => params.append("sgw", s));
+      }
+
+      if (Array.isArray(pgw5gList)) {
+        pgw5gList.forEach((p) => params.append("pgw5g", p)); // ✅ thêm pgw5g
       }
 
       const fullUrl = `/nornirps/generate-tmp-tac/?${params.toString()}`;
@@ -39,7 +51,6 @@ export const fetchGenerateTmpCommandTAC = createAsyncThunk(
     }
   }
 );
-
 
 // Gọi API kiểm tra DNS theo TAC (4G)
 export const fetchDnsCheckResultTAC = createAsyncThunk(

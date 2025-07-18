@@ -24,7 +24,7 @@ const TopNavbar = () => {
           <NavLink to="/dns/tacs" className={getLinkClass}>
             TAC
           </NavLink>
-          <NavLink to="/dns/apn" className={getLinkClass}>
+          <NavLink to="/dns/apns" className={getLinkClass}>
             Apn
           </NavLink>
           <NavLink to="/dns/vungphumme" className={getLinkClass}>

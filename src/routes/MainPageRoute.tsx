@@ -57,6 +57,7 @@ import CreateConnectionForm from "components/SNOC/views/forms/sbc/CreateConnecti
 import DeclareNumberForm from "components/SNOC/views/forms/sbc/DeclareNumberForm";
 import RoutingDeclarationForm from "components/SNOC/views/forms/sbc/RoutingDeclarationForm";
 import RequestHistoryTable from "components/SNOC/views/forms/sbc/RequestHistoryTable";
+import APNConfigPanel from "components/SNOC/views/forms/dns/APNConfigPanel";
 interface Props {
   Apps: any;
 }
@@ -204,6 +205,7 @@ const MainPageRoute = (props: Props) => {
       <Route path="/app/dashboard/dns" element={<DnsConfigDashboard />} />
       <Route path="/dns/tacs" element={<TACConfigPanel />} />
       <Route path="/dns/lacracrnc" element={<DnsLacracrnc />} />
+      <Route path="/dns/apns" element={<APNConfigPanel />} />
       <Route path="/sbc/dashboard" element={<SbcDashboardWithNavbar />} />
       <Route
         path="/sbc/CreateConnectionForm"

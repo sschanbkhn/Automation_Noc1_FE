@@ -18,7 +18,7 @@ const TACConfigPanelContent = () => {
   const [tac, setTac] = useState("");
   const [mmeGroups, setMmeGroups] = useState([]);
   const [sgwGroups, setSgwGroups] = useState([]);
-
+  const [pgw5gGroups, setPgw5gGroups] = useState([]);
   const {
     tacResult = {},
     tmpCommands = {},
@@ -64,6 +64,7 @@ const TACConfigPanelContent = () => {
         tacList,
         mmeList: mmeGroups, // ✅ Đúng key
         sgwList: sgwGroups, // ✅ Đúng key
+        pgw5gList: pgw5gGroups, // ✅ Gửi thêm PGW 5G vào API
       })
     );
   };
@@ -114,7 +115,9 @@ const TACConfigPanelContent = () => {
     "epg4x",
     "epg4x5g",
   ].map((v) => ({ value: v, label: v }));
-
+  const pgw5gOptions = ["epg1x5g", "epg2x5g", "epg3x5g", "epg4x5g"].map(
+    (v) => ({ value: v, label: v })
+  );
   return (
     <>
       <TopNavbarDns />
@@ -165,18 +168,16 @@ const TACConfigPanelContent = () => {
               <Button variant="danger" onClick={handleDelete}>
                 Delete
               </Button>
-              <Button variant="warning" onClick={handleCreateTmp}>
-                Create tmp
-              </Button>
+
               <Button variant="secondary" onClick={handleClear}>
-                Clear cache
+                Clear cache dns
               </Button>
             </div>
           </Col>
         </Row>
 
         <Row className="mb-3">
-          <Col md={6}>
+          <Col md={2}>
             <Form.Group>
               <Form.Label>Group MME</Form.Label>
               <Select
@@ -191,7 +192,7 @@ const TACConfigPanelContent = () => {
               />
             </Form.Group>
           </Col>
-          <Col md={6}>
+          <Col md={2}>
             <Form.Group>
               <Form.Label>PGW Pool</Form.Label>
               <Select
@@ -205,6 +206,32 @@ const TACConfigPanelContent = () => {
                 }
               />
             </Form.Group>
+          </Col>
+          <Col md={2}>
+            <Form.Group>
+              <Form.Label>PGW 5G Pool</Form.Label>
+              <Select
+                isMulti
+                options={pgw5gOptions}
+                value={pgw5gOptions.filter((opt) =>
+                  pgw5gGroups.includes(opt.value)
+                )}
+                onChange={(selected) =>
+                  setPgw5gGroups(selected.map((s) => s.value))
+                }
+              />
+            </Form.Group>
+          </Col>
+          <Col md={6}>
+            <Form.Label>Phím chức năng</Form.Label>
+            <div className="d-flex gap-2 flex-wrap">
+              <Button variant="warning" onClick={handleCreateTmp}>
+                Tmp Add
+              </Button>
+              <Button variant="secondary" onClick={handleClear}>
+                Clear textbox
+              </Button>
+            </div>
           </Col>
         </Row>
 
