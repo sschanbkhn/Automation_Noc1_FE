@@ -46,6 +46,7 @@ import PSCoreTable from "components/SNOC/views/tables/health/PSCoreTable";
 import CsTable from "components/SNOC/views/tables/health/CsTable";
 import SignalTable from "components/SNOC/views/tables/health/SignalTable";
 import OcsTable from "components/SNOC/views/tables/health/OcsTable";
+import HealthcheckPage from "components/SNOC/views/tables/health/HealthcheckPage";
 import HistoricalReporting from "components/SNOC/views/tables/health/HistoricalReporting";
 import Healthcheck from "components/SNOC/views/forms/health/Healthcheck";
 import Schedule from "components/SNOC/views/forms/health/Schedule";
@@ -197,11 +198,16 @@ const MainPageRoute = (props: Props) => {
       <Route path="/healthcheck/schedule" element={<Schedule />} />
       <Route path="/healthcheck/checks" element={<Healthcheck />} />
       <Route path="/healthcheck/history" element={<HistoricalReporting />} />
-      <Route path="/healthcheck/ps-core" element={<PSCoreTable />} />
+      {/* <Route path="/healthcheck/ps-core" element={<PSCoreTable />} />
       <Route path="/healthcheck/cs-core" element={<CsTable />} />
       <Route path="/healthcheck/signal" element={<SignalTable />} />
 
-      <Route path="/healthcheck/ocs" element={<OcsTable />} />
+      <Route path="/healthcheck/ocs" element={<OcsTable />} /> */}
+      <Route path="/healthcheck/:group" element={<HealthcheckPage />} />
+      <Route
+        path="/healthcheck/:group/:subsystem"
+        element={<HealthcheckPage />}
+      />
       <Route path="/app/dashboard/dns" element={<DnsConfigDashboard />} />
       <Route path="/dns/tacs" element={<TACConfigPanel />} />
       <Route path="/dns/lacracrnc" element={<DnsLacracrnc />} />

@@ -2,6 +2,18 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import snocApi from "../../api/snocApiWithAutoToken";
 import { showTemporaryAlert } from "../Alert/alertSlice";
 
+export const fetchPlatformGroupSchema = createAsyncThunk(
+  "systemHealth/fetchPlatformGroupSchema",
+  async (_, { rejectWithValue }) => {
+    try {
+      const res = await snocApi.get("/nornirps/systemhealth/schema/");
+      return res.data; // object: { "OCS": { "SDP": [...], ... } }
+    } catch (err) {
+      return rejectWithValue(err.response?.data || {});
+    }
+  }
+);
+
 export const fetchHealthcheckSchedules = createAsyncThunk(
   "pscore/fetchHealthcheckSchedules",
   async (_, { dispatch, rejectWithValue }) => {
@@ -178,6 +190,43 @@ export const fetchSystemStatus = createAsyncThunk(
   }
 );
 
+export const fetchSystemStatusByGroup = createAsyncThunk(
+  "pscore/fetchSystemStatusByGroup",
+  async (group, { rejectWithValue, dispatch }) => {
+    try {
+      const response = await snocApi.get(`/nornirps/systemhealth/${group}/`);
+      return { group, data: response.data };
+    } catch (error) {
+      const msg =
+        error?.response?.data?.detail || `Không thể tải dữ liệu group ${group}`;
+      dispatch(showTemporaryAlert({ message: msg, type: "error" }));
+      return rejectWithValue({ group, error: error?.response?.data });
+    }
+  }
+);
+
+export const fetchSystemStatusBySubsystem = createAsyncThunk(
+  "pscore/fetchSystemStatusBySubsystem",
+  async ({ group, subsystem }, { rejectWithValue, dispatch }) => {
+    try {
+      const response = await snocApi.get(
+        `/nornirps/systemhealth/${group}/${subsystem}/`
+      );
+      return { group, subsystem, data: response.data };
+    } catch (error) {
+      const msg =
+        error?.response?.data?.detail ||
+        `Không thể tải dữ liệu subsystem ${subsystem}`;
+      dispatch(showTemporaryAlert({ message: msg, type: "error" }));
+      return rejectWithValue({
+        group,
+        subsystem,
+        error: error?.response?.data,
+      });
+    }
+  }
+);
+
 export const GenericHealthCheckView = createAsyncThunk(
   "healthcheck/GenericHealthCheckView",
   async (
@@ -222,6 +271,9 @@ const psCoreSlice = createSlice({
     scheduleCreating: false,
     scheduledTasks: [],
     loadingScheduledTasks: false,
+    groupStatus: {}, // từng group như OCS, PS Core
+    subsystemStatus: {}, // từng subsystem trong từng group
+    platformSchema: {},
   },
   reducers: {
     updateLastRunAt: (state, action) => {
@@ -275,6 +327,30 @@ const psCoreSlice = createSlice({
       .addCase(fetchSystemStatus.rejected, (state) => {
         state.loading = false;
         state.systemStatus = {};
+      })
+
+      // --- Fetch system status theo group ---
+      .addCase(fetchSystemStatusByGroup.fulfilled, (state, action) => {
+        const { group, data } = action.payload;
+        state.groupStatus[group] = data[group] || data;
+      })
+      .addCase(fetchSystemStatusByGroup.rejected, (state, action) => {
+        const { group } = action.payload || {};
+        if (group) state.groupStatus[group] = null;
+      })
+
+      // --- Fetch theo subsystem ---
+      .addCase(fetchSystemStatusBySubsystem.fulfilled, (state, action) => {
+        const { group, subsystem, data } = action.payload;
+        if (!state.subsystemStatus[group]) state.subsystemStatus[group] = {};
+        state.subsystemStatus[group][subsystem] = data[subsystem] || data;
+      })
+      .addCase(fetchSystemStatusBySubsystem.rejected, (state, action) => {
+        const { group, subsystem } = action.payload || {};
+        if (group && subsystem) {
+          if (!state.subsystemStatus[group]) state.subsystemStatus[group] = {};
+          state.subsystemStatus[group][subsystem] = null;
+        }
       })
 
       .addCase(GenericHealthCheckView.pending, (state) => {
@@ -334,6 +410,18 @@ const psCoreSlice = createSlice({
       .addCase(fetchHealthcheckSchedules.rejected, (state) => {
         state.loadingScheduledTasks = false;
         state.scheduledTasks = [];
+      })
+      // --- Load schema nhóm platform từ backend ---
+      .addCase(fetchPlatformGroupSchema.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchPlatformGroupSchema.fulfilled, (state, action) => {
+        state.loading = false;
+        state.platformSchema = action.payload;
+      })
+      .addCase(fetchPlatformGroupSchema.rejected, (state) => {
+        state.loading = false;
+        state.platformSchema = {};
       });
   },
 });

@@ -2,10 +2,14 @@ import React, { useEffect } from "react";
 import { Row, Col, Card, Spinner } from "react-bootstrap";
 import { Provider, useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { fetchSystemStatus } from "../../../redux/Healthcheck/healthcheckSlice";
+import {
+  fetchSystemStatus,
+  fetchPlatformGroupSchema,
+} from "../../../redux/Healthcheck/healthcheckSlice";
 import snocStore from "../../../store/snocStore";
 import TopNavbarHealth from "./TopNavbarHealth";
-import BlankLayout from "../../../layouts/BlankLayout";
+import styles from "./../../../styles/SystemHealth.module.scss";
+
 const statusColorClass = {
   Normal: "success",
   Warning: "warning",
@@ -14,156 +18,115 @@ const statusColorClass = {
 };
 
 const statusIcon = {
-  Normal: "✅",
-  Warning: "⚠️",
-  Error: "❌",
-  Unknown: "❓",
+  Normal: <span className={`${styles.dot} ${styles.successDot}`} />,
+  Warning: <span className={`${styles.dot} ${styles.warningDot}`} />,
+  Error: <span className={`${styles.dot} ${styles.dangerDot}`} />,
+  Unknown: <span className={`${styles.dot} ${styles.secondaryDot}`} />,
 };
 
-const systems = [
-  {
-    label: "Signal",
-    platform: ["signal"],
-  },
-
-  {
-    label: "CS Core",
-    platform: ["cs_core"],
-    children: [
-      { label: "MSS", platform: "mss" },
-      { label: "MGW", platform: "mgw" },
-    ],
-  },
-  {
-    label: "PS Core",
-    platform: ["ps_core"],
-    children: [
-      { label: "MME", platform: "mme" },
-      { label: "PGW", platform: "pgw" },
-      { label: "PCRF", platform: "pcrf" },
-      { label: "DNS", platform: "dns" },
-    ],
-  },
-  {
-    label: "UDC Core",
-    platform: ["udc"],
-  },
-  {
-    label: "IMS Core",
-    platform: ["ims"],
-  },
-
-  {
-    label: "OCS",
-    platform: ["ocs_sdp"],
-  },
-];
-
-const systemCardStyle = {
-  "CS Core": "bg-white border-start border-4 border-primary",
-  "PS Core": "bg-white border-start border-4 border-info",
-  Signal: "bg-white border-start border-4 border-warning",
-  OCS: "bg-white border-start border-4 border-success",
+const cardClassMapping = {
+  "CS Core": styles.cardCsCore,
+  "PS Core": styles.cardPsCore,
+  Signal: styles.cardSignal,
+  OCS: styles.cardOcs,
+  "IMS Core": styles.cardIms,
+  "UDC Core": styles.cardUdc,
 };
 
 const SystemHealthContent = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { systemStatus = {}, loading = false } = useSelector(
+  const { systemStatus = {}, loading = false, platformSchema = {} } = useSelector(
     (state) => state.pscore || {}
   );
 
   useEffect(() => {
+    dispatch(fetchPlatformGroupSchema());
     dispatch(fetchSystemStatus());
   }, [dispatch]);
 
-  const routeMapping = {
-    "CS Core": "/healthcheck/cs-core",
-    "PS Core": "/healthcheck/ps-core",
-    Signal: "/healthcheck/signal",
-    OCS: "/healthcheck/ocs",
-  };
-
-  const platformMapping = {
-    "CS Core": ["cs_core"],
-    "PS Core": ["ps_core"],
-    Signal: ["signal"],
-    OCS: ["ocs_sdp"],
-  };
-
-  const handleCardClick = (systemLabel) => {
-    navigate(routeMapping[systemLabel], {
-      state: { platform: platformMapping[systemLabel] },
+  const handleCardClick = (systemLabel, platformList) => {
+    navigate(`/healthcheck/${encodeURIComponent(systemLabel)}`, {
+      state: {
+        group: systemLabel,
+        platform: platformList,
+      },
     });
   };
 
   return (
     <>
       <TopNavbarHealth />
-      <div className="bg-light min-vh-100 p-4">
+      <div className={styles.container}>
         <Row>
           <Col md={12}>
-            <h3 className="mb-4 fw-bold">System Health Dashboard</h3>
+            <h3 className={styles.pageTitle}>System Health Dashboard</h3>
             <Row>
-              {systems.map((system) => {
-                const groupData = systemStatus[system.label] || {};
-                const status = groupData.status || "Unknown";
-                const children = groupData.children || {};
-                const cardClass = systemCardStyle[system.label] || "bg-white";
+              {Object.entries(platformSchema).map(([groupName, subsystems]) => {
+                const groupData = systemStatus[groupName] || {};
+                const groupStatus = groupData.status || "Unknown";
+                const groupChildren = groupData.children || {};
+                const cardClass = cardClassMapping[groupName] || "";
+
+                // Gom tất cả platform trong group để route vào khi click thẻ lớn
+                const allGroupPlatforms = Object.values(subsystems).flat();
 
                 return (
-                  <Col md={6} key={system.label} className="mb-4">
+                  <Col md={6} key={groupName} className="mb-4">
                     <Card
-                      className={`shadow ${cardClass}`}
-                      onClick={() => handleCardClick(system.label)}
-                      style={{ cursor: "pointer" }}
+                      className={`shadow ${styles.cardCommon} ${cardClass}`}
+                      onClick={() =>
+                        handleCardClick(groupName, allGroupPlatforms)
+                      }
                     >
                       <Card.Body className="p-4">
                         <div className="d-flex align-items-center justify-content-between mb-3">
-                          <h5 className="mb-0 fw-bold fs-4">{system.label}</h5>
+                          <h5 className="mb-0 fw-bold fs-4">{groupName}</h5>
                           {loading ? (
                             <Spinner animation="border" size="sm" />
                           ) : (
                             <span
-                              className={`badge bg-${statusColorClass[status]} fs-6 py-2 px-3`}
+                              className={`${styles.statusBadge} ${
+                                styles[statusColorClass[groupStatus]]
+                              }`}
                             >
-                              <span className="fs-5">{statusIcon[status]}</span>{" "}
-                              {status}
+                              {statusIcon[groupStatus]} {groupStatus}
                             </span>
                           )}
                         </div>
 
-                        {!loading && Object.keys(children).length > 0 && (
+                        {!loading && Object.keys(subsystems).length > 0 && (
                           <div className="d-flex flex-wrap gap-3 mt-3">
-                            {Object.entries(children).map(
-                              ([label, childData]) => {
+                            {Object.entries(subsystems).map(
+                              ([subsystemLabel, platforms]) => {
+                                const childData =
+                                  groupChildren?.[subsystemLabel] || {};
                                 const childStatus =
-                                  typeof childData === "object"
-                                    ? childData.status
-                                    : childData;
+                                  childData.status || "Unknown";
 
                                 return (
                                   <div
-                                    key={label}
-                                    className="d-flex align-items-center gap-2 border px-3 py-2 rounded bg-light"
-                                    style={{ cursor: "pointer" }}
+                                    key={subsystemLabel}
+                                    className={styles.subItem}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       navigate(
-                                        `/healthcheck/${label.toLowerCase()}`,
+                                        `/healthcheck/${encodeURIComponent(
+                                          groupName
+                                        )}/${encodeURIComponent(subsystemLabel)}`,
                                         {
                                           state: {
-                                            platform: [label.toLowerCase()],
+                                            group: groupName,
+                                            subsystem: subsystemLabel,
+                                            platform: platforms,
                                           },
                                         }
                                       );
                                     }}
                                   >
-                                    <span className="fs-5">
-                                      {statusIcon[childStatus]}
-                                    </span>
+                                    {statusIcon[childStatus]}
                                     <span className="fw-semibold fs-6">
-                                      {label}
+                                      {subsystemLabel}
                                     </span>
                                   </div>
                                 );
@@ -173,15 +136,16 @@ const SystemHealthContent = () => {
                         )}
 
                         {!loading && (
-                          <div className="d-flex justify-content-between mt-4">
-                            <div className="text-success">
-                              ✅ OK: <strong>{groupData.ok_count || 0}</strong>
+                          <div className={styles.statRow}>
+                            <div className={styles.ok}>
+                              🟢 OK:{" "}
+                              <strong>{groupData.ok_count || 0}</strong>
                             </div>
-                            <div className="text-danger">
-                              ❌ NOK:{" "}
+                            <div className={styles.nok}>
+                              🔴 NOK:{" "}
                               <strong>{groupData.nok_count || 0}</strong>
                             </div>
-                            <div className="text-muted">
+                            <div className={styles.total}>
                               📦 Total:{" "}
                               <strong>{groupData.total_devices || 0}</strong>
                             </div>

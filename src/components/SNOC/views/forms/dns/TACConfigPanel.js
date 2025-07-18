@@ -226,7 +226,7 @@ const TACConfigPanelContent = () => {
             <Form.Label>Phím chức năng</Form.Label>
             <div className="d-flex gap-2 flex-wrap">
               <Button variant="warning" onClick={handleCreateTmp}>
-                Tmp Add
+                Generate TMP
               </Button>
               <Button variant="secondary" onClick={handleClear}>
                 Clear textbox
