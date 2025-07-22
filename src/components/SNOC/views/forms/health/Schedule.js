@@ -12,10 +12,12 @@ import {
   fetchHealthcheckSchedules,
   deleteHealthcheckSchedule,
   updateHealthcheckSchedule,
+  toggleScheduleEnabled,
 } from "../../../redux/Healthcheck/healthcheckSlice";
 import snocStore from "../../../store/snocStore";
 import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
+import WebSocketStatusBanner from "./../../../components/WebSocketStatusBanner"; // cập nhật path cho đúng
 
 const StatusBadge = ({ status }) => {
   const map = {
@@ -34,7 +36,7 @@ const StatusBadge = ({ status }) => {
 };
 
 const SchedulekContent = () => {
-  useScheduleWebSocket();
+  useScheduleWebSocket(); // ✅ Gọi ở đây
   const dispatch = useDispatch();
   const { platforms, devices } = useSelector((state) => state.platformDevice);
   const { scheduleCreating, scheduledTasks = [] } = useSelector(
@@ -149,6 +151,10 @@ const SchedulekContent = () => {
     }
   };
 
+  const handleToggleEnabled = (task) => {
+    dispatch(toggleScheduleEnabled({ id: task.id, enabled: !task.enabled }));
+  };
+
   const filteredTasks = scheduledTasks
     .filter((s) =>
       s.name.toLowerCase().includes(searchText.trim().toLowerCase())
@@ -182,6 +188,8 @@ const SchedulekContent = () => {
   return (
     <>
       <TopNavbarHealth />
+      <WebSocketStatusBanner />
+
       <Row>
         <Col sm={12}>
           <Card>
@@ -341,7 +349,15 @@ const SchedulekContent = () => {
                         <td>{s.platform}</td>
                         <td>{s.cron}</td>
                         <td>{s.node_names?.join(", ")}</td>
-                        <td>{s.enabled ? "🟢 Bật" : "🔴 Tắt"}</td>
+                        <td>
+                          <Button
+                            size="sm"
+                            variant={s.enabled ? "success" : "secondary"}
+                            onClick={() => handleToggleEnabled(s)}
+                          >
+                            {s.enabled ? "🟢 Bật" : "🔴 Tắt"}
+                          </Button>
+                        </td>
                         <td>{s.last_run_at || "Chưa chạy"}</td>
                         <td>
                           <StatusBadge status={s.last_run_status} />

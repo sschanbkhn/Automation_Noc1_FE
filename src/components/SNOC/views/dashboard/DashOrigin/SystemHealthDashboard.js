@@ -9,6 +9,8 @@ import {
 import snocStore from "../../../store/snocStore";
 import TopNavbarHealth from "./TopNavbarHealth";
 import styles from "./../../../styles/SystemHealth.module.scss";
+import WebSocketStatusBanner from "./../../../components/WebSocketStatusBanner"; // cập nhật path cho đúng
+import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
 
 const statusColorClass = {
   Normal: "success",
@@ -34,11 +36,15 @@ const cardClassMapping = {
 };
 
 const SystemHealthContent = () => {
+    useScheduleWebSocket(); // ✅ Gọi ở đây
+  
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { systemStatus = {}, loading = false, platformSchema = {} } = useSelector(
-    (state) => state.pscore || {}
-  );
+  const {
+    systemStatus = {},
+    loading = false,
+    platformSchema = {},
+  } = useSelector((state) => state.pscore || {});
 
   useEffect(() => {
     dispatch(fetchPlatformGroupSchema());
@@ -57,6 +63,7 @@ const SystemHealthContent = () => {
   return (
     <>
       <TopNavbarHealth />
+      <WebSocketStatusBanner />
       <div className={styles.container}>
         <Row>
           <Col md={12}>
@@ -113,7 +120,9 @@ const SystemHealthContent = () => {
                                       navigate(
                                         `/healthcheck/${encodeURIComponent(
                                           groupName
-                                        )}/${encodeURIComponent(subsystemLabel)}`,
+                                        )}/${encodeURIComponent(
+                                          subsystemLabel
+                                        )}`,
                                         {
                                           state: {
                                             group: groupName,
@@ -125,9 +134,34 @@ const SystemHealthContent = () => {
                                     }}
                                   >
                                     {statusIcon[childStatus]}
-                                    <span className="fw-semibold fs-6">
-                                      {subsystemLabel}
-                                    </span>
+                                    <div className="d-flex flex-column">
+                                      <span className="fw-semibold fs-6">
+                                        {subsystemLabel}
+                                      </span>
+                                      <div className="d-flex gap-2 mt-1">
+                                        <span
+                                          className={
+                                            childData.ok_count > 0
+                                              ? styles.ok
+                                              : styles.total
+                                          }
+                                        >
+                                          {childData.ok_count || 0}
+                                        </span>
+                                        <span
+                                          className={
+                                            childData.nok_count > 0
+                                              ? styles.nok
+                                              : styles.total
+                                          }
+                                        >
+                                          {childData.nok_count || 0}
+                                        </span>
+                                        {/* <span className="total">
+                                          {childData.total_devices || 0}
+                                        </span> */}
+                                      </div>
+                                    </div>
                                   </div>
                                 );
                               }
@@ -137,16 +171,28 @@ const SystemHealthContent = () => {
 
                         {!loading && (
                           <div className={styles.statRow}>
-                            <div className={styles.ok}>
-                              🟢 OK:{" "}
+                            <div
+                              className={
+                                groupData.ok_count > 0
+                                  ? styles.ok
+                                  : styles.total
+                              }
+                            >
+                              {groupData.ok_count > 0 ? "🟢" : "⚪"} OK:{" "}
                               <strong>{groupData.ok_count || 0}</strong>
                             </div>
-                            <div className={styles.nok}>
-                              🔴 NOK:{" "}
+                            <div
+                              className={
+                                groupData.nok_count > 0
+                                  ? styles.nok
+                                  : styles.total
+                              }
+                            >
+                              {groupData.nok_count > 0 ? "🔴" : "⚪"} NOK:{" "}
                               <strong>{groupData.nok_count || 0}</strong>
                             </div>
                             <div className={styles.total}>
-                              📦 Total:{" "}
+                              {groupData.total_devices > 0 ? "📦" : "⚪"} Total:{" "}
                               <strong>{groupData.total_devices || 0}</strong>
                             </div>
                           </div>

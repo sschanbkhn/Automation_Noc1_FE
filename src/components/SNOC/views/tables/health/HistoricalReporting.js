@@ -14,6 +14,8 @@ import { fetchPSCoreStatus } from "../../../redux/Healthcheck/healthcheckSlice";
 import { SERVER_MEDIA } from "../../../config/constant";
 import snocStore, { RootState, AppDispatch } from "../../../store/snocStore";
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
+import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
+import WebSocketStatusBanner from "./../../../components/WebSocketStatusBanner"; // cập nhật path cho đúng
 
 const statusRowClass = {
   OK: "table-success",
@@ -24,6 +26,8 @@ const statusRowClass = {
 };
 
 const HistoricalReportingContent = () => {
+  useScheduleWebSocket(); // ✅ Gọi ở đây
+
   const dispatch = useDispatch();
   const {
     items = [],
@@ -76,6 +80,7 @@ const HistoricalReportingContent = () => {
   return (
     <>
       <TopNavbarHealth />
+      <WebSocketStatusBanner />
 
       <React.Fragment>
         <Row>
@@ -153,16 +158,8 @@ const HistoricalReportingContent = () => {
                               {new Date(item.created_at).toLocaleString()}
                             </td>
                             <td>{item.status}</td>
-                            <td>
-                              <ul className="mb-0 ps-3">
-                                {Array.isArray(item.notes) ? (
-                                  item.notes.map((noteObj, idx) => (
-                                    <li key={idx}>{noteObj.note}</li>
-                                  ))
-                                ) : (
-                                  <li>Không có ghi chú</li>
-                                )}
-                              </ul>
+                            <td style={{ whiteSpace: "pre-line" }}>
+                              {item.notes ? item.notes : ""}
                             </td>
                             <td>
                               {item.result_file ? (

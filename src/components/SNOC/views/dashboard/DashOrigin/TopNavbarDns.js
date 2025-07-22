@@ -27,12 +27,12 @@ const TopNavbar = () => {
           <NavLink to="/dns/apns" className={getLinkClass}>
             Apn
           </NavLink>
-          <NavLink to="/dns/vungphumme" className={getLinkClass}>
-            Vùng phủ MME
-          </NavLink>
-          <NavLink to="/dns/vungphupgw" className={getLinkClass}>
-            Vùng phủ PGW
-          </NavLink>
+            {/* <NavLink to="/dns/vungphumme" className={getLinkClass}>
+              Vùng phủ MME
+            </NavLink>
+            <NavLink to="/dns/vungphupgw" className={getLinkClass}>
+              Vùng phủ PGW
+            </NavLink> */}
         </Nav>
       </Container>
     </Navbar>

@@ -64,6 +64,33 @@ export const createHealthcheckSchedule = createAsyncThunk(
   }
 );
 
+// on off schedule
+export const toggleScheduleEnabled = createAsyncThunk(
+  "pscore/toggleScheduleEnabled",
+  async ({ id, enabled }, { dispatch, rejectWithValue }) => {
+    try {
+      await snocApi.patch(`/nornirps/schedulerhealth/${id}/toggle/`, {
+        enabled,
+      });
+      dispatch(fetchHealthcheckSchedules());
+      dispatch(
+        showTemporaryAlert({
+          message: `Đã ${enabled ? "bật" : "tắt"} lịch thành công`,
+          type: "success",
+        })
+      );
+      return { id, enabled };
+    } catch (error) {
+      const message =
+        error?.response?.data?.detail || "Lỗi khi bật/tắt lịch";
+      dispatch(showTemporaryAlert({ message, type: "error" }));
+      return rejectWithValue(error?.response?.data);
+    }
+  }
+);
+
+
+
 // Xóa lịch
 export const deleteHealthcheckSchedule = createAsyncThunk(
   "pscore/deleteHealthcheckSchedule",
@@ -274,6 +301,7 @@ const psCoreSlice = createSlice({
     groupStatus: {}, // từng group như OCS, PS Core
     subsystemStatus: {}, // từng subsystem trong từng group
     platformSchema: {},
+    websocketConnected: true, // ✅ trạng thái kết nối WebSocket
   },
   reducers: {
     updateLastRunAt: (state, action) => {
@@ -283,7 +311,10 @@ const psCoreSlice = createSlice({
         task.last_run_status = status;
         task.last_run_at = last_run_at;
       }
-    }, // ← kiểm tra dấu phẩy ở đây
+    },
+    setWebSocketStatus: (state, action) => {
+      state.websocketConnected = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -425,5 +456,5 @@ const psCoreSlice = createSlice({
       });
   },
 });
-export const { updateLastRunAt } = psCoreSlice.actions;
+export const { updateLastRunAt, setWebSocketStatus } = psCoreSlice.actions;
 export default psCoreSlice.reducer;

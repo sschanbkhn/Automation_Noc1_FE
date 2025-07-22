@@ -94,26 +94,27 @@
 }
 
 // === Dòng thống kê ===
+// === Dòng thống kê (chung cho phần dưới card lớn) ===
 .statRow {
   display: flex;
   justify-content: space-between;
   margin-top: 1.25rem;
   font-size: 0.9rem;
   font-weight: 600;
-
-  .ok {
-    color: #28a745;
-  }
-
-  .nok {
-    color: #dc3545;
-  }
-
-  .total {
-    color: #6c757d;
-  }
 }
 
+// === Màu cho số OK / NOK / Total — dùng được cả trong subItem ===
+.ok {
+  color: #28a745;
+}
+
+.nok {
+  color: #dc3545;
+}
+
+.total {
+  color: #6c757d;
+}
 // === Chấm tròn nhỏ đại diện trạng thái ===
 .dot {
   display: inline-block;
@@ -138,3 +139,5 @@
 .secondaryDot {
   background-color: #6c757d;
 }
+
+

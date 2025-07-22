@@ -20,8 +20,12 @@ import { GenericHealthCheckView } from "../../../redux/Healthcheck/healthcheckSl
 import { SERVER_MEDIA } from "../../../config/constant";
 import snocStore, { RootState, AppDispatch } from "../../../store/snocStore";
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
+import WebSocketStatusBanner from "./../../../components/WebSocketStatusBanner"; // cập nhật path cho đúng
+import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
 
 const HealthcheckContent = () => {
+  useScheduleWebSocket(); // ✅ Gọi ở đây
+
   const dispatch = useDispatch();
   const { platforms, devices, loadingDevices } = useSelector(
     (state) => state.platformDevice
@@ -29,6 +33,7 @@ const HealthcheckContent = () => {
   const { healthchecknodes = [], loading = false } = useSelector(
     (state) => state.pscore ?? {}
   );
+  console.log("healthchecknodes", healthchecknodes);
 
   const [selectedPlatform, setSelectedPlatform] = useState("");
   const [selectedDevices, setSelectedDevices] = useState([]);
@@ -88,6 +93,8 @@ const HealthcheckContent = () => {
   return (
     <>
       <TopNavbarHealth />
+      <WebSocketStatusBanner />
+
       <Row>
         <Col sm={12}>
           <Card>
@@ -171,16 +178,8 @@ const HealthcheckContent = () => {
                         <td>{item.host}</td>
                         <td>{new Date(item.endtime).toLocaleString()}</td>
                         <td>{item.status}</td>
-                        <td>
-                          <ul className="mb-0 ps-3">
-                            {Array.isArray(item.notes) ? (
-                              item.notes.map((noteObj, idx) => (
-                                <li key={idx}>{noteObj.note}</li>
-                              ))
-                            ) : (
-                              <li>Không có ghi chú</li>
-                            )}
-                          </ul>
+                        <td style={{ whiteSpace: "pre-line" }}>
+                          {item.notes ? item.notes : ""}
                         </td>
                         <td>
                           {item.result_file ? (
