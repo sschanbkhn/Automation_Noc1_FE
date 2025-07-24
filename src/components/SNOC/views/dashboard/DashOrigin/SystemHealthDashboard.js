@@ -11,7 +11,8 @@ import TopNavbarHealth from "./TopNavbarHealth";
 import styles from "./../../../styles/SystemHealth.module.scss";
 import WebSocketStatusBanner from "./../../../components/WebSocketStatusBanner"; // cập nhật path cho đúng
 import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
-
+import Clock from "../../../components/Clock";
+import Alert from "../../../components/Alert/Alert";
 const statusColorClass = {
   Normal: "success",
   Warning: "warning",
@@ -36,14 +37,15 @@ const cardClassMapping = {
 };
 
 const SystemHealthContent = () => {
-    useScheduleWebSocket(); // ✅ Gọi ở đây
-  
+  useScheduleWebSocket(); // ✅ Gọi ở đây
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const {
     systemStatus = {},
     loading = false,
     platformSchema = {},
+    recentlyUpdated = {},
   } = useSelector((state) => state.pscore || {});
 
   useEffect(() => {
@@ -64,10 +66,20 @@ const SystemHealthContent = () => {
     <>
       <TopNavbarHealth />
       <WebSocketStatusBanner />
+      <Alert />
       <div className={styles.container}>
         <Row>
           <Col md={12}>
-            <h3 className={styles.pageTitle}>System Health Dashboard</h3>
+            <h3 className={styles.pageTitle}>
+              System Health Dashboard
+              <Clock
+                style={{
+                  float: "right",
+                  fontSize: "1rem",
+                  fontWeight: "normal",
+                }}
+              />
+            </h3>
             <Row>
               {Object.entries(platformSchema).map(([groupName, subsystems]) => {
                 const groupData = systemStatus[groupName] || {};
@@ -111,10 +123,23 @@ const SystemHealthContent = () => {
                                 const childStatus =
                                   childData.status || "Unknown";
 
+                                // ✅ Kiểm tra subsystem có vừa được cập nhật không
+                                const updatedRecently =
+                                  recentlyUpdated?.[groupName]?.[
+                                    subsystemLabel
+                                  ] &&
+                                  Date.now() -
+                                    recentlyUpdated[groupName][subsystemLabel] <
+                                    3000;
+
+                                const dynamicClass = updatedRecently
+                                  ? styles.updated
+                                  : "";
+
                                 return (
                                   <div
                                     key={subsystemLabel}
-                                    className={styles.subItem}
+                                    className={`${styles.subItem} ${dynamicClass}`}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       navigate(
@@ -157,9 +182,6 @@ const SystemHealthContent = () => {
                                         >
                                           {childData.nok_count || 0}
                                         </span>
-                                        {/* <span className="total">
-                                          {childData.total_devices || 0}
-                                        </span> */}
                                       </div>
                                     </div>
                                   </div>

@@ -140,4 +140,69 @@
   background-color: #6c757d;
 }
 
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    background-color: #fff6d1;
+  }
+  50% {
+    transform: scale(1.02);
+    background-color: #ffe27f;
+  }
+  100% {
+    transform: scale(1);
+    background-color: #fff6d1;
+  }
+}
 
+.updated {
+  animation: pulse 0.6s ease-in-out 3;
+  border-radius: 8px;
+}
+
+/* === Toast cảnh báo (đồng bộ màu sắc) === */
+.toast-success {
+  background-color: #28a745;
+  color: white;
+}
+
+.toast-warning {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.toast-danger {
+  background-color: #dc3545;
+  color: white;
+}
+
+.toast-info {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.toast .toast-body {
+  font-weight: 500;
+  padding: 0.75rem 1rem;
+}
+
+
+.toastSuccess {
+  background-color: #28a745;
+  color: white;
+}
+
+.toastWarning {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.toastDanger {
+  background-color: #dc3545;
+  color: white;
+}
+
+.toastInfo {
+  background-color: #17a2b8;
+  color: white;
+}

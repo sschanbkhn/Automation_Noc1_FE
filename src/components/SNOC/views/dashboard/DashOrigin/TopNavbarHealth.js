@@ -11,14 +11,16 @@ const TopNavbar = () => {
   return (
     <Navbar bg="primary" variant="dark" expand="lg">
       <Container>
-        <Navbar.Brand className="fw-bold">System Health Automation</Navbar.Brand>
+        <Navbar.Brand className="fw-bold">
+          System Health Automation
+        </Navbar.Brand>
         <Nav className="ms-auto">
           <NavLink to="/app/dashboard/origin" className={getLinkClass}>
             Dashboard
           </NavLink>
-          {/* <NavLink to="/app/dashboard/origin" className={getLinkClass}>
+          <NavLink to="/healthcheck/devices" className={getLinkClass}>
             Devices
-          </NavLink> */}
+          </NavLink>
           <NavLink to="/healthcheck/schedule" className={getLinkClass}>
             Schedule
           </NavLink>

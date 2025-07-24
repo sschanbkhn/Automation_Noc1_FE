@@ -81,15 +81,12 @@ export const toggleScheduleEnabled = createAsyncThunk(
       );
       return { id, enabled };
     } catch (error) {
-      const message =
-        error?.response?.data?.detail || "Lỗi khi bật/tắt lịch";
+      const message = error?.response?.data?.detail || "Lỗi khi bật/tắt lịch";
       dispatch(showTemporaryAlert({ message, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
   }
 );
-
-
 
 // Xóa lịch
 export const deleteHealthcheckSchedule = createAsyncThunk(
@@ -302,6 +299,7 @@ const psCoreSlice = createSlice({
     subsystemStatus: {}, // từng subsystem trong từng group
     platformSchema: {},
     websocketConnected: true, // ✅ trạng thái kết nối WebSocket
+    recentlyUpdated: {}, // Lưu thông tin các hệ thống vừa cập nhật
   },
   reducers: {
     updateLastRunAt: (state, action) => {
@@ -314,6 +312,54 @@ const psCoreSlice = createSlice({
     },
     setWebSocketStatus: (state, action) => {
       state.websocketConnected = action.payload;
+    },
+    updateSystemStatusPatch: (state, action) => {
+      const { group, subsystem, data } = action.payload;
+
+      // Nếu group chưa có thì khởi tạo
+      if (!state.systemStatus[group]) {
+        state.systemStatus[group] = {
+          status: "Unknown",
+          children: {},
+          ok_count: 0,
+          nok_count: 0,
+          total_devices: 0,
+        };
+      }
+
+      if (!state.systemStatus[group].children) {
+        state.systemStatus[group].children = {};
+      }
+
+      // ✅ Gộp (merge) thông tin mới với thông tin cũ
+      const oldData = state.systemStatus[group].children[subsystem] || {};
+      state.systemStatus[group].children[subsystem] = {
+        ...oldData,
+        ...data,
+      };
+
+      // ✅ Tính lại tổng theo group sau khi cập nhật 1 subsystem
+      const children = state.systemStatus[group].children;
+      let ok = 0,
+        nok = 0,
+        total = 0;
+
+      for (const key in children) {
+        ok += children[key].ok_count || 0;
+        nok += children[key].nok_count || 0;
+        total += children[key].total_devices || 0;
+      }
+
+      state.systemStatus[group].ok_count = ok;
+      state.systemStatus[group].nok_count = nok;
+      state.systemStatus[group].total_devices = total;
+
+      state.systemStatus[group].status =
+        nok > 0 ? "Warning" : ok > 0 ? "Normal" : "Unknown";
+
+      // ✅ Ghi nhận thời điểm cập nhật
+      if (!state.recentlyUpdated[group]) state.recentlyUpdated[group] = {};
+      state.recentlyUpdated[group][subsystem] = Date.now();
     },
   },
   extraReducers: (builder) => {
@@ -456,5 +502,6 @@ const psCoreSlice = createSlice({
       });
   },
 });
-export const { updateLastRunAt, setWebSocketStatus } = psCoreSlice.actions;
+export const { updateLastRunAt, setWebSocketStatus, updateSystemStatusPatch } =
+  psCoreSlice.actions;
 export default psCoreSlice.reducer;

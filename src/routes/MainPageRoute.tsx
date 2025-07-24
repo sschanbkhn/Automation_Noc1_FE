@@ -59,6 +59,8 @@ import DeclareNumberForm from "components/SNOC/views/forms/sbc/DeclareNumberForm
 import RoutingDeclarationForm from "components/SNOC/views/forms/sbc/RoutingDeclarationForm";
 import RequestHistoryTable from "components/SNOC/views/forms/sbc/RequestHistoryTable";
 import APNConfigPanel from "components/SNOC/views/forms/dns/APNConfigPanel";
+import HostConfigPanel from "components/SNOC/views/forms/hosts/HostConfigPanel";
+
 interface Props {
   Apps: any;
 }
@@ -194,7 +196,7 @@ const MainPageRoute = (props: Props) => {
       <Route key="404" path="/page404" element={<Page404 />} />
       <Route path="/schedule-trigger-form" element={<ScheduleTriggerForm />} />
       <Route path="/app/dashboard/origin" element={<DashOrigin />} />
-      <Route path="/healthcheck/devices" element={<DashOrigin />} />
+      <Route path="/healthcheck/devices" element={<HostConfigPanel />} />
       <Route path="/healthcheck/schedule" element={<Schedule />} />
       <Route path="/healthcheck/checks" element={<Healthcheck />} />
       <Route path="/healthcheck/history" element={<HistoricalReporting />} />

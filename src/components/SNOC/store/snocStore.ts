@@ -4,6 +4,7 @@ import psCoreReducer from "../redux/Healthcheck/healthcheckSlice";
 import alertReducer from "../redux/Alert/alertSlice";
 import platformDeviceReducer from "../redux/Healthcheck/platformDeviceSlice";
 import dnsReducer from "../redux/Dns/dnsSlice";
+import hostsReducer from "../redux/Hosts/hostsSlice";
 const snocStore = configureStore({
   reducer: {
     snoc: snocReducer,
@@ -11,6 +12,7 @@ const snocStore = configureStore({
     alert: alertReducer,
     platformDevice: platformDeviceReducer,
     dns: dnsReducer,
+    hosts: hostsReducer,
   },
 });
 

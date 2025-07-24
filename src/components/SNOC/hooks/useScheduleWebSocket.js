@@ -3,8 +3,9 @@ import { useDispatch } from "react-redux";
 import {
   updateLastRunAt,
   setWebSocketStatus,
+  updateSystemStatusPatch, // ✅ Thêm action mới
 } from "../redux/Healthcheck/healthcheckSlice";
-
+import { showTemporaryAlert } from "../redux/Alert/alertSlice"; // ✅ Thêm action mới
 const WS_URL = "ws://10.155.43.201:8000/ws/healthcheck/";
 const RECONNECT_INTERVAL = 5000;
 
@@ -32,14 +33,29 @@ const useScheduleWebSocket = () => {
 
     socket.onmessage = (event) => {
       if (!isMountedRef.current) return;
+
       try {
         const data = JSON.parse(event.data);
+        console.log("📥 WebSocket message:", data); // ✅ Debug mọi gói tin
+
+        // ✅ Cập nhật last_run_at của schedule
         if (data.schedule_name && data.last_run_at) {
           dispatch(
             updateLastRunAt({
               name: data.schedule_name,
               status: data.status,
               last_run_at: data.last_run_at,
+            })
+          );
+        }
+
+        // ✅ Cập nhật dashboard subsystem (patch update)
+        if (data.type === "system_status_patch" && data.payload) {
+          dispatch(updateSystemStatusPatch(data.payload));
+          dispatch(
+            showTemporaryAlert({
+              type: "success",
+              message: `🔁 Subsystem "${data.payload.subsystem}" trong nhóm "${data.payload.group}" vừa được cập nhật.`,
             })
           );
         }
@@ -58,7 +74,7 @@ const useScheduleWebSocket = () => {
     };
 
     socket.onerror = () => {
-      socket.close();
+      socket.close(); // Kích hoạt onclose để reconnect
     };
   };
 
@@ -72,7 +88,7 @@ const useScheduleWebSocket = () => {
     connect();
 
     return () => {
-      isMountedRef.current = false; // ✅ hủy flag khi unmount
+      isMountedRef.current = false;
       if (socketRef.current) socketRef.current.close();
       if (timerRef.current) clearTimeout(timerRef.current);
     };

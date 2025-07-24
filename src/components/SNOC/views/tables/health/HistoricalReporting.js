@@ -84,29 +84,33 @@ const HistoricalReportingContent = () => {
 
       <React.Fragment>
         <Row>
-          <Col md={12} className="mb-3">
-            <Form onSubmit={handleSearch} className="d-flex">
-              <Form.Control
-                type="text"
-                placeholder="Nhập tên node (host)"
-                value={host}
-                onChange={(e) => setHost(e.target.value)}
-                className="me-2"
-              />
-              <Button variant="primary" type="submit">
-                Tìm kiếm
-              </Button>
-            </Form>
-          </Col>
+          <Col md={12} className="mb-3"></Col>
         </Row>
 
         <Row>
           <Col md={12}>
             <Card>
-              <Card.Header>
-                <Card.Title as="h5">
+              <Card.Header className="d-flex justify-content-between align-items-center flex-wrap">
+                <Card.Title as="h5" className="mb-0">
                   Historical Reporting - Danh sách bản ghi healthcheck
                 </Card.Title>
+                <Form
+                  onSubmit={handleSearch}
+                  className="d-flex align-items-center ms-3"
+                  style={{ flexWrap: "nowrap", whiteSpace: "nowrap" }}
+                >
+                  <Form.Control
+                    type="text"
+                    placeholder="Nhập tên node (host)"
+                    value={host}
+                    onChange={(e) => setHost(e.target.value)}
+                    className="me-2"
+                    style={{ width: "200px" }}
+                  />
+                  <Button variant="primary" type="submit" className="px-3">
+                    Tìm kiếm
+                  </Button>
+                </Form>
               </Card.Header>
               <Card.Body>
                 {loading ? (

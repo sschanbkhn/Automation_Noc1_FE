@@ -231,16 +231,8 @@ const HealthcheckTable = () => {
                           <td>{item.host}</td>
                           <td>{new Date(item.starttime).toLocaleString()}</td>
                           <td>{item.status}</td>
-                          <td>
-                            <ul className="mb-0 ps-3">
-                              {Array.isArray(item.notes) ? (
-                                item.notes.map((noteObj, idx) => (
-                                  <li key={idx}>{noteObj.note}</li>
-                                ))
-                              ) : (
-                                <li>Không có ghi chú</li>
-                              )}
-                            </ul>
+                          <td style={{ whiteSpace: "pre-line" }}>
+                            {item.notes ? item.notes : ""}
                           </td>
                           <td>
                             {item.result_file ? (

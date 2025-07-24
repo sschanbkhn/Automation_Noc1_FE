@@ -18,7 +18,7 @@ import snocStore from "../../../store/snocStore";
 import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
 import WebSocketStatusBanner from "./../../../components/WebSocketStatusBanner"; // cập nhật path cho đúng
-
+import dayjs from "dayjs";
 const StatusBadge = ({ status }) => {
   const map = {
     success: { label: "Thành công", color: "success", icon: "✅" },
@@ -358,7 +358,31 @@ const SchedulekContent = () => {
                             {s.enabled ? "🟢 Bật" : "🔴 Tắt"}
                           </Button>
                         </td>
-                        <td>{s.last_run_at || "Chưa chạy"}</td>
+                        <td>
+                          {s.last_run_at
+                            ? (() => {
+                                const d = new Date(s.last_run_at);
+                                const day = String(d.getDate()).padStart(
+                                  2,
+                                  "0"
+                                );
+                                const month = String(d.getMonth() + 1).padStart(
+                                  2,
+                                  "0"
+                                ); // tháng bắt đầu từ 0
+                                const year = d.getFullYear();
+                                const hours = String(d.getHours()).padStart(
+                                  2,
+                                  "0"
+                                );
+                                const minutes = String(d.getMinutes()).padStart(
+                                  2,
+                                  "0"
+                                );
+                                return `${day}/${month}/${year} ${hours}:${minutes}`;
+                              })()
+                            : "Chưa chạy"}
+                        </td>
                         <td>
                           <StatusBadge status={s.last_run_status} />
                         </td>
