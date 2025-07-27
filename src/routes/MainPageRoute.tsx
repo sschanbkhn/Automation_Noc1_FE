@@ -64,6 +64,9 @@ import ConfigReport from "components/RNOC1/R009";
 
 import HomeSleepingCell from "components/RNOC1/R005-SleepingCell/R005HomeSleepingCell";
 
+import R005Monitor from '../components/RNOC1/R005-SleepingCell/Monitor/R005Monitor';
+import R005Configuration from '../components/RNOC1/R005-SleepingCell/Configuration/R005Configuration';
+
 
 
 
@@ -287,6 +290,10 @@ const IsMenuOfUser = (menu: any) => {
       />
 
       
+
+<Route path="/sleeping-cell" element={<HomeSleepingCell />} />
+<Route path="/sleeping-cell/monitor" element={<R005Monitor />} />           // ← ADD THIS
+<Route path="/sleeping-cell/configuration" element={<R005Configuration />} /> // ← ADD THIS
 
 
 
