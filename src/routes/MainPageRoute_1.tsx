@@ -1,9 +1,13 @@
+
+
+import HomeSleepingCell from "components/RNOC1/R005-SleepingCell/R005HomeSleepingCell";
+
+
 import React, { useEffect, useState } from "react";
-
-
-
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { connect } from "react-redux";
+
+
 import Home from "components/Home";
 import { Config } from "components/System";
 import { Account, Organ, Permission, Role } from "components/User";
@@ -34,6 +38,8 @@ import {
 } from "components/Network";
 import MapComponent from "components/Network/LinksMaps/Map";
 import Charts from "uielements/charts/Charts";
+
+
 import CenterDashboard from "../DashboardAutomation/CenterDashboard";
 import RoomDashboard from "../DashboardAutomation/RoomDashboard";
 import DashboardRnocSummary from "../DashboardAutomation/DashboardRnoc/DashboardRnocSummary";
@@ -61,50 +67,11 @@ import DeclareNumberForm from "components/SNOC/views/forms/sbc/DeclareNumberForm
 import RoutingDeclarationForm from "components/SNOC/views/forms/sbc/RoutingDeclarationForm";
 import RequestHistoryTable from "components/SNOC/views/forms/sbc/RequestHistoryTable";
 import ConfigReport from "components/RNOC1/R009";
-
-import HomeSleepingCell from "components/RNOC1/R005-SleepingCell/R005HomeSleepingCell";
-
-
-
-
-
-
 interface Props {
   Apps: any;
 }
 
 const MainPageRoute = (props: Props) => {
-
-
-  
-  useEffect(() => {
-  const userInfo = {
-    UserName: "admin",
-    RoleName: "Admin", 
-    Role: "admin",
-    Menus: [
-      "Home", "User", "System", "Category", "NetworkRnoc", "NetworkSnoc", 
-      "NetworkInoc", "NetworkTnoc", "Anm", "Organ", "Account", "Role", 
-      "Permission", "Config", "CategoryStatus", "CategoryAlarmCode", 
-      "CategoryAlarmLevel", "CategoryAlarmType", "DashboardRnoc", 
-      "DashboardRnocRoom", "DashboardR001", "CableManagement", 
-      "ConfigurationLogs", "CurenAlarm", "HistoryCurenAlarm", 
-      "DevicePorts", "ConfigReport", "hc-dashboard", "hc-dashboard-dns", 
-      "hc-dashboard-sbc", "LinksMaps", "ucppoe", "anm_uc1", "TestSleeping"
-    ]
-  };
-  
-  // Set cả 2 cookies
-  Cookie.setCookie("UserInfo", JSON.stringify(userInfo), 7);
-  Cookie.setCookie("Token", "fake-token-bypass", 7); // ← Thêm dòng này!
-  
-  console.log("✅ Full auth bypass set");
-}, []);
-
-
-
-  
-
   const GetPage = (code: String) => {
     switch (code) {
       case "Home":
@@ -180,21 +147,6 @@ const MainPageRoute = (props: Props) => {
         return <DnsLacracrnc />;
       case "hc-dashboard-sbc":
         return <SbcDashboardWithNavbar />;
-
-      case "R005SleepingCellManagement":  // ← Match với code trong menu
-         return <HomeSleepingCell />;
-
-
-
-
-
-
-
-
-
-
-
-
       default:
         return <Page404 />;
     }
@@ -239,16 +191,20 @@ const MainPageRoute = (props: Props) => {
     }
     return false;
   };
-*/
-const IsMenuOfUser = (menu: any) => {
-  return true; // Show tất cả menu
-};
+  */
 
+const IsMenuOfUser = (menu: any) => {
+    return true; // Bypass all menu checks for development
+};
 
   return (
     <Routes>
-
+       {/* 
+    <React.Fragment>
       {RouteRender()}
+    </React.Fragment>
+*/}
+
       <Route path="/dashboard/field/:fieldName" element={<RoomDashboard />} />
       <Route path="/dashboard" element={<CenterDashboard />} />
       <Route path="/dashboard/room/:roomId" element={<RoomDashboard />} />
@@ -272,6 +228,10 @@ const IsMenuOfUser = (menu: any) => {
       <Route path="/dns/tacs" element={<TACConfigPanel />} />
       <Route path="/dns/lacracrnc" element={<DnsLacracrnc />} />
       <Route path="/sbc/dashboard" element={<SbcDashboardWithNavbar />} />
+
+     
+
+
       <Route
         path="/sbc/CreateConnectionForm"
         element={<CreateConnectionForm />}
@@ -286,14 +246,9 @@ const IsMenuOfUser = (menu: any) => {
         element={<RequestHistoryTable />}
       />
 
-      
 
-
-
-
-
-
-
+// Thêm vào cuối <Routes>, trước </Routes>
+<Route path="/test-sleeping-cell" element={<HomeSleepingCell />} />
 
     </Routes>
   );
@@ -301,6 +256,10 @@ const IsMenuOfUser = (menu: any) => {
 const mapState = ({ ...state }) => ({
   Apps: state.apps,
 });
+
+      // <Route path="/test-sleeping-cell" element={<div>Simple Test Works!</div>} />
+      // <Route path="/test-sleeping-cell" element={<div><h1>Simple Test Works!</h1></div>} />
+      
 const mapDispatchToProps = {};
 
 export default connect(mapState, mapDispatchToProps)(MainPageRoute);

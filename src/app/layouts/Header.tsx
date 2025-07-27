@@ -127,7 +127,12 @@ const Header = (props: Props) => {
     const GoToPageSupport = () => {
       navigate('/support'); 
     }
-    let userInfo:IUserInfo = JSON.parse(Cookie.getCookie("UserInfo"));    
+    // let userInfo:IUserInfo = JSON.parse(Cookie.getCookie("UserInfo"));    
+let userInfo:IUserInfo = Cookie.getCookie("UserInfo") ? 
+    JSON.parse(Cookie.getCookie("UserInfo")) : 
+    { UserName: "Admin", RoleName: "Administrator" };
+
+
     return(
       <header id="header" className="header fixed-top d-flex align-items-center">
         <div className="d-flex align-items-center justify-content-between">

@@ -121,9 +121,9 @@
           "icon": "bi bi-grid"
         },
         {
-          "code": "ConfigurationLogs",
-          "name": "Tự động thực hiện reset cell",
-          "url": "/configuration-logs",
+          "code": "R005SleepingCellManagement",
+          "name": "R005-Sleeping Cell Management",
+          "url": "/R005-Sleeping-Cell",
           "icon": "bi bi-grid"
         },
         {
