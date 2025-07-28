@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { HashRouter as Router, Routes, Route } from "react-router-dom";
 import { connect } from "react-redux";
 import Home from "components/Home";
 import { Config } from "components/System";
@@ -38,6 +38,7 @@ import DashboardRnocRoom from "../DashboardAutomation/DashboardRnoc/DashboardRno
 import ScheduleTriggerForm from "components/RNOC1/R009";
 import Anm_uc1 from "components/ANM/UC1";
 import DashboardR001 from "components/RNOC1/R001";
+import DashboardR007 from "components/RNOC1/R009"
 import Ucppoe from "components/INOC1/I003";
 import NornirPlatformView from "components/SNOC/components/NornirPlatformView";
 import DashOrigin from "components/SNOC/views/dashboard/DashOrigin/SystemHealthDashboard";
@@ -90,6 +91,18 @@ const MainPageRoute = (props: Props) => {
         return <ConfigReport />;
       case "DashboardR001":
         return <DashboardR001 />;
+      case "DashboardR002":
+        return <DashboardR001 />; // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
+      case "DashboardR003":
+        return <DashboardR001 />; // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
+      case "DashboardR004":
+        return <DashboardR001 />; // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
+      case "DashboardR005":
+        return <DashboardR001 />; // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
+      case "DashboardR006":
+        return <DashboardR001 />; // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
+      case "DashboardR007":
+        return <DashboardR007 />; // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
       case "CableManagement":
         return <CableManagement />;
       case "ConfigurationLogs":
