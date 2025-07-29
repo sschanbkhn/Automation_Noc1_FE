@@ -25,8 +25,8 @@ const NetworkLinksList = (props: Props) => {
     const refDynamicTable = useRef<any>();
     const [dialogVisible, setDialogVisible] = useState(false);
     useEffect(() => {        
-        Actions.GetItems(dispatch); 
-        Actions.GetItem_Device(dispatch);  
+        // Actions.GetItems(dispatch); 
+        // Actions.GetItem_Device(dispatch);  
         // Actions.GetItem_DevicePort(dispatch);     
     }, [])
     const ActionEvents = {

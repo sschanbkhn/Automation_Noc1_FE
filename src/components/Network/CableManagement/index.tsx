@@ -25,9 +25,9 @@ const CableManagementList = (props: Props) => {
     const refDynamicTable = useRef<any>();
     const [dialogVisible, setDialogVisible] = useState(false);
     useEffect(() => {        
-        Actions.GetItems(dispatch); 
-        Actions.GetItem_Device(dispatch);  
-        Actions.GetItem_NetworkLinks(dispatch);     
+        // Actions.GetItems(dispatch); 
+        // Actions.GetItem_Device(dispatch);  
+        // Actions.GetItem_NetworkLinks(dispatch);     
     }, [])
     const ActionEvents = {
         onClickCreate: () => {

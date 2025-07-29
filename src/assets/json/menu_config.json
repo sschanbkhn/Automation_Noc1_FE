@@ -115,39 +115,39 @@
           "icon": "bi bi-bar-chart"
         },
         {
-          "code": "CableManagement",
+          "code": "DashboardR002",
           "name": "Tối ưu cell di động",
-          "url": "/cable-management",
+          "url": "/dashboardrnoc2",
           "icon": "bi bi-grid"
         },
         {
-          "code": "ConfigurationLogs",
+          "code": "DashboardR003",
           "name": "Tự động thực hiện reset cell",
-          "url": "/configuration-logs",
+          "url": "/dashboardrnoc3",
           "icon": "bi bi-grid"
         },
         {
-          "code": "CurenAlarm",
+          "code": "DashboardR004",
           "name": "Phát hiện bất thường site 0",
-          "url": "/curen-alarm",
+          "url": "/dashboardrnoc4",
           "icon": "bi bi-grid"
         },
         {
-          "code": "HistoryCurenAlarm",
+          "code": "DashboardR005",
           "name": "Tự động khai báo trạm 5G",
-          "url": "/history-curen-alarm",
+          "url": "/dashboardrnoc5",
           "icon": "bi bi-grid"
         },
         {
-          "code": "DevicePorts",
+          "code": "DashboardR006",
           "name": "Công cụ tiết kiệm điện",
-          "url": "/device-ports",
+          "url": "/dashboardrnoc6",
           "icon": "bi bi-grid"
         },
         {
-          "code": "ConfigReport",
+          "code": "DashboardR007",
           "name": "Công cụ tự động báo cáo cấu hình",
-          "url": "/config-report",
+          "url": "/dashboardrnoc7",
           "icon": "bi bi-grid"
         }
       ]
