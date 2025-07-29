@@ -60,7 +60,7 @@ import RequestHistoryTable from "components/SNOC/views/forms/sbc/RequestHistoryT
 import ConfigReport from "components/RNOC1/R009";
 import ClearThuebaoDaphien from "components/INOC1/I003";
 import LspQuocte from "components/INOC1/I004";
-import DataLspQuocte from "components/INOC1/I004.1";
+import DataLspQuocte from "components/INOC1/I004_1";
 
 interface Props {
   Apps: any;
