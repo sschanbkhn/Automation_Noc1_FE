@@ -58,6 +58,10 @@ import DeclareNumberForm from "components/SNOC/views/forms/sbc/DeclareNumberForm
 import RoutingDeclarationForm from "components/SNOC/views/forms/sbc/RoutingDeclarationForm";
 import RequestHistoryTable from "components/SNOC/views/forms/sbc/RequestHistoryTable";
 import ConfigReport from "components/RNOC1/R009";
+import ClearThuebaoDaphien from "components/INOC1/I003";
+import LspQuocte from "components/INOC1/I004";
+import DataLspQuocte from "components/INOC1/I004.1";
+
 interface Props {
   Apps: any;
 }
@@ -138,6 +142,12 @@ const MainPageRoute = (props: Props) => {
         return <DnsLacracrnc />;
       case "hc-dashboard-sbc":
         return <SbcDashboardWithNavbar />;
+    case "ClearThuebaoDaphien":
+        return <ClearThuebaoDaphien />;
+    case "LspQuocte":
+        return <LspQuocte />;
+    case "DataLspQuocte":
+        return <DataLspQuocte />;
       default:
         return <Page404 />;
     }
