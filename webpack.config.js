@@ -16,18 +16,24 @@ const config = {
   devtool: "inline-source-map",
   mode: devMode ? "development" : "production",
   devServer: {
-    contentBase: resolve(__dirname, "dist"),
-    compress: true,
+    host: "0.0.0.0",
     port: 80,
+    compress: true,
     historyApiFallback: true,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+    },
+    contentBase: resolve(__dirname, "public"),
+    watchContentBase: true,
+    disableHostCheck: true,
   },
   entry: {
     index: "./src/index.tsx",
   },
   output: {
-    publicPath: devMode ? "http://localhost:80/" : "",
     path: resolve(__dirname, "dist"),
     filename: devMode ? "[name].js" : "javascripts/[name].js",
+    publicPath: "/", // ✅ Quan trọng để truy cập từ IP
   },
   resolve: {
     extensions: [".js", ".jsx", ".ts", ".tsx"],

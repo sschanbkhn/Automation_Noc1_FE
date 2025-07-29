@@ -222,7 +222,15 @@ const HostManagerContent = () => {
                             <Button
                               variant="danger"
                               size="sm"
-                              onClick={() => dispatch(deleteHost(d.name))}
+                              onClick={() => {
+                                if (
+                                  window.confirm(
+                                    `Bạn có chắc muốn xoá thiết bị "${d.name}" không?`
+                                  )
+                                ) {
+                                  dispatch(deleteHost(d.name));
+                                }
+                              }}
                             >
                               🗑️ Xoá
                             </Button>

@@ -60,7 +60,8 @@ import RoutingDeclarationForm from "components/SNOC/views/forms/sbc/RoutingDecla
 import RequestHistoryTable from "components/SNOC/views/forms/sbc/RequestHistoryTable";
 import APNConfigPanel from "components/SNOC/views/forms/dns/APNConfigPanel";
 import HostConfigPanel from "components/SNOC/views/forms/hosts/HostConfigPanel";
-
+import KPIChartDashboard from "components/SNOC/views/forms/kpi/KPIChartDashboard";
+import KPISelectorPage from "components/SNOC/views/forms/kpi/KPISelectorPage";
 interface Props {
   Apps: any;
 }
@@ -200,6 +201,8 @@ const MainPageRoute = (props: Props) => {
       <Route path="/healthcheck/schedule" element={<Schedule />} />
       <Route path="/healthcheck/checks" element={<Healthcheck />} />
       <Route path="/healthcheck/history" element={<HistoricalReporting />} />
+      <Route path="/healthcheck/kpi" element={<KPIChartDashboard />} />
+      <Route path="/kpi/:system/:subsystem" element={<KPISelectorPage />} />
       {/* <Route path="/healthcheck/ps-core" element={<PSCoreTable />} />
       <Route path="/healthcheck/cs-core" element={<CsTable />} />
       <Route path="/healthcheck/signal" element={<SignalTable />} />

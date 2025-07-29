@@ -2,6 +2,53 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import snocApi from "../../api/snocApiWithAutoToken";
 import { showTemporaryAlert } from "../Alert/alertSlice";
 
+// ######################### kpi
+
+export const fetchAvailableKPIs = createAsyncThunk(
+  "healthcheck/fetchAvailableKPIs",
+  async ({ selectedPlatform }, { rejectWithValue }) => {
+    try {
+      const response = await snocApi.get(
+        `/nornirps/kpi/list/?platform=${selectedPlatform}`
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error?.response?.data || {});
+    }
+  }
+);
+
+export const fetchKPIChartData = createAsyncThunk(
+  "pscore/fetchKPIChartData",
+  async (
+    { selectedPlatform, selectedDevice, selectedKPI, startDate, endDate },
+    { rejectWithValue }
+  ) => {
+    try {
+      const params = new URLSearchParams();
+      params.append("platform", selectedPlatform);
+      params.append("kpi", selectedKPI);
+      params.append("start", startDate);
+      params.append("end", endDate);
+      if (selectedDevice && selectedDevice.length > 0) {
+        for (const d of selectedDevice) {
+          params.append("device", d);
+        }
+      }
+      const url = `/nornirps/kpi/query/?${params.toString()}`;
+      console.log("[fetchKPIChartData] Request URL:", url);
+      const response = await snocApi.get(url);
+      console.log("[fetchKPIChartData] Response Data:", response.data);
+      return { kpi: selectedKPI, data: response.data };
+    } catch (error) {
+      console.error("[fetchKPIChartData] Error:", error);
+      return rejectWithValue(error?.response?.data || {});
+    }
+  }
+);
+
+// ##########################end kpi
+
 export const fetchPlatformGroupSchema = createAsyncThunk(
   "systemHealth/fetchPlatformGroupSchema",
   async (_, { rejectWithValue }) => {
@@ -300,6 +347,8 @@ const psCoreSlice = createSlice({
     platformSchema: {},
     websocketConnected: true, // ✅ trạng thái kết nối WebSocket
     recentlyUpdated: {}, // Lưu thông tin các hệ thống vừa cập nhật
+    availableKPIs: [], // ✅ Danh sách KPI có sẵn
+    kpiChartData: {}, // Updated to object keyed by KPI
   },
   reducers: {
     updateLastRunAt: (state, action) => {
@@ -499,6 +548,34 @@ const psCoreSlice = createSlice({
       .addCase(fetchPlatformGroupSchema.rejected, (state) => {
         state.loading = false;
         state.platformSchema = {};
+      })
+
+      // ############# kpi
+      .addCase(fetchAvailableKPIs.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchAvailableKPIs.fulfilled, (state, action) => {
+        state.availableKPIs =
+          action.payload && Array.isArray(action.payload.kpis)
+            ? action.payload
+            : { kpis: [] };
+      })
+      .addCase(fetchAvailableKPIs.rejected, (state) => {
+        state.loading = false;
+        state.availableKPIs = [];
+      })
+      .addCase(fetchKPIChartData.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchKPIChartData.fulfilled, (state, action) => {
+        const { kpi, data } = action.payload;
+        state.loading = false;
+        state.kpiChartData[kpi] = data;
+      })
+      .addCase(fetchKPIChartData.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message;
       });
   },
 });
