@@ -78,7 +78,7 @@ const R005Header: React.FC = () => {
               textShadow: '0 2px 4px rgba(0,0,0,0.2)',
               letterSpacing: '0.02em'
             }}>
-              R005 - Sleeping Cell Management
+              R007 - Sleeping Cell Management
             </h1>
             <p style={{
               color: 'rgba(255, 255, 255, 0.9)',

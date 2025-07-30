@@ -586,10 +586,7 @@ const R005Tabs: React.FC = () => {
         <div style={{
           padding: '24px 32px',
           borderBottom: '1px solid #e2e8f0',
-          // background: 'linear-gradient(135deg, #fafbfc 0%, #f1f5f9 100%)'
-background: 'white'
-
-
+          background: 'linear-gradient(135deg, #fafbfc 0%, #f1f5f9 100%)'
         }}>
           <div style={{
             display: 'flex',
@@ -599,17 +596,17 @@ background: 'white'
             <div style={{
               width: '56px',
               height: '56px',
-              borderRadius: '16px',
-              background: '#2563eb',
+              borderRadius: '14px',
+              background: `linear-gradient(135deg, ${tabs.find(t => t.id === activeTab)?.color}15, ${tabs.find(t => t.id === activeTab)?.color}08)`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)'
+              border: `2px solid ${tabs.find(t => t.id === activeTab)?.color}25`
             }}>
-              {createIcon(FiBarChart, { 
-                size: 24,
-                color: 'white',
-                strokeWidth: 2.5
+              {createIcon(getIconComponent(tabs.find(t => t.id === activeTab)?.icon || 'FiBarChart'), { 
+                size: 28,
+                color: tabs.find(t => t.id === activeTab)?.color,
+                strokeWidth: 2
               })}
             </div>
             <div>
@@ -619,14 +616,16 @@ background: 'white'
                 fontWeight: 'bold',
                 color: '#1a202c'
               }}>
-                Sleeping Cell - Dashboard
+                R005 - {tabs.find(t => t.id === activeTab)?.label}
               </h2>
               <p style={{
                 margin: '4px 0 0 0',
                 color: '#64748b',
                 fontSize: '14px'
               }}>
-                Sleeping cell detection and recovery overview
+                {activeTab === 'dashboard' && 'Sleeping cell detection and recovery overview'}
+                {activeTab === 'monitor' && 'Real-time monitoring and system status'}
+                {activeTab === 'configuration' && 'System settings and automation rules'}
               </p>
             </div>
           </div>

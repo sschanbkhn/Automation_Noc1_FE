@@ -22,13 +22,6 @@ const Dashboard: React.FC<DashboardProps> = ({
     manual: 25
   };
 
-
-const maxValue = 34;
-  const total = 34;
-  const resolved = 24;
-  const manual = 10;
-
-
   const provinces = [
     { name: 'HÀ NỘI', icon: '🏛️', cells: 45, resolved: 38, manual: 7, rate: 84 },
     { name: 'HẢI PHÒNG', icon: '🚢', cells: 32, resolved: 28, manual: 4, rate: 88 },
@@ -772,468 +765,11 @@ const maxValue = 34;
   </Card>
 </div>
 
-{/* ZONE 4: Technical Summary - Redesigned */}
-<div className="mb-3">
-  <Card className="border-0 shadow-lg" style={{
-    borderRadius: '16px',
-    overflow: 'hidden'
-  }}>
-    {/* Gradient Border Effect */}
-    <div style={{
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      padding: '2px',
-      borderRadius: '16px'
-    }}>
-      <Card.Body className="p-4" style={{
-        background: 'white',
-        borderRadius: '14px'
-      }}>
-        {/* Header Section */}
-        <div className="d-flex align-items-center mb-4 position-relative">
-          <div className="d-flex align-items-center">
-            <div style={{
-              width: '56px',
-              height: '56px',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              borderRadius: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: '16px',
-              boxShadow: '0 8px 24px rgba(102, 126, 234, 0.25)'
-            }}>
-              <span style={{fontSize: '1.8rem'}}>🔧</span>
-            </div>
-            <div>
-              <h5 className="fw-bold mb-1" style={{color: '#1a202c'}}>
-                Technical Execution Results
-              </h5>
-              <small className="text-muted">Automation Process Summary</small>
-            </div>
-          </div>
-          
-          {/* Success Badge */}
-          <div className="ms-auto">
-            <span className="badge" style={{
-              background: 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)',
-              color: 'white',
-              padding: '8px 16px',
-              borderRadius: '20px',
-              fontSize: '0.75rem',
-              fontWeight: '600',
-              boxShadow: '0 4px 12px rgba(72, 187, 120, 0.3)'
-            }}>
-              All Systems Operational
-            </span>
-          </div>
-        </div>
-        
-        <Row className="g-3">
-          {/* Connectivity Test Card */}
-          <Col xl={6} lg={6}>
-            <div className="h-100 p-3 rounded-3 position-relative" style={{
-              background: '#f8fafb',
-              border: '1px solid #e9ecef',
-              transition: 'all 0.3s ease',
-              cursor: 'pointer'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-4px)';
-              e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)';
-              e.currentTarget.style.borderColor = '#dee2e6';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
-              e.currentTarget.style.borderColor = '#e9ecef';
-            }}>
-              {/* Top accent bar */}
-              <div style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                height: '3px',
-                background: 'linear-gradient(90deg, #48bb78, #38a169)',
-                borderRadius: '3px 3px 0 0'
-              }} />
-              
-              <div className="d-flex align-items-start">
-                <div style={{
-                  width: '44px',
-                  height: '44px',
-                  background: 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)',
-                  borderRadius: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  boxShadow: '0 4px 12px rgba(72, 187, 120, 0.2)'
-                }}>
-                  <span style={{fontSize: '1.3rem'}}>🔗</span>
-                </div>
-                <div className="ms-3 flex-grow-1">
-                  <h6 className="text-uppercase mb-2" style={{
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
-                    letterSpacing: '0.5px',
-                    color: '#718096'
-                  }}>
-                    Connectivity Test
-                  </h6>
-                  <div className="d-flex align-items-baseline mb-2">
-                    <span className="fw-bold me-2" style={{fontSize: '1.75rem', color: '#1a202c'}}>
-                      142/150
-                    </span>
-                    <span className="text-muted" style={{fontSize: '0.875rem'}}>
-                      sites (95%)
-                    </span>
-                  </div>
-                  <div className="mb-2" style={{height: '8px', backgroundColor: '#e2e8f0', borderRadius: '10px', overflow: 'hidden'}}>
-                    <div style={{
-                      width: '95%',
-                      height: '100%',
-                      background: 'linear-gradient(90deg, #48bb78, #38a169)',
-                      borderRadius: '10px',
-                      position: 'relative',
-                      overflow: 'hidden'
-                    }}>
-                      <div style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
-                        animation: 'shimmer 2s infinite linear'
-                      }} />
-                    </div>
-                  </div>
-                  <div className="d-flex align-items-center">
-                    <span style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      backgroundColor: '#f56565',
-                      marginRight: '6px',
-                      animation: 'pulse 2s infinite'
-                    }} />
-                    <small className="fw-semibold" style={{color: '#f56565'}}>
-                      8 ping failed
-                    </small>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Col>
-          
-          {/* SSH Connection Card */}
-          <Col xl={6} lg={6}>
-            <div className="h-100 p-3 rounded-3 position-relative" style={{
-              background: '#f8fafb',
-              border: '1px solid #e9ecef',
-              transition: 'all 0.3s ease',
-              cursor: 'pointer'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-4px)';
-              e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)';
-              e.currentTarget.style.borderColor = '#dee2e6';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
-              e.currentTarget.style.borderColor = '#e9ecef';
-            }}>
-              {/* Top accent bar */}
-              <div style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                height: '3px',
-                background: 'linear-gradient(90deg, #4299e1, #3182ce)',
-                borderRadius: '3px 3px 0 0'
-              }} />
-              
-              <div className="d-flex align-items-start">
-                <div style={{
-                  width: '44px',
-                  height: '44px',
-                  background: 'linear-gradient(135deg, #4299e1 0%, #3182ce 100%)',
-                  borderRadius: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  boxShadow: '0 4px 12px rgba(66, 153, 225, 0.2)'
-                }}>
-                  <span style={{fontSize: '1.3rem'}}>🔑</span>
-                </div>
-                <div className="ms-3 flex-grow-1">
-                  <h6 className="text-uppercase mb-2" style={{
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
-                    letterSpacing: '0.5px',
-                    color: '#718096'
-                  }}>
-                    SSH Connection
-                  </h6>
-                  <div className="d-flex align-items-baseline mb-2">
-                    <span className="fw-bold me-2" style={{fontSize: '1.75rem', color: '#1a202c'}}>
-                      138/142
-                    </span>
-                    <span className="text-muted" style={{fontSize: '0.875rem'}}>
-                      success (97%)
-                    </span>
-                  </div>
-                  <div className="mb-2" style={{height: '8px', backgroundColor: '#e2e8f0', borderRadius: '10px', overflow: 'hidden'}}>
-                    <div style={{
-                      width: '97%',
-                      height: '100%',
-                      background: 'linear-gradient(90deg, #4299e1, #3182ce)',
-                      borderRadius: '10px',
-                      position: 'relative',
-                      overflow: 'hidden'
-                    }}>
-                      <div style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
-                        animation: 'shimmer 2s infinite linear'
-                      }} />
-                    </div>
-                  </div>
-                  <div className="d-flex align-items-center">
-                    <span style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      backgroundColor: '#f56565',
-                      marginRight: '6px',
-                      animation: 'pulse 2s infinite'
-                    }} />
-                    <small className="fw-semibold" style={{color: '#f56565'}}>
-                      4 SSH failed
-                    </small>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Col>
-          
-          {/* Reset Execution Card */}
-          <Col xl={6} lg={6}>
-            <div className="h-100 p-3 rounded-3 position-relative" style={{
-              background: '#f8fafb',
-              border: '1px solid #e9ecef',
-              transition: 'all 0.3s ease',
-              cursor: 'pointer'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-4px)';
-              e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)';
-              e.currentTarget.style.borderColor = '#dee2e6';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
-              e.currentTarget.style.borderColor = '#e9ecef';
-            }}>
-              {/* Top accent bar */}
-              <div style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                height: '3px',
-                background: 'linear-gradient(90deg, #ed8936, #dd6b20)',
-                borderRadius: '3px 3px 0 0'
-              }} />
-              
-              <div className="d-flex align-items-start">
-                <div style={{
-                  width: '44px',
-                  height: '44px',
-                  background: 'linear-gradient(135deg, #ed8936 0%, #dd6b20 100%)',
-                  borderRadius: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  boxShadow: '0 4px 12px rgba(237, 137, 54, 0.2)'
-                }}>
-                  <span style={{fontSize: '1.3rem'}}>🔄</span>
-                </div>
-                <div className="ms-3 flex-grow-1">
-                  <h6 className="text-uppercase mb-2" style={{
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
-                    letterSpacing: '0.5px',
-                    color: '#718096'
-                  }}>
-                    Reset Execution
-                  </h6>
-                  <div className="d-flex align-items-baseline mb-2">
-                    <span className="fw-bold me-2" style={{fontSize: '1.75rem', color: '#1a202c'}}>
-                      125/138
-                    </span>
-                    <span className="text-muted" style={{fontSize: '0.875rem'}}>
-                      success (91%)
-                    </span>
-                  </div>
-                  <div className="mb-2" style={{height: '8px', backgroundColor: '#e2e8f0', borderRadius: '10px', overflow: 'hidden'}}>
-                    <div style={{
-                      width: '91%',
-                      height: '100%',
-                      background: 'linear-gradient(90deg, #ed8936, #dd6b20)',
-                      borderRadius: '10px',
-                      position: 'relative',
-                      overflow: 'hidden'
-                    }}>
-                      <div style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
-                        animation: 'shimmer 2s infinite linear'
-                      }} />
-                    </div>
-                  </div>
-                  <div className="d-flex align-items-center">
-                    <span style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      backgroundColor: '#f56565',
-                      marginRight: '6px',
-                      animation: 'pulse 2s infinite'
-                    }} />
-                    <small className="fw-semibold" style={{color: '#f56565'}}>
-                      13 reset failed
-                    </small>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Col>
-          
-          {/* Final Verification Card */}
-          <Col xl={6} lg={6}>
-            <div className="h-100 p-3 rounded-3 position-relative" style={{
-              background: '#f8fafb',
-              border: '1px solid #e9ecef',
-              transition: 'all 0.3s ease',
-              cursor: 'pointer'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-4px)';
-              e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)';
-              e.currentTarget.style.borderColor = '#dee2e6';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
-              e.currentTarget.style.borderColor = '#e9ecef';
-            }}>
-              {/* Top accent bar */}
-              <div style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                height: '3px',
-                background: 'linear-gradient(90deg, #667eea, #764ba2)',
-                borderRadius: '3px 3px 0 0'
-              }} />
-              
-              <div className="d-flex align-items-start">
-                <div style={{
-                  width: '44px',
-                  height: '44px',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  borderRadius: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.2)'
-                }}>
-                  <span style={{fontSize: '1.3rem'}}>✅</span>
-                </div>
-                <div className="ms-3 flex-grow-1">
-                  <h6 className="text-uppercase mb-2" style={{
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
-                    letterSpacing: '0.5px',
-                    color: '#718096'
-                  }}>
-                    Final Verification
-                  </h6>
-                  <div className="d-flex align-items-baseline mb-2">
-                    <span className="fw-bold me-2" style={{fontSize: '1.75rem', color: '#1a202c'}}>
-                      125/125
-                    </span>
-                    <span className="text-muted" style={{fontSize: '0.875rem'}}>
-                      recovered (100%)
-                    </span>
-                  </div>
-                  <div className="mb-2" style={{height: '8px', backgroundColor: '#e2e8f0', borderRadius: '10px', overflow: 'hidden'}}>
-                    <div style={{
-                      width: '100%',
-                      height: '100%',
-                      background: 'linear-gradient(90deg, #667eea, #764ba2)',
-                      borderRadius: '10px',
-                      position: 'relative',
-                      overflow: 'hidden'
-                    }}>
-                      <div style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
-                        animation: 'shimmer 2s infinite linear'
-                      }} />
-                    </div>
-                  </div>
-                  <div className="d-flex align-items-center">
-                    <span style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      backgroundColor: '#48bb78',
-                      marginRight: '6px',
-                      animation: 'pulse 2s infinite'
-                    }} />
-                    <small className="fw-semibold" style={{color: '#48bb78'}}>
-                      0 still down
-                    </small>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Col>
-        </Row>
-      </Card.Body>
-    </div>
-  </Card>
-</div>
 
 
 
 
-
-{/*
-
-
-        { ZONE 4: Technical Summary 
+        {/* ZONE 4: Technical Summary */}
         <div className="mb-3">
           <Card className="border-0 shadow-sm">
             <Card.Body className="p-3">
@@ -1313,11 +849,9 @@ const maxValue = 34;
         </div>
 
 
-{ ================================================ ZONE 4: Technical Summary }
+{/* ================================================ ZONE 4: Technical Summary */}
 
 
-
-*/}
 
 
 {/* ZONE 5: Technical Summary */}
@@ -1497,7 +1031,7 @@ const maxValue = 34;
     </Card>
   </Col>
 
-
+{/* Three Column Province Chart - Updated to Timeline Style */}
 
 
 {/* Three Column Province Chart - Updated to Timeline Style */}
@@ -1523,9 +1057,6 @@ const maxValue = 34;
 
 {/* All Provinces - With Labels */}
 
-
-
-
 {/* LSN Province */}
 <div className="mb-3">
   <div 
@@ -1582,12 +1113,12 @@ const maxValue = 34;
           <div 
             style={{
               height: '8px',
-              backgroundColor: '#f59e0c',
+              backgroundColor: '#f59e0b',
               width: '100%'
             }}
           ></div>
         </div>
-        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#f59e0c', minWidth: '50px' }}>34</span>
+        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#f59e0b', minWidth: '25px' }}>34</span>
       </div>
       
       {/* Resolved bar */}
@@ -1597,12 +1128,12 @@ const maxValue = 34;
           <div 
             style={{
               height: '8px',
-              backgroundColor: '#10b983',
+              backgroundColor: '#10b981',
               width: '71%'
             }}
           ></div>
         </div>
-        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#10b983', minWidth: '50px' }}>24</span>
+        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#10b981', minWidth: '25px' }}>24</span>
       </div>
       
       {/* Manual bar */}
@@ -1617,116 +1148,11 @@ const maxValue = 34;
             }}
           ></div>
         </div>
-        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#ef4444', minWidth: '50px' }}>10</span>
+        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#ef4444', minWidth: '25px' }}>10</span>
       </div>
     </div>
   </div>
 </div>
-
-
-
-{/* LSN Province */}
-<div className="mb-3">
-  <div 
-    className="p-3 d-flex align-items-center" 
-    style={{ 
-      backgroundColor: '#f8f9fa', 
-      borderRadius: '8px',
-      border: '1px solid #e9ecef'
-    }}
-  >
-    {/* Icon Circle */}
-    <div 
-      className="rounded-circle d-flex align-items-center justify-content-center me-3"
-      style={{
-        width: '50px',
-        height: '50px',
-        backgroundColor: '#f59e0b',
-        flexShrink: 0
-      }}
-    >
-      <div 
-        style={{
-          width: '25px',
-          height: '18px',
-          backgroundColor: '#1f2937',
-          border: '2px solid #1f2937',
-          position: 'relative'
-        }}
-      >
-        <div 
-          style={{
-            position: 'absolute',
-            top: '2px',
-            left: '2px',
-            right: '2px',
-            bottom: '2px',
-            background: 'linear-gradient(45deg, transparent 40%, #ef4444 40%, #ef4444 60%, transparent 60%)'
-          }}
-        ></div>
-      </div>
-    </div>
-    
-    {/* Province Name */}
-    <div className="me-3" style={{ minWidth: '60px' }}>
-      <h5 className="fw-bold mb-0" style={{ fontSize: '18px', color: '#1f2937' }}>LSN</h5>
-    </div>
-    
-    {/* Three bars with labels */}
-    <div className="flex-grow-1">
-      {/* Total bar */}
-      <div className="d-flex justify-content-between align-items-center mb-1">
-        <div className="d-flex align-items-center flex-grow-1">
-          <span className="me-2" style={{ fontSize: '11px', color: '#6b7280', minWidth: '50px' }}>Total</span>
-          <div 
-            style={{
-              height: '8px',
-              backgroundColor: '#f59e01',
-              width: '100%'
-            }}
-          ></div>
-        </div>
-        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#f59e01', minWidth: '25px' }}>34</span>
-      </div>
-      
-      {/* Resolved bar */}
-      <div className="d-flex justify-content-between align-items-center mb-1">
-        <div className="d-flex align-items-center flex-grow-1">
-          <span className="me-2" style={{ fontSize: '11px', color: '#6b7280', minWidth: '50px' }}>Resolved</span>
-          <div 
-            style={{
-              height: '8px',
-    backgroundColor: '#10b983', 
-    width: '50%',
-            }}
-
-
-
-          ></div>
-        </div>
-        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#10b983', minWidth: '50px' }}>24</span>
-      </div>
-      
-      {/* Manual bar */}
-      <div className="d-flex justify-content-between align-items-center">
-        <div className="d-flex align-items-center flex-grow-1">
-          <span className="me-2" style={{ fontSize: '11px', color: '#6b7280', minWidth: '50px' }}>Manual</span>
-          <div 
-            style={{
-              height: '8px',
-              backgroundColor: '#ef4444',
-              width: '50%'
-            }}
-          ></div>
-        </div>
-        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#ef4444', minWidth: '50px' }}>10</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-
-
 
 {/* LCU Province */}
 <div className="mb-2">  {/* // chinh khoang cach giua cac container */}
@@ -1765,12 +1191,12 @@ const maxValue = 34;
           <div 
             style={{
               height: '8px',
-              backgroundColor: '#f59e0a',
+              backgroundColor: '#f59e0b',
               width: '100%'
             }}
           ></div>
         </div>
-        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#f59e0a', minWidth: '25px' }}>13</span>
+        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#f59e0b', minWidth: '25px' }}>13</span>
       </div>
       
       {/* Resolved bar */}
@@ -1780,15 +1206,12 @@ const maxValue = 34;
           <div 
             style={{
               height: '8px',
-    backgroundColor: '#10b981', 
-    width: '85%',
+              backgroundColor: '#10b981',
+              width: '85%'
             }}
-
-
-
           ></div>
         </div>
-        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#10b981', minWidth: '50px' }}>11</span>
+        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#10b981', minWidth: '25px' }}>11</span>
       </div>
       
       {/* Manual bar */}
@@ -1803,7 +1226,7 @@ const maxValue = 34;
             }}
           ></div>
         </div>
-        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#ef4444', minWidth: '50px' }}>2</span>
+        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#ef4444', minWidth: '25px' }}>2</span>
       </div>
     </div>
   </div>
@@ -1847,7 +1270,7 @@ const maxValue = 34;
             style={{
               height: '8px',
               backgroundColor: '#f59e0b',
-              width: '100%'
+              width: '26%'
             }}
           ></div>
         </div>
@@ -2128,22 +1551,347 @@ const maxValue = 34;
 
 
 
+{/* LSN Province - With Labels */}
+<div className="mb-4">
+  <div 
+    className="p-3 d-flex align-items-center" 
+    style={{ 
+      backgroundColor: '#f8f9fa', 
+      borderRadius: '8px',
+      border: '1px solid #e9ecef'
+    }}
+  >
+    {/* Icon Circle */}
+    <div 
+      className="rounded-circle d-flex align-items-center justify-content-center me-3"
+      style={{
+        width: '50px',
+        height: '50px',
+        backgroundColor: '#f59e0b',
+        flexShrink: 0
+      }}
+    >
+      <div 
+        style={{
+          width: '25px',
+          height: '18px',
+          backgroundColor: '#1f2937',
+          border: '2px solid #1f2937',
+          position: 'relative'
+        }}
+      >
+        <div 
+          style={{
+            position: 'absolute',
+            top: '2px',
+            left: '2px',
+            right: '2px',
+            bottom: '2px',
+            background: 'linear-gradient(45deg, transparent 40%, #ef4444 40%, #ef4444 60%, transparent 60%)'
+          }}
+        ></div>
+      </div>
+    </div>
+    
+    {/* Province Name */}
+    <div className="me-3" style={{ minWidth: '60px' }}>
+      <h5 className="fw-bold mb-0" style={{ fontSize: '18px', color: '#1f2937' }}>LSN</h5>
+    </div>
+    
+    {/* Three bars with labels - no border radius */}
+    <div className="flex-grow-1">
+      {/* Total bar */}
+      <div className="d-flex justify-content-between align-items-center mb-1">
+        <div className="d-flex align-items-center flex-grow-1">
+          <span className="me-2" style={{ fontSize: '11px', color: '#6b7280', minWidth: '50px' }}>Total</span>
+          <div 
+            style={{ 
+              height: '8px',
+              backgroundColor: '#f59e0b',
+              width: '100%'
+            }}
+          ></div>
+        </div>
+        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#f59e0b', minWidth: '25px' }}>34</span>
+      </div>
+      
+      {/* Resolved bar */}
+      <div className="d-flex justify-content-between align-items-center mb-1">
+        <div className="d-flex align-items-center flex-grow-1">
+          <span className="me-2" style={{ fontSize: '11px', color: '#6b7280', minWidth: '50px' }}>Resolved</span>
+          <div 
+            style={{ 
+              height: '8px',
+              backgroundColor: '#10b981',
+              width: '71%'
+            }}
+          ></div>
+        </div>
+        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#10b981', minWidth: '25px' }}>24</span>
+      </div>
+      
+      {/* Manual bar */}
+      <div className="d-flex justify-content-between align-items-center">
+        <div className="d-flex align-items-center flex-grow-1">
+          <span className="me-2" style={{ fontSize: '11px', color: '#6b7280', minWidth: '50px' }}>Manual</span>
+          <div 
+            style={{ 
+              height: '8px',
+              backgroundColor: '#ef4444',
+              width: '29%'
+            }}
+          ></div>
+        </div>
+        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#ef4444', minWidth: '25px' }}>10</span>
+      </div>
+    </div>
+  </div>
+</div>
 
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
+        
+        {/* LCU */}
+        <div className="mb-5">
+          <div className="d-flex align-items-center">
+            <div 
+              className="rounded-circle d-flex align-items-center justify-content-center me-4"
+              style={{
+                width: '60px',
+                height: '60px',
+                backgroundColor: '#06b6d4',
+                flexShrink: 0
+              }}
+            >
+              <span style={{ fontSize: '20px', color: 'white' }}>⛰️</span>
+            </div>
+            
+            <div className="me-4" style={{ minWidth: '80px' }}>
+              <h4 className="fw-bold mb-0" style={{ fontSize: '24px', color: '#1f2937' }}>LCU</h4>
+            </div>
+            
+            <div className="flex-grow-1 me-4">
+              <div className="d-flex gap-1">
+                <div style={{ height: '24px', backgroundColor: '#3b82f6', borderRadius: '12px', width: '60%' }}></div>
+                <div style={{ height: '24px', backgroundColor: '#f59e0b', borderRadius: '12px', width: '25%' }}></div>
+                <div style={{ height: '24px', backgroundColor: '#10b981', borderRadius: '12px', width: '15%' }}></div>
+              </div>
+            </div>
+            
+            <div style={{ minWidth: '120px' }}>
+              <div className="d-flex justify-content-between align-items-center mb-1">
+                <span className="text-muted" style={{ fontSize: '14px' }}>Total</span>
+                <span className="fw-bold" style={{ fontSize: '16px', color: '#f59e0b' }}>13</span>
+              </div>
+              <div className="d-flex justify-content-between align-items-center mb-1">
+                <span className="text-muted" style={{ fontSize: '14px' }}>Resolved</span>
+                <span className="fw-bold" style={{ fontSize: '16px', color: '#10b981' }}>11</span>
+              </div>
+              <div className="d-flex justify-content-between align-items-center">
+                <span className="text-muted" style={{ fontSize: '14px' }}>Manual</span>
+                <span className="fw-bold" style={{ fontSize: '16px', color: '#ef4444' }}>2</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* LCI */}
+        <div className="mb-5">
+          <div className="d-flex align-items-center">
+            <div 
+              className="rounded-circle d-flex align-items-center justify-content-center me-4"
+              style={{
+                width: '60px',
+                height: '60px',
+                backgroundColor: '#8b5cf6',
+                flexShrink: 0
+              }}
+            >
+              <span style={{ fontSize: '20px', color: 'white' }}>🌲</span>
+            </div>
+            
+            <div className="me-4" style={{ minWidth: '80px' }}>
+              <h4 className="fw-bold mb-0" style={{ fontSize: '24px', color: '#1f2937' }}>LCI</h4>
+            </div>
+            
+            <div className="flex-grow-1 me-4">
+              <div className="d-flex gap-1">
+                <div style={{ height: '24px', backgroundColor: '#3b82f6', borderRadius: '12px', width: '50%' }}></div>
+                <div style={{ height: '24px', backgroundColor: '#f59e0b', borderRadius: '12px', width: '30%' }}></div>
+                <div style={{ height: '24px', backgroundColor: '#10b981', borderRadius: '12px', width: '20%' }}></div>
+              </div>
+            </div>
+            
+            <div style={{ minWidth: '120px' }}>
+              <div className="d-flex justify-content-between align-items-center mb-1">
+                <span className="text-muted" style={{ fontSize: '14px' }}>Total</span>
+                <span className="fw-bold" style={{ fontSize: '16px', color: '#f59e0b' }}>9</span>
+              </div>
+              <div className="d-flex justify-content-between align-items-center mb-1">
+                <span className="text-muted" style={{ fontSize: '14px' }}>Resolved</span>
+                <span className="fw-bold" style={{ fontSize: '16px', color: '#10b981' }}>7</span>
+              </div>
+              <div className="d-flex justify-content-between align-items-center">
+                <span className="text-muted" style={{ fontSize: '14px' }}>Manual</span>
+                <span className="fw-bold" style={{ fontSize: '16px', color: '#ef4444' }}>2</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* SLA */}
+        <div className="mb-5">
+          <div className="d-flex align-items-center">
+            <div 
+              className="rounded-circle d-flex align-items-center justify-content-center me-4"
+              style={{
+                width: '60px',
+                height: '60px',
+                backgroundColor: '#10b981',
+                flexShrink: 0
+              }}
+            >
+              <span style={{ fontSize: '20px', color: 'white' }}>🌾</span>
+            </div>
+            
+            <div className="me-4" style={{ minWidth: '80px' }}>
+              <h4 className="fw-bold mb-0" style={{ fontSize: '24px', color: '#1f2937' }}>SLA</h4>
+            </div>
+            
+            <div className="flex-grow-1 me-4">
+              <div className="d-flex gap-1">
+                <div style={{ height: '24px', backgroundColor: '#3b82f6', borderRadius: '12px', width: '30%' }}></div>
+                <div style={{ height: '24px', backgroundColor: '#f59e0b', borderRadius: '12px', width: '20%' }}></div>
+                <div style={{ height: '24px', backgroundColor: '#10b981', borderRadius: '12px', width: '50%' }}></div>
+              </div>
+            </div>
+            
+            <div style={{ minWidth: '120px' }}>
+              <div className="d-flex justify-content-between align-items-center mb-1">
+                <span className="text-muted" style={{ fontSize: '14px' }}>Total</span>
+                <span className="fw-bold" style={{ fontSize: '16px', color: '#f59e0b' }}>6</span>
+              </div>
+              <div className="d-flex justify-content-between align-items-center mb-1">
+                <span className="text-muted" style={{ fontSize: '14px' }}>Resolved</span>
+                <span className="fw-bold" style={{ fontSize: '16px', color: '#10b981' }}>6</span>
+              </div>
+              <div className="d-flex justify-content-between align-items-center">
+                <span className="text-muted" style={{ fontSize: '14px' }}>Manual</span>
+                <span className="fw-bold" style={{ fontSize: '16px', color: '#ef4444' }}>0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* DBN */}
+        <div className="mb-5">
+          <div className="d-flex align-items-center">
+            <div 
+              className="rounded-circle d-flex align-items-center justify-content-center me-4"
+              style={{
+                width: '60px',
+                height: '60px',
+                backgroundColor: '#0ea5e9',
+                flexShrink: 0
+              }}
+            >
+              <span style={{ fontSize: '20px', color: 'white' }}>🚢</span>
+            </div>
+            
+            <div className="me-4" style={{ minWidth: '80px' }}>
+              <h4 className="fw-bold mb-0" style={{ fontSize: '24px', color: '#1f2937' }}>DBN</h4>
+            </div>
+            
+            <div className="flex-grow-1 me-4">
+              <div 
+                className="position-relative d-flex"
+                style={{ 
+                  height: '24px',
+                  backgroundColor: '#f1f5f9',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  border: '1px solid #e2e8f0'
+                }}
+              >
+                <div style={{ width: '40%', height: '100%', backgroundColor: '#3b82f6' }}></div>
+                <div style={{ width: '10%', height: '100%', backgroundColor: '#f59e0b' }}></div>
+                <div style={{ width: '50%', height: '100%', backgroundColor: '#10b981' }}></div>
+              </div>
+            </div>
+            
+            <div style={{ minWidth: '120px' }}>
+              <div className="d-flex justify-content-between align-items-center mb-1">
+                <span className="text-muted" style={{ fontSize: '14px' }}>Total</span>
+                <span className="fw-bold" style={{ fontSize: '16px', color: '#f59e0b' }}>2</span>
+              </div>
+              <div className="d-flex justify-content-between align-items-center mb-1">
+                <span className="text-muted" style={{ fontSize: '14px' }}>Resolved</span>
+                <span className="fw-bold" style={{ fontSize: '16px', color: '#10b981' }}>2</span>
+              </div>
+              <div className="d-flex justify-content-between align-items-center">
+                <span className="text-muted" style={{ fontSize: '14px' }}>Manual</span>
+                <span className="fw-bold" style={{ fontSize: '16px', color: '#ef4444' }}>0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* CBG */}
+        <div className="mb-5">
+          <div className="d-flex align-items-center">
+            <div 
+              className="rounded-circle d-flex align-items-center justify-content-center me-4"
+              style={{
+                width: '60px',
+                height: '60px',
+                backgroundColor: '#ec4899',
+                flexShrink: 0
+              }}
+            >
+              <span style={{ fontSize: '20px', color: 'white' }}>🏭</span>
+            </div>
+            
+            <div className="me-4" style={{ minWidth: '80px' }}>
+              <h4 className="fw-bold mb-0" style={{ fontSize: '24px', color: '#1f2937' }}>CBG</h4>
+            </div>
+            
+            <div className="flex-grow-1 me-4">
+              <div 
+                className="position-relative d-flex"
+                style={{ 
+                  height: '24px',
+                  backgroundColor: '#f1f5f9',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  border: '1px solid #e2e8f0'
+                }}
+              >
+                <div style={{ width: '60%', height: '100%', backgroundColor: '#3b82f6' }}></div>
+                <div style={{ width: '20%', height: '100%', backgroundColor: '#f59e0b' }}></div>
+                <div style={{ width: '20%', height: '100%', backgroundColor: '#10b981' }}></div>
+              </div>
+            </div>
+            
+            <div style={{ minWidth: '120px' }}>
+              <div className="d-flex justify-content-between align-items-center mb-1">
+                <span className="text-muted" style={{ fontSize: '14px' }}>Total</span>
+                <span className="fw-bold" style={{ fontSize: '16px', color: '#f59e0b' }}>1</span>
+              </div>
+              <div className="d-flex justify-content-between align-items-center mb-1">
+                <span className="text-muted" style={{ fontSize: '14px' }}>Resolved</span>
+                <span className="fw-bold" style={{ fontSize: '16px', color: '#10b981' }}>1</span>
+              </div>
+              <div className="d-flex justify-content-between align-items-center">
+                <span className="text-muted" style={{ fontSize: '14px' }}>Manual</span>
+                <span className="fw-bold" style={{ fontSize: '16px', color: '#ef4444' }}>0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Legend */}
       <div className="mt-4 pt-3 border-top">
@@ -2186,13 +1934,6 @@ const maxValue = 34;
           </div>
         </div>
       </div>
-
-</div>
-
-
-
-
-
     </Card.Body>
   </Card>
 </Col>
@@ -2203,390 +1944,7 @@ const maxValue = 34;
 </Row>
 
 
-{/*
 
-
-{ ZONE 6: Actions & Alerts - Redesigned }
-<div className="mb-4">
-  <Card className="border-0 shadow-lg" style={{
-    borderRadius: '16px',
-    overflow: 'hidden'
-  }}>
-    { Gradient Border Effect /}
-    <div style={{
-      background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-      padding: '2px',
-      borderRadius: '16px'
-    }}>
-      <Card.Body className="p-4" style={{
-        background: 'white',
-        borderRadius: '14px'
-      }}>
-        {/ Header Section /}
-        <div className="d-flex align-items-center justify-content-between mb-4">
-          <div className="d-flex align-items-center">
-            <div style={{
-              width: '56px',
-              height: '56px',
-              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-              borderRadius: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 8px 24px rgba(239, 68, 68, 0.25)'
-            }}>
-              <span style={{fontSize: '1.8rem'}}>🚨</span>
-            </div>
-            <div className="ms-3">
-              <h5 className="fw-bold mb-1" style={{color: '#1a202c'}}>
-                Actions Required
-              </h5>
-              <small className="text-muted">Items need manual intervention</small>
-            </div>
-          </div>
-          
-          {/ Total Issues Badge /}
-          <div>
-            <span className="badge" style={{
-              background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-              color: 'white',
-              padding: '8px 16px',
-              borderRadius: '20px',
-              fontSize: '0.875rem',
-              fontWeight: '600',
-              boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)'
-            }}>
-              25 Total Issues
-            </span>
-          </div>
-        </div>
-        
-        <Row className="g-3">
-          {/ Ping Failed Alert /}
-          <Col md={4}>
-            <div className="h-100 position-relative" style={{
-              background: '#fef2f2',
-              borderRadius: '12px',
-              padding: '20px',
-              border: '1px solid #fee2e2',
-              transition: 'all 0.3s ease',
-              cursor: 'pointer',
-              overflow: 'hidden'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-4px)';
-              e.currentTarget.style.boxShadow = '0 8px 24px rgba(239, 68, 68, 0.15)';
-              e.currentTarget.style.borderColor = '#fecaca';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
-              e.currentTarget.style.borderColor = '#fee2e2';
-            }}>
-              {/ Left Border Accent /}
-              <div style={{
-                position: 'absolute',
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: '4px',
-                background: 'linear-gradient(180deg, #ef4444 0%, #dc2626 100%)',
-                borderRadius: '4px 0 0 4px'
-              }} />
-              
-              <div className="d-flex flex-column h-100">
-                <div className="d-flex align-items-start mb-3">
-                  <div style={{
-                    width: '40px',
-                    height: '40px',
-                    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                    borderRadius: '10px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)'
-                  }}>
-                    <span style={{fontSize: '1.2rem'}}>🔗</span>
-                  </div>
-                  <div className="ms-3 flex-grow-1">
-                    <h6 className="mb-1 fw-bold" style={{color: '#dc2626', fontSize: '1.1rem'}}>
-                      8 sites: Ping failed
-                    </h6>
-                    <small style={{color: '#7f1d1d', fontWeight: '500'}}>
-                      Network connectivity issue
-                    </small>
-                  </div>
-                </div>
-                
-                <div className="mt-auto">
-                  <div className="d-flex align-items-center justify-content-between mb-2">
-                    <span style={{
-                      fontSize: '0.75rem',
-                      color: '#991b1b',
-                      fontWeight: '600',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
-                      Severity: High
-                    </span>
-                    <span style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      backgroundColor: '#ef4444',
-                      display: 'inline-block',
-                      animation: 'pulse 2s infinite'
-                    }} />
-                  </div>
-                  
-                  <Button 
-                    variant="danger" 
-                    size="sm" 
-                    className="w-100"
-                    style={{
-                      background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontWeight: '600',
-                      padding: '8px',
-                      boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.4)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(239, 68, 68, 0.3)';
-                    }}>
-                    View Details →
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </Col>
-          
-          {/ SSH Failed Alert /}
-          <Col md={4}>
-            <div className="h-100 position-relative" style={{
-              background: '#fffbeb',
-              borderRadius: '12px',
-              padding: '20px',
-              border: '1px solid #fef3c7',
-              transition: 'all 0.3s ease',
-              cursor: 'pointer',
-              overflow: 'hidden'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-4px)';
-              e.currentTarget.style.boxShadow = '0 8px 24px rgba(245, 158, 11, 0.15)';
-              e.currentTarget.style.borderColor = '#fde68a';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
-              e.currentTarget.style.borderColor = '#fef3c7';
-            }}>
-              {/ Left Border Accent /}
-              <div style={{
-                position: 'absolute',
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: '4px',
-                background: 'linear-gradient(180deg, #f59e0b 0%, #d97706 100%)',
-                borderRadius: '4px 0 0 4px'
-              }} />
-              
-              <div className="d-flex flex-column h-100">
-                <div className="d-flex align-items-start mb-3">
-                  <div style={{
-                    width: '40px',
-                    height: '40px',
-                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                    borderRadius: '10px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)'
-                  }}>
-                    <span style={{fontSize: '1.2rem'}}>🔑</span>
-                  </div>
-                  <div className="ms-3 flex-grow-1">
-                    <h6 className="mb-1 fw-bold" style={{color: '#d97706', fontSize: '1.1rem'}}>
-                      4 sites: SSH failed
-                    </h6>
-                    <small style={{color: '#92400e', fontWeight: '500'}}>
-                      Access credential problem
-                    </small>
-                  </div>
-                </div>
-                
-                <div className="mt-auto">
-                  <div className="d-flex align-items-center justify-content-between mb-2">
-                    <span style={{
-                      fontSize: '0.75rem',
-                      color: '#92400e',
-                      fontWeight: '600',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
-                      Severity: Medium
-                    </span>
-                    <span style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      backgroundColor: '#f59e0b',
-                      display: 'inline-block',
-                      animation: 'pulse 2s infinite'
-                    }} />
-                  </div>
-                  
-                  <Button 
-                    variant="warning" 
-                    size="sm" 
-                    className="w-100"
-                    style={{
-                      background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontWeight: '600',
-                      padding: '8px',
-                      color: 'white',
-                      boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.4)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(245, 158, 11, 0.3)';
-                    }}>
-                    View Details →
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </Col>
-          
-          {/ Reset Failed Alert /}
-          <Col md={4}>
-            <div className="h-100 position-relative" style={{
-              background: '#eff6ff',
-              borderRadius: '12px',
-              padding: '20px',
-              border: '1px solid #dbeafe',
-              transition: 'all 0.3s ease',
-              cursor: 'pointer',
-              overflow: 'hidden'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-4px)';
-              e.currentTarget.style.boxShadow = '0 8px 24px rgba(59, 130, 246, 0.15)';
-              e.currentTarget.style.borderColor = '#bfdbfe';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
-              e.currentTarget.style.borderColor = '#dbeafe';
-            }}>
-              {/ Left Border Accent /}
-              <div style={{
-                position: 'absolute',
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: '4px',
-                background: 'linear-gradient(180deg, #3b82f6 0%, #2563eb 100%)',
-                borderRadius: '4px 0 0 4px'
-              }} />
-              
-              <div className="d-flex flex-column h-100">
-                <div className="d-flex align-items-start mb-3">
-                  <div style={{
-                    width: '40px',
-                    height: '40px',
-                    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                    borderRadius: '10px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)'
-                  }}>
-                    <span style={{fontSize: '1.2rem'}}>🔄</span>
-                  </div>
-                  <div className="ms-3 flex-grow-1">
-                    <h6 className="mb-1 fw-bold" style={{color: '#2563eb', fontSize: '1.1rem'}}>
-                      13 cells: Reset failed
-                    </h6>
-                    <small style={{color: '#1e3a8a', fontWeight: '500'}}>
-                      Manual intervention needed
-                    </small>
-                  </div>
-                </div>
-                
-                <div className="mt-auto">
-                  <div className="d-flex align-items-center justify-content-between mb-2">
-                    <span style={{
-                      fontSize: '0.75rem',
-                      color: '#1e3a8a',
-                      fontWeight: '600',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
-                      Severity: Low
-                    </span>
-                    <span style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      backgroundColor: '#3b82f6',
-                      display: 'inline-block',
-                      animation: 'pulse 2s infinite'
-                    }} />
-                  </div>
-                  
-                  <Button 
-                    variant="primary" 
-                    size="sm" 
-                    className="w-100"
-                    style={{
-                      background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontWeight: '600',
-                      padding: '8px',
-                      boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.4)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(59, 130, 246, 0.3)';
-                    }}>
-                    View Details →
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </Col>
-        </Row>
-      </Card.Body>
-    </div>
-  </Card>
-</div>
-
-{/ CSS animations cần thêm vào file CSS /}
-
-
-*/}
 
 
         {/* ZONE 6: Actions & Alerts */}
@@ -2644,12 +2002,6 @@ const maxValue = 34;
           </Card>
         </div>
 
-
-
-
-{/* ===================================================}
-
-
         {/* ZONE 7: Quick Action Buttons */}
         <div className="mb-4">
           <Card className="border-0 shadow-sm">
@@ -2667,7 +2019,7 @@ const maxValue = 34;
               <div className="d-flex flex-wrap gap-3">
                 <Button variant="primary" className="d-flex align-items-center">
                   <span className="me-2">📋</span>
-                  Export Sleeping Cell
+                  View Fail Cells
                 </Button>
                 
                 <Button variant="success" className="d-flex align-items-center">
@@ -2677,18 +2029,22 @@ const maxValue = 34;
                 
                 <Button variant="info" className="d-flex align-items-center">
                   <span className="me-2">📊</span>
-                  Export resolved cell
+                  Export All Sleeping
                 </Button>
                 
+                <Button variant="secondary" className="d-flex align-items-center">
+                  <span className="me-2">🔍</span>
+                  View Logs
+                </Button>
                 
                 <Button variant="outline-primary" className="d-flex align-items-center">
                   <span className="me-2">⚙️</span>
-                  Export error cell
+                  Configuration
                 </Button>
                 
                 <Button variant="outline-warning" className="d-flex align-items-center">
                   <span className="me-2">📧</span>
-                  Send Email
+                  Send Report
                 </Button>
               </div>
             </Card.Body>

@@ -292,10 +292,10 @@ const IsMenuOfUser = (menu: any) => {
       
 
 <Route path="/sleeping-cell" element={<HomeSleepingCell />} />
-<Route path="/sleeping-cell/monitor" element={<R005Monitor />} />           // ← ADD THIS
+{/* <Route path="/sleeping-cell/monitor" element={<R005Monitor />} />           // ← ADD THIS
 <Route path="/sleeping-cell/configuration" element={<R005Configuration />} /> // ← ADD THIS
 
-
+*/}
 
 
 

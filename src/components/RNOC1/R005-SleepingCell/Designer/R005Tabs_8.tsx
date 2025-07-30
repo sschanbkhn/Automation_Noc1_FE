@@ -1,15 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { FiBarChart, FiEye, FiSettings } from 'react-icons/fi';
 
-// Import icons using require to avoid type issues
-const FiBarChart = require('react-icons/fi').FiBarChart;
-const FiEye = require('react-icons/fi').FiEye;
-const FiSettings = require('react-icons/fi').FiSettings;
-
-// Dynamic component imports with fallback
-let Dashboard: any = null;
-let Monitor: any = null;
-let Configuration: any = null;
+// Import real components - with fallback handling
+let Dashboard, Monitor, Configuration;
 
 try {
   Dashboard = require('../Dashboard/R005Dashboard').default;
@@ -36,7 +30,7 @@ const R005Tabs: React.FC = () => {
   // Determine active tab from URL
   const getActiveTab = () => {
     const path = location.pathname;
-    console.log('🔍 Current path:', path);
+    console.log('🔍 Current path:', path); // DEBUG
     if (path.includes('/monitor')) return 'monitor';
     if (path.includes('/configuration')) return 'configuration';
     return 'dashboard';
@@ -47,51 +41,35 @@ const R005Tabs: React.FC = () => {
   // Update active tab when URL changes
   useEffect(() => {
     setActiveTab(getActiveTab());
-    console.log('🔄 Active tab updated to:', getActiveTab());
+    console.log('🔄 Active tab updated to:', getActiveTab()); // DEBUG
   }, [location.pathname]);
 
-  // Tab configuration with beautiful styling
   const tabs = [
     {
       id: 'dashboard',
       label: 'Dashboard',
-      icon: 'FiBarChart',
-      gradient: 'from-blue-500 to-blue-600',
-      bgColor: 'bg-blue-50',
-      textColor: 'text-blue-700',
-      borderColor: 'border-blue-200',
-      shadowColor: 'shadow-blue-200/50',
+      icon: FiBarChart,
       color: '#2563eb'
     },
     {
       id: 'monitor',
       label: 'Monitor',
-      icon: 'FiEye',
-      gradient: 'from-emerald-500 to-emerald-600',
-      bgColor: 'bg-emerald-50',
-      textColor: 'text-emerald-700',
-      borderColor: 'border-emerald-200',
-      shadowColor: 'shadow-emerald-200/50',
+      icon: FiEye,
       color: '#059669'
     },
     {
       id: 'configuration',
       label: 'Configuration',
-      icon: 'FiSettings',
-      gradient: 'from-purple-500 to-purple-600',
-      bgColor: 'bg-purple-50',
-      textColor: 'text-purple-700',
-      borderColor: 'border-purple-200',
-      shadowColor: 'shadow-purple-200/50',
+      icon: FiSettings,
       color: '#7c3aed'
     }
   ];
 
   const handleTabClick = (tabId: string) => {
-    console.log('🖱️ Tab clicked:', tabId);
+    console.log('🖱️ Tab clicked:', tabId); // DEBUG
     setActiveTab(tabId);
     
-    // Navigate to appropriate route (uncomment when ready)
+    // DISABLE NAVIGATION for testing
     // switch (tabId) {
     //   case 'dashboard':
     //     navigate('/sleeping-cell');
@@ -105,34 +83,13 @@ const R005Tabs: React.FC = () => {
     // }
   };
 
-  // Helper to get icon component safely
-  const getIconComponent = (iconName: string) => {
-    switch (iconName) {
-      case 'FiBarChart': return FiBarChart;
-      case 'FiEye': return FiEye;
-      case 'FiSettings': return FiSettings;
-      default: return FiBarChart;
-    }
-  };
-
-  // Helper to create icon element safely
-  const createIcon = (IconComponent: any, props: any = {}) => {
-    if (!IconComponent) return null;
-    return React.createElement(IconComponent, {
-      size: props.size || 20,
-      strokeWidth: props.strokeWidth || 2,
-      color: props.color,
-      ...props
-    });
-  };
-
   const renderContent = () => {
-    console.log('🎨 Rendering content for tab:', activeTab);
+    console.log('🎨 Rendering content for tab:', activeTab); // DEBUG
     
     switch (activeTab) {
       case 'dashboard':
-        // Use real Dashboard component if available, otherwise show fallback
-        return Dashboard ? React.createElement(Dashboard) : (
+        // Always show fallback content for testing
+        return (
           <div style={{ padding: '40px', textAlign: 'center' }}>
             <div style={{
               display: 'inline-flex',
@@ -140,103 +97,95 @@ const R005Tabs: React.FC = () => {
               justifyContent: 'center',
               width: '80px',
               height: '80px',
-              background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+              background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
               color: 'white',
-              borderRadius: '20px',
+              borderRadius: '16px',
               marginBottom: '24px',
-              boxShadow: '0 10px 40px rgba(37, 99, 235, 0.3)'
+              boxShadow: '0 8px 24px rgba(59, 130, 246, 0.3)'
             }}>
-              {createIcon(FiBarChart, { size: 32 })}
+              {React.createElement(FiBarChart as any, { size: 32, strokeWidth: 2 })}
             </div>
             <h2 style={{
-              fontSize: '32px',
+              fontSize: '30px',
               fontWeight: 'bold',
-              color: '#1a202c',
+              color: '#1f2937',
               marginBottom: '12px'
             }}>
               Dashboard Overview
             </h2>
             <p style={{
-              color: '#64748b',
+              color: '#6b7280',
               fontSize: '18px',
-              maxWidth: '500px',
-              margin: '0 auto 32px auto',
-              lineHeight: '1.6'
+              maxWidth: '448px',
+              margin: '0 auto',
+              lineHeight: '1.75'
             }}>
               Comprehensive analytics and real-time metrics for your R005 Sleeping Cell Management system
             </p>
             <div style={{
+              marginTop: '24px',
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-              gap: '20px',
-              maxWidth: '600px',
-              margin: '0 auto'
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: '16px',
+              maxWidth: '448px',
+              margin: '24px auto 0 auto'
             }}>
               <div style={{
-                background: 'linear-gradient(135deg, #eff6ff, #f0f9ff)',
-                padding: '24px',
-                borderRadius: '16px',
-                border: '2px solid #bfdbfe',
-                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.1)'
+                backgroundColor: '#eff6ff',
+                padding: '16px',
+                borderRadius: '12px',
+                border: '1px solid #bfdbfe'
               }}>
                 <div style={{
-                  fontSize: '28px',
+                  fontSize: '24px',
                   fontWeight: 'bold',
-                  color: '#2563eb',
-                  marginBottom: '8px'
+                  color: '#2563eb'
                 }}>
                   24
                 </div>
                 <div style={{
                   fontSize: '14px',
-                  color: '#1d4ed8',
-                  fontWeight: '600'
+                  color: '#2563eb'
                 }}>
                   Active Cells
                 </div>
               </div>
               <div style={{
-                background: 'linear-gradient(135deg, #eff6ff, #f0f9ff)',
-                padding: '24px',
-                borderRadius: '16px',
-                border: '2px solid #bfdbfe',
-                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.1)'
+                backgroundColor: '#eff6ff',
+                padding: '16px',
+                borderRadius: '12px',
+                border: '1px solid #bfdbfe'
               }}>
                 <div style={{
-                  fontSize: '28px',
+                  fontSize: '24px',
                   fontWeight: 'bold',
-                  color: '#2563eb',
-                  marginBottom: '8px'
+                  color: '#2563eb'
                 }}>
                   98%
                 </div>
                 <div style={{
                   fontSize: '14px',
-                  color: '#1d4ed8',
-                  fontWeight: '600'
+                  color: '#2563eb'
                 }}>
                   Uptime
                 </div>
               </div>
               <div style={{
-                background: 'linear-gradient(135deg, #eff6ff, #f0f9ff)',
-                padding: '24px',
-                borderRadius: '16px',
-                border: '2px solid #bfdbfe',
-                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.1)'
+                backgroundColor: '#eff6ff',
+                padding: '16px',
+                borderRadius: '12px',
+                border: '1px solid #bfdbfe'
               }}>
                 <div style={{
-                  fontSize: '28px',
+                  fontSize: '24px',
                   fontWeight: 'bold',
-                  color: '#2563eb',
-                  marginBottom: '8px'
+                  color: '#2563eb'
                 }}>
                   5
                 </div>
                 <div style={{
                   fontSize: '14px',
-                  color: '#1d4ed8',
-                  fontWeight: '600'
+                  color: '#2563eb'
                 }}>
                   Alerts
                 </div>
@@ -246,7 +195,8 @@ const R005Tabs: React.FC = () => {
         );
         
       case 'monitor':
-        return Monitor ? React.createElement(Monitor) : (
+        // Always show fallback content for testing
+        return (
           <div style={{ padding: '40px', textAlign: 'center' }}>
             <div style={{
               display: 'inline-flex',
@@ -254,80 +204,95 @@ const R005Tabs: React.FC = () => {
               justifyContent: 'center',
               width: '80px',
               height: '80px',
-              background: 'linear-gradient(135deg, #059669, #047857)',
+              background: 'linear-gradient(135deg, #10b981, #059669)',
               color: 'white',
-              borderRadius: '20px',
+              borderRadius: '16px',
               marginBottom: '24px',
-              boxShadow: '0 10px 40px rgba(5, 150, 105, 0.3)'
+              boxShadow: '0 8px 24px rgba(16, 185, 129, 0.3)'
             }}>
-              {createIcon(FiEye, { size: 32 })}
+              {React.createElement(FiEye as any, { size: 32, strokeWidth: 2 })}
             </div>
             <h2 style={{
               fontSize: '32px',
               fontWeight: 'bold',
-              color: '#1a202c',
-              marginBottom: '12px'
+              color: '#1f2937',
+              marginBottom: '16px'
             }}>
               Real-time Monitoring
             </h2>
             <p style={{
-              color: '#64748b',
-              fontSize: '18px',
+              color: '#6b7280',
+              fontSize: '16px',
               maxWidth: '500px',
-              margin: '0 auto 32px auto',
+              margin: '0 auto 40px auto',
               lineHeight: '1.6'
             }}>
               24/7 surveillance and instant alerts for sleeping cell detection and recovery operations
             </p>
+            
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '20px',
-              maxWidth: '600px',
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '24px',
+              maxWidth: '500px',
               margin: '0 auto'
             }}>
               <div style={{
-                background: 'linear-gradient(135deg, #ecfdf5, #f0fdf4)',
-                padding: '24px',
+                backgroundColor: '#ecfdf5',
+                padding: '24px 32px',
                 borderRadius: '16px',
-                border: '2px solid #a7f3d0',
-                boxShadow: '0 4px 12px rgba(5, 150, 105, 0.1)'
+                border: '1px solid #a7f3d0',
+                minWidth: '140px',
+                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.1)'
               }}>
                 <div style={{
-                  fontSize: '28px',
+                  fontSize: '24px',
                   fontWeight: 'bold',
                   color: '#059669',
-                  marginBottom: '8px'
+                  marginBottom: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
                 }}>
-                  ● Live
+                  <span style={{ 
+                    width: '8px', 
+                    height: '8px', 
+                    backgroundColor: '#10b981', 
+                    borderRadius: '50%',
+                    display: 'inline-block'
+                  }}></span>
+                  Live
                 </div>
                 <div style={{
                   fontSize: '14px',
                   color: '#047857',
-                  fontWeight: '600'
+                  fontWeight: '500'
                 }}>
                   System Status
                 </div>
               </div>
+              
               <div style={{
-                background: 'linear-gradient(135deg, #ecfdf5, #f0fdf4)',
-                padding: '24px',
+                backgroundColor: '#ecfdf5',
+                padding: '24px 32px',
                 borderRadius: '16px',
-                border: '2px solid #a7f3d0',
-                boxShadow: '0 4px 12px rgba(5, 150, 105, 0.1)'
+                border: '1px solid #a7f3d0',
+                minWidth: '140px',
+                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.1)'
               }}>
                 <div style={{
-                  fontSize: '28px',
+                  fontSize: '24px',
                   fontWeight: 'bold',
                   color: '#059669',
-                  marginBottom: '8px'
+                  marginBottom: '4px'
                 }}>
                   2.3s
                 </div>
                 <div style={{
                   fontSize: '14px',
                   color: '#047857',
-                  fontWeight: '600'
+                  fontWeight: '500'
                 }}>
                   Response Time
                 </div>
@@ -337,7 +302,8 @@ const R005Tabs: React.FC = () => {
         );
         
       case 'configuration':
-        return Configuration ? React.createElement(Configuration) : (
+        // Always show fallback content for testing
+        return (
           <div style={{ padding: '40px', textAlign: 'center' }}>
             <div style={{
               display: 'inline-flex',
@@ -345,80 +311,75 @@ const R005Tabs: React.FC = () => {
               justifyContent: 'center',
               width: '80px',
               height: '80px',
-              background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+              background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
               color: 'white',
-              borderRadius: '20px',
+              borderRadius: '16px',
               marginBottom: '24px',
-              boxShadow: '0 10px 40px rgba(124, 58, 237, 0.3)'
+              boxShadow: '0 8px 24px rgba(139, 92, 246, 0.3)'
             }}>
-              {createIcon(FiSettings, { size: 32 })}
+              {React.createElement(FiSettings as any, { size: 32, strokeWidth: 2 })}
             </div>
             <h2 style={{
-              fontSize: '32px',
+              fontSize: '30px',
               fontWeight: 'bold',
-              color: '#1a202c',
+              color: '#1f2937',
               marginBottom: '12px'
             }}>
               System Configuration
             </h2>
             <p style={{
-              color: '#64748b',
+              color: '#6b7280',
               fontSize: '18px',
-              maxWidth: '500px',
-              margin: '0 auto 32px auto',
-              lineHeight: '1.6'
+              maxWidth: '448px',
+              margin: '0 auto',
+              lineHeight: '1.75'
             }}>
               Advanced settings and customization options for optimal sleeping cell management performance
             </p>
             <div style={{
+              marginTop: '24px',
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '20px',
-              maxWidth: '600px',
-              margin: '0 auto'
+              gridTemplateColumns: 'repeat(2, 1fr)',
+              gap: '16px',
+              maxWidth: '384px',
+              margin: '24px auto 0 auto'
             }}>
               <div style={{
-                background: 'linear-gradient(135deg, #f3e8ff, #faf5ff)',
-                padding: '24px',
-                borderRadius: '16px',
-                border: '2px solid #c4b5fd',
-                boxShadow: '0 4px 12px rgba(124, 58, 237, 0.1)'
+                backgroundColor: '#f3e8ff',
+                padding: '16px',
+                borderRadius: '12px',
+                border: '1px solid #c4b5fd'
               }}>
                 <div style={{
-                  fontSize: '28px',
+                  fontSize: '24px',
                   fontWeight: 'bold',
-                  color: '#7c3aed',
-                  marginBottom: '8px'
+                  color: '#7c3aed'
                 }}>
                   12
                 </div>
                 <div style={{
                   fontSize: '14px',
-                  color: '#6d28d9',
-                  fontWeight: '600'
+                  color: '#7c3aed'
                 }}>
                   Config Rules
                 </div>
               </div>
               <div style={{
-                background: 'linear-gradient(135deg, #f3e8ff, #faf5ff)',
-                padding: '24px',
-                borderRadius: '16px',
-                border: '2px solid #c4b5fd',
-                boxShadow: '0 4px 12px rgba(124, 58, 237, 0.1)'
+                backgroundColor: '#f3e8ff',
+                padding: '16px',
+                borderRadius: '12px',
+                border: '1px solid #c4b5fd'
               }}>
                 <div style={{
-                  fontSize: '28px',
+                  fontSize: '24px',
                   fontWeight: 'bold',
-                  color: '#7c3aed',
-                  marginBottom: '8px'
+                  color: '#7c3aed'
                 }}>
                   ●
                 </div>
                 <div style={{
                   fontSize: '14px',
-                  color: '#6d28d9',
-                  fontWeight: '600'
+                  color: '#7c3aed'
                 }}>
                   Auto Recovery
                 </div>
@@ -428,7 +389,7 @@ const R005Tabs: React.FC = () => {
         );
         
       default:
-        return Dashboard ? React.createElement(Dashboard) : (
+        return (
           <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
             <h2>R005 Dashboard</h2>
             <p>Loading dashboard content...</p>
@@ -439,7 +400,7 @@ const R005Tabs: React.FC = () => {
 
   return (
     <div style={{ width: '100%', maxWidth: 'none', margin: '0', padding: '0' }}>
-      {/* Beautiful Connected Tabs with Amazing Effects */}
+      {/* Beautiful Connected Tabs */}
       <div style={{
         display: 'flex',
         backgroundColor: '#f8fafc',
@@ -453,7 +414,7 @@ const R005Tabs: React.FC = () => {
           const isActive = activeTab === tab.id;
           const isFirst = index === 0;
           const isLast = index === tabs.length - 1;
-          const IconComponent = getIconComponent(tab.icon);
+          const Icon = tab.icon;
 
           return (
             <button
@@ -481,37 +442,8 @@ const R005Tabs: React.FC = () => {
                 boxShadow: isActive ? `0 8px 25px ${tab.color}20` : 'none',
                 outline: 'none'
               }}
-              onMouseEnter={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.backgroundColor = '#f1f5f9';
-                  e.currentTarget.style.transform = 'scale(1.02)';
-                  e.currentTarget.style.borderColor = '#cbd5e1';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.transform = 'scale(0.95)';
-                  e.currentTarget.style.borderColor = 'transparent';
-                  e.currentTarget.style.boxShadow = 'none';
-                }
-              }}
             >
-              {/* Gradient overlay for active tab */}
-              {isActive && (
-                <div style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  background: `linear-gradient(135deg, ${tab.color}08, ${tab.color}03)`,
-                  borderRadius: isFirst ? '12px 0 0 12px' : isLast ? '0 12px 12px 0' : '0'
-                }} />
-              )}
-
-              {/* Icon with gradient background */}
+              {/* Icon */}
               <div style={{
                 position: 'relative',
                 padding: '10px',
@@ -524,7 +456,7 @@ const R005Tabs: React.FC = () => {
                 transform: isActive ? 'scale(1.1)' : 'scale(1)',
                 boxShadow: isActive ? `0 4px 12px ${tab.color}30` : 'none'
               }}>
-                {createIcon(IconComponent, { 
+                {React.createElement(Icon as any, { 
                   size: 20,
                   strokeWidth: 2.5
                 })}
@@ -586,10 +518,7 @@ const R005Tabs: React.FC = () => {
         <div style={{
           padding: '24px 32px',
           borderBottom: '1px solid #e2e8f0',
-          // background: 'linear-gradient(135deg, #fafbfc 0%, #f1f5f9 100%)'
-background: 'white'
-
-
+          background: 'linear-gradient(135deg, #fafbfc 0%, #f1f5f9 100%)'
         }}>
           <div style={{
             display: 'flex',
@@ -599,17 +528,17 @@ background: 'white'
             <div style={{
               width: '56px',
               height: '56px',
-              borderRadius: '16px',
-              background: '#2563eb',
+              borderRadius: '14px',
+              background: `linear-gradient(135deg, ${tabs.find(t => t.id === activeTab)?.color}15, ${tabs.find(t => t.id === activeTab)?.color}08)`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)'
+              border: `2px solid ${tabs.find(t => t.id === activeTab)?.color}25`
             }}>
-              {createIcon(FiBarChart, { 
-                size: 24,
-                color: 'white',
-                strokeWidth: 2.5
+              {React.createElement(tabs.find(t => t.id === activeTab)?.icon as any, { 
+                size: 28,
+                color: tabs.find(t => t.id === activeTab)?.color,
+                strokeWidth: 2
               })}
             </div>
             <div>
@@ -619,14 +548,16 @@ background: 'white'
                 fontWeight: 'bold',
                 color: '#1a202c'
               }}>
-                Sleeping Cell - Dashboard
+                R005 - {tabs.find(t => t.id === activeTab)?.label}
               </h2>
               <p style={{
                 margin: '4px 0 0 0',
                 color: '#64748b',
                 fontSize: '14px'
               }}>
-                Sleeping cell detection and recovery overview
+                {activeTab === 'dashboard' && 'Sleeping cell detection and recovery overview'}
+                {activeTab === 'monitor' && 'Real-time monitoring and system status'}
+                {activeTab === 'configuration' && 'System settings and automation rules'}
               </p>
             </div>
           </div>

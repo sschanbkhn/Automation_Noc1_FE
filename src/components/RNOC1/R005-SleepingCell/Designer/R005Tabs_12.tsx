@@ -619,7 +619,7 @@ background: 'white'
                 fontWeight: 'bold',
                 color: '#1a202c'
               }}>
-                Sleeping Cell - Dashboard
+                R005 - Dashboard
               </h2>
               <p style={{
                 margin: '4px 0 0 0',
