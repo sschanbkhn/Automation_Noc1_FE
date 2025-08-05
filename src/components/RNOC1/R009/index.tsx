@@ -5,11 +5,13 @@ import CtrlButton from 'components/common/CtrlButton';
 import Card from 'components/common/Card';
 import CtrlDate from 'components/common/CtrlDate';
 import CtrlSelect from 'components/common/CtrlSelect';
+import Tab from 'components/common/Tab';
 import { Message } from 'models/Enums';
 import RnocR009Service from 'services/RnocR009Service';
 import Nokia4GTable from './Nokia4GTable';
 import Nokia5GTable from './Nokia5GTable';
 import Huawei4GTable from './Huawei4GTable';
+import Dashboard from './Dashboard';
 
 interface Props {
     Apps: any
@@ -672,23 +674,23 @@ const Index = (props: Props) => {
             } else if (formSearch.vendor === "nokia" && formSearch.technology === "4G") {
                 response = await RnocR009Service.GetNokiaBtsDataByDate(dateStr);
                 if (!isMountedRef.current) return;
-                console.log('Nokia 4G API Response:', response);
-                console.log('Nokia 4G Response Success:', response?.Success);
-                console.log('Nokia 4G Response Data:', response?.Data);
-                console.log('Nokia 4G Response data (lowercase):', response?.data);
-                console.log('Nokia 4G Response keys:', Object.keys(response || {}));
+                // // console.log('Nokia 4G API Response:', response);
+                // // console.log('Nokia 4G Response Success:', response?.Success);
+                // // console.log('Nokia 4G Response Data:', response?.Data);
+                // // console.log('Nokia 4G Response data (lowercase):', response?.data);
+                // // console.log('Nokia 4G Response keys:', Object.keys(response || {}));
                 
                 if (response && response.Success) {
                     const newData = response.Data || response.data || [];
-                    console.log('Nokia 4G Raw Data:', newData);
-                    console.log('Nokia 4G Data Length:', newData.length);
-                    console.log('Nokia 4G Data Type:', typeof newData);
-                    console.log('Nokia 4G Is Array:', Array.isArray(newData));
+                    // // console.log('Nokia 4G Raw Data:', newData);
+                    // // console.log('Nokia 4G Data Length:', newData.length);
+                    // // console.log('Nokia 4G Data Type:', typeof newData);
+                    // // console.log('Nokia 4G Is Array:', Array.isArray(newData));
                     
                     if (newData.length > 0) {
-                        console.log('Nokia 4G First Record:', newData[0]);
-                        console.log('Nokia 4G First Record Keys:', Object.keys(newData[0]));
-                        console.log('Nokia 4G First Record Values:', Object.values(newData[0]));
+                        // // console.log('Nokia 4G First Record:', newData[0]);
+                        // // console.log('Nokia 4G First Record Keys:', Object.keys(newData[0]));
+                        // // console.log('Nokia 4G First Record Values:', Object.values(newData[0]));
                     }
                     
                     const mappedData = newData.map((item: any, idx: number) => {
@@ -713,15 +715,15 @@ const Index = (props: Props) => {
                             direction: item.direction || item.Direction || '',
                             createdate: item.createdate || item.CreateDate || ''
                         };
-                        console.log(`Nokia 4G Mapped Record ${idx + 1}:`, mapped);
+                        // console.log(`Nokia 4G Mapped Record ${idx + 1}:`, mapped);
                         return mapped;
                     });
-                    console.log('Nokia 4G Final Mapped Data Length:', mappedData.length);
+                    // console.log('Nokia 4G Final Mapped Data Length:', mappedData.length);
                     setNokia4GData(mappedData);
                 } else {
-                    console.log('Nokia 4G API failed or no data');
-                    console.log('Nokia 4G Response Success:', response?.Success);
-                    console.log('Nokia 4G Response Message:', response?.Message);
+                    // // console.log('Nokia 4G API failed or no data');
+                    // // console.log('Nokia 4G Response Success:', response?.Success);
+                    // // console.log('Nokia 4G Response Message:', response?.Message);
                     setNokia4GData([]);
                 }
                 setHuaweiData([]);
@@ -729,23 +731,23 @@ const Index = (props: Props) => {
             } else if (formSearch.vendor === "nokia" && formSearch.technology === "5G") {
                 response = await RnocR009Service.GetNokiaBtsData5GByDate(dateStr);
                 if (!isMountedRef.current) return;
-                console.log('Nokia 5G API Response:', response);
-                console.log('Nokia 5G Response Success:', response?.Success);
-                console.log('Nokia 5G Response Data:', response?.Data);
-                console.log('Nokia 5G Response data (lowercase):', response?.data);
-                console.log('Nokia 5G Response keys:', Object.keys(response || {}));
+                // console.log('Nokia 5G API Response:', response);
+                // console.log('Nokia 5G Response Success:', response?.Success);
+                // console.log('Nokia 5G Response Data:', response?.Data);
+                // console.log('Nokia 5G Response data (lowercase):', response?.data);
+                // console.log('Nokia 5G Response keys:', Object.keys(response || {}));
                 
                 if (response && response.Success) {
                     const newData = response.Data || response.data || [];
-                    console.log('Nokia 5G Raw Data:', newData);
-                    console.log('Nokia 5G Data Length:', newData.length);
-                    console.log('Nokia 5G Data Type:', typeof newData);
-                    console.log('Nokia 5G Is Array:', Array.isArray(newData));
+                    // console.log('Nokia 5G Raw Data:', newData);
+                    // console.log('Nokia 5G Data Length:', newData.length);
+                    // console.log('Nokia 5G Data Type:', typeof newData);
+                    // console.log('Nokia 5G Is Array:', Array.isArray(newData));
                     
                     if (newData.length > 0) {
-                        console.log('Nokia 5G First Record:', newData[0]);
-                        console.log('Nokia 5G First Record Keys:', Object.keys(newData[0]));
-                        console.log('Nokia 5G First Record Values:', Object.values(newData[0]));
+                        // console.log('Nokia 5G First Record:', newData[0]);
+                        // console.log('Nokia 5G First Record Keys:', Object.keys(newData[0]));
+                        // console.log('Nokia 5G First Record Values:', Object.values(newData[0]));
                     }
                     
                     const mappedData = newData.map((item: any, idx: number) => {
@@ -771,15 +773,15 @@ const Index = (props: Props) => {
                             direction: item.direction || item.Direction || '',
                             createdate: item.createdate || item.CreateDate || ''
                         };
-                        console.log(`Nokia 5G Mapped Record ${idx + 1}:`, mapped);
+                        // console.log(`Nokia 5G Mapped Record ${idx + 1}:`, mapped);
                         return mapped;
                     });
-                    console.log('Nokia 5G Final Mapped Data Length:', mappedData.length);
+                    // console.log('Nokia 5G Final Mapped Data Length:', mappedData.length);
                     setNokia5GData(mappedData);
                 } else {
-                    console.log('Nokia 5G API failed or no data');
-                    console.log('Nokia 5G Response Success:', response?.Success);
-                    console.log('Nokia 5G Response Message:', response?.Message);
+                    // console.log('Nokia 5G API failed or no data');
+                    // console.log('Nokia 5G Response Success:', response?.Success);
+                    // console.log('Nokia 5G Response Message:', response?.Message);
                     setNokia5GData([]);
                 }
                 setHuaweiData([]);
@@ -952,127 +954,138 @@ const Index = (props: Props) => {
 
     return (
         <>
-            <CtrlNotification ref={refNotification} />   
-            <Card key='r009-report' title='Báo cáo BTS Data' buttonGroups={ButtonGroupsRender()}>
-                <div>
-                    {/* Header Section with Light Gray Background */}
-                    <div className="row mb-4" style={{
-                        backgroundColor: '#f8f9fa',
-                        padding: '20px',
-                        borderRadius: '8px',
-                        border: '1px solid #e9ecef',
-                        margin: '0 -15px 20px -15px'
-                    }}> 
-                        <div className="col-md-3">
-                            <div className="mb-2">
-                                <label className="form-label fw-bold text-dark mb-1">
-                                    <i className="fas fa-calendar-alt me-2 text-primary"></i>
-                                    Chọn ngày
-                                </label>
-                            </div>
-                            <CtrlDate 
-                                placeholder="Chọn ngày" 
-                                key={"selectedDate"} 
-                                onChange={(e: any) => onChangeFormSearch('selectedDate', e)} 
-                                value={formSearch.selectedDate} 
-                            />         
-                        </div> 
-                        <div className="col-md-3">
-                            <div className="mb-2">
-                                <label className="form-label fw-bold text-dark mb-1">
-                                    <i className="fas fa-building me-2 text-primary"></i>
-                                    Vendor
-                                </label>
-                            </div>
-                            <CtrlSelect 
-                                clearable={false} 
-                                onChange={(value: any) => onChangeFormSearch('vendor', value)} 
-                                placeholder="Chọn Vendor" 
-                                value={formSearch.vendor} 
-                                options={VendorOptions} 
-                            />
-                        </div>
-                        <div className="col-md-3">
-                            <div className="mb-2">
-                                <label className="form-label fw-bold text-dark mb-1">
-                                    <i className="fas fa-wifi me-2 text-primary"></i>
-                                    Công nghệ
-                                </label>
-                            </div>
-                            <CtrlSelect 
-                                clearable={false} 
-                                onChange={(value: any) => onChangeFormSearch('technology', value)} 
-                                placeholder="Chọn Công nghệ" 
-                                value={formSearch.technology} 
-                                options={TechnologyOptions} 
-                            />
-                        </div>
-                        <div className="col-md-3 d-flex align-items-end">
-                            <div className="d-flex align-items-center w-100">
-                                <div className="flex-grow-1">
-                                    <div className="d-flex align-items-center">
-                                        <i className="fas fa-database me-2 text-success"></i>
-                                        <span className="fw-bold text-dark">Tổng số bản ghi:</span>
-                                        <span className="badge bg-primary ms-2 fs-6">
-                                            {formSearch.vendor === 'huawei' && formSearch.technology === '4G' ? huaweiData.length :
-                                             formSearch.vendor === 'nokia' && formSearch.technology === '4G' ? nokia4GData.length :
-                                             formSearch.vendor === 'nokia' && formSearch.technology === '5G' ? nokia5GData.length : 0}
-                                        </span>
+            <CtrlNotification ref={refNotification} />
+            
+            <Tab 
+                key="r009-tabs"
+                activeName="dashboard"
+                tabsPanel={[
+                    {
+                        label: "Dashboard Tổng Quan",
+                        name: "dashboard",
+                        panel: <Dashboard />
+                    },
+                    {
+                        label: "Quản Lý Dữ Liệu BTS",
+                        name: "data-management",
+                        panel: (
+                            <Card title="Quản Lý Dữ Liệu BTS" icon="fas fa-database" buttonGroups={ButtonGroupsRender()}>
+                                <div className="row mb-4">
+                                    <div className="col-md-3">
+                                        <div className="mb-2">
+                                            <label className="form-label fw-bold text-dark mb-1">
+                                                <i className="fas fa-calendar me-2 text-primary"></i>
+                                                Ngày
+                                            </label>
+                                        </div>
+                                        <CtrlDate 
+                                            value={formSearch.selectedDate} 
+                                            onChange={(date: Date) => onChangeFormSearch('selectedDate', date)} 
+                                            placeholder="Chọn ngày" 
+                                        />
                                     </div>
-                                    {/* Debug info */}
-                                    <div className="mt-1">
-                                        <small className="text-muted">
-                                            Debug: HW={huaweiData.length}, N4G={nokia4GData.length}, N5G={nokia5GData.length}
-                                        </small>
+                                    <div className="col-md-3">
+                                        <div className="mb-2">
+                                            <label className="form-label fw-bold text-dark mb-1">
+                                                <i className="fas fa-building me-2 text-success"></i>
+                                                Vendor
+                                            </label>
+                                        </div>
+                                        <CtrlSelect 
+                                            clearable={false} 
+                                            onChange={(value: any) => onChangeFormSearch('vendor', value)} 
+                                            placeholder="Chọn Vendor" 
+                                            value={formSearch.vendor} 
+                                            options={VendorOptions} 
+                                        />
+                                    </div>
+                                    <div className="col-md-3">
+                                        <div className="mb-2">
+                                            <label className="form-label fw-bold text-dark mb-1">
+                                                <i className="fas fa-wifi me-2 text-primary"></i>
+                                                Công nghệ
+                                            </label>
+                                        </div>
+                                        <CtrlSelect 
+                                            clearable={false} 
+                                            onChange={(value: any) => onChangeFormSearch('technology', value)} 
+                                            placeholder="Chọn Công nghệ" 
+                                            value={formSearch.technology} 
+                                            options={TechnologyOptions} 
+                                        />
+                                    </div>
+                                    <div className="col-md-3 d-flex align-items-end">
+                                        <div className="d-flex align-items-center w-100">
+                                            <div className="flex-grow-1">
+                                                <div className="d-flex align-items-center">
+                                                    <i className="fas fa-database me-2 text-success"></i>
+                                                    <span className="fw-bold text-dark">Tổng số bản ghi:</span>
+                                                    <span className="badge bg-primary ms-2 fs-6">
+                                                        {formSearch.vendor === 'huawei' && formSearch.technology === '4G' ? huaweiData.length :
+                                                         formSearch.vendor === 'nokia' && formSearch.technology === '4G' ? nokia4GData.length :
+                                                         formSearch.vendor === 'nokia' && formSearch.technology === '5G' ? nokia5GData.length : 0}
+                                                    </span>
+                                                </div>
+                                                {/* Debug info */}
+                                                <div className="mt-1">
+                                                    <small className="text-muted">
+                                                        Debug: HW={huaweiData.length}, N4G={nokia4GData.length}, N5G={nokia5GData.length}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                            <div className="text-end">
+                                                <small className="text-muted">
+                                                    <i className="fas fa-info-circle me-1"></i>
+                                                    Báo cáo dữ liệu BTS theo ngày
+                                                </small>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="text-end">
-                                    <small className="text-muted">
-                                        <i className="fas fa-info-circle me-1"></i>
-                                        Báo cáo dữ liệu BTS theo ngày
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    {/* Render bảng phù hợp theo vendor/technology */}
-                    {formSearch.vendor === 'nokia' && formSearch.technology === '4G' ? (
-                        <Nokia4GTable
-                            data={nokia4GData}
-                            isLoading={isLoading}
-                            currentPage={nokia4GPage}
-                            pageSize={nokia4GPageSize}
-                            onPageChange={setNokia4GPage}
-                            searchTerm={nokia4GSearch}
-                            onSearchChange={setNokia4GSearch}
-                            onPageSizeChange={setNokia4GPageSize}
-                        />
-                    ) : formSearch.vendor === 'nokia' && formSearch.technology === '5G' ? (
-                        <Nokia5GTable
-                            data={nokia5GData}
-                            isLoading={isLoading}
-                            currentPage={nokia5GPage}
-                            pageSize={nokia5GPageSize}
-                            onPageChange={setNokia5GPage}
-                            searchTerm={nokia5GSearch}
-                            onSearchChange={setNokia5GSearch}
-                            onPageSizeChange={setNokia5GPageSize}
-                        />
-                    ) : formSearch.vendor === 'huawei' && formSearch.technology === '4G' ? (
-                        <Huawei4GTable
-                            data={huaweiData}
-                            isLoading={isLoading}
-                            currentPage={huaweiPage}
-                            pageSize={huaweiPageSize}
-                            onPageChange={setHuaweiPage}
-                            searchTerm={huaweiSearch}
-                            onSearchChange={setHuaweiSearch}
-                            onPageSizeChange={setHuaweiPageSize}
-                        />
-                    ) : null}
-                </div>
-            </Card>
+                                {/* Render bảng phù hợp theo vendor/technology */}
+                                {formSearch.vendor === 'nokia' && formSearch.technology === '4G' ? (
+                                    <Nokia4GTable
+                                        data={nokia4GData}
+                                        isLoading={isLoading}
+                                        currentPage={nokia4GPage}
+                                        pageSize={nokia4GPageSize}
+                                        onPageChange={setNokia4GPage}
+                                        searchTerm={nokia4GSearch}
+                                        onSearchChange={setNokia4GSearch}
+                                        onPageSizeChange={setNokia4GPageSize}
+                                    />
+                                ) : formSearch.vendor === 'nokia' && formSearch.technology === '5G' ? (
+                                    <Nokia5GTable
+                                        data={nokia5GData}
+                                        isLoading={isLoading}
+                                        currentPage={nokia5GPage}
+                                        pageSize={nokia5GPageSize}
+                                        onPageChange={setNokia5GPage}
+                                        searchTerm={nokia5GSearch}
+                                        onSearchChange={setNokia5GSearch}
+                                        onPageSizeChange={setNokia5GPageSize}
+                                    />
+                                ) : formSearch.vendor === 'huawei' && formSearch.technology === '4G' ? (
+                                    <Huawei4GTable
+                                        data={huaweiData}
+                                        isLoading={isLoading}
+                                        currentPage={huaweiPage}
+                                        pageSize={huaweiPageSize}
+                                        onPageChange={setHuaweiPage}
+                                        searchTerm={huaweiSearch}
+                                        onSearchChange={setHuaweiSearch}
+                                        onPageSizeChange={setHuaweiPageSize}
+                                    />
+                                ) : null}
+                            </Card>
+                        )
+                    }
+                ]}
+                onTabClick={(tab: any) => {
+                    console.log('Tab clicked:', tab);
+                }}
+            />
         </>
     );
 };
