@@ -186,9 +186,9 @@
       "icon": "bi bi-globe",
       "subMenu": [
         {
-          "code": "LinksMaps",
-          "name": "Cân chỉnh internet quốc tế ",
-          "url": "/link-cabman",
+          "code": "ClearThuebaoDaphien",
+          "name": "Clear thuê bao đa phiên ",
+          "url": "/ClearThuebaoDaphien",
           "icon": "bi bi-grid"
         },
         {
@@ -198,11 +198,19 @@
           "icon": "bi bi-grid"
         },
         {
-          "code": "ucppoe",
-          "name": "Kiểm soát số phiên pppoe",
-          "url": "/ucppoe",
+            "code": "LspQuocte",
+          "name": "Kiểm soát LSP quốc tế",
+          "url": "/LspQuocte",
           "icon": "bi bi-grid"
-        },
+
+            },
+        {
+            "code": "DataLspQuocte",
+          "name": "Dữ liệu LSP quốc tế",
+          "url": "/DataLspQuocte",
+          "icon": "bi bi-grid"
+
+            },
         {
           "code": "ConfigurationLogs",
           "name": "Xử lý cảnh báo phần cứng",
