@@ -77,6 +77,58 @@ const RnocR009Service = {
             data: data
         });
         return res;
+    },
+
+    // Dashboard APIs
+    GetDashboard4GData: async (date: string) => {        
+        let res: any = await request({
+            url: `Rnoc_R009/dashboard4g?date=${date}`,
+            method: 'get'
+        });
+        return res;
+    },
+
+    GetDashboard5GData: async (date: string) => {        
+        let res: any = await request({
+            url: `Rnoc_R009/dashboard5g?date=${date}`,
+            method: 'get'
+        });
+        return res;
+    },
+
+    // Provincial Report APIs
+    GetProvincialReport4G: async (date: string) => {        
+        let res: any = await request({
+            url: `Rnoc_R009/provincial4g?date=${date}`,
+            method: 'get'
+        });
+        return res;
+    },
+
+    GetProvincialReport5G: async (date: string) => {        
+        let res: any = await request({
+            url: `Rnoc_R009/provincial5g?date=${date}`,
+            method: 'get'
+        });
+        return res;
+    },
+
+    GetProvincialReportAll: async (date: string) => {        
+        let res: any = await request({
+            url: `Rnoc_R009/provincialAll?date=${date}`,
+            method: 'get'
+        });
+        return res;
+    },
+
+    // Export Provincial Report to Excel
+    ExportProvincialReportToExcel: async (data: any, technology: string) => {        
+        let res: any = await request({
+            url: `Rnoc_R009/exportProvincialReportToExcel`,
+            method: 'post',
+            data: { ...data, technology }
+        });
+        return res;
     }
 };
 
