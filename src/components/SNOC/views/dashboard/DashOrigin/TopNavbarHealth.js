@@ -18,9 +18,9 @@ const TopNavbar = () => {
           <NavLink to="/app/dashboard/origin" className={getLinkClass}>
             Dashboard
           </NavLink>
-          {/* <NavLink to="/healthcheck/devices" className={getLinkClass}>
+          <NavLink to="/healthcheck/devices" className={getLinkClass}>
             Devices
-          </NavLink> */}
+          </NavLink>
           <NavLink to="/healthcheck/schedule" className={getLinkClass}>
             Schedule
           </NavLink>
@@ -30,9 +30,12 @@ const TopNavbar = () => {
           <NavLink to="/healthcheck/history" className={getLinkClass}>
             Historical Reporting
           </NavLink>
-          {/* <NavLink to="/healthcheck/kpi" className={getLinkClass}>
+          <NavLink to="/healthcheck/kpi" className={getLinkClass}>
             KPI
-          </NavLink> */}
+          </NavLink>
+          <NavLink to="/healthcheck/kpischedule" className={getLinkClass}>
+            KPI Schedule
+          </NavLink>
         </Nav>
       </Container>
     </Navbar>

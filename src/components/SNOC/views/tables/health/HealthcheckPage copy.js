@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Provider, useDispatch, useSelector } from "react-redux";
 import {
   Row,
@@ -18,9 +18,8 @@ import snocStore from "../../../store/snocStore";
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-import WebSocketStatusBanner from "../../../components/WebSocketStatusBanner";
+import WebSocketStatusBanner from "./../../../components/WebSocketStatusBanner"; // cập nhật path cho đúng
 import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
-import snocApi from "../../../api/snocApiWithAutoToken";
 
 const statusRowClass = {
   OK: "",
@@ -31,7 +30,7 @@ const statusRowClass = {
 };
 
 const HealthcheckTable = () => {
-  useScheduleWebSocket();
+  useScheduleWebSocket(); // ✅ Gọi ở đây
   const dispatch = useDispatch();
   const { group, subsystem } = useParams();
   const { state } = useLocation();
@@ -39,7 +38,7 @@ const HealthcheckTable = () => {
   const {
     lastestitems = [],
     loading = false,
-    countlastest = 0,
+    count = 0,
   } = useSelector((state) => state.pscore || {});
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -48,50 +47,18 @@ const HealthcheckTable = () => {
   const [statusFilter, setStatusFilter] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [platformList, setPlatformList] = useState([]);
   const searchHostRef = useRef("");
   const pageSize = 10;
 
-  useEffect(() => {
-    const fetchPlatformList = async () => {
-      if (state?.platform) {
-        const pList = Array.isArray(state.platform)
-          ? state.platform
-          : [state.platform];
-        setPlatformList(pList);
-        return;
-      }
-      const stored = localStorage.getItem("platformFromDashboard");
-      if (stored) {
-        localStorage.removeItem("platformFromDashboard");
-        try {
-          const parsed = JSON.parse(stored);
-          setPlatformList(Array.isArray(parsed) ? parsed : [parsed]);
-          return;
-        } catch {
-          setPlatformList([]);
-          return;
-        }
-      }
-      // fallback: fetch from backend
-      try {
-        const res = await snocApi.get(
-          `/nornirps/schema/platforms-by-subsystem/?group=${encodeURIComponent(
-            group
-          )}&subsystem=${encodeURIComponent(subsystem)}`
-        );
-        setPlatformList(res.data.platforms || []);
-      } catch (err) {
-        console.error("❌ Failed to fetch platforms", err);
-        setPlatformList([]);
-      }
-    };
-
-    fetchPlatformList();
-  }, [group, subsystem, state]);
+  const platformList = Array.isArray(state?.platform)
+    ? state.platform
+    : state?.platform
+    ? [state.platform]
+    : subsystem
+    ? [subsystem.toLowerCase()]
+    : [];
 
   useEffect(() => {
-    if (platformList.length === 0) return;
     dispatch(
       fetchLatestHealthcheckView({
         host: searchHostRef.current,
@@ -99,7 +66,7 @@ const HealthcheckTable = () => {
         platform: platformList,
       })
     );
-  }, [dispatch, currentPage, group, subsystem, platformList]);
+  }, [dispatch, currentPage, group, subsystem]);
 
   const handlePageChange = (pageNum) => {
     setCurrentPage(pageNum);
@@ -172,8 +139,8 @@ const HealthcheckTable = () => {
     saveAs(blob, `${group || "healthcheck"}_export.xlsx`);
   };
 
-  const totalPages = Math.ceil(countlastest / pageSize);
-  const title = subsystem && group ? `${group} / ${subsystem}` : group || "Healthcheck";
+  const title =
+    subsystem && group ? `${group} / ${subsystem}` : group || "Healthcheck";
 
   return (
     <>
@@ -286,49 +253,19 @@ const HealthcheckTable = () => {
                     </tbody>
                   </Table>
 
-                  {totalPages > 1 && (
+                  {Math.ceil(filteredItems.length / pageSize) > 1 && (
                     <Pagination className="justify-content-center mt-3">
-                      {currentPage > 1 && (
-                        <Pagination.Prev
-                          onClick={() => handlePageChange(currentPage - 1)}
-                        />
-                      )}
-                      {currentPage > 3 && (
-                        <>
-                          <Pagination.Item onClick={() => handlePageChange(1)}>
-                            1
-                          </Pagination.Item>
-                          {currentPage > 4 && <Pagination.Ellipsis disabled />}
-                        </>
-                      )}
-                      {Array.from({ length: 5 }, (_, i) => currentPage - 2 + i)
-                        .filter((page) => page > 1 && page < totalPages)
-                        .map((page) => (
-                          <Pagination.Item
-                            key={page}
-                            active={currentPage === page}
-                            onClick={() => handlePageChange(page)}
-                          >
-                            {page}
-                          </Pagination.Item>
-                        ))}
-                      {currentPage < totalPages - 2 && (
-                        <>
-                          {currentPage < totalPages - 3 && (
-                            <Pagination.Ellipsis disabled />
-                          )}
-                          <Pagination.Item
-                            onClick={() => handlePageChange(totalPages)}
-                          >
-                            {totalPages}
-                          </Pagination.Item>
-                        </>
-                      )}
-                      {currentPage < totalPages && (
-                        <Pagination.Next
-                          onClick={() => handlePageChange(currentPage + 1)}
-                        />
-                      )}
+                      {[
+                        ...Array(Math.ceil(filteredItems.length / pageSize)),
+                      ].map((_, idx) => (
+                        <Pagination.Item
+                          key={idx + 1}
+                          active={currentPage === idx + 1}
+                          onClick={() => handlePageChange(idx + 1)}
+                        >
+                          {idx + 1}
+                        </Pagination.Item>
+                      ))}
                     </Pagination>
                   )}
                 </>

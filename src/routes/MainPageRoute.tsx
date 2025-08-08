@@ -1,23 +1,17 @@
-import React, { useEffect, useState } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { connect } from "react-redux";
-import Home from "components/Home";
-import { Config } from "components/System";
-import { Account, Organ, Permission, Role } from "components/User";
+import menu_config from "assets/json/menu_config.json";
+import Anm_uc1 from "components/ANM/UC1";
 import {
   CategoryAlarmCode,
   CategoryAlarmLevel,
-  CategoryStatus,
   CategoryAlarmType,
+  CategoryStatus,
 } from "components/Category";
-import menu_config from "assets/json/menu_config.json";
+import Page401 from "components/common/Page401";
 import Page404 from "components/common/Page404";
 import Profile from "components/common/Profile";
-import Page401 from "components/common/Page401";
-import { Cookie } from "helpers/cookie";
-import { IUserInfo } from "models/Apps";
 import Setting from "components/common/Setting";
 import Support from "components/common/Support";
+import Ucppoe from "components/INOC1/I003";
 import {
   CableManagement,
   ConfigurationLogs,
@@ -27,41 +21,40 @@ import {
   DeviceTypes,
   HistoryCurenAlarm,
   Manufacturers,
-  NetworkLinks,
 } from "components/Network";
-import MapComponent from "components/Network/LinksMaps/Map";
-import Charts from "uielements/charts/Charts";
-import CenterDashboard from "../DashboardAutomation/CenterDashboard";
-import RoomDashboard from "../DashboardAutomation/RoomDashboard";
-import DashboardRnocSummary from "../DashboardAutomation/DashboardRnoc/DashboardRnocSummary";
-import DashboardRnocRoom from "../DashboardAutomation/DashboardRnoc/DashboardRnocRoom";
-import ScheduleTriggerForm from "components/RNOC1/R009";
-import Anm_uc1 from "components/ANM/UC1";
 import DashboardR001 from "components/RNOC1/R001";
-import Ucppoe from "components/INOC1/I003";
+import ScheduleTriggerForm from "components/RNOC1/R009";
 import NornirPlatformView from "components/SNOC/components/NornirPlatformView";
 import DashOrigin from "components/SNOC/views/dashboard/DashOrigin/SystemHealthDashboard";
+import { Config } from "components/System";
+import { Account, Organ, Permission, Role } from "components/User";
+import { Cookie } from "helpers/cookie";
+import { IUserInfo } from "models/Apps";
+import React from "react";
+import { connect } from "react-redux";
+import { Route, Routes } from "react-router-dom";
+import CenterDashboard from "../DashboardAutomation/CenterDashboard";
+import DashboardRnocRoom from "../DashboardAutomation/DashboardRnoc/DashboardRnocRoom";
+import DashboardRnocSummary from "../DashboardAutomation/DashboardRnoc/DashboardRnocSummary";
+import RoomDashboard from "../DashboardAutomation/RoomDashboard";
 
-import PSCoreTable from "components/SNOC/views/tables/health/PSCoreTable";
-import CsTable from "components/SNOC/views/tables/health/CsTable";
-import SignalTable from "components/SNOC/views/tables/health/SignalTable";
-import OcsTable from "components/SNOC/views/tables/health/OcsTable";
-import HealthcheckPage from "components/SNOC/views/tables/health/HealthcheckPage";
-import HistoricalReporting from "components/SNOC/views/tables/health/HistoricalReporting";
-import Healthcheck from "components/SNOC/views/forms/health/Healthcheck";
-import Schedule from "components/SNOC/views/forms/health/Schedule";
-import DnsLacracrnc from "components/SNOC/views/forms/dns/Dnslacracrnc";
-import TACConfigPanel from "components/SNOC/views/forms/dns/TACConfigPanel";
 import DnsConfigDashboard from "components/SNOC/views/dashboard/DashOrigin/DnsConfigDashboard";
 import SbcDashboardWithNavbar from "components/SNOC/views/dashboard/DashOrigin/SbcDashboardWithNavbar";
-import CreateConnectionForm from "components/SNOC/views/forms/sbc/CreateConnectionForm";
-import DeclareNumberForm from "components/SNOC/views/forms/sbc/DeclareNumberForm";
-import RoutingDeclarationForm from "components/SNOC/views/forms/sbc/RoutingDeclarationForm";
-import RequestHistoryTable from "components/SNOC/views/forms/sbc/RequestHistoryTable";
 import APNConfigPanel from "components/SNOC/views/forms/dns/APNConfigPanel";
+import DnsLacracrnc from "components/SNOC/views/forms/dns/Dnslacracrnc";
+import TACConfigPanel from "components/SNOC/views/forms/dns/TACConfigPanel";
+import Healthcheck from "components/SNOC/views/forms/health/Healthcheck";
+import Schedule from "components/SNOC/views/forms/health/Schedule";
 import HostConfigPanel from "components/SNOC/views/forms/hosts/HostConfigPanel";
 import KPIChartDashboard from "components/SNOC/views/forms/kpi/KPIChartDashboard";
 import KPISelectorPage from "components/SNOC/views/forms/kpi/KPISelectorPage";
+import ScheduleKpi from "components/SNOC/views/forms/kpi/ScheduleCausecode";
+import CreateConnectionForm from "components/SNOC/views/forms/sbc/CreateConnectionForm";
+import DeclareNumberForm from "components/SNOC/views/forms/sbc/DeclareNumberForm";
+import RequestHistoryTable from "components/SNOC/views/forms/sbc/RequestHistoryTable";
+import RoutingDeclarationForm from "components/SNOC/views/forms/sbc/RoutingDeclarationForm";
+import HealthcheckPage from "components/SNOC/views/tables/health/HealthcheckPage";
+import HistoricalReporting from "components/SNOC/views/tables/health/HistoricalReporting";
 interface Props {
   Apps: any;
 }
@@ -202,6 +195,7 @@ const MainPageRoute = (props: Props) => {
       <Route path="/healthcheck/checks" element={<Healthcheck />} />
       <Route path="/healthcheck/history" element={<HistoricalReporting />} />
       <Route path="/healthcheck/kpi" element={<KPIChartDashboard />} />
+      <Route path="/healthcheck/kpischedule" element={<ScheduleKpi />} />
       <Route path="/kpi/:system/:subsystem" element={<KPISelectorPage />} />
       {/* <Route path="/healthcheck/ps-core" element={<PSCoreTable />} />
       <Route path="/healthcheck/cs-core" element={<CsTable />} />

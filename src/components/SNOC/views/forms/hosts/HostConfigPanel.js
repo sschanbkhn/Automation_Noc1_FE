@@ -1,32 +1,35 @@
-import React, { useEffect, useState, useRef } from "react";
-import { useDispatch, useSelector, Provider } from "react-redux";
+import React, { useEffect, useState } from "react";
 import {
-  Row,
+  Button,
+  Card,
   Col,
   Form,
-  Button,
-  Table,
-  Spinner,
   Modal,
-  Card,
   Pagination,
+  Row,
+  Spinner,
+  Table,
 } from "react-bootstrap";
-import snocStore from "../../../store/snocStore";
+import { Provider, useDispatch, useSelector } from "react-redux";
+import CreatableSelect from "react-select/creatable";
+import Alert from "../../../components/Alert/Alert";
+import WebSocketStatusBanner from "../../../components/WebSocketStatusBanner";
+import { fetchPlatforms } from "../../../redux/Healthcheck/platformDeviceSlice";
 import {
-  fetchHosts,
-  deleteHost,
   addHost,
+  deleteHost,
+  fetchHosts,
   updateHost,
 } from "../../../redux/Hosts/hostsSlice";
+import snocStore from "../../../store/snocStore";
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
-import WebSocketStatusBanner from "../../../components/WebSocketStatusBanner";
-import Alert from "../../../components/Alert/Alert";
 
 const HostManagerContent = () => {
   const dispatch = useDispatch();
   const { devices = [], loading = false } = useSelector(
     (state) => state.hosts || {}
   );
+  const { platforms = [] } = useSelector((state) => state.platformDevice || {});
 
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -36,20 +39,19 @@ const HostManagerContent = () => {
   const [newHost, setNewHost] = useState({
     name: "",
     hostname: "",
-    platform: "",
+    platform: "", // ID platform nếu chọn từ dropdown
+    platformName: "", // Tên platform nếu tạo mới
     groups: "",
     username: "",
     password: "",
   });
+
   const pageSize = 20;
 
   useEffect(() => {
     dispatch(fetchHosts());
+    dispatch(fetchPlatforms()); // ✅ load list platform cho dropdown
   }, [dispatch]);
-
-  useEffect(() => {
-    console.log("🔍 newHost:", newHost);
-  }, [newHost]);
 
   const handleSort = (key) => {
     let direction = "asc";
@@ -91,6 +93,12 @@ const HostManagerContent = () => {
         .map((g) => g.trim())
         .filter((g) => g),
     };
+
+    // Chuẩn hóa platform gửi lên
+    if (!payload.platform && payload.platformName) {
+      payload.platform = payload.platformName; // Gửi tên nếu là platform mới
+    }
+
     if (editing) {
       dispatch(updateHost({ name: newHost.name, data: payload }));
     } else {
@@ -103,8 +111,13 @@ const HostManagerContent = () => {
 
   const handleEdit = (host) => {
     setEditing(true);
+    // Map platform name → ID cho dropdown
+    const platformObj = platforms.find((p) => p.name === host.platform);
+    const platformId = platformObj ? platformObj.id : "";
     setNewHost({
       ...host,
+      platform: platformId,
+      platformName: platformObj ? "" : host.platform,
       groups: host.groups?.join(", ") || "",
       username: "",
       password: "",
@@ -115,7 +128,7 @@ const HostManagerContent = () => {
   const handleAddNew = () => {
     setEditing(false);
     resetHostForm();
-    setTimeout(() => setShowModal(true), 0); // 👈 Đợi sau 1 tick để state cập nhật xong
+    setTimeout(() => setShowModal(true), 0);
   };
 
   const resetHostForm = () => {
@@ -123,10 +136,16 @@ const HostManagerContent = () => {
       name: "",
       hostname: "",
       platform: "",
+      platformName: "",
       groups: "",
       username: "",
       password: "",
     });
+  };
+
+  const getPlatformLabel = (id) => {
+    const p = platforms.find((pl) => pl.id === id);
+    return p ? p.name : "";
   };
 
   return (
@@ -197,7 +216,6 @@ const HostManagerContent = () => {
                         >
                           Groups
                         </th>
-                        {/* <th>Username</th> */}
                         <th>Hành động</th>
                       </tr>
                     </thead>
@@ -209,7 +227,6 @@ const HostManagerContent = () => {
                           <td>{d.hostname}</td>
                           <td>{d.platform}</td>
                           <td>{d.groups?.join(", ")}</td>
-                          {/* <td>{d.username || "—"}</td> */}
                           <td>
                             <Button
                               variant="warning"
@@ -309,12 +326,43 @@ const HostManagerContent = () => {
             </Form.Group>
             <Form.Group className="mb-3">
               <Form.Label>Platform</Form.Label>
-              <Form.Control
-                type="text"
-                value={newHost.platform}
-                onChange={(e) =>
-                  setNewHost({ ...newHost, platform: e.target.value })
+              <CreatableSelect
+                isClearable
+                placeholder="Chọn hoặc nhập platform mới..."
+                value={
+                  newHost.platform
+                    ? {
+                        value: newHost.platform,
+                        label: getPlatformLabel(newHost.platform),
+                      }
+                    : newHost.platformName
+                    ? {
+                        value: newHost.platformName,
+                        label: newHost.platformName,
+                      }
+                    : null
                 }
+                options={platforms.map((p) => ({
+                  value: p.id,
+                  label: p.name,
+                }))}
+                onChange={(option) => {
+                  if (!option) {
+                    setNewHost({ ...newHost, platform: "", platformName: "" });
+                  } else if (option.__isNew__) {
+                    setNewHost({
+                      ...newHost,
+                      platform: "",
+                      platformName: option.label,
+                    });
+                  } else {
+                    setNewHost({
+                      ...newHost,
+                      platform: option.value,
+                      platformName: "",
+                    });
+                  }
+                }}
               />
             </Form.Group>
             <Form.Group className="mb-3">
@@ -331,7 +379,6 @@ const HostManagerContent = () => {
               <Form.Label>Username</Form.Label>
               <Form.Control
                 type="text"
-                name="newhost_username"
                 autoComplete="off"
                 value={newHost.username}
                 onChange={(e) =>
@@ -343,7 +390,6 @@ const HostManagerContent = () => {
               <Form.Label>Password</Form.Label>
               <Form.Control
                 type="password"
-                name="newhost_password"
                 autoComplete="new-password"
                 value={newHost.password}
                 onChange={(e) =>

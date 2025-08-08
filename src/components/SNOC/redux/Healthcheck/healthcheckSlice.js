@@ -1,16 +1,185 @@
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import snocApi from "../../api/snocApiWithAutoToken";
 import { showTemporaryAlert } from "../Alert/alertSlice";
+
+// ######## toggle device excluded
+
+export const toggleDeviceExcluded = createAsyncThunk(
+  "pscore/toggleDeviceExcluded",
+  async ({ host, excluded }, { dispatch, rejectWithValue }) => {
+    try {
+      const response = await snocApi.post(
+        `/nornirps/systemhealth/toggle-exclude/`,
+        { host, excluded }
+      );
+
+      dispatch(
+        showTemporaryAlert({
+          message: `Thiết bị ${host} ${
+            excluded ? "đã loại trừ" : "bỏ loại trừ"
+          } khỏi cảnh báo`,
+          type: "success",
+        })
+      );
+
+      return { host, excluded };
+    } catch (error) {
+      const msg =
+        error?.response?.data?.detail ||
+        "Không thể cập nhật trạng thái excluded";
+      dispatch(showTemporaryAlert({ message: msg, type: "error" }));
+      return rejectWithValue(error?.response?.data);
+    }
+  }
+);
+
+// ######################### scheduler chung
+// ######################### scheduler chung #########################
+
+// 1️⃣ Lấy danh sách schedule generic
+export const fetchGenericSchedule = createAsyncThunk(
+  "pscore/fetchGenericSchedules",
+  async ({ usecase_type = "causecode" }, { dispatch, rejectWithValue }) => {
+    try {
+      const response = await snocApi.get(
+        `/nornirps/scheduler/generic/list/?usecase=${usecase_type}`
+      );
+      return response.data;
+    } catch (error) {
+      const message =
+        error?.response?.data?.detail || "Lỗi khi tải danh sách lịch generic";
+      dispatch(showTemporaryAlert({ message, type: "error" }));
+      return rejectWithValue(error?.response?.data);
+    }
+  }
+);
+
+// 2️⃣ Tạo schedule generic
+export const createGenericSchedule = createAsyncThunk(
+  "pscore/createGenericSchedule",
+  async (
+    { name, platform, node_names, cron, start_time, usecase_type },
+    { dispatch, rejectWithValue }
+  ) => {
+    try {
+      const response = await snocApi.post("/nornirps/scheduler/generic/", {
+        name,
+        platform,
+        node_names,
+        cron,
+        start_time,
+        usecase_type, // ✅ gửi đúng key backend yêu cầu
+      });
+      dispatch(
+        showTemporaryAlert({
+          message: "Tạo lịch generic thành công!",
+          type: "success",
+        })
+      );
+      return response.data;
+    } catch (error) {
+      const message =
+        error?.response?.data?.detail || "Lỗi khi tạo lịch generic";
+      dispatch(showTemporaryAlert({ message, type: "error" }));
+      return rejectWithValue(error?.response?.data);
+    }
+  }
+);
+
+// 3️⃣ Bật / tắt schedule generic
+export const toggleGenericSchedule = createAsyncThunk(
+  "pscore/toggleGenericScheduleEnabled",
+  async ({ id, enabled }, { dispatch, rejectWithValue }) => {
+    try {
+      await snocApi.patch(`/nornirps/scheduler/generic/${id}/toggle/`, {
+        enabled,
+      });
+      dispatch(
+        showTemporaryAlert({
+          message: `Đã ${enabled ? "bật" : "tắt"} lịch generic`,
+          type: "success",
+        })
+      );
+      return { id, enabled };
+    } catch (error) {
+      const message =
+        error?.response?.data?.detail || "Lỗi bật/tắt lịch generic";
+      dispatch(showTemporaryAlert({ message, type: "error" }));
+      return rejectWithValue(error?.response?.data);
+    }
+  }
+);
+
+// 4️⃣ Xoá schedule generic
+export const deleteGenericSchedule = createAsyncThunk(
+  "pscore/deleteGenericSchedule",
+  async ({ id, usecase_type }, { dispatch, rejectWithValue }) => {
+    try {
+      // ✅ truyền usecase_type dưới dạng query param
+      await snocApi.delete(
+        `/nornirps/scheduler/generic/${id}/delete/?usecase_type=${usecase_type}`
+      );
+
+      dispatch(
+        showTemporaryAlert({ message: "Đã xóa lịch generic", type: "success" })
+      );
+      // ✅ Fetch lại danh sách theo đúng usecase_type
+      dispatch(fetchGenericSchedule({ usecase_type }));
+
+      return { id, usecase_type };
+    } catch (error) {
+      const message = error?.response?.data?.detail || "Lỗi xóa lịch generic";
+      dispatch(showTemporaryAlert({ message, type: "error" }));
+      return rejectWithValue(error?.response?.data);
+    }
+  }
+);
+
+// 5️⃣ Cập nhật schedule generic
+export const updateGenericSchedule = createAsyncThunk(
+  "pscore/updateGenericSchedule",
+  async (
+    { id, name, platform, node_names, cron, start_time, usecase_type },
+    { dispatch, rejectWithValue }
+  ) => {
+    try {
+      await snocApi.put(`/nornirps/scheduler/generic/${id}/update/`, {
+        name,
+        platform,
+        node_names,
+        cron,
+        start_time,
+        usecase_type, // ✅ gửi đúng key backend yêu cầu
+      });
+      dispatch(fetchGenericSchedule({ usecase_type }));
+      dispatch(
+        showTemporaryAlert({
+          message: "Đã cập nhật lịch thành công",
+          type: "success",
+        })
+      );
+      return id;
+    } catch (error) {
+      const message =
+        error?.response?.data?.detail || "Lỗi khi cập nhật lịch generic";
+      dispatch(showTemporaryAlert({ message, type: "error" }));
+      return rejectWithValue(error?.response?.data);
+    }
+  }
+);
 
 // ######################### kpi
 
 export const fetchAvailableKPIs = createAsyncThunk(
-  "healthcheck/fetchAvailableKPIs",
-  async ({ selectedPlatform }, { rejectWithValue }) => {
+  "pscore/fetchAvailableKPIs",
+  async ({ selectedPlatform, selectedDevices = [] }, { rejectWithValue }) => {
     try {
-      const response = await snocApi.get(
-        `/nornirps/kpi/list/?platform=${selectedPlatform}`
-      );
+      const params = new URLSearchParams();
+      params.append("platform", selectedPlatform);
+      selectedDevices.forEach((d) => params.append("device", d));
+
+      const url = `/nornirps/kpi/list/?${params.toString()}`;
+      const response = await snocApi.get(url);
       return response.data;
     } catch (error) {
       return rejectWithValue(error?.response?.data || {});
@@ -334,6 +503,9 @@ const psCoreSlice = createSlice({
     count: 0,
     next: null,
     previous: null,
+    countlastest: 0,
+    nextlastest: null,
+    previouslastest: null,
     healthchecknodes: [],
     status: "idle",
     error: null,
@@ -349,6 +521,8 @@ const psCoreSlice = createSlice({
     recentlyUpdated: {}, // Lưu thông tin các hệ thống vừa cập nhật
     availableKPIs: [], // ✅ Danh sách KPI có sẵn
     kpiChartData: {}, // Updated to object keyed by KPI
+    genericSchedules: {}, // { healthcheck: [], causecode: [], ... }
+    loadingGenericSchedules: {},
   },
   reducers: {
     updateLastRunAt: (state, action) => {
@@ -434,9 +608,9 @@ const psCoreSlice = createSlice({
       .addCase(fetchLatestHealthcheckView.fulfilled, (state, action) => {
         state.loading = false;
         state.lastestitems = action.payload.results || [];
-        state.count = action.payload.count || 0;
-        state.next = action.payload.next;
-        state.previous = action.payload.previous;
+        state.countlastest = action.payload.count || 0;
+        state.nextlastest = action.payload.next;
+        state.previouslastest = action.payload.previous;
       })
       .addCase(fetchLatestHealthcheckView.rejected, (state) => {
         state.loading = false;
@@ -576,6 +750,134 @@ const psCoreSlice = createSlice({
       .addCase(fetchKPIChartData.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message;
+      })
+
+      // --- FETCH generic schedule ---
+      .addCase(fetchGenericSchedule.pending, (state, action) => {
+        const type = action.meta.arg.usecase_type;
+        state.loadingGenericSchedules = {
+          ...state.loadingGenericSchedules,
+          [type]: true,
+        };
+      })
+      .addCase(fetchGenericSchedule.fulfilled, (state, action) => {
+        const type = action.meta.arg.usecase_type;
+        state.loadingGenericSchedules = {
+          ...state.loadingGenericSchedules,
+          [type]: false,
+        };
+        // API trả về mảng -> gán trực tiếp
+        state.genericSchedules[type] = action.payload || [];
+      })
+      .addCase(fetchGenericSchedule.rejected, (state, action) => {
+        const type = action.meta.arg.usecase_type;
+        state.loadingGenericSchedules = {
+          ...state.loadingGenericSchedules,
+          [type]: false,
+        };
+        state.genericSchedules[type] = [];
+      })
+
+      // --- CREATE generic schedule ---
+      .addCase(createGenericSchedule.pending, (state, action) => {
+        const type = action.meta.arg.usecase_type;
+        state.loadingGenericSchedules = {
+          ...state.loadingGenericSchedules,
+          [type]: true,
+        };
+      })
+      .addCase(createGenericSchedule.fulfilled, (state, action) => {
+        const type = action.meta.arg.usecase_type;
+        state.loadingGenericSchedules = {
+          ...state.loadingGenericSchedules,
+          [type]: false,
+        };
+        // Sau khi tạo thành công, thunk đã dispatch fetchGenericSchedule -> list sẽ update sau
+      })
+      .addCase(createGenericSchedule.rejected, (state, action) => {
+        const type = action.meta.arg.usecase_type;
+        state.loadingGenericSchedules = {
+          ...state.loadingGenericSchedules,
+          [type]: false,
+        };
+      })
+
+      // --- UPDATE generic schedule ---
+      .addCase(updateGenericSchedule.pending, (state, action) => {
+        const type = action.meta.arg.usecase_type;
+        state.loadingGenericSchedules = {
+          ...state.loadingGenericSchedules,
+          [type]: true,
+        };
+      })
+      .addCase(updateGenericSchedule.fulfilled, (state, action) => {
+        const type = action.meta.arg.usecase_type;
+        state.loadingGenericSchedules = {
+          ...state.loadingGenericSchedules,
+          [type]: false,
+        };
+      })
+      .addCase(updateGenericSchedule.rejected, (state, action) => {
+        const type = action.meta.arg.usecase_type;
+        state.loadingGenericSchedules = {
+          ...state.loadingGenericSchedules,
+          [type]: false,
+        };
+      })
+
+      // --- DELETE generic schedule ---
+      .addCase(deleteGenericSchedule.pending, (state, action) => {
+        const type = action.meta.arg.usecase_type;
+        state.loadingGenericSchedules = {
+          ...state.loadingGenericSchedules,
+          [type]: true,
+        };
+      })
+      .addCase(deleteGenericSchedule.fulfilled, (state, action) => {
+        const type = action.meta.arg.usecase_type;
+        state.loadingGenericSchedules = {
+          ...state.loadingGenericSchedules,
+          [type]: false,
+        };
+      })
+      .addCase(deleteGenericSchedule.rejected, (state, action) => {
+        const type = action.meta.arg.usecase_type;
+        state.loadingGenericSchedules = {
+          ...state.loadingGenericSchedules,
+          [type]: false,
+        };
+      })
+
+      // --- TOGGLE generic schedule ---
+      .addCase(toggleGenericSchedule.pending, (state, action) => {
+        const type = action.meta.arg.usecase_type;
+        state.loadingGenericSchedules = {
+          ...state.loadingGenericSchedules,
+          [type]: true,
+        };
+      })
+      .addCase(toggleGenericSchedule.fulfilled, (state, action) => {
+        const type = action.meta.arg.usecase_type;
+        state.loadingGenericSchedules = {
+          ...state.loadingGenericSchedules,
+          [type]: false,
+        };
+      })
+      .addCase(toggleGenericSchedule.rejected, (state, action) => {
+        const type = action.meta.arg.usecase_type;
+        state.loadingGenericSchedules = {
+          ...state.loadingGenericSchedules,
+          [type]: false,
+        };
+      })
+
+      // --- TOGGLE device excluded ---
+      .addCase(toggleDeviceExcluded.fulfilled, (state, action) => {
+        const { host, excluded } = action.payload;
+        // cập nhật vào lastestitems
+        state.lastestitems = state.lastestitems.map((item) =>
+          item.host === host ? { ...item, excluded } : item
+        );
       });
   },
 });

@@ -1,36 +1,35 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { useParams, useLocation } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
-import { fetchDevicesByPlatform } from "../../../redux/Healthcheck/platformDeviceSlice";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  fetchKPIChartData,
-  fetchAvailableKPIs,
-} from "../../../redux/Healthcheck/healthcheckSlice";
-import {
-  Row,
-  Col,
-  Card,
   Button,
-  InputGroup,
+  Card,
+  Col,
   FormControl,
+  InputGroup,
+  Row,
 } from "react-bootstrap";
-import Select from "react-select";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
-import WebSocketStatusBanner from "../../../components/WebSocketStatusBanner";
-import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
-import snocStore from "../../../store/snocStore";
-import { Provider } from "react-redux";
+import { Provider, useDispatch, useSelector } from "react-redux";
+import { useLocation, useParams } from "react-router-dom";
+import Select from "react-select";
 import {
-  LineChart,
+  CartesianGrid,
   Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
 } from "recharts";
+import WebSocketStatusBanner from "../../../components/WebSocketStatusBanner";
+import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
+import {
+  fetchAvailableKPIs,
+  fetchKPIChartData,
+} from "../../../redux/Healthcheck/healthcheckSlice";
+import { fetchDevicesByPlatform } from "../../../redux/Healthcheck/platformDeviceSlice";
+import snocStore from "../../../store/snocStore";
+import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
 
 const KPISelectorPageContent = () => {
   const { system, subsystem } = useParams();
@@ -53,14 +52,36 @@ const KPISelectorPageContent = () => {
   const [endTime, setEndTime] = useState("23:59");
   const [visibleDevices, setVisibleDevices] = useState([]);
   const [showAll, setShowAll] = useState(true);
+  const [chartMode, setChartMode] = useState("absolute");
 
   useEffect(() => {
     if (selectedPlatform) {
       dispatch(fetchDevicesByPlatform(selectedPlatform));
-      dispatch(fetchAvailableKPIs({ selectedPlatform }));
+      setSelectedDevices([]);
+      setSelectedKPIs([]);
     }
-    setSelectedDevices([]);
   }, [dispatch, selectedPlatform]);
+
+  useEffect(() => {
+    if (selectedPlatform && selectedDevices.length > 0) {
+      const selectedDeviceNames = selectedDevices.map((d) => d.value);
+      dispatch(
+        fetchAvailableKPIs({
+          selectedPlatform,
+          selectedDevices: selectedDeviceNames,
+        })
+      );
+      setSelectedKPIs([]);
+    }
+  }, [dispatch, selectedPlatform, selectedDevices]);
+
+  useEffect(() => {
+    if (availableKPIs.kpis?.length > 0 && selectedKPIs.length === 0) {
+      setSelectedKPIs([
+        { label: availableKPIs.kpis[0], value: availableKPIs.kpis[0] },
+      ]);
+    }
+  }, [availableKPIs.kpis]);
 
   const deviceOptions = useMemo(() => {
     return devices.map((d) => ({
@@ -82,6 +103,11 @@ const KPISelectorPageContent = () => {
       setSelectedDevices(selected);
     }
   };
+
+  const kpiOptions = (availableKPIs?.kpis || []).map((kpi) => ({
+    label: kpi,
+    value: kpi,
+  }));
 
   const handleCheckKPI = () => {
     const selectedNames = selectedDevices.map((d) => d.value);
@@ -114,11 +140,6 @@ const KPISelectorPageContent = () => {
     }
   };
 
-  const kpiOptions = (availableKPIs?.kpis || []).map((kpi) => ({
-    label: kpi,
-    value: kpi,
-  }));
-
   const groupedChartDataByKPIAndDevice = useMemo(() => {
     const groups = {};
     for (const kpi in kpiChartData) {
@@ -132,6 +153,17 @@ const KPISelectorPageContent = () => {
     }
     return groups;
   }, [kpiChartData]);
+
+  const getDeltaLineData = (deviceData) => {
+    const deltaByDevice = {};
+    Object.entries(deviceData).forEach(([device, arr]) => {
+      deltaByDevice[device] = arr.map((row, idx) => ({
+        ...row,
+        value: idx === 0 ? 0 : row.value - arr[idx - 1].value,
+      }));
+    });
+    return deltaByDevice;
+  };
 
   useEffect(() => {
     const allDevices = new Set();
@@ -152,23 +184,17 @@ const KPISelectorPageContent = () => {
     );
   };
 
-  const showAllDevices = () => {
-    const allDevices = new Set();
-    for (const kpi in groupedChartDataByKPIAndDevice) {
-      for (const device in groupedChartDataByKPIAndDevice[kpi]) {
-        allDevices.add(device);
-      }
-    }
-    setVisibleDevices(Array.from(allDevices));
-  };
-
-  const hideAllDevices = () => setVisibleDevices([]);
-
   const toggleAllDevices = () => {
     if (showAll) {
-      hideAllDevices();
+      setVisibleDevices([]);
     } else {
-      showAllDevices();
+      const allDevices = new Set();
+      for (const kpi in groupedChartDataByKPIAndDevice) {
+        for (const device in groupedChartDataByKPIAndDevice[kpi]) {
+          allDevices.add(device);
+        }
+      }
+      setVisibleDevices(Array.from(allDevices));
     }
     setShowAll(!showAll);
   };
@@ -186,6 +212,9 @@ const KPISelectorPageContent = () => {
     "#17becf",
   ];
 
+  const [kpiSearchInput, setKpiSearchInput] = useState("");
+  const kpiInputRef = useRef("");
+  const [kpiMenuOpen, setKpiMenuOpen] = useState(false);
   return (
     <>
       <TopNavbarHealth />
@@ -214,6 +243,7 @@ const KPISelectorPageContent = () => {
             <Col md={3}>
               <Select
                 isMulti
+                isSearchable={true} // 🔹 bật search
                 closeMenuOnSelect={false}
                 hideSelectedOptions={false}
                 options={combinedOptions}
@@ -237,11 +267,39 @@ const KPISelectorPageContent = () => {
             <Col md={3}>
               <Select
                 isMulti
+                isSearchable
                 closeMenuOnSelect={false}
+                blurInputOnSelect={false}
+                menuIsOpen={kpiMenuOpen}
+                onMenuOpen={() => setKpiMenuOpen(true)}
+                onMenuClose={() => {
+                  setKpiMenuOpen(false);
+                  // ⚠️ Ngăn react-select reset inputValue
+                  setTimeout(() => {
+                    setKpiSearchInput(kpiInputRef.current);
+                  }, 0);
+                }}
+                inputValue={kpiSearchInput}
+                onInputChange={(value, { action }) => {
+                  if (action === "input-change") {
+                    kpiInputRef.current = value;
+                    setKpiSearchInput(value);
+                  }
+                  if (action === "menu-close") {
+                    setKpiMenuOpen(false);
+                  }
+                }}
+                onChange={(selected, meta) => {
+                  setSelectedKPIs(selected || []);
+                  if (meta.action === "select-option") {
+                    setTimeout(() => {
+                      setKpiSearchInput(kpiInputRef.current);
+                    }, 0);
+                  }
+                }}
                 hideSelectedOptions={false}
                 options={kpiOptions}
                 value={selectedKPIs}
-                onChange={(selected) => setSelectedKPIs(selected || [])}
                 placeholder="-- Chọn KPI --"
                 styles={{
                   valueContainer: (base) => ({
@@ -264,7 +322,7 @@ const KPISelectorPageContent = () => {
             </Col>
           </Row>
 
-          <Row className="align-items-end">
+          <Row className="align-items-end mb-3">
             <Col md={3}>
               <DatePicker
                 selected={startDate}
@@ -296,72 +354,89 @@ const KPISelectorPageContent = () => {
               />
             </Col>
           </Row>
+
+          <Row className="mb-2">
+            <Col>
+              <Button
+                size="sm"
+                variant={
+                  chartMode === "absolute" ? "primary" : "outline-primary"
+                }
+                onClick={() => setChartMode("absolute")}
+              >
+                Absolute
+              </Button>{" "}
+              <Button
+                size="sm"
+                variant={chartMode === "delta" ? "primary" : "outline-primary"}
+                onClick={() => setChartMode("delta")}
+              >
+                Delta
+              </Button>
+            </Col>
+          </Row>
         </Card.Body>
       </Card>
 
-      {selectedKPIs.map((kpiObj) => {
-        const kpi = kpiObj.value;
-        const deviceData = groupedChartDataByKPIAndDevice[kpi] || {};
-        return (
-          <Card className="mb-4" key={kpi}>
-            <Card.Body>
-              <h5 className="mb-3">
-                Biểu đồ KPI: <i>{kpi}</i>
-              </h5>
-              <Row className="flex-nowrap">
-                <Col className="pe-2">
-                  <ResponsiveContainer width="100%" height={350}>
+      <Row>
+        {selectedKPIs.map((kpiObj) => {
+          const kpi = kpiObj.value;
+          const deviceData = groupedChartDataByKPIAndDevice[kpi] || {};
+          const displayData =
+            chartMode === "delta" ? getDeltaLineData(deviceData) : deviceData;
+
+          return (
+            <Col md={4} key={kpi} className="mb-4">
+              <Card>
+                <Card.Body>
+                  <h6 className="mb-2">
+                    KPI: <i>{kpi}</i>
+                  </h6>
+                  <ResponsiveContainer width="100%" height={300}>
                     <LineChart margin={{ top: 20, right: 20, bottom: 50 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis
                         dataKey="timestamp"
                         tickFormatter={(value) => {
                           const date = new Date(value);
-                          return `${date.getFullYear()}-${String(
-                            date.getMonth() + 1
-                          ).padStart(2, "0")}-${String(date.getDate()).padStart(
-                            2,
-                            "0"
-                          )} ${String(date.getHours()).padStart(
-                            2,
-                            "0"
-                          )}:${String(date.getMinutes()).padStart(2, "0")}`;
+                          return `${date.getHours()}:${String(
+                            date.getMinutes()
+                          ).padStart(2, "0")}`;
                         }}
                         angle={-45}
                         textAnchor="end"
                         interval={Math.floor(
-                          (kpiChartData[kpi]?.length || 1) / 20
+                          (kpiChartData[kpi]?.length || 1) / 10
                         )}
                       />
                       <YAxis />
                       <Tooltip />
-                      {Object.entries(deviceData).map(([device, data], index) =>
-                        visibleDevices.includes(device) ? (
-                          <Line
-                            key={device}
-                            type="monotone"
-                            data={data}
-                            dataKey="value"
-                            name={device}
-                            stroke={colors[index % colors.length]}
-                            dot={{ r: 2 }}
-                            strokeWidth={2}
-                            isAnimationActive={false}
-                          />
-                        ) : null
+                      {Object.entries(displayData).map(
+                        ([device, data], index) =>
+                          visibleDevices.includes(device) ? (
+                            <Line
+                              key={device}
+                              type="monotone"
+                              data={data}
+                              dataKey="value"
+                              name={device}
+                              stroke={colors[index % colors.length]}
+                              dot={{ r: 2 }}
+                              strokeWidth={2}
+                              isAnimationActive={false}
+                            />
+                          ) : null
                       )}
                     </LineChart>
                   </ResponsiveContainer>
-                </Col>
-                <div
-                  className="d-flex flex-column gap-2 mt-3 mt-lg-0"
-                  style={{
-                    width: "160px",
-                    maxHeight: "350px",
-                    overflowY: "auto",
-                  }}
-                >
-                  <div className="d-flex gap-2">
+                  <div
+                    className="d-flex flex-column gap-1 mt-2"
+                    style={{
+                      maxHeight: "120px",
+                      overflowY: "auto",
+                      fontSize: "11px",
+                    }}
+                  >
                     <Button
                       size="sm"
                       variant="outline-secondary"
@@ -375,32 +450,31 @@ const KPISelectorPageContent = () => {
                     >
                       👁️
                     </Button>
+                    {Object.keys(deviceData).map((device, index) => {
+                      const isVisible = visibleDevices.includes(device);
+                      return (
+                        <div
+                          key={device}
+                          onClick={() => toggleDeviceVisibility(device)}
+                          style={{
+                            cursor: "pointer",
+                            color: colors[index % colors.length],
+                            textDecoration: isVisible ? "none" : "line-through",
+                            whiteSpace: "nowrap",
+                          }}
+                          title={device}
+                        >
+                          {device}
+                        </div>
+                      );
+                    })}
                   </div>
-                  {Object.keys(deviceData).map((device, index) => {
-                    const isVisible = visibleDevices.includes(device);
-                    return (
-                      <div
-                        key={device}
-                        onClick={() => toggleDeviceVisibility(device)}
-                        style={{
-                          cursor: "pointer",
-                          fontSize: "12px",
-                          color: colors[index % colors.length],
-                          textDecoration: isVisible ? "none" : "line-through",
-                          whiteSpace: "nowrap",
-                        }}
-                        title={device}
-                      >
-                        {device}
-                      </div>
-                    );
-                  })}
-                </div>
-              </Row>
-            </Card.Body>
-          </Card>
-        );
-      })}
+                </Card.Body>
+              </Card>
+            </Col>
+          );
+        })}
+      </Row>
     </>
   );
 };

@@ -186,7 +186,6 @@
   padding: 0.75rem 1rem;
 }
 
-
 .toastSuccess {
   background-color: #28a745;
   color: white;
@@ -205,4 +204,14 @@
 .toastInfo {
   background-color: #17a2b8;
   color: white;
+}
+
+.modal-90w {
+  max-width: 95vw !important;
+  width: 95vw !important;
+}
+
+.modalWide {
+  max-width: 1800px !important; // ~gấp đôi modal xl mặc định
+  width: 95% !important; // gần full màn hình nhưng vẫn có khoảng cách
 }
