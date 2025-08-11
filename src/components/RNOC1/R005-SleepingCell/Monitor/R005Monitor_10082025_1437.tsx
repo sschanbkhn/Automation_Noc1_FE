@@ -629,9 +629,9 @@ const KpiMonitorTab: React.FC = () => {
         { header: "Data Date", key: "data_date", width: 15 },
       ];
 
-      // Thêm data và style
+      // Thêm data
       filteredRecords.forEach((record, index) => {
-        const row = worksheet.addRow({
+        worksheet.addRow({
           stt: index + 1,
           province: record.province,
           period_start_time: record.period_start_time,
@@ -651,126 +651,15 @@ const KpiMonitorTab: React.FC = () => {
           vendor: record.vendor,
           data_date: record.data_date,
         });
-
-        // ✅ Thêm dòng này để đảm bảo chiều cao cho từng dòng data
-        row.height = 20;
-
-        // 🎨 Alternate row colors (zebra striping)
-        const isEvenRow = (index + 1) % 2 === 0;
-        const rowFillColor = isEvenRow ? "F8F9FA" : "FFFFFF"; // Light gray cho even rows
-
-        // Apply background color to all cells in row
-        row.eachCell((cell, colNumber) => {
-          cell.fill = {
-            type: "pattern",
-            pattern: "solid",
-            fgColor: { argb: rowFillColor },
-          };
-
-          // 🔲 Add borders to all cells
-          cell.border = {
-            top: { style: "thin", color: { argb: "D1D5DB" } },
-            left: { style: "thin", color: { argb: "D1D5DB" } },
-            bottom: { style: "thin", color: { argb: "D1D5DB" } },
-            right: { style: "thin", color: { argb: "D1D5DB" } },
-          };
-
-          // 📊 Style Cell Availability column based on value
-          if (colNumber === 10) {
-            // Cell Avail column
-            const cellAvail = record.cell_avail || 0;
-            if (cellAvail >= 95) {
-              cell.font = { color: { argb: "10B981" }, bold: true }; // Green
-            } else if (cellAvail >= 90) {
-              cell.font = { color: { argb: "F59E0B" }, bold: true }; // Yellow
-            } else {
-              cell.font = { color: { argb: "EF4444" }, bold: true }; // Red
-            }
-          }
-
-          // 🏷️ Style Execution Status column
-          if (colNumber === 14) {
-            // Execution Status column
-            const status = record.execution_status?.toLowerCase();
-            switch (status) {
-              case "completed":
-                cell.fill = {
-                  type: "pattern",
-                  pattern: "solid",
-                  fgColor: { argb: "D1FAE5" }, // Light green background
-                };
-                cell.font = { color: { argb: "10B981" }, bold: true };
-                break;
-              case "failed":
-                cell.fill = {
-                  type: "pattern",
-                  pattern: "solid",
-                  fgColor: { argb: "FEE2E2" }, // Light red background
-                };
-                cell.font = { color: { argb: "EF4444" }, bold: true };
-                break;
-              case "starting_reset":
-                cell.fill = {
-                  type: "pattern",
-                  pattern: "solid",
-                  fgColor: { argb: "FEF3C7" }, // Light yellow background
-                };
-                cell.font = { color: { argb: "F59E0B" }, bold: true };
-                break;
-              default:
-                cell.fill = {
-                  type: "pattern",
-                  pattern: "solid",
-                  fgColor: { argb: "F3F4F6" }, // Light gray background
-                };
-                cell.font = { color: { argb: "6B7280" }, bold: true };
-            }
-          }
-
-          // 📝 Center align number columns
-          if ([1, 8, 9, 10, 11, 12, 13].includes(colNumber)) {
-            cell.alignment = { horizontal: "center", vertical: "middle" };
-          } else {
-            cell.alignment = { horizontal: "left", vertical: "middle" };
-          }
-        });
       });
 
-      // 🏆 Style header row
-      const headerRow = worksheet.getRow(1);
-      headerRow.font = {
-        bold: true,
-        color: { argb: "FFFFFF" },
-        // color: { argb: "366092" },
-        size: 12,
-      };
-      headerRow.fill = {
+      // Style header row
+      worksheet.getRow(1).font = { bold: true, color: { argb: "FFFFFF" } };
+      worksheet.getRow(1).fill = {
         type: "pattern",
         pattern: "solid",
-        // fgColor: { argb: "1F2937" }, // Dark gray header
-        fgColor: { argb: "366092" }, // Dark gray header
+        fgColor: { argb: "366092" },
       };
-      headerRow.alignment = {
-        horizontal: "center",
-        vertical: "middle",
-      };
-      headerRow.height = 25; // Taller header
-
-      // Add borders to header
-      headerRow.eachCell((cell) => {
-        cell.border = {
-          top: { style: "medium", color: { argb: "111827" } },
-          left: { style: "medium", color: { argb: "111827" } },
-          bottom: { style: "medium", color: { argb: "111827" } },
-          right: { style: "medium", color: { argb: "111827" } },
-        };
-      });
-
-      // 📐 Set default row height
-      worksheet.properties.defaultRowHeight = 20;
-
-      // 🔒 Freeze header row
-      worksheet.views = [{ state: "frozen", ySplit: 1 }];
 
       // Generate Excel file
       const buffer = await workbook.xlsx.writeBuffer();

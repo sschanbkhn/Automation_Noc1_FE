@@ -1,9 +1,5 @@
+// import React, { useState, useEffect, useMemo } from "react";
 import React, { useState, useEffect, useMemo, useRef } from "react";
-// import ReactExport from "react-excel-export";
-// declare module "react-excel-export";
-// import * as XLSX from "xlsx";
-import * as ExcelJS from "exceljs";
-import { saveAs } from "file-saver";
 
 interface KpiRecord {
   id: number;
@@ -32,15 +28,13 @@ interface KpiRecord {
   vendor: string;
   archived_at: string;
   archived_by: string;
-  // execution_status?: "success" | "failed" | "pending"; // Thêm execution status
-  execution_status?: string; // ← SỬA: từ "success" | "failed" | "pending" thành string
 }
 
 const KpiMonitorTab: React.FC = () => {
   const [records, setRecords] = useState<KpiRecord[]>([]);
   const [filteredRecords, setFilteredRecords] = useState<KpiRecord[]>([]);
   const [loading, setLoading] = useState(false);
-  const [executionStatus, setExecutionStatus] = useState<"idle" | "loading" | "success" | "failed">("idle");
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toLocaleDateString("en-CA"));
 
   interface MultiSelectDropdownProps {
     label: string;
@@ -57,13 +51,19 @@ const KpiMonitorTab: React.FC = () => {
 
     const filteredOptions = options.filter((option) => option.toLowerCase().includes(searchTerm.toLowerCase()));
 
+    // ✅ Click outside để đóng dropdown
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
+        // ✅ CHỈ đóng khi click BÊN NGOÀI dropdown
         if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+          console.log("🔒 Clicking outside - closing dropdown");
           setIsOpen(false);
+        } else {
+          console.log("🔓 Clicking inside dropdown - keeping open");
         }
       };
 
+      // ✅ CHỈ listen khi dropdown đang mở
       if (isOpen) {
         document.addEventListener("mousedown", handleClickOutside);
       }
@@ -71,19 +71,30 @@ const KpiMonitorTab: React.FC = () => {
       return () => {
         document.removeEventListener("mousedown", handleClickOutside);
       };
-    }, [isOpen]);
+    }, [isOpen]); // ✅ THÊM isOpen vào dependency
 
+    // ✅ FIXED: Cải thiện logic handle checkbox
     const handleCheckboxChange = (option: string) => {
-      const newSelectedValues = selectedValues.includes(option) ? selectedValues.filter((v) => v !== option) : [...selectedValues, option];
+      console.log(`🔄 Toggling option: ${option}`);
+      console.log(`📋 Current selected:`, selectedValues);
 
+      const newSelectedValues = selectedValues.includes(option)
+        ? selectedValues.filter((v) => v !== option) // Remove if exists
+        : [...selectedValues, option]; // Add if not exists
+
+      console.log(`✅ New selected:`, newSelectedValues);
       onChange(newSelectedValues);
     };
 
+    // ✅ FIXED: Select All function
     const handleSelectAll = () => {
-      onChange(filteredOptions);
+      console.log(`🎯 Select All clicked for ${label}`);
+      onChange(filteredOptions); // Select all filtered options
     };
 
+    // ✅ FIXED: Clear All function
     const handleClearAll = () => {
+      console.log(`🗑️ Clear All clicked for ${label}`);
       onChange([]);
     };
 
@@ -91,22 +102,27 @@ const KpiMonitorTab: React.FC = () => {
 
     return (
       <div className="position-relative" ref={dropdownRef}>
+        {/* ✅ Dropdown Button */}
         <button
           type="button"
           className="form-select d-flex justify-content-between align-items-center"
           style={{
             borderRadius: "8px",
-            textAlign: "left",
+            textAlign: "left", // ✅ ADDED: Left align text
           }}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
+            console.log(`🔽 Dropdown button clicked for ${label}, isOpen: ${isOpen}`);
             setIsOpen(!isOpen);
           }}
         >
           <span className={selectedValues.length === 0 ? "text-muted" : ""}>{displayText}</span>
+          {/* ✅ ADDED: Dropdown arrow */}
+          {/* <span style={{ fontSize: "12px", color: "#666" }}>{isOpen ? "▲" : "▼"}</span> */}
         </button>
 
+        {/* ✅ Dropdown Menu */}
         {isOpen && (
           <div
             className="position-absolute bg-white border rounded shadow-lg"
@@ -114,14 +130,14 @@ const KpiMonitorTab: React.FC = () => {
               top: "100%",
               left: 0,
               right: 0,
-              zIndex: 1050,
+              zIndex: 1050, // ✅ INCREASED: Higher z-index
               maxHeight: "400px",
               overflowY: "auto",
-              minWidth: "200px",
+              minWidth: "200px", // ✅ INCREASED: Wider dropdown
             }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()} // ✅ ADDED: Prevent dropdown close
           >
-            {/* Search Box */}
+            {/* ✅ Search Box */}
             <div className="p-2 border-bottom">
               <input
                 type="text"
@@ -136,7 +152,7 @@ const KpiMonitorTab: React.FC = () => {
               />
             </div>
 
-            {/* Select All / Clear All */}
+            {/* ✅ Select All / Clear All Options */}
             <div className="p-2 border-bottom bg-light">
               <div className="d-flex justify-content-between">
                 <button
@@ -151,6 +167,7 @@ const KpiMonitorTab: React.FC = () => {
                 >
                   Select All ({filteredOptions.length})
                 </button>
+
                 <button
                   type="button"
                   className="btn btn-link btn-sm p-0 text-danger"
@@ -166,7 +183,7 @@ const KpiMonitorTab: React.FC = () => {
               </div>
             </div>
 
-            {/* Options List */}
+            {/* ✅ Options List */}
             <div className="p-1">
               {filteredOptions.length > 0 ? (
                 filteredOptions.map((option) => {
@@ -180,12 +197,13 @@ const KpiMonitorTab: React.FC = () => {
                         cursor: "pointer",
                         borderRadius: "4px",
                         margin: "2px 0",
-                        backgroundColor: isSelected ? "#e3f2fd" : "transparent",
-                        transition: "background-color 0.2s ease",
+                        backgroundColor: isSelected ? "#e3f2fd" : "transparent", // ✅ ADDED: Visual feedback
+                        transition: "background-color 0.2s ease", // ✅ ADDED: Smooth transition
                       }}
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        console.log(`🖱️ Clicked on option: ${option}`);
                         handleCheckboxChange(option);
                       }}
                       onMouseEnter={(e) => {
@@ -199,7 +217,7 @@ const KpiMonitorTab: React.FC = () => {
                         }
                       }}
                     >
-                      {/* Custom Checkbox */}
+                      {/* ✅ FIXED: Larger, more clickable checkbox */}
                       <div
                         className="form-check-input me-3"
                         style={{
@@ -211,7 +229,13 @@ const KpiMonitorTab: React.FC = () => {
                           cursor: "pointer",
                           position: "relative",
                         }}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleCheckboxChange(option);
+                        }}
                       >
+                        {/* ✅ ADDED: Custom checkmark */}
                         {isSelected && (
                           <span
                             style={{
@@ -228,6 +252,7 @@ const KpiMonitorTab: React.FC = () => {
                         )}
                       </div>
 
+                      {/* ✅ Option Label */}
                       <label
                         className="form-check-label flex-grow-1"
                         style={{
@@ -235,7 +260,12 @@ const KpiMonitorTab: React.FC = () => {
                           fontSize: "14px",
                           fontWeight: isSelected ? "600" : "400",
                           color: isSelected ? "#0d6efd" : "#212529",
-                          userSelect: "none",
+                          userSelect: "none", // ✅ ADDED: Prevent text selection
+                        }}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleCheckboxChange(option);
                         }}
                       >
                         {option}
@@ -250,7 +280,7 @@ const KpiMonitorTab: React.FC = () => {
               )}
             </div>
 
-            {/* Done Button */}
+            {/* ✅ THÊM NÚT DONE */}
             <div className="p-2 border-top text-center">
               <button
                 type="button"
@@ -266,7 +296,7 @@ const KpiMonitorTab: React.FC = () => {
               </button>
             </div>
 
-            {/* Selection Count */}
+            {/* ✅ ADDED: Footer with selection count */}
             {selectedValues.length > 0 && (
               <div className="p-2 border-top bg-light text-center">
                 <small className="text-muted">
@@ -285,13 +315,23 @@ const KpiMonitorTab: React.FC = () => {
   const [pageSize, setPageSize] = useState(20);
 
   // Filters
+
   const [selectedProvinces, setSelectedProvinces] = useState<string[]>([]);
   const [selectedDistricts, setSelectedDistricts] = useState<string[]>([]);
   const [selectedVendors, setSelectedVendors] = useState<string[]>([]);
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
 
   const [searchText, setSearchText] = useState("");
+  /*
+  const [selectedProvince, setSelectedProvince] = useState("");
+  const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [selectedVendor, setSelectedVendor] = useState("");
+  const [selectedRegion, setSelectedRegion] = useState("");
 
+*/
+
+  // const [startDate, setStartDate] = useState("");
+  // const [endDate, setEndDate] = useState("");
   const [startDate, setStartDate] = useState(() => {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
@@ -306,24 +346,31 @@ const KpiMonitorTab: React.FC = () => {
 
   // Modals
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showNoteModal, setShowNoteModal] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<KpiRecord | null>(null);
+  const [noteText, setNoteText] = useState("");
 
   // Sort
   const [sortField, setSortField] = useState<string>("");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
-  // Load initial data
+  // Load data
   useEffect(() => {
+    // Chỉ auto-load lần đầu khi vào tab (dữ liệu ngày hôm trước)
     const fetchInitialData = async () => {
       setLoading(true);
-      setExecutionStatus("loading");
-
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayString = yesterday.toLocaleDateString("en-CA");
 
+      console.log("🔍 Yesterday calculated:", yesterdayString); // ← THÊM LOG NÀY
       setStartDate(yesterdayString);
       setEndDate(yesterdayString);
+
+      console.log("🖥️ PC timezone:", Intl.DateTimeFormat().resolvedOptions().timeZone);
+      console.log("🕐 PC time:", new Date().toString());
+      console.log("🇻🇳 VN time:", new Date().toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }));
+      console.log("📅 Today:", new Date().toISOString().split("T")[0]);
 
       try {
         const response = await fetch(`https://localhost:7232/api/monitoring/kpi-monitor/${yesterdayString}`);
@@ -332,115 +379,71 @@ const KpiMonitorTab: React.FC = () => {
         if (result.success) {
           setRecords(result.data.records);
           setFilteredRecords(result.data.records);
-          setExecutionStatus("success");
+          setSelectedDate(yesterdayString); // Set date picker về ngày hôm trước
         } else {
           console.error("API Error:", result.error);
           setRecords([]);
           setFilteredRecords([]);
-          setExecutionStatus("failed");
         }
       } catch (error) {
         console.error("Fetch Error:", error);
         setRecords([]);
         setFilteredRecords([]);
-        setExecutionStatus("failed");
       } finally {
         setLoading(false);
       }
     };
 
+    // Chỉ chạy lần đầu khi component mount
     fetchInitialData();
-  }, []);
+  }, []); // ← Empty dependency array
 
-  // Display data with date range
+  // ✅ Display Click - API mới (date range)
   const handleDisplayClick = async () => {
     setLoading(true);
-    setExecutionStatus("loading");
-
     try {
+      // Validate dates
       if (startDate > endDate) {
         alert("Start Date cannot be greater than End Date");
         setLoading(false);
-        setExecutionStatus("failed");
         return;
       }
 
+      // Validate required dates
       if (!startDate || !endDate) {
         alert("Please select both Start Date and End Date");
         setLoading(false);
-        setExecutionStatus("failed");
         return;
       }
 
+      // GỌI API MỚI cho date range
       const response = await fetch(`https://localhost:7232/api/monitoring/kpi-monitor-range?startDate=${startDate}&endDate=${endDate}`);
       const result = await response.json();
 
       if (result.success) {
         setRecords(result.data.records);
         setFilteredRecords(result.data.records);
-        setExecutionStatus("success");
+
+        // Log để debug
+        console.log(`📊 Loaded ${result.data.totalRecords} records from ${startDate} to ${endDate}`);
+        if (result.data.dateRange) {
+          console.log(`📅 Date range: ${result.data.dateRange.totalDays} days`);
+        }
       } else {
         console.error("API Error:", result.error);
         setRecords([]);
         setFilteredRecords([]);
-        setExecutionStatus("failed");
         alert(`Error: ${result.error}`);
       }
     } catch (error) {
       console.error("Fetch Error:", error);
       setRecords([]);
       setFilteredRecords([]);
-      setExecutionStatus("failed");
       alert("Failed to fetch data. Please try again.");
     } finally {
       setLoading(false);
     }
   };
-
-  // Get unique values for filters - IMPROVED: Dynamic filtering
-  const uniqueProvinces = useMemo(
-    () =>
-      Array.from(new Set(records.map((r) => r.province)))
-        .filter(Boolean)
-        .sort(),
-    [records]
-  );
-
-  // Districts based on selected provinces (nếu có tỉnh được chọn thì chỉ hiện huyện của tỉnh đó)
-  const uniqueDistricts = useMemo(() => {
-    const filteredRecords = selectedProvinces.length > 0 ? records.filter((r) => selectedProvinces.includes(r.province)) : records;
-
-    return Array.from(new Set(filteredRecords.map((r) => r.district)))
-      .filter(Boolean)
-      .sort();
-  }, [records, selectedProvinces]);
-
-  // Provinces based on selected districts (nếu có huyện được chọn thì chỉ hiện tỉnh của huyện đó)
-  const availableProvinces = useMemo(() => {
-    if (selectedDistricts.length > 0) {
-      const filteredRecords = records.filter((r) => selectedDistricts.includes(r.district));
-      return Array.from(new Set(filteredRecords.map((r) => r.province)))
-        .filter(Boolean)
-        .sort();
-    }
-    return uniqueProvinces;
-  }, [records, selectedDistricts, uniqueProvinces]);
-
-  const uniqueVendors = useMemo(
-    () =>
-      Array.from(new Set(records.map((r) => r.vendor)))
-        .filter(Boolean)
-        .sort(),
-    [records]
-  );
-
-  const uniqueRegions = useMemo(
-    () =>
-      Array.from(new Set(records.map((r) => r.region)))
-        .filter(Boolean)
-        .sort(),
-    [records]
-  );
 
   // Filter data
   useEffect(() => {
@@ -451,20 +454,33 @@ const KpiMonitorTab: React.FC = () => {
     }
 
     if (selectedProvinces.length > 0) {
-      filtered = filtered.filter((record) => selectedProvinces.includes(record.province));
+      // filtered = filtered.filter((record) => record.province === selectedProvinces);
+      filtered = filtered.filter((record) => selectedProvinces.includes(record.province)); // ✅ ĐÚNG
     }
 
     if (selectedDistricts.length > 0) {
+      // filtered = filtered.filter((record) => record.district === selectedDistricts);
       filtered = filtered.filter((record) => selectedDistricts.includes(record.district));
     }
 
     if (selectedVendors.length > 0) {
+      // filtered = filtered.filter((record) => record.vendor === selectedVendor);
       filtered = filtered.filter((record) => selectedVendors.includes(record.vendor));
     }
 
     if (selectedRegions.length > 0) {
+      // filtered = filtered.filter((record) => record.region === selectedRegion);
       filtered = filtered.filter((record) => selectedRegions.includes(record.region));
     }
+    /*
+    if (startDate) {
+      filtered = filtered.filter((record) => record.data_date >= startDate);
+    }
+
+    if (endDate) {
+      filtered = filtered.filter((record) => record.data_date <= endDate);
+    }
+    */
 
     // Sort
     if (sortField) {
@@ -484,7 +500,40 @@ const KpiMonitorTab: React.FC = () => {
 
     setFilteredRecords(filtered);
     setCurrentPage(1);
-  }, [records, searchText, selectedProvinces, selectedDistricts, selectedVendors, selectedRegions, sortField, sortDirection]);
+  }, [records, searchText, selectedProvinces, selectedDistricts, selectedVendors, startDate, selectedRegions, endDate, sortField, sortDirection]);
+
+  // Get unique values for filters
+  const uniqueProvinces = useMemo(
+    () =>
+      Array.from(new Set(records.map((r) => r.province)))
+        .filter(Boolean)
+        .sort(),
+    [records]
+  );
+
+  const uniqueDistricts = useMemo(
+    () =>
+      Array.from(new Set(records.map((r) => r.district)))
+        .filter(Boolean)
+        .sort(),
+    [records]
+  );
+
+  const uniqueVendors = useMemo(
+    () =>
+      Array.from(new Set(records.map((r) => r.vendor)))
+        .filter(Boolean)
+        .sort(),
+    [records]
+  );
+
+  const uniqueRegions = useMemo(
+    () =>
+      Array.from(new Set(records.map((r) => r.region)))
+        .filter(Boolean)
+        .sort(),
+    [records]
+  );
 
   // Pagination
   const totalPages = Math.ceil(filteredRecords.length / pageSize);
@@ -508,307 +557,34 @@ const KpiMonitorTab: React.FC = () => {
     setShowDetailModal(true);
   };
 
+  const handleNote = (record: KpiRecord) => {
+    setSelectedRecord(record);
+    setNoteText("");
+    setShowNoteModal(true);
+  };
+
+  const handleSaveNote = () => {
+    console.log("Saving note for record:", selectedRecord?.id, "Note:", noteText);
+    setShowNoteModal(false);
+    setNoteText("");
+  };
+
+  const handleReset = (record: KpiRecord) => {
+    if (window.confirm(`Are you sure you want to reset record ${record.id}?`)) {
+      console.log("Resetting record:", record.id);
+    }
+  };
+
+  const handleBlacklist = (record: KpiRecord) => {
+    if (window.confirm(`Are you sure you want to add record ${record.id} to blacklist?`)) {
+      console.log("Adding to blacklist:", record.id);
+    }
+  };
+
   // Export to Excel
-  // const handleExportExcel = () => {
-  // console.log("Exporting to Excel...");
-  // Excel export logic would go here
-  // };
-
-  const getExecutionStatusColor = (status?: string) => {
-    switch (status?.toLowerCase()) {
-      case "completed":
-        return "#10b981"; // Green
-      case "failed":
-      case null:
-      case undefined:
-      case "":
-      case "unknown":
-        return "#ef4444"; // Red - tất cả null/empty/unknown đều là failed
-      case "starting_reset":
-        return "#f59e0b"; // Yellow
-      default:
-        return "#ef4444"; // Red - default cũng là failed
-    }
-  };
-
-  const getExecutionStatusText = (status?: string) => {
-    switch (status?.toLowerCase()) {
-      case "completed":
-        return "Success";
-      case "failed":
-      case null:
-      case undefined:
-      case "":
-      case "unknown":
-        return "Failed"; // ← SỬA: tất cả null/empty/unknown đều hiển thị "Failed"
-      case "starting_reset":
-        return "Starting Reset";
-      default:
-        return "Failed"; // ← SỬA: default cũng là "Failed"
-    }
-  };
-
-  /*
-
-  // Thêm vào phần helper functions
-  const getExecutionStatusColor = (status?: string) => {
-    switch (status) {
-      // case " completed":
-      case "completed":
-        return "#10b981"; // Green
-      case "failed":
-        return "#ef4444"; // Red
-      case "pending":
-        return "#f59e0b"; // Yellow
-      default:
-        return "#6b7280"; // Gray
-    }
-  };
-
-  const getExecutionStatusText = (status?: string) => {
-    switch (status) {
-      case "completed":
-        return "Success";
-      case "failed":
-        return "Failed";
-      case "pending":
-        return "Pending";
-      default:
-        return "Unknown";
-    }
-  };
-
-
-*/
-
-  const TruncatedCell: React.FC<{ value: string; maxWidth?: string }> = ({ value, maxWidth = "140px" }) => (
-    <td
-      className="py-3 px-2"
-      style={{
-        fontSize: "0.875rem",
-        maxWidth,
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
-        cursor: "help",
-      }}
-      title={value}
-    >
-      {value}
-    </td>
-  );
-
-  // Sử dụng:
-  // <TruncatedCell value={record.lncel_name} />
-  // <TruncatedCell value={record.dn_mrbts_site} maxWidth="200px" />
-
-  const handleExportExcel = async () => {
-    try {
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet("KPI Monitor Data");
-
-      // Định nghĩa columns
-      worksheet.columns = [
-        { header: "STT", key: "stt", width: 10 },
-        { header: "Province", key: "province", width: 15 },
-        { header: "Period Start Time", key: "period_start_time", width: 20 },
-        { header: "MRBTS Name", key: "mrbts_name", width: 20 },
-        { header: "LNBTS Name", key: "lnbts_name", width: 20 },
-        { header: "Cell Name", key: "lncel_name", width: 25 },
-        { header: "Site DN", key: "dn_mrbts_site", width: 30 },
-        { header: "PDCP DL", key: "pdcp_volume_dl", width: 15 },
-        { header: "PDCP UL", key: "pdcp_volume_ul", width: 15 },
-        { header: "Cell Avail (%)", key: "cell_avail", width: 15 },
-        { header: "Max UEs", key: "max_ues", width: 15 },
-        { header: "Max PDCP DL", key: "max_pdcp_dl", width: 15 },
-        { header: "Max PDCP UL", key: "max_pdcp_ul", width: 15 },
-        { header: "Execution Status", key: "execution_status", width: 15 },
-        { header: "District", key: "district", width: 15 },
-        { header: "Region", key: "region", width: 15 },
-        { header: "Vendor", key: "vendor", width: 15 },
-        { header: "Data Date", key: "data_date", width: 15 },
-      ];
-
-      // Thêm data và style
-      filteredRecords.forEach((record, index) => {
-        const row = worksheet.addRow({
-          stt: index + 1,
-          province: record.province,
-          period_start_time: record.period_start_time,
-          mrbts_name: record.mrbts_name,
-          lnbts_name: record.lnbts_name,
-          lncel_name: record.lncel_name,
-          dn_mrbts_site: record.dn_mrbts_site,
-          pdcp_volume_dl: record.pdcp_volume_dl,
-          pdcp_volume_ul: record.pdcp_volume_ul,
-          cell_avail: record.cell_avail,
-          max_ues: record.max_ues,
-          max_pdcp_dl: record.max_pdcp_dl,
-          max_pdcp_ul: record.max_pdcp_ul,
-          execution_status: record.execution_status || "Unknown",
-          district: record.district,
-          region: record.region,
-          vendor: record.vendor,
-          data_date: record.data_date,
-        });
-
-        // ✅ Thêm dòng này để đảm bảo chiều cao cho từng dòng data
-        row.height = 20;
-
-        // 🎨 Alternate row colors (zebra striping)
-        const isEvenRow = (index + 1) % 2 === 0;
-        const rowFillColor = isEvenRow ? "F8F9FA" : "FFFFFF"; // Light gray cho even rows
-
-        // Apply background color to all cells in row
-        row.eachCell((cell, colNumber) => {
-          cell.fill = {
-            type: "pattern",
-            pattern: "solid",
-            fgColor: { argb: rowFillColor },
-          };
-
-          // 🔲 Add borders to all cells
-          cell.border = {
-            top: { style: "thin", color: { argb: "D1D5DB" } },
-            left: { style: "thin", color: { argb: "D1D5DB" } },
-            bottom: { style: "thin", color: { argb: "D1D5DB" } },
-            right: { style: "thin", color: { argb: "D1D5DB" } },
-          };
-
-          // 📊 Style Cell Availability column based on value
-          if (colNumber === 10) {
-            // Cell Avail column
-            const cellAvail = record.cell_avail || 0;
-            if (cellAvail >= 95) {
-              cell.font = { color: { argb: "10B981" }, bold: true }; // Green
-            } else if (cellAvail >= 90) {
-              cell.font = { color: { argb: "F59E0B" }, bold: true }; // Yellow
-            } else {
-              cell.font = { color: { argb: "EF4444" }, bold: true }; // Red
-            }
-          }
-
-          // 🏷️ Style Execution Status column
-          if (colNumber === 14) {
-            // Execution Status column
-            const status = record.execution_status?.toLowerCase();
-            switch (status) {
-              case "completed":
-                cell.fill = {
-                  type: "pattern",
-                  pattern: "solid",
-                  fgColor: { argb: "D1FAE5" }, // Light green background
-                };
-                cell.font = { color: { argb: "10B981" }, bold: true };
-                break;
-              case "failed":
-                cell.fill = {
-                  type: "pattern",
-                  pattern: "solid",
-                  fgColor: { argb: "FEE2E2" }, // Light red background
-                };
-                cell.font = { color: { argb: "EF4444" }, bold: true };
-                break;
-              case "starting_reset":
-                cell.fill = {
-                  type: "pattern",
-                  pattern: "solid",
-                  fgColor: { argb: "FEF3C7" }, // Light yellow background
-                };
-                cell.font = { color: { argb: "F59E0B" }, bold: true };
-                break;
-              default:
-                cell.fill = {
-                  type: "pattern",
-                  pattern: "solid",
-                  fgColor: { argb: "F3F4F6" }, // Light gray background
-                };
-                cell.font = { color: { argb: "6B7280" }, bold: true };
-            }
-          }
-
-          // 📝 Center align number columns
-          if ([1, 8, 9, 10, 11, 12, 13].includes(colNumber)) {
-            cell.alignment = { horizontal: "center", vertical: "middle" };
-          } else {
-            cell.alignment = { horizontal: "left", vertical: "middle" };
-          }
-        });
-      });
-
-      // 🏆 Style header row
-      const headerRow = worksheet.getRow(1);
-      headerRow.font = {
-        bold: true,
-        color: { argb: "FFFFFF" },
-        // color: { argb: "366092" },
-        size: 12,
-      };
-      headerRow.fill = {
-        type: "pattern",
-        pattern: "solid",
-        // fgColor: { argb: "1F2937" }, // Dark gray header
-        fgColor: { argb: "366092" }, // Dark gray header
-      };
-      headerRow.alignment = {
-        horizontal: "center",
-        vertical: "middle",
-      };
-      headerRow.height = 25; // Taller header
-
-      // Add borders to header
-      headerRow.eachCell((cell) => {
-        cell.border = {
-          top: { style: "medium", color: { argb: "111827" } },
-          left: { style: "medium", color: { argb: "111827" } },
-          bottom: { style: "medium", color: { argb: "111827" } },
-          right: { style: "medium", color: { argb: "111827" } },
-        };
-      });
-
-      // 📐 Set default row height
-      worksheet.properties.defaultRowHeight = 20;
-
-      // 🔒 Freeze header row
-      worksheet.views = [{ state: "frozen", ySplit: 1 }];
-
-      // Generate Excel file
-      const buffer = await workbook.xlsx.writeBuffer();
-      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
-      const filename = `KPI_Monitor_${startDate}_to_${endDate}_${timestamp}.xlsx`;
-
-      // Download file
-      saveAs(new Blob([buffer]), filename);
-
-      alert(`✅ Exported ${filteredRecords.length} records to Excel successfully!`);
-    } catch (error) {
-      console.error("❌ Export failed:", error);
-      alert("Export failed. Please try again.");
-    }
-  };
-
-  // Clear all filters and data
-  const handleClearAll = () => {
-    setSearchText("");
-    setSelectedProvinces([]);
-    setSelectedDistricts([]);
-    setSelectedVendors([]);
-    setSelectedRegions([]);
-
-    // Reset dates
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayString = yesterday.toISOString().split("T")[0];
-    setStartDate(yesterdayString);
-    setEndDate(yesterdayString);
-
-    // Clear data and reset status
-    setRecords([]);
-    setFilteredRecords([]);
-    setExecutionStatus("idle");
-
-    // Stop loading
-    setLoading(false);
+  const handleExportExcel = () => {
+    console.log("Exporting to Excel...");
+    // Excel export logic would go here
   };
 
   // Get cell availability color
@@ -818,44 +594,41 @@ const KpiMonitorTab: React.FC = () => {
     return "#ef4444"; // Red
   };
 
-  // Get execution status display
-  const getExecutionStatusDisplay = () => {
-    switch (executionStatus) {
-      case "loading":
-        return (
-          <span className="d-flex align-items-center text-primary">
-            <div className="spinner-border spinner-border-sm me-2" role="status">
-              <span className="visually-hidden">Loading...</span>
-            </div>
-            Loading...
-          </span>
-        );
-      case "success":
-        return (
-          <span className="d-flex align-items-center text-success">
-            <span className="me-2">✅</span>
-            Success
-          </span>
-        );
-      case "failed":
-        return (
-          <span className="d-flex align-items-center text-danger">
-            <span className="me-2">❌</span>
-            Failed
-          </span>
-        );
-      default:
-        return (
-          <span className="text-muted">
-            <span className="me-2">⏸️</span>
-            Ready
-          </span>
-        );
-    }
-  };
-
   return (
     <div className="container-fluid p-4">
+      {/* ===============================================================*/}
+      {/* Header */}
+      {/*
+      <div className="d-flex align-items-center justify-content-between mb-4">
+       
+        <div className="d-flex align-items-center">
+          <div className="p-2 rounded-circle me-3" style={{ backgroundColor: "#d1fae5" }}>
+            <span style={{ fontSize: "1.5rem" }}>📊</span>
+          </div>
+          <div>
+            <h4 className="fw-bold mb-0" style={{ color: "#1f2937" }}>
+              KPI Monitor Dashboard
+            </h4>
+            <small className="text-muted">Archive Data Analysis</small>
+          </div>
+        </div>
+
+        */}
+
+      {/* Last Updated - Right side */}
+      {/*}
+        <div className="d-flex align-items-center">
+          <span className="text-muted" style={{ fontSize: "0.9rem" }}>
+            📅 Last Updated: {startDate && endDate ? (startDate === endDate ? new Date(startDate).toLocaleDateString("en-US") : `${new Date(startDate).toLocaleDateString("en-US")} - ${new Date(endDate).toLocaleDateString("en-US")}`) : startDate ? new Date(startDate).toLocaleDateString("en-US") : endDate ? new Date(endDate).toLocaleDateString("en-US") : "Not selected"}
+          </span>
+        </div>
+              
+      </div>
+      */}
+
+      {/*  ket thuc   Header  */}
+      {/* ===============================================================*/}
+
       {/* Search and Filters */}
       <div className="card mb-4" style={{ borderRadius: "12px", border: "none", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
         <div className="card-body p-3">
@@ -864,11 +637,63 @@ const KpiMonitorTab: React.FC = () => {
               <input type="text" className="form-control" placeholder="🔍 Search all fields..." value={searchText} onChange={(e) => setSearchText(e.target.value)} style={{ borderRadius: "8px" }} />
             </div>
             <div className="col-md-2">
-              <MultiSelectDropdown label="Province" options={availableProvinces} selectedValues={selectedProvinces} onChange={setSelectedProvinces} placeholder="All Provinces" />
+              {/*}
+              <select className="form-select" value={selectedProvinces} onChange={(e) => setSelectedProvinces(e.target.value)} style={{ borderRadius: "8px" }}>
+                <option value="">All Provinces</option>
+                {uniqueProvinces.map((province) => (
+                  <option key={province} value={province}>
+                    {province}
+                  </option>
+                ))}
+              </select>
+              */}
+              {/*}
+              <select className="form-select" value={selectedProvinces} onChange={(e) => setSelectedProvinces(e.target.value)} style={{ borderRadius: "8px" }}>
+                <option value="">All Provinces</option>
+                {uniqueProvinces.map((province) => (
+                  <option key={province} value={province}>
+                    {province}
+                  </option>
+                ))}
+              </select>
+              */}
+              <MultiSelectDropdown label="Province" options={uniqueProvinces} selectedValues={selectedProvinces} onChange={setSelectedProvinces} placeholder="All Provinces" />
             </div>
+            {/*}
             <div className="col-md-2">
               <MultiSelectDropdown label="District" options={uniqueDistricts} selectedValues={selectedDistricts} onChange={setSelectedDistricts} placeholder="All Districts" />
             </div>
+
+            */}
+            <div className="col-md-2">
+              <MultiSelectDropdown label="District" options={uniqueDistricts} selectedValues={selectedDistricts} onChange={setSelectedDistricts} placeholder="All Districts" />
+            </div>
+
+            {/* ← Phải là setSelectedProvinces, không phải selectedProvinces */}
+            {/*}
+
+            <div className="col-md-2">
+              <select className="form-select" value={selectedRegion} onChange={(e) => setSelectedRegion(e.target.value)} style={{ borderRadius: "8px" }}>
+                <option value="">All Regions</option>
+                {uniqueRegions.map((region) => (
+                  <option key={region} value={region}>
+                    {region}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="col-md-2">
+              <select className="form-select" value={selectedVendor} onChange={(e) => setSelectedVendor(e.target.value)} style={{ borderRadius: "8px" }}>
+                <option value="">All Vendors</option>
+                {uniqueVendors.map((vendor) => (
+                  <option key={vendor} value={vendor}>
+                    {vendor}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            */}
             <div className="col-md-2">
               <MultiSelectDropdown label="Region" options={uniqueRegions} selectedValues={selectedRegions} onChange={setSelectedRegions} placeholder="All Regions" />
             </div>
@@ -877,8 +702,51 @@ const KpiMonitorTab: React.FC = () => {
             </div>
           </div>
 
+          {/*}
+
+          <div className="row g-3 mt-2">
+            <div className="col-md-2">
+              <label className="form-label small text-muted">Start Date</label>
+              <input type="date" className="form-control" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ borderRadius: "8px" }} />
+            </div>
+            <div className="col-md-2">
+              <label className="form-label small text-muted">End Date</label>
+              <input type="date" className="form-control" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ borderRadius: "8px" }} />
+            </div>
+
+            <div className="col-md-2 d-flex align-items-end">
+              <button
+                className="btn btn-outline-secondary w-100"
+                onClick={() => {
+                  setSearchText("");
+                  setSelectedProvince("");
+                  setSelectedDistrict("");
+                  setSelectedRegion("");
+                  setSelectedVendor("");
+                  setStartDate("");
+                  setEndDate("");
+                }}
+                style={{ borderRadius: "8px" }}
+              >
+                🗑️ Clear
+              </button>
+            </div>
+            <div className="col-md-2 d-flex align-items-end">
+              <button className="btn btn-outline-primary w-100" onClick={() => window.location.reload()} style={{ borderRadius: "8px" }}>
+                🔄 Refresh
+              </button>
+            </div>
+            <div className="col-md-4 d-flex align-items-end">
+              <button className="btn btn-success w-100" onClick={handleExportExcel} style={{ borderRadius: "8px" }}>
+                📊 Export Excel (All 26 Columns)
+              </button>
+            </div>
+          </div>
+
+*/}
+
           <div className="mt-2">
-            {/* Row 1: Labels and Status */}
+            {/* Row 1: Labels */}
             <div className="d-flex align-items-center gap-4 mb-2">
               <span className="text-muted" style={{ fontSize: "14px", fontWeight: "500", width: "150px" }}>
                 Start Date:
@@ -886,22 +754,15 @@ const KpiMonitorTab: React.FC = () => {
               <span className="text-muted" style={{ fontSize: "14px", fontWeight: "500", width: "150px" }}>
                 End Date:
               </span>
-              <span style={{ width: "170px" }}></span>
-              <div className="d-flex align-items-center gap-4">
-                <span className="text-muted" style={{ fontSize: "14px", whiteSpace: "nowrap" }}>
-                  📅 Last Updated: {startDate && endDate ? (startDate === endDate ? new Date(startDate).toLocaleDateString("en-US") : `${new Date(startDate).toLocaleDateString("en-US")} - ${new Date(endDate).toLocaleDateString("en-US")}`) : "Not selected"}
-                </span>
-                {/*}
-                <div style={{ fontSize: "14px", whiteSpace: "nowrap" }}>
-                  <strong>Status: </strong>
-                  {getExecutionStatusDisplay()}
-                </div>
-                */}
-              </div>
+              <span style={{ width: "170px" }}> {/* Placeholder space for alignment */}</span>
+              <span className="text-muted" style={{ fontSize: "14px", whiteSpace: "nowrap" }}>
+                📅 Last Updated: {startDate && endDate ? (startDate === endDate ? new Date(startDate).toLocaleDateString("en-US") : `${new Date(startDate).toLocaleDateString("en-US")} - ${new Date(endDate).toLocaleDateString("en-US")}`) : startDate ? new Date(startDate).toLocaleDateString("en-US") : endDate ? new Date(endDate).toLocaleDateString("en-US") : "Not selected"}
+              </span>
             </div>
 
             {/* Row 2: Inputs and Buttons */}
             <div className="d-flex align-items-center gap-3">
+              {/* Start Date Input */}
               <input
                 type="date"
                 className="form-control"
@@ -914,6 +775,7 @@ const KpiMonitorTab: React.FC = () => {
                 }}
               />
 
+              {/* End Date Input */}
               <input
                 type="date"
                 className="form-control"
@@ -926,10 +788,10 @@ const KpiMonitorTab: React.FC = () => {
                 }}
               />
 
+              {/* Display Button */}
               <button
                 className="btn btn-success d-flex align-items-center gap-2"
                 onClick={handleDisplayClick}
-                disabled={loading}
                 style={{
                   borderRadius: "8px",
                   padding: "6px 12px",
@@ -941,18 +803,83 @@ const KpiMonitorTab: React.FC = () => {
                 Display
               </button>
 
+              {/* Clear Button */}
+
+              {/*}
               <button
                 className="btn btn-outline-secondary"
-                onClick={handleClearAll}
+                onClick={() => {
+                  setSearchText("");
+                  setSelectedProvinces([]);
+                  setSelectedDistricts([]);
+                  // setSelectedRegion("");
+                  // setSelectedVendor("");
+                  setSelectedVendors([]); // ✅ ĐÚNG
+                  setSelectedRegions([]); // ✅ ĐÚNG
+                  // setStartDate("");
+                  // setEndDate("");
+
+                  // Reset về yesterday
+                  const yesterday = new Date();
+                  yesterday.setDate(yesterday.getDate() - 1);
+                  const yesterdayString = yesterday.toISOString().split("T")[0];
+                  setStartDate(yesterdayString);
+                  setEndDate(yesterdayString);
+
+                  // ✅ THÊM: Clear bảng data
+                  // setRecords([]);
+                  // setFilteredRecords([]);
+
+                  // Gọi API để load yesterday data
+                  // fetch(`https://localhost:7232/api/monitoring/kpi-monitor/${yesterdayString}`);
+                }}
                 style={{
                   borderRadius: "8px",
                   padding: "6px 12px",
                   fontSize: "14px",
                 }}
               >
-                🗑️ Clear All
+                🗑️ Clear
+              </button>
+              
+*/}
+
+              {/* Clear Button */}
+
+              {/* Clear Button */}
+              <button
+                className="btn btn-outline-secondary"
+                onClick={() => {
+                  setSearchText("");
+                  setSelectedProvinces([]);
+                  setSelectedDistricts([]);
+                  setSelectedVendors([]);
+                  setSelectedRegions([]);
+
+                  // Reset dates
+                  const yesterday = new Date();
+                  yesterday.setDate(yesterday.getDate() - 1);
+                  const yesterdayString = yesterday.toISOString().split("T")[0];
+                  setStartDate(yesterdayString);
+                  setEndDate(yesterdayString);
+
+                  // ✅ SET LOADING để hiển thị empty state
+                  setLoading(true);
+
+                  // ✅ Clear data
+                  setRecords([]);
+                  setFilteredRecords([]);
+
+                  // ✅ Stop loading sau 1 giây để user thấy table empty
+                  setTimeout(() => {
+                    setLoading(false);
+                  }, 100);
+                }}
+              >
+                🗑️ Clear
               </button>
 
+              {/* Export Excel Button */}
               <button
                 className="btn btn-primary"
                 onClick={handleExportExcel}
@@ -962,7 +889,7 @@ const KpiMonitorTab: React.FC = () => {
                   fontSize: "14px",
                 }}
               >
-                📊 Export Excel
+                📊 Export Excel (All 26 Columns)
               </button>
             </div>
           </div>
@@ -1007,7 +934,14 @@ const KpiMonitorTab: React.FC = () => {
               <table className="table table-hover mb-0">
                 <thead style={{ backgroundColor: "#f8fafc", borderBottom: "2px solid #e5e7eb" }}>
                   <tr>
-                    <th className="fw-semibold text-muted py-3 px-2" style={{ fontSize: "0.875rem", minWidth: "60px", whiteSpace: "nowrap" }}>
+                    <th
+                      className="fw-semibold text-muted py-3 px-2"
+                      style={{
+                        fontSize: "0.875rem",
+                        minWidth: "60px",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
                       STT
                     </th>
                     {[
@@ -1023,7 +957,6 @@ const KpiMonitorTab: React.FC = () => {
                       { field: "max_ues", label: "Max UEs", width: "100px" },
                       { field: "max_pdcp_dl", label: "Max PDCP DL", width: "130px" },
                       { field: "max_pdcp_ul", label: "Max PDCP UL", width: "130px" },
-                      { field: "execution_status", label: "Execution Status", width: "130px" },
                     ].map(({ field, label, width }) => (
                       <th
                         key={field}
@@ -1041,7 +974,7 @@ const KpiMonitorTab: React.FC = () => {
                         {sortField === field && <span className="ms-1">{sortDirection === "asc" ? "↑" : "↓"}</span>}
                       </th>
                     ))}
-                    <th className="fw-semibold text-muted py-3 px-2" style={{ fontSize: "0.875rem", minWidth: "100px" }}>
+                    <th className="fw-semibold text-muted py-3 px-2" style={{ fontSize: "0.875rem", minWidth: "200px" }}>
                       Actions
                     </th>
                   </tr>
@@ -1064,25 +997,19 @@ const KpiMonitorTab: React.FC = () => {
                       <td className="py-3 px-2" style={{ fontSize: "0.875rem" }}>
                         {record.lnbts_name}
                       </td>
-                      {/*}
                       <td className="py-3 px-2" style={{ fontSize: "0.875rem" }}>
                         {record.lncel_name}
                       </td>
-                      */}
-                      <TruncatedCell value={record.lncel_name} maxWidth="180px" />
-                      {/*}
                       <td className="py-3 px-2" style={{ fontSize: "0.875rem" }}>
                         {record.dn_mrbts_site}
                       </td>
-                      */}
-                      <TruncatedCell value={record.dn_mrbts_site} maxWidth="200px" />
+
                       <td className="py-3 px-2" style={{ fontSize: "0.875rem" }}>
                         {(record.pdcp_volume_dl || 0).toLocaleString()}
                       </td>
                       <td className="py-3 px-2" style={{ fontSize: "0.875rem" }}>
                         {(record.pdcp_volume_ul || 0).toLocaleString()}
                       </td>
-
                       <td className="py-3 px-2">
                         <span
                           className="fw-semibold"
@@ -1091,7 +1018,7 @@ const KpiMonitorTab: React.FC = () => {
                             fontSize: "0.875rem",
                           }}
                         >
-                          {record.cell_avail !== null && record.cell_avail !== undefined ? record.cell_avail.toFixed(2) + "%" : "0%"}
+                          {(record.cell_avail || 0).toFixed(2)}%
                         </span>
                       </td>
                       <td className="py-3 px-2" style={{ fontSize: "0.875rem" }}>
@@ -1104,25 +1031,21 @@ const KpiMonitorTab: React.FC = () => {
                         {(record.max_pdcp_ul || 0).toLocaleString()}
                       </td>
 
-                      <td className="py-3 px-2" style={{ fontSize: "0.875rem" }}>
-                        <span
-                          className="badge"
-                          style={{
-                            backgroundColor: getExecutionStatusColor(record.execution_status),
-                            color: "white",
-                            fontSize: "0.75rem",
-                            padding: "4px 8px",
-                            borderRadius: "4px",
-                          }}
-                        >
-                          {getExecutionStatusText(record.execution_status)}
-                        </span>
-                      </td>
-
                       <td className="py-3 px-2">
-                        <button className="btn btn-outline-primary btn-sm" onClick={() => handleDetail(record)} style={{ borderRadius: "6px", fontSize: "0.75rem" }}>
-                          Detail
-                        </button>
+                        <div className="d-flex gap-1">
+                          <button className="btn btn-outline-primary btn-sm" onClick={() => handleDetail(record)} style={{ borderRadius: "6px", fontSize: "0.75rem" }}>
+                            Detail
+                          </button>
+                          <button className="btn btn-outline-info btn-sm" onClick={() => handleNote(record)} style={{ borderRadius: "6px", fontSize: "0.75rem" }}>
+                            Note
+                          </button>
+                          <button className="btn btn-outline-warning btn-sm" onClick={() => handleReset(record)} style={{ borderRadius: "6px", fontSize: "0.75rem" }}>
+                            Reset
+                          </button>
+                          <button className="btn btn-outline-danger btn-sm" onClick={() => handleBlacklist(record)} style={{ borderRadius: "6px", fontSize: "0.75rem" }}>
+                            Blacklist
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1132,7 +1055,7 @@ const KpiMonitorTab: React.FC = () => {
           )}
         </div>
       </div>
-
+      {/* ===============================================================*/}
       {/* Pagination */}
       {!loading && totalPages > 1 && (
         <div className="d-flex justify-content-center mt-4">
@@ -1145,7 +1068,7 @@ const KpiMonitorTab: React.FC = () => {
               </li>
 
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum: number;
+                let pageNum: number; // ← Fixed: Added type annotation
                 if (totalPages <= 5) {
                   pageNum = i + 1;
                 } else if (currentPage <= 3) {
@@ -1174,6 +1097,8 @@ const KpiMonitorTab: React.FC = () => {
           </nav>
         </div>
       )}
+      {/* ===============================================================*/}
+      {/* ===============================================================*/}
 
       {/* Detail Modal */}
       {showDetailModal && selectedRecord && (
@@ -1185,124 +1110,16 @@ const KpiMonitorTab: React.FC = () => {
                 <button type="button" className="btn-close" onClick={() => setShowDetailModal(false)}></button>
               </div>
               <div className="modal-body">
-                <div className="row g-4">
-                  {/* Basic Information */}
-                  <div className="col-md-6">
+                <div className="row">
+                  <div className="col-md-6 mt-3">
                     <div className="card" style={{ backgroundColor: "#f8fafc", borderRadius: "12px", border: "none" }}>
                       <div className="card-body">
-                        <h6 className="fw-bold mb-3 text-primary">📍 Basic Information</h6>
+                        <h6 className="fw-bold mb-3 text-primary">📅 Time Info</h6>
                         <div className="row g-2">
-                          <div className="col-6">
-                            <strong>Original ID:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.original_id}</div>
-                          <div className="col-6">
-                            <strong>Province:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.province}</div>
-                          <div className="col-6">
-                            <strong>District:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.district}</div>
-                          <div className="col-6">
-                            <strong>Region:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.region}</div>
-                          <div className="col-6">
-                            <strong>Vendor:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.vendor}</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Network Information */}
-                  <div className="col-md-6">
-                    <div className="card" style={{ backgroundColor: "#f0f9ff", borderRadius: "12px", border: "none" }}>
-                      <div className="card-body">
-                        <h6 className="fw-bold mb-3 text-info">🏗️ Network Information</h6>
-                        <div className="row g-2">
-                          <div className="col-6">
-                            <strong>MRBTS Name:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.mrbts_name}</div>
-                          <div className="col-6">
-                            <strong>LNBTS Name:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.lnbts_name}</div>
-                          <div className="col-6">
-                            <strong>Cell Name:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.lncel_name}</div>
-                          <div className="col-6">
-                            <strong>Site DN:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.dn_mrbts_site}</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Performance Metrics */}
-                  <div className="col-md-6">
-                    <div className="card" style={{ backgroundColor: "#f0fdf4", borderRadius: "12px", border: "none" }}>
-                      <div className="card-body">
-                        <h6 className="fw-bold mb-3 text-success">📊 Performance Metrics</h6>
-                        <div className="row g-2">
-                          <div className="col-6">
-                            <strong>PDCP Volume DL:</strong>
-                          </div>
-                          <div className="col-6">{(selectedRecord.pdcp_volume_dl || 0).toLocaleString()}</div>
-                          <div className="col-6">
-                            <strong>PDCP Volume UL:</strong>
-                          </div>
-                          <div className="col-6">{(selectedRecord.pdcp_volume_ul || 0).toLocaleString()}</div>
-                          <div className="col-6">
-                            <strong>Cell Availability:</strong>
-                          </div>
-                          <div className="col-6">
-                            <span style={{ color: getCellAvailColor(selectedRecord.cell_avail || 0), fontWeight: "bold" }}>{(selectedRecord.cell_avail || 0).toFixed(2)}%</span>
-                          </div>
-                          <div className="col-6">
-                            <strong>Max UEs:</strong>
-                          </div>
-                          <div className="col-6">{(selectedRecord.max_ues || 0).toLocaleString()}</div>
-                          <div className="col-6">
-                            <strong>Max PDCP DL:</strong>
-                          </div>
-                          <div className="col-6">{(selectedRecord.max_pdcp_dl || 0).toLocaleString()}</div>
-                          <div className="col-6">
-                            <strong>Max PDCP UL:</strong>
-                          </div>
-                          <div className="col-6">{(selectedRecord.max_pdcp_ul || 0).toLocaleString()}</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Time Information */}
-                  <div className="col-md-6">
-                    <div className="card" style={{ backgroundColor: "#fef3c7", borderRadius: "12px", border: "none" }}>
-                      <div className="card-body">
-                        <h6 className="fw-bold mb-3 text-warning">📅 Time Information</h6>
-                        <div className="row g-2">
-                          <div className="col-6">
-                            <strong>Period Start:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.period_start_time}</div>
                           <div className="col-6">
                             <strong>Data Date:</strong>
                           </div>
                           <div className="col-6">{selectedRecord.data_date}</div>
-                          <div className="col-6">
-                            <strong>Year:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.data_year}</div>
-                          <div className="col-6">
-                            <strong>Month:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.data_month}</div>
                           <div className="col-6">
                             <strong>Quarter:</strong>
                           </div>
@@ -1312,13 +1129,9 @@ const KpiMonitorTab: React.FC = () => {
                           </div>
                           <div className="col-6">{selectedRecord.data_week}</div>
                           <div className="col-6">
-                            <strong>Archived At:</strong>
+                            <strong>Archived:</strong>
                           </div>
-                          <div className="col-6">{new Date(selectedRecord.archived_at).toLocaleString()}</div>
-                          <div className="col-6">
-                            <strong>Archived By:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.archived_by}</div>
+                          <div className="col-6">{new Date(selectedRecord.archived_at).toLocaleDateString()}</div>
                         </div>
                       </div>
                     </div>
@@ -1328,6 +1141,42 @@ const KpiMonitorTab: React.FC = () => {
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowDetailModal(false)}>
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Note Modal */}
+      {showNoteModal && selectedRecord && (
+        <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content" style={{ borderRadius: "16px" }}>
+              <div className="modal-header">
+                <h5 className="modal-title">📝 Add Note - Record ID: {selectedRecord.id}</h5>
+                <button type="button" className="btn-close" onClick={() => setShowNoteModal(false)}></button>
+              </div>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label className="form-label fw-semibold">Cell: {selectedRecord.lncel_name}</label>
+                  <small className="text-muted d-block">
+                    Province: {selectedRecord.province}, District: {selectedRecord.district}
+                  </small>
+                </div>
+                <div className="mb-3">
+                  <label htmlFor="noteTextarea" className="form-label fw-semibold">
+                    Note Content:
+                  </label>
+                  <textarea id="noteTextarea" className="form-control" rows={5} value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Enter your note here..." style={{ borderRadius: "8px" }}></textarea>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowNoteModal(false)}>
+                  Cancel
+                </button>
+                <button type="button" className="btn btn-primary" onClick={handleSaveNote} disabled={!noteText.trim()}>
+                  Save Note
                 </button>
               </div>
             </div>

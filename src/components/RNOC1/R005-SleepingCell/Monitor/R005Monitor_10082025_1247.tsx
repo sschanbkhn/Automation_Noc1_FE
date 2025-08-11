@@ -1,9 +1,4 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-// import ReactExport from "react-excel-export";
-// declare module "react-excel-export";
-// import * as XLSX from "xlsx";
-import * as ExcelJS from "exceljs";
-import { saveAs } from "file-saver";
 
 interface KpiRecord {
   id: number;
@@ -32,8 +27,7 @@ interface KpiRecord {
   vendor: string;
   archived_at: string;
   archived_by: string;
-  // execution_status?: "success" | "failed" | "pending"; // Thêm execution status
-  execution_status?: string; // ← SỬA: từ "success" | "failed" | "pending" thành string
+  execution_status?: "success" | "failed" | "pending"; // Thêm execution status
 }
 
 const KpiMonitorTab: React.FC = () => {
@@ -509,282 +503,9 @@ const KpiMonitorTab: React.FC = () => {
   };
 
   // Export to Excel
-  // const handleExportExcel = () => {
-  // console.log("Exporting to Excel...");
-  // Excel export logic would go here
-  // };
-
-  const getExecutionStatusColor = (status?: string) => {
-    switch (status?.toLowerCase()) {
-      case "completed":
-        return "#10b981"; // Green
-      case "failed":
-      case null:
-      case undefined:
-      case "":
-      case "unknown":
-        return "#ef4444"; // Red - tất cả null/empty/unknown đều là failed
-      case "starting_reset":
-        return "#f59e0b"; // Yellow
-      default:
-        return "#ef4444"; // Red - default cũng là failed
-    }
-  };
-
-  const getExecutionStatusText = (status?: string) => {
-    switch (status?.toLowerCase()) {
-      case "completed":
-        return "Success";
-      case "failed":
-      case null:
-      case undefined:
-      case "":
-      case "unknown":
-        return "Failed"; // ← SỬA: tất cả null/empty/unknown đều hiển thị "Failed"
-      case "starting_reset":
-        return "Starting Reset";
-      default:
-        return "Failed"; // ← SỬA: default cũng là "Failed"
-    }
-  };
-
-  /*
-
-  // Thêm vào phần helper functions
-  const getExecutionStatusColor = (status?: string) => {
-    switch (status) {
-      // case " completed":
-      case "completed":
-        return "#10b981"; // Green
-      case "failed":
-        return "#ef4444"; // Red
-      case "pending":
-        return "#f59e0b"; // Yellow
-      default:
-        return "#6b7280"; // Gray
-    }
-  };
-
-  const getExecutionStatusText = (status?: string) => {
-    switch (status) {
-      case "completed":
-        return "Success";
-      case "failed":
-        return "Failed";
-      case "pending":
-        return "Pending";
-      default:
-        return "Unknown";
-    }
-  };
-
-
-*/
-
-  const TruncatedCell: React.FC<{ value: string; maxWidth?: string }> = ({ value, maxWidth = "140px" }) => (
-    <td
-      className="py-3 px-2"
-      style={{
-        fontSize: "0.875rem",
-        maxWidth,
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
-        cursor: "help",
-      }}
-      title={value}
-    >
-      {value}
-    </td>
-  );
-
-  // Sử dụng:
-  // <TruncatedCell value={record.lncel_name} />
-  // <TruncatedCell value={record.dn_mrbts_site} maxWidth="200px" />
-
-  const handleExportExcel = async () => {
-    try {
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet("KPI Monitor Data");
-
-      // Định nghĩa columns
-      worksheet.columns = [
-        { header: "STT", key: "stt", width: 10 },
-        { header: "Province", key: "province", width: 15 },
-        { header: "Period Start Time", key: "period_start_time", width: 20 },
-        { header: "MRBTS Name", key: "mrbts_name", width: 20 },
-        { header: "LNBTS Name", key: "lnbts_name", width: 20 },
-        { header: "Cell Name", key: "lncel_name", width: 25 },
-        { header: "Site DN", key: "dn_mrbts_site", width: 30 },
-        { header: "PDCP DL", key: "pdcp_volume_dl", width: 15 },
-        { header: "PDCP UL", key: "pdcp_volume_ul", width: 15 },
-        { header: "Cell Avail (%)", key: "cell_avail", width: 15 },
-        { header: "Max UEs", key: "max_ues", width: 15 },
-        { header: "Max PDCP DL", key: "max_pdcp_dl", width: 15 },
-        { header: "Max PDCP UL", key: "max_pdcp_ul", width: 15 },
-        { header: "Execution Status", key: "execution_status", width: 15 },
-        { header: "District", key: "district", width: 15 },
-        { header: "Region", key: "region", width: 15 },
-        { header: "Vendor", key: "vendor", width: 15 },
-        { header: "Data Date", key: "data_date", width: 15 },
-      ];
-
-      // Thêm data và style
-      filteredRecords.forEach((record, index) => {
-        const row = worksheet.addRow({
-          stt: index + 1,
-          province: record.province,
-          period_start_time: record.period_start_time,
-          mrbts_name: record.mrbts_name,
-          lnbts_name: record.lnbts_name,
-          lncel_name: record.lncel_name,
-          dn_mrbts_site: record.dn_mrbts_site,
-          pdcp_volume_dl: record.pdcp_volume_dl,
-          pdcp_volume_ul: record.pdcp_volume_ul,
-          cell_avail: record.cell_avail,
-          max_ues: record.max_ues,
-          max_pdcp_dl: record.max_pdcp_dl,
-          max_pdcp_ul: record.max_pdcp_ul,
-          execution_status: record.execution_status || "Unknown",
-          district: record.district,
-          region: record.region,
-          vendor: record.vendor,
-          data_date: record.data_date,
-        });
-
-        // ✅ Thêm dòng này để đảm bảo chiều cao cho từng dòng data
-        row.height = 20;
-
-        // 🎨 Alternate row colors (zebra striping)
-        const isEvenRow = (index + 1) % 2 === 0;
-        const rowFillColor = isEvenRow ? "F8F9FA" : "FFFFFF"; // Light gray cho even rows
-
-        // Apply background color to all cells in row
-        row.eachCell((cell, colNumber) => {
-          cell.fill = {
-            type: "pattern",
-            pattern: "solid",
-            fgColor: { argb: rowFillColor },
-          };
-
-          // 🔲 Add borders to all cells
-          cell.border = {
-            top: { style: "thin", color: { argb: "D1D5DB" } },
-            left: { style: "thin", color: { argb: "D1D5DB" } },
-            bottom: { style: "thin", color: { argb: "D1D5DB" } },
-            right: { style: "thin", color: { argb: "D1D5DB" } },
-          };
-
-          // 📊 Style Cell Availability column based on value
-          if (colNumber === 10) {
-            // Cell Avail column
-            const cellAvail = record.cell_avail || 0;
-            if (cellAvail >= 95) {
-              cell.font = { color: { argb: "10B981" }, bold: true }; // Green
-            } else if (cellAvail >= 90) {
-              cell.font = { color: { argb: "F59E0B" }, bold: true }; // Yellow
-            } else {
-              cell.font = { color: { argb: "EF4444" }, bold: true }; // Red
-            }
-          }
-
-          // 🏷️ Style Execution Status column
-          if (colNumber === 14) {
-            // Execution Status column
-            const status = record.execution_status?.toLowerCase();
-            switch (status) {
-              case "completed":
-                cell.fill = {
-                  type: "pattern",
-                  pattern: "solid",
-                  fgColor: { argb: "D1FAE5" }, // Light green background
-                };
-                cell.font = { color: { argb: "10B981" }, bold: true };
-                break;
-              case "failed":
-                cell.fill = {
-                  type: "pattern",
-                  pattern: "solid",
-                  fgColor: { argb: "FEE2E2" }, // Light red background
-                };
-                cell.font = { color: { argb: "EF4444" }, bold: true };
-                break;
-              case "starting_reset":
-                cell.fill = {
-                  type: "pattern",
-                  pattern: "solid",
-                  fgColor: { argb: "FEF3C7" }, // Light yellow background
-                };
-                cell.font = { color: { argb: "F59E0B" }, bold: true };
-                break;
-              default:
-                cell.fill = {
-                  type: "pattern",
-                  pattern: "solid",
-                  fgColor: { argb: "F3F4F6" }, // Light gray background
-                };
-                cell.font = { color: { argb: "6B7280" }, bold: true };
-            }
-          }
-
-          // 📝 Center align number columns
-          if ([1, 8, 9, 10, 11, 12, 13].includes(colNumber)) {
-            cell.alignment = { horizontal: "center", vertical: "middle" };
-          } else {
-            cell.alignment = { horizontal: "left", vertical: "middle" };
-          }
-        });
-      });
-
-      // 🏆 Style header row
-      const headerRow = worksheet.getRow(1);
-      headerRow.font = {
-        bold: true,
-        color: { argb: "FFFFFF" },
-        // color: { argb: "366092" },
-        size: 12,
-      };
-      headerRow.fill = {
-        type: "pattern",
-        pattern: "solid",
-        // fgColor: { argb: "1F2937" }, // Dark gray header
-        fgColor: { argb: "366092" }, // Dark gray header
-      };
-      headerRow.alignment = {
-        horizontal: "center",
-        vertical: "middle",
-      };
-      headerRow.height = 25; // Taller header
-
-      // Add borders to header
-      headerRow.eachCell((cell) => {
-        cell.border = {
-          top: { style: "medium", color: { argb: "111827" } },
-          left: { style: "medium", color: { argb: "111827" } },
-          bottom: { style: "medium", color: { argb: "111827" } },
-          right: { style: "medium", color: { argb: "111827" } },
-        };
-      });
-
-      // 📐 Set default row height
-      worksheet.properties.defaultRowHeight = 20;
-
-      // 🔒 Freeze header row
-      worksheet.views = [{ state: "frozen", ySplit: 1 }];
-
-      // Generate Excel file
-      const buffer = await workbook.xlsx.writeBuffer();
-      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
-      const filename = `KPI_Monitor_${startDate}_to_${endDate}_${timestamp}.xlsx`;
-
-      // Download file
-      saveAs(new Blob([buffer]), filename);
-
-      alert(`✅ Exported ${filteredRecords.length} records to Excel successfully!`);
-    } catch (error) {
-      console.error("❌ Export failed:", error);
-      alert("Export failed. Please try again.");
-    }
+  const handleExportExcel = () => {
+    console.log("Exporting to Excel...");
+    // Excel export logic would go here
   };
 
   // Clear all filters and data
@@ -891,12 +612,10 @@ const KpiMonitorTab: React.FC = () => {
                 <span className="text-muted" style={{ fontSize: "14px", whiteSpace: "nowrap" }}>
                   📅 Last Updated: {startDate && endDate ? (startDate === endDate ? new Date(startDate).toLocaleDateString("en-US") : `${new Date(startDate).toLocaleDateString("en-US")} - ${new Date(endDate).toLocaleDateString("en-US")}`) : "Not selected"}
                 </span>
-                {/*}
                 <div style={{ fontSize: "14px", whiteSpace: "nowrap" }}>
                   <strong>Status: </strong>
                   {getExecutionStatusDisplay()}
                 </div>
-                */}
               </div>
             </div>
 
@@ -1023,7 +742,6 @@ const KpiMonitorTab: React.FC = () => {
                       { field: "max_ues", label: "Max UEs", width: "100px" },
                       { field: "max_pdcp_dl", label: "Max PDCP DL", width: "130px" },
                       { field: "max_pdcp_ul", label: "Max PDCP UL", width: "130px" },
-                      { field: "execution_status", label: "Execution Status", width: "130px" },
                     ].map(({ field, label, width }) => (
                       <th
                         key={field}
@@ -1064,25 +782,18 @@ const KpiMonitorTab: React.FC = () => {
                       <td className="py-3 px-2" style={{ fontSize: "0.875rem" }}>
                         {record.lnbts_name}
                       </td>
-                      {/*}
                       <td className="py-3 px-2" style={{ fontSize: "0.875rem" }}>
                         {record.lncel_name}
                       </td>
-                      */}
-                      <TruncatedCell value={record.lncel_name} maxWidth="180px" />
-                      {/*}
                       <td className="py-3 px-2" style={{ fontSize: "0.875rem" }}>
                         {record.dn_mrbts_site}
                       </td>
-                      */}
-                      <TruncatedCell value={record.dn_mrbts_site} maxWidth="200px" />
                       <td className="py-3 px-2" style={{ fontSize: "0.875rem" }}>
                         {(record.pdcp_volume_dl || 0).toLocaleString()}
                       </td>
                       <td className="py-3 px-2" style={{ fontSize: "0.875rem" }}>
                         {(record.pdcp_volume_ul || 0).toLocaleString()}
                       </td>
-
                       <td className="py-3 px-2">
                         <span
                           className="fw-semibold"
@@ -1091,7 +802,7 @@ const KpiMonitorTab: React.FC = () => {
                             fontSize: "0.875rem",
                           }}
                         >
-                          {record.cell_avail !== null && record.cell_avail !== undefined ? record.cell_avail.toFixed(2) + "%" : "0%"}
+                          {(record.cell_avail || 0).toFixed(2)}%
                         </span>
                       </td>
                       <td className="py-3 px-2" style={{ fontSize: "0.875rem" }}>
@@ -1103,22 +814,6 @@ const KpiMonitorTab: React.FC = () => {
                       <td className="py-3 px-2" style={{ fontSize: "0.875rem" }}>
                         {(record.max_pdcp_ul || 0).toLocaleString()}
                       </td>
-
-                      <td className="py-3 px-2" style={{ fontSize: "0.875rem" }}>
-                        <span
-                          className="badge"
-                          style={{
-                            backgroundColor: getExecutionStatusColor(record.execution_status),
-                            color: "white",
-                            fontSize: "0.75rem",
-                            padding: "4px 8px",
-                            borderRadius: "4px",
-                          }}
-                        >
-                          {getExecutionStatusText(record.execution_status)}
-                        </span>
-                      </td>
-
                       <td className="py-3 px-2">
                         <button className="btn btn-outline-primary btn-sm" onClick={() => handleDetail(record)} style={{ borderRadius: "6px", fontSize: "0.75rem" }}>
                           Detail

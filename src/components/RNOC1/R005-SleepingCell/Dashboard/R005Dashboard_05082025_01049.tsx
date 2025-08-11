@@ -1,26 +1,178 @@
 // src/components/RNOC1/R005-SleepingCell/Dashboard/Dashboard.tsx
-import React from 'react';
+// import React from 'react';
 import { Container, Row, Col, Card, Button, Badge, ProgressBar } from 'react-bootstrap';
 import './R005Dashboard.css'; // Import CSS file
+
+import React, { useState, useEffect } from 'react';
+
 
 interface DashboardProps {
   sidebarWidth?: number;
   isSidebarCollapsed?: boolean;
+    dashboardData: any;
+  loading: boolean;
 }
+
+
+
+
 
 const Dashboard: React.FC<DashboardProps> = ({ 
   sidebarWidth = 250, 
-  isSidebarCollapsed = false 
+  isSidebarCollapsed = false ,
+  dashboardData, 
+  loading 
 }) => {
-  const mockData = {
-    ossFiles: 5,
-    analyzed: 1250,
-    detected: 150,
-    ping: 142,
-    ssh: 138,
-    reset: 125,
-    manual: 25
-  };
+
+
+/*
+   const [selectedDate, setSelectedDate] = useState('2025-07-29');
+  const [dashboardData, setDashboardData] = useState({
+    todayAnalysis: 8250,
+    sleepingCells: 150,
+    executionCells: 138,
+    recheckCells: 12
+
+ });
+
+ */
+
+ // const [dashboardData, setDashboardData] = useState(null);
+// const [loading, setLoading] = useState(false); // <-- Thêm dòng này
+
+// const [selectedDate, setSelectedDate] = useState('2025-07-29'); // OK - giá trị mặc định
+
+{/*}
+const [dashboardData, setDashboardData] = useState(null); // ✅ Đúng
+const [loading, setLoading] = useState(false);
+// const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]); // ✅ Ngày hiện tại
+const [selectedDate, setSelectedDate] = useState(() => {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  return yesterday.toISOString().split('T')[0];
+});
+
+*/}
+
+/*
+const [selectedDate, setSelectedDate] = useState(() => {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  return yesterday.toISOString().split('T')[0];
+}); // ✅ Ngày hôm qua
+
+*/
+
+/*
+
+// ✅ Thêm useEffect này:
+useEffect(() => {
+  fetchDashboardData();
+}, [selectedDate]);
+
+
+*/
+
+{/*
+
+// ✅ Chỉ gọi API một lần khi component mount (không phụ thuộc selectedDate)
+useEffect(() => {
+  fetchDashboardData();
+}, []); // ← Empty dependency array - chỉ chạy 1 lần khi load
+
+
+*/}
+
+{/*}
+
+const fetchDashboardData = async () => {
+  setLoading(true);
+  try {
+    const apiUrl = `https://localhost:7232/api/dashboard/summary/${selectedDate}`;
+    const response = await fetch(apiUrl);
+    const data = await response.json();
+    setDashboardData(data); // ✅ Chỉ cập nhật khi bấm Refresh
+  } catch (error) {
+    console.error('❌ API Error:', error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+*/}
+
+{/*
+
+
+const fetchDashboardData = async () => {
+  console.log('🔄 Fetching data for date:', selectedDate);
+  setLoading(true);
+  try {
+    const apiUrl = `https://localhost:7232/api/dashboard/summary/${selectedDate}`;
+    console.log('🔗 API URL:', apiUrl);
+    
+    const response = await fetch(apiUrl);
+    const data = await response.json();
+    
+    console.log('📊 API returned:', data);
+    console.log('📊 Data empty?', !data || Object.keys(data).length === 0);
+    
+    if (data && Object.keys(data).length > 0) {
+      setDashboardData(data);
+      console.log('✅ Data updated successfully');
+    } else {
+      console.log('⚠️ API returned empty data for this date');
+      // Có thể hiển thị thông báo "No data for this date"
+    }
+    
+  } catch (error) {
+    console.error('❌ API Error:', error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+*/}
+
+
+/*
+
+const fetchDashboardData = async () => {
+  setLoading(true);
+  try {
+    const apiUrl = `https://localhost:7232/api/dashboard/summary/${selectedDate}`;
+    console.log('🔍 Calling API:', apiUrl);
+    
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        // Thêm headers khác nếu cần (Authorization, etc.)
+      },
+      // credentials: 'include', // Nếu cần cookies
+    });
+    
+    console.log('📡 Response status:', response.status);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    console.log('✅ Data received:', data);
+    
+    setDashboardData(data);
+  } catch (error) {
+    console.error('❌ API Error:', error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+*/
+
 
   const provinces = [
     { name: 'HÀ NỘI', icon: '🏛️', cells: 45, resolved: 38, manual: 7, rate: 84 },
@@ -33,6 +185,10 @@ const Dashboard: React.FC<DashboardProps> = ({
   const sidebarOffset = isSidebarCollapsed ? 60 : sidebarWidth;
   const dashboardClass = isSidebarCollapsed ? 'dashboard-sidebar-collapsed' : 'dashboard-no-sidebar-overlap';
 
+  if (loading) {
+    return <div>Loading dashboard data...</div>;
+  }
+
   return (
     <div 
       className={dashboardClass}
@@ -43,12 +199,72 @@ const Dashboard: React.FC<DashboardProps> = ({
       }}
     >
       <Container fluid style={{maxWidth: 'none', padding: '0', margin: '0'}}>
-        
-        {/* ZONE 1 & 2: Modern 4 Cards Layout */}
+
+
+  
+  {/* Date Picker Controls */}
+  {/*
+  <Row className="mb-4">
+    <Col lg={12}>
+      <Card className="border-0 shadow-sm">
+        <Card.Body className="p-3">
+          <div className="d-flex align-items-center justify-content-between">
+            <div className="d-flex align-items-center">
+              <div className="p-2 rounded-circle me-3" style={{backgroundColor: '#e3f2fd'}}>
+                <span style={{fontSize: '1.2rem'}}>📅</span>
+              </div>
+              <div>
+                <h6 className="fw-bold mb-0">Dashboard Date</h6>
+                <small className="text-muted">Select date to view data</small>
+              </div>
+            </div>
+            
+            <div className="d-flex align-items-center gap-3">
+              <input 
+                type="date" 
+                className="form-control"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                style={{width: '160px'}}
+              />
+              <Button 
+                variant="primary" 
+                onClick={fetchDashboardData}
+                disabled={loading}
+                className="d-flex align-items-center"
+              >
+                {loading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <span className="me-2">🔄</span>
+                    Display Data
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </Card.Body>
+      </Card>
+    </Col>
+  </Row>
+
+
+  */}
+
+  {/* Existing ZONE 1 & 2: Modern 4 Cards Layout */}
+
+
+
+
+
+{/* ZONE 1: Fixed - Dynamic Data Display */}
 <Row className="g-3 mb-3">
   <Col xl={3} lg={6} md={6}>
     <Card style={{
-      // backgroundColor: 'white',
       backgroundColor: '#ffebf0', 
       border: 'none',
       borderRadius: '16px',
@@ -59,10 +275,19 @@ const Dashboard: React.FC<DashboardProps> = ({
         <div className="d-flex justify-content-between align-items-start">
           <div className="flex-grow-1">
             <p className="text-muted mb-1 small">Today's Analysis</p>
-            <h2 className="fw-bold mb-2" style={{color: '#1a202c', fontSize: '2rem'}}>8,250</h2>
+            {loading ? (
+              <div className="d-flex align-items-center">
+                <span className="spinner-border spinner-border-sm me-2" />
+                <h2 className="fw-bold mb-2" style={{color: '#1a202c', fontSize: '2rem'}}>Loading...</h2>
+              </div>
+            ) : dashboardData ? (
+              <h2 className="fw-bold mb-2" style={{color: '#1a202c', fontSize: '2rem'}}>
+                {dashboardData.todayAnalysis?.toLocaleString() || 'N/A'}
+              </h2>
+            ) : (
+              <h2 className="fw-bold mb-2" style={{color: '#1a202c', fontSize: '2rem'}}>No Data</h2>
+            )}
             <div className="d-flex align-items-center">
-              
-              
               <span className="badge" style={{
                 backgroundColor: '#10b981', 
                 color: 'white', 
@@ -70,8 +295,6 @@ const Dashboard: React.FC<DashboardProps> = ({
                 borderRadius: '8px',
                 padding: '4px 8px'
               }}>+100%</span>
-
-
             </div>
           </div>
           <div style={{
@@ -85,19 +308,11 @@ const Dashboard: React.FC<DashboardProps> = ({
             flexShrink: 0
           }}>
             <span style={{fontSize: '1.5rem', color: 'white'}}>📚</span>
-
           </div>
         </div>
       </Card.Body>
     </Card>
   </Col>
-
-
-
-
-
-
-
 
   <Col xl={3} lg={6} md={6}>
     <Card style={{
@@ -110,10 +325,20 @@ const Dashboard: React.FC<DashboardProps> = ({
       <Card.Body className="p-4">
         <div className="d-flex justify-content-between align-items-start">
           <div className="flex-grow-1">
-            <p className="text-muted mb-1 small">Sleeping Cells</p>
-            <h2 className="fw-bold mb-2" style={{color: '#1a202c', fontSize: '2rem'}}>150</h2>
+            <p className="text-muted mb-1 small">Excution Cells</p>
+            {loading ? (
+              <div className="d-flex align-items-center">
+                <span className="spinner-border spinner-border-sm me-2" />
+                <h2 className="fw-bold mb-2" style={{color: '#1a202c', fontSize: '2rem'}}>Loading...</h2>
+              </div>
+            ) : dashboardData ? (
+              <h2 className="fw-bold mb-2" style={{color: '#1a202c', fontSize: '2rem'}}>
+                {dashboardData.sleepingCells?.toLocaleString() || 'N/A'}
+              </h2>
+            ) : (
+              <h2 className="fw-bold mb-2" style={{color: '#1a202c', fontSize: '2rem'}}>No Data</h2>
+            )}
             <div className="d-flex align-items-center">
-              
               <span className="badge" style={{
                 backgroundColor: '#10b981', 
                 color: 'white', 
@@ -121,14 +346,12 @@ const Dashboard: React.FC<DashboardProps> = ({
                 borderRadius: '8px',
                 padding: '4px 8px'
               }}>+7%</span>
-              
             </div>
           </div>
           <div style={{
             width: '56px',
             height: '56px',
             borderRadius: '16px',
-
             background: 'linear-gradient(135deg, #ff9800)',
             display: 'flex',
             alignItems: 'center',
@@ -144,7 +367,6 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   <Col xl={3} lg={6} md={6}>
     <Card style={{
-      //backgroundColor: 'white',
       backgroundColor: '#e8f8f0', 
       border: 'none',
       borderRadius: '16px',
@@ -154,8 +376,19 @@ const Dashboard: React.FC<DashboardProps> = ({
       <Card.Body className="p-4">
         <div className="d-flex justify-content-between align-items-start">
           <div className="flex-grow-1">
-            <p className="text-muted mb-1 small">Excution Cells</p>
-            <h2 className="fw-bold mb-2" style={{color: '#1a202c', fontSize: '2rem'}}>138</h2>
+            <p className="text-muted mb-1 small">Resolved Cells</p>
+            {loading ? (
+              <div className="d-flex align-items-center">
+                <span className="spinner-border spinner-border-sm me-2" />
+                <h2 className="fw-bold mb-2" style={{color: '#1a202c', fontSize: '2rem'}}>Loading...</h2>
+              </div>
+            ) : dashboardData ? (
+              <h2 className="fw-bold mb-2" style={{color: '#1a202c', fontSize: '2rem'}}>
+                {dashboardData.executionCells?.toLocaleString() || 'N/A'}
+              </h2>
+            ) : (
+              <h2 className="fw-bold mb-2" style={{color: '#1a202c', fontSize: '2rem'}}>No Data</h2>
+            )}
             <div className="d-flex align-items-center">
               <span className="badge" style={{
                 backgroundColor: '#10b981', 
@@ -195,7 +428,18 @@ const Dashboard: React.FC<DashboardProps> = ({
         <div className="d-flex justify-content-between align-items-start">
           <div className="flex-grow-1">
             <p className="text-muted mb-1 small">Recheck Cells</p>
-            <h2 className="fw-bold mb-2" style={{color: '#1a202c', fontSize: '2rem'}}>12</h2>
+            {loading ? (
+              <div className="d-flex align-items-center">
+                <span className="spinner-border spinner-border-sm me-2" />
+                <h2 className="fw-bold mb-2" style={{color: '#1a202c', fontSize: '2rem'}}>Loading...</h2>
+              </div>
+            ) : dashboardData ? (
+              <h2 className="fw-bold mb-2" style={{color: '#1a202c', fontSize: '2rem'}}>
+                {dashboardData.recheckCells?.toLocaleString() || 'N/A'}
+              </h2>
+            ) : (
+              <h2 className="fw-bold mb-2" style={{color: '#1a202c', fontSize: '2rem'}}>No Data</h2>
+            )}
             <div className="d-flex align-items-center">
               <span className="badge" style={{
                 backgroundColor: '#10b981', 
@@ -223,9 +467,6 @@ const Dashboard: React.FC<DashboardProps> = ({
     </Card>
   </Col>
 </Row>
-        
-
-
 
 
 
@@ -765,11 +1006,468 @@ const Dashboard: React.FC<DashboardProps> = ({
   </Card>
 </div>
 
+{/* ZONE 4: Technical Summary - Redesigned */}
+<div className="mb-3">
+  <Card className="border-0 shadow-lg" style={{
+    borderRadius: '16px',
+    overflow: 'hidden'
+  }}>
+    {/* Gradient Border Effect */}
+    <div style={{
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      padding: '2px',
+      borderRadius: '16px'
+    }}>
+      <Card.Body className="p-4" style={{
+        background: 'white',
+        borderRadius: '14px'
+      }}>
+        {/* Header Section */}
+        <div className="d-flex align-items-center mb-4 position-relative">
+          <div className="d-flex align-items-center">
+            <div style={{
+              width: '56px',
+              height: '56px',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              borderRadius: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginRight: '16px',
+              boxShadow: '0 8px 24px rgba(102, 126, 234, 0.25)'
+            }}>
+              <span style={{fontSize: '1.8rem'}}>🔧</span>
+            </div>
+            <div>
+              <h5 className="fw-bold mb-1" style={{color: '#1a202c'}}>
+                Technical Execution Results
+              </h5>
+              <small className="text-muted">Automation Process Summary</small>
+            </div>
+          </div>
+          
+          {/* Success Badge */}
+          <div className="ms-auto">
+            <span className="badge" style={{
+              background: 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)',
+              color: 'white',
+              padding: '8px 16px',
+              borderRadius: '20px',
+              fontSize: '0.75rem',
+              fontWeight: '600',
+              boxShadow: '0 4px 12px rgba(72, 187, 120, 0.3)'
+            }}>
+              All Systems Operational
+            </span>
+          </div>
+        </div>
+        
+        <Row className="g-3">
+          {/* Connectivity Test Card */}
+          <Col xl={6} lg={6}>
+            <div className="h-100 p-3 rounded-3 position-relative" style={{
+              background: '#f8fafb',
+              border: '1px solid #e9ecef',
+              transition: 'all 0.3s ease',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-4px)';
+              e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)';
+              e.currentTarget.style.borderColor = '#dee2e6';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+              e.currentTarget.style.borderColor = '#e9ecef';
+            }}>
+              {/* Top accent bar */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '3px',
+                background: 'linear-gradient(90deg, #48bb78, #38a169)',
+                borderRadius: '3px 3px 0 0'
+              }} />
+              
+              <div className="d-flex align-items-start">
+                <div style={{
+                  width: '44px',
+                  height: '44px',
+                  background: 'linear-gradient(135deg, #48bb78 0%, #38a169 100%)',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  boxShadow: '0 4px 12px rgba(72, 187, 120, 0.2)'
+                }}>
+                  <span style={{fontSize: '1.3rem'}}>🔗</span>
+                </div>
+                <div className="ms-3 flex-grow-1">
+                  <h6 className="text-uppercase mb-2" style={{
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    letterSpacing: '0.5px',
+                    color: '#718096'
+                  }}>
+                    Connectivity Test
+                  </h6>
+                  <div className="d-flex align-items-baseline mb-2">
+                    <span className="fw-bold me-2" style={{fontSize: '1.75rem', color: '#1a202c'}}>
+                      142/150
+                    </span>
+                    <span className="text-muted" style={{fontSize: '0.875rem'}}>
+                      sites (95%)
+                    </span>
+                  </div>
+                  <div className="mb-2" style={{height: '8px', backgroundColor: '#e2e8f0', borderRadius: '10px', overflow: 'hidden'}}>
+                    <div style={{
+                      width: '95%',
+                      height: '100%',
+                      background: 'linear-gradient(90deg, #48bb78, #38a169)',
+                      borderRadius: '10px',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}>
+                      <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+                        animation: 'shimmer 2s infinite linear'
+                      }} />
+                    </div>
+                  </div>
+                  <div className="d-flex align-items-center">
+                    <span style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      backgroundColor: '#f56565',
+                      marginRight: '6px',
+                      animation: 'pulse 2s infinite'
+                    }} />
+                    <small className="fw-semibold" style={{color: '#f56565'}}>
+                      8 ping failed
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Col>
+          
+          {/* SSH Connection Card */}
+          <Col xl={6} lg={6}>
+            <div className="h-100 p-3 rounded-3 position-relative" style={{
+              background: '#f8fafb',
+              border: '1px solid #e9ecef',
+              transition: 'all 0.3s ease',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-4px)';
+              e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)';
+              e.currentTarget.style.borderColor = '#dee2e6';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+              e.currentTarget.style.borderColor = '#e9ecef';
+            }}>
+              {/* Top accent bar */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '3px',
+                background: 'linear-gradient(90deg, #4299e1, #3182ce)',
+                borderRadius: '3px 3px 0 0'
+              }} />
+              
+              <div className="d-flex align-items-start">
+                <div style={{
+                  width: '44px',
+                  height: '44px',
+                  background: 'linear-gradient(135deg, #4299e1 0%, #3182ce 100%)',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  boxShadow: '0 4px 12px rgba(66, 153, 225, 0.2)'
+                }}>
+                  <span style={{fontSize: '1.3rem'}}>🔑</span>
+                </div>
+                <div className="ms-3 flex-grow-1">
+                  <h6 className="text-uppercase mb-2" style={{
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    letterSpacing: '0.5px',
+                    color: '#718096'
+                  }}>
+                    SSH Connection
+                  </h6>
+                  <div className="d-flex align-items-baseline mb-2">
+                    <span className="fw-bold me-2" style={{fontSize: '1.75rem', color: '#1a202c'}}>
+                      138/142
+                    </span>
+                    <span className="text-muted" style={{fontSize: '0.875rem'}}>
+                      success (97%)
+                    </span>
+                  </div>
+                  <div className="mb-2" style={{height: '8px', backgroundColor: '#e2e8f0', borderRadius: '10px', overflow: 'hidden'}}>
+                    <div style={{
+                      width: '97%',
+                      height: '100%',
+                      background: 'linear-gradient(90deg, #4299e1, #3182ce)',
+                      borderRadius: '10px',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}>
+                      <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+                        animation: 'shimmer 2s infinite linear'
+                      }} />
+                    </div>
+                  </div>
+                  <div className="d-flex align-items-center">
+                    <span style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      backgroundColor: '#f56565',
+                      marginRight: '6px',
+                      animation: 'pulse 2s infinite'
+                    }} />
+                    <small className="fw-semibold" style={{color: '#f56565'}}>
+                      4 SSH failed
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Col>
+          
+          {/* Reset Execution Card */}
+          <Col xl={6} lg={6}>
+            <div className="h-100 p-3 rounded-3 position-relative" style={{
+              background: '#f8fafb',
+              border: '1px solid #e9ecef',
+              transition: 'all 0.3s ease',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-4px)';
+              e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)';
+              e.currentTarget.style.borderColor = '#dee2e6';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+              e.currentTarget.style.borderColor = '#e9ecef';
+            }}>
+              {/* Top accent bar */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '3px',
+                background: 'linear-gradient(90deg, #ed8936, #dd6b20)',
+                borderRadius: '3px 3px 0 0'
+              }} />
+              
+              <div className="d-flex align-items-start">
+                <div style={{
+                  width: '44px',
+                  height: '44px',
+                  background: 'linear-gradient(135deg, #ed8936 0%, #dd6b20 100%)',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  boxShadow: '0 4px 12px rgba(237, 137, 54, 0.2)'
+                }}>
+                  <span style={{fontSize: '1.3rem'}}>🔄</span>
+                </div>
+                <div className="ms-3 flex-grow-1">
+                  <h6 className="text-uppercase mb-2" style={{
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    letterSpacing: '0.5px',
+                    color: '#718096'
+                  }}>
+                    Reset Execution
+                  </h6>
+                  <div className="d-flex align-items-baseline mb-2">
+                    <span className="fw-bold me-2" style={{fontSize: '1.75rem', color: '#1a202c'}}>
+                      125/138
+                    </span>
+                    <span className="text-muted" style={{fontSize: '0.875rem'}}>
+                      success (91%)
+                    </span>
+                  </div>
+                  <div className="mb-2" style={{height: '8px', backgroundColor: '#e2e8f0', borderRadius: '10px', overflow: 'hidden'}}>
+                    <div style={{
+                      width: '91%',
+                      height: '100%',
+                      background: 'linear-gradient(90deg, #ed8936, #dd6b20)',
+                      borderRadius: '10px',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}>
+                      <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+                        animation: 'shimmer 2s infinite linear'
+                      }} />
+                    </div>
+                  </div>
+                  <div className="d-flex align-items-center">
+                    <span style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      backgroundColor: '#f56565',
+                      marginRight: '6px',
+                      animation: 'pulse 2s infinite'
+                    }} />
+                    <small className="fw-semibold" style={{color: '#f56565'}}>
+                      13 reset failed
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Col>
+          
+          {/* Final Verification Card */}
+          <Col xl={6} lg={6}>
+            <div className="h-100 p-3 rounded-3 position-relative" style={{
+              background: '#f8fafb',
+              border: '1px solid #e9ecef',
+              transition: 'all 0.3s ease',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-4px)';
+              e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)';
+              e.currentTarget.style.borderColor = '#dee2e6';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+              e.currentTarget.style.borderColor = '#e9ecef';
+            }}>
+              {/* Top accent bar */}
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '3px',
+                background: 'linear-gradient(90deg, #667eea, #764ba2)',
+                borderRadius: '3px 3px 0 0'
+              }} />
+              
+              <div className="d-flex align-items-start">
+                <div style={{
+                  width: '44px',
+                  height: '44px',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.2)'
+                }}>
+                  <span style={{fontSize: '1.3rem'}}>✅</span>
+                </div>
+                <div className="ms-3 flex-grow-1">
+                  <h6 className="text-uppercase mb-2" style={{
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    letterSpacing: '0.5px',
+                    color: '#718096'
+                  }}>
+                    Final Verification
+                  </h6>
+                  <div className="d-flex align-items-baseline mb-2">
+                    <span className="fw-bold me-2" style={{fontSize: '1.75rem', color: '#1a202c'}}>
+                      125/125
+                    </span>
+                    <span className="text-muted" style={{fontSize: '0.875rem'}}>
+                      recovered (100%)
+                    </span>
+                  </div>
+                  <div className="mb-2" style={{height: '8px', backgroundColor: '#e2e8f0', borderRadius: '10px', overflow: 'hidden'}}>
+                    <div style={{
+                      width: '100%',
+                      height: '100%',
+                      background: 'linear-gradient(90deg, #667eea, #764ba2)',
+                      borderRadius: '10px',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}>
+                      <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+                        animation: 'shimmer 2s infinite linear'
+                      }} />
+                    </div>
+                  </div>
+                  <div className="d-flex align-items-center">
+                    <span style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      backgroundColor: '#48bb78',
+                      marginRight: '6px',
+                      animation: 'pulse 2s infinite'
+                    }} />
+                    <small className="fw-semibold" style={{color: '#48bb78'}}>
+                      0 still down
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Col>
+        </Row>
+      </Card.Body>
+    </div>
+  </Card>
+</div>
 
 
 
 
-        {/* ZONE 4: Technical Summary */}
+
+{/*
+
+
+        { ZONE 4: Technical Summary 
         <div className="mb-3">
           <Card className="border-0 shadow-sm">
             <Card.Body className="p-3">
@@ -849,9 +1547,11 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
 
-{/* ================================================ ZONE 4: Technical Summary */}
+{ ================================================ ZONE 4: Technical Summary }
 
 
+
+*/}
 
 
 {/* ZONE 5: Technical Summary */}
@@ -1031,7 +1731,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     </Card>
   </Col>
 
-{/* Three Column Province Chart - Updated to Timeline Style */}
+
 
 
 {/* Three Column Province Chart - Updated to Timeline Style */}
@@ -1056,6 +1756,9 @@ const Dashboard: React.FC<DashboardProps> = ({
 
 
 {/* All Provinces - With Labels */}
+
+
+
 
 {/* LSN Province */}
 <div className="mb-3">
@@ -1113,12 +1816,12 @@ const Dashboard: React.FC<DashboardProps> = ({
           <div 
             style={{
               height: '8px',
-              backgroundColor: '#f59e0b',
+              backgroundColor: '#f59e01',
               width: '100%'
             }}
           ></div>
         </div>
-        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#f59e0b', minWidth: '25px' }}>34</span>
+        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#f59e01', minWidth: '25px' }}>34</span>
       </div>
       
       {/* Resolved bar */}
@@ -1128,12 +1831,15 @@ const Dashboard: React.FC<DashboardProps> = ({
           <div 
             style={{
               height: '8px',
-              backgroundColor: '#10b981',
-              width: '71%'
+    backgroundColor: '#10b983', 
+    width: '50%',
             }}
+
+
+
           ></div>
         </div>
-        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#10b981', minWidth: '25px' }}>24</span>
+        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#10b983', minWidth: '50px' }}>24</span>
       </div>
       
       {/* Manual bar */}
@@ -1144,15 +1850,18 @@ const Dashboard: React.FC<DashboardProps> = ({
             style={{
               height: '8px',
               backgroundColor: '#ef4444',
-              width: '29%'
+              width: '50%'
             }}
           ></div>
         </div>
-        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#ef4444', minWidth: '25px' }}>10</span>
+        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#ef4444', minWidth: '50px' }}>10</span>
       </div>
     </div>
   </div>
 </div>
+
+
+
 
 {/* LCU Province */}
 <div className="mb-2">  {/* // chinh khoang cach giua cac container */}
@@ -1191,12 +1900,12 @@ const Dashboard: React.FC<DashboardProps> = ({
           <div 
             style={{
               height: '8px',
-              backgroundColor: '#f59e0b',
+              backgroundColor: '#f59e0a',
               width: '100%'
             }}
           ></div>
         </div>
-        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#f59e0b', minWidth: '25px' }}>13</span>
+        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#f59e0a', minWidth: '25px' }}>13</span>
       </div>
       
       {/* Resolved bar */}
@@ -1206,12 +1915,15 @@ const Dashboard: React.FC<DashboardProps> = ({
           <div 
             style={{
               height: '8px',
-              backgroundColor: '#10b981',
-              width: '85%'
+    backgroundColor: '#10b981', 
+    width: '85%',
             }}
+
+
+
           ></div>
         </div>
-        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#10b981', minWidth: '25px' }}>11</span>
+        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#10b981', minWidth: '50px' }}>11</span>
       </div>
       
       {/* Manual bar */}
@@ -1226,7 +1938,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             }}
           ></div>
         </div>
-        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#ef4444', minWidth: '25px' }}>2</span>
+        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#ef4444', minWidth: '50px' }}>2</span>
       </div>
     </div>
   </div>
@@ -1270,7 +1982,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             style={{
               height: '8px',
               backgroundColor: '#f59e0b',
-              width: '26%'
+              width: '100%'
             }}
           ></div>
         </div>
@@ -1551,347 +2263,22 @@ const Dashboard: React.FC<DashboardProps> = ({
 
 
 
-{/* LSN Province - With Labels */}
-<div className="mb-4">
-  <div 
-    className="p-3 d-flex align-items-center" 
-    style={{ 
-      backgroundColor: '#f8f9fa', 
-      borderRadius: '8px',
-      border: '1px solid #e9ecef'
-    }}
-  >
-    {/* Icon Circle */}
-    <div 
-      className="rounded-circle d-flex align-items-center justify-content-center me-3"
-      style={{
-        width: '50px',
-        height: '50px',
-        backgroundColor: '#f59e0b',
-        flexShrink: 0
-      }}
-    >
-      <div 
-        style={{
-          width: '25px',
-          height: '18px',
-          backgroundColor: '#1f2937',
-          border: '2px solid #1f2937',
-          position: 'relative'
-        }}
-      >
-        <div 
-          style={{
-            position: 'absolute',
-            top: '2px',
-            left: '2px',
-            right: '2px',
-            bottom: '2px',
-            background: 'linear-gradient(45deg, transparent 40%, #ef4444 40%, #ef4444 60%, transparent 60%)'
-          }}
-        ></div>
-      </div>
-    </div>
-    
-    {/* Province Name */}
-    <div className="me-3" style={{ minWidth: '60px' }}>
-      <h5 className="fw-bold mb-0" style={{ fontSize: '18px', color: '#1f2937' }}>LSN</h5>
-    </div>
-    
-    {/* Three bars with labels - no border radius */}
-    <div className="flex-grow-1">
-      {/* Total bar */}
-      <div className="d-flex justify-content-between align-items-center mb-1">
-        <div className="d-flex align-items-center flex-grow-1">
-          <span className="me-2" style={{ fontSize: '11px', color: '#6b7280', minWidth: '50px' }}>Total</span>
-          <div 
-            style={{ 
-              height: '8px',
-              backgroundColor: '#f59e0b',
-              width: '100%'
-            }}
-          ></div>
-        </div>
-        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#f59e0b', minWidth: '25px' }}>34</span>
-      </div>
-      
-      {/* Resolved bar */}
-      <div className="d-flex justify-content-between align-items-center mb-1">
-        <div className="d-flex align-items-center flex-grow-1">
-          <span className="me-2" style={{ fontSize: '11px', color: '#6b7280', minWidth: '50px' }}>Resolved</span>
-          <div 
-            style={{ 
-              height: '8px',
-              backgroundColor: '#10b981',
-              width: '71%'
-            }}
-          ></div>
-        </div>
-        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#10b981', minWidth: '25px' }}>24</span>
-      </div>
-      
-      {/* Manual bar */}
-      <div className="d-flex justify-content-between align-items-center">
-        <div className="d-flex align-items-center flex-grow-1">
-          <span className="me-2" style={{ fontSize: '11px', color: '#6b7280', minWidth: '50px' }}>Manual</span>
-          <div 
-            style={{ 
-              height: '8px',
-              backgroundColor: '#ef4444',
-              width: '29%'
-            }}
-          ></div>
-        </div>
-        <span className="ms-2 fw-bold" style={{ fontSize: '12px', color: '#ef4444', minWidth: '25px' }}>10</span>
-      </div>
-    </div>
-  </div>
-</div>
 
 
 
 
 
 
-        
-        {/* LCU */}
-        <div className="mb-5">
-          <div className="d-flex align-items-center">
-            <div 
-              className="rounded-circle d-flex align-items-center justify-content-center me-4"
-              style={{
-                width: '60px',
-                height: '60px',
-                backgroundColor: '#06b6d4',
-                flexShrink: 0
-              }}
-            >
-              <span style={{ fontSize: '20px', color: 'white' }}>⛰️</span>
-            </div>
-            
-            <div className="me-4" style={{ minWidth: '80px' }}>
-              <h4 className="fw-bold mb-0" style={{ fontSize: '24px', color: '#1f2937' }}>LCU</h4>
-            </div>
-            
-            <div className="flex-grow-1 me-4">
-              <div className="d-flex gap-1">
-                <div style={{ height: '24px', backgroundColor: '#3b82f6', borderRadius: '12px', width: '60%' }}></div>
-                <div style={{ height: '24px', backgroundColor: '#f59e0b', borderRadius: '12px', width: '25%' }}></div>
-                <div style={{ height: '24px', backgroundColor: '#10b981', borderRadius: '12px', width: '15%' }}></div>
-              </div>
-            </div>
-            
-            <div style={{ minWidth: '120px' }}>
-              <div className="d-flex justify-content-between align-items-center mb-1">
-                <span className="text-muted" style={{ fontSize: '14px' }}>Total</span>
-                <span className="fw-bold" style={{ fontSize: '16px', color: '#f59e0b' }}>13</span>
-              </div>
-              <div className="d-flex justify-content-between align-items-center mb-1">
-                <span className="text-muted" style={{ fontSize: '14px' }}>Resolved</span>
-                <span className="fw-bold" style={{ fontSize: '16px', color: '#10b981' }}>11</span>
-              </div>
-              <div className="d-flex justify-content-between align-items-center">
-                <span className="text-muted" style={{ fontSize: '14px' }}>Manual</span>
-                <span className="fw-bold" style={{ fontSize: '16px', color: '#ef4444' }}>2</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* LCI */}
-        <div className="mb-5">
-          <div className="d-flex align-items-center">
-            <div 
-              className="rounded-circle d-flex align-items-center justify-content-center me-4"
-              style={{
-                width: '60px',
-                height: '60px',
-                backgroundColor: '#8b5cf6',
-                flexShrink: 0
-              }}
-            >
-              <span style={{ fontSize: '20px', color: 'white' }}>🌲</span>
-            </div>
-            
-            <div className="me-4" style={{ minWidth: '80px' }}>
-              <h4 className="fw-bold mb-0" style={{ fontSize: '24px', color: '#1f2937' }}>LCI</h4>
-            </div>
-            
-            <div className="flex-grow-1 me-4">
-              <div className="d-flex gap-1">
-                <div style={{ height: '24px', backgroundColor: '#3b82f6', borderRadius: '12px', width: '50%' }}></div>
-                <div style={{ height: '24px', backgroundColor: '#f59e0b', borderRadius: '12px', width: '30%' }}></div>
-                <div style={{ height: '24px', backgroundColor: '#10b981', borderRadius: '12px', width: '20%' }}></div>
-              </div>
-            </div>
-            
-            <div style={{ minWidth: '120px' }}>
-              <div className="d-flex justify-content-between align-items-center mb-1">
-                <span className="text-muted" style={{ fontSize: '14px' }}>Total</span>
-                <span className="fw-bold" style={{ fontSize: '16px', color: '#f59e0b' }}>9</span>
-              </div>
-              <div className="d-flex justify-content-between align-items-center mb-1">
-                <span className="text-muted" style={{ fontSize: '14px' }}>Resolved</span>
-                <span className="fw-bold" style={{ fontSize: '16px', color: '#10b981' }}>7</span>
-              </div>
-              <div className="d-flex justify-content-between align-items-center">
-                <span className="text-muted" style={{ fontSize: '14px' }}>Manual</span>
-                <span className="fw-bold" style={{ fontSize: '16px', color: '#ef4444' }}>2</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* SLA */}
-        <div className="mb-5">
-          <div className="d-flex align-items-center">
-            <div 
-              className="rounded-circle d-flex align-items-center justify-content-center me-4"
-              style={{
-                width: '60px',
-                height: '60px',
-                backgroundColor: '#10b981',
-                flexShrink: 0
-              }}
-            >
-              <span style={{ fontSize: '20px', color: 'white' }}>🌾</span>
-            </div>
-            
-            <div className="me-4" style={{ minWidth: '80px' }}>
-              <h4 className="fw-bold mb-0" style={{ fontSize: '24px', color: '#1f2937' }}>SLA</h4>
-            </div>
-            
-            <div className="flex-grow-1 me-4">
-              <div className="d-flex gap-1">
-                <div style={{ height: '24px', backgroundColor: '#3b82f6', borderRadius: '12px', width: '30%' }}></div>
-                <div style={{ height: '24px', backgroundColor: '#f59e0b', borderRadius: '12px', width: '20%' }}></div>
-                <div style={{ height: '24px', backgroundColor: '#10b981', borderRadius: '12px', width: '50%' }}></div>
-              </div>
-            </div>
-            
-            <div style={{ minWidth: '120px' }}>
-              <div className="d-flex justify-content-between align-items-center mb-1">
-                <span className="text-muted" style={{ fontSize: '14px' }}>Total</span>
-                <span className="fw-bold" style={{ fontSize: '16px', color: '#f59e0b' }}>6</span>
-              </div>
-              <div className="d-flex justify-content-between align-items-center mb-1">
-                <span className="text-muted" style={{ fontSize: '14px' }}>Resolved</span>
-                <span className="fw-bold" style={{ fontSize: '16px', color: '#10b981' }}>6</span>
-              </div>
-              <div className="d-flex justify-content-between align-items-center">
-                <span className="text-muted" style={{ fontSize: '14px' }}>Manual</span>
-                <span className="fw-bold" style={{ fontSize: '16px', color: '#ef4444' }}>0</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* DBN */}
-        <div className="mb-5">
-          <div className="d-flex align-items-center">
-            <div 
-              className="rounded-circle d-flex align-items-center justify-content-center me-4"
-              style={{
-                width: '60px',
-                height: '60px',
-                backgroundColor: '#0ea5e9',
-                flexShrink: 0
-              }}
-            >
-              <span style={{ fontSize: '20px', color: 'white' }}>🚢</span>
-            </div>
-            
-            <div className="me-4" style={{ minWidth: '80px' }}>
-              <h4 className="fw-bold mb-0" style={{ fontSize: '24px', color: '#1f2937' }}>DBN</h4>
-            </div>
-            
-            <div className="flex-grow-1 me-4">
-              <div 
-                className="position-relative d-flex"
-                style={{ 
-                  height: '24px',
-                  backgroundColor: '#f1f5f9',
-                  borderRadius: '12px',
-                  overflow: 'hidden',
-                  border: '1px solid #e2e8f0'
-                }}
-              >
-                <div style={{ width: '40%', height: '100%', backgroundColor: '#3b82f6' }}></div>
-                <div style={{ width: '10%', height: '100%', backgroundColor: '#f59e0b' }}></div>
-                <div style={{ width: '50%', height: '100%', backgroundColor: '#10b981' }}></div>
-              </div>
-            </div>
-            
-            <div style={{ minWidth: '120px' }}>
-              <div className="d-flex justify-content-between align-items-center mb-1">
-                <span className="text-muted" style={{ fontSize: '14px' }}>Total</span>
-                <span className="fw-bold" style={{ fontSize: '16px', color: '#f59e0b' }}>2</span>
-              </div>
-              <div className="d-flex justify-content-between align-items-center mb-1">
-                <span className="text-muted" style={{ fontSize: '14px' }}>Resolved</span>
-                <span className="fw-bold" style={{ fontSize: '16px', color: '#10b981' }}>2</span>
-              </div>
-              <div className="d-flex justify-content-between align-items-center">
-                <span className="text-muted" style={{ fontSize: '14px' }}>Manual</span>
-                <span className="fw-bold" style={{ fontSize: '16px', color: '#ef4444' }}>0</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* CBG */}
-        <div className="mb-5">
-          <div className="d-flex align-items-center">
-            <div 
-              className="rounded-circle d-flex align-items-center justify-content-center me-4"
-              style={{
-                width: '60px',
-                height: '60px',
-                backgroundColor: '#ec4899',
-                flexShrink: 0
-              }}
-            >
-              <span style={{ fontSize: '20px', color: 'white' }}>🏭</span>
-            </div>
-            
-            <div className="me-4" style={{ minWidth: '80px' }}>
-              <h4 className="fw-bold mb-0" style={{ fontSize: '24px', color: '#1f2937' }}>CBG</h4>
-            </div>
-            
-            <div className="flex-grow-1 me-4">
-              <div 
-                className="position-relative d-flex"
-                style={{ 
-                  height: '24px',
-                  backgroundColor: '#f1f5f9',
-                  borderRadius: '12px',
-                  overflow: 'hidden',
-                  border: '1px solid #e2e8f0'
-                }}
-              >
-                <div style={{ width: '60%', height: '100%', backgroundColor: '#3b82f6' }}></div>
-                <div style={{ width: '20%', height: '100%', backgroundColor: '#f59e0b' }}></div>
-                <div style={{ width: '20%', height: '100%', backgroundColor: '#10b981' }}></div>
-              </div>
-            </div>
-            
-            <div style={{ minWidth: '120px' }}>
-              <div className="d-flex justify-content-between align-items-center mb-1">
-                <span className="text-muted" style={{ fontSize: '14px' }}>Total</span>
-                <span className="fw-bold" style={{ fontSize: '16px', color: '#f59e0b' }}>1</span>
-              </div>
-              <div className="d-flex justify-content-between align-items-center mb-1">
-                <span className="text-muted" style={{ fontSize: '14px' }}>Resolved</span>
-                <span className="fw-bold" style={{ fontSize: '16px', color: '#10b981' }}>1</span>
-              </div>
-              <div className="d-flex justify-content-between align-items-center">
-                <span className="text-muted" style={{ fontSize: '14px' }}>Manual</span>
-                <span className="fw-bold" style={{ fontSize: '16px', color: '#ef4444' }}>0</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+
+
+
+
+
+
+
+
+
+
 
       {/* Legend */}
       <div className="mt-4 pt-3 border-top">
@@ -1901,39 +2288,49 @@ const Dashboard: React.FC<DashboardProps> = ({
               style={{
                 width: '12px',
                 height: '12px',
-                backgroundColor: '#3b82f6',
-                borderRadius: '2px',
-                marginRight: '6px'
-              }}
-            ></div>
-            <small className="text-muted">Detection</small>
-          </div>
-          <div className="d-flex align-items-center">
-            <div 
-              style={{
-                width: '12px',
-                height: '12px',
+                // backgroundColor: '#3b82f6',
                 backgroundColor: '#f59e0b',
                 borderRadius: '2px',
                 marginRight: '6px'
               }}
             ></div>
-            <small className="text-muted">Processing</small>
+            <small className="text-muted">Total</small>
           </div>
           <div className="d-flex align-items-center">
             <div 
               style={{
                 width: '12px',
                 height: '12px',
+                // backgroundColor: '#f59e0b',
                 backgroundColor: '#10b981',
                 borderRadius: '2px',
                 marginRight: '6px'
               }}
             ></div>
-            <small className="text-muted">Resolution</small>
+            <small className="text-muted">Resolved</small>
+          </div>
+          <div className="d-flex align-items-center">
+            <div 
+              style={{
+                width: '12px',
+                height: '12px',
+                // backgroundColor: '#10b981',
+                backgroundColor: '#ef4444',
+                borderRadius: '2px',
+                marginRight: '6px'
+              }}
+            ></div>
+            <small className="text-muted">Error</small>
           </div>
         </div>
       </div>
+
+</div>
+
+
+
+
+
     </Card.Body>
   </Card>
 </Col>
@@ -1942,7 +2339,6 @@ const Dashboard: React.FC<DashboardProps> = ({
 
 
 </Row>
-
 
 
 
@@ -2002,6 +2398,12 @@ const Dashboard: React.FC<DashboardProps> = ({
           </Card>
         </div>
 
+
+
+
+{/* ===================================================}
+
+
         {/* ZONE 7: Quick Action Buttons */}
         <div className="mb-4">
           <Card className="border-0 shadow-sm">
@@ -2019,7 +2421,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               <div className="d-flex flex-wrap gap-3">
                 <Button variant="primary" className="d-flex align-items-center">
                   <span className="me-2">📋</span>
-                  View Fail Cells
+                  Export Sleeping Cell
                 </Button>
                 
                 <Button variant="success" className="d-flex align-items-center">
@@ -2029,22 +2431,18 @@ const Dashboard: React.FC<DashboardProps> = ({
                 
                 <Button variant="info" className="d-flex align-items-center">
                   <span className="me-2">📊</span>
-                  Export All Sleeping
+                  Export resolved cell
                 </Button>
                 
-                <Button variant="secondary" className="d-flex align-items-center">
-                  <span className="me-2">🔍</span>
-                  View Logs
-                </Button>
                 
                 <Button variant="outline-primary" className="d-flex align-items-center">
                   <span className="me-2">⚙️</span>
-                  Configuration
+                  Export error cell
                 </Button>
                 
                 <Button variant="outline-warning" className="d-flex align-items-center">
                   <span className="me-2">📧</span>
-                  Send Report
+                  Send Email
                 </Button>
               </div>
             </Card.Body>

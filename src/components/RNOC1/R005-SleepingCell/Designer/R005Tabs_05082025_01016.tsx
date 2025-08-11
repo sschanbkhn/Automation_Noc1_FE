@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
+
+
 // Import icons using require to avoid type issues
 const FiBarChart = require('react-icons/fi').FiBarChart;
 const FiEye = require('react-icons/fi').FiEye;
@@ -29,9 +31,61 @@ try {
   Configuration = null;
 }
 
+
+  
+
+
+
+
 const R005Tabs: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+
+
+
+
+// Thêm state cho selectedDate
+  // const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+const [loading, setLoading] = useState(false); // ← THÊM DÒNG NÀY
+
+// const [selectedDate, setSelectedDate] = useState('2025-07-29'); // OK - giá trị mặc định
+const [dashboardData, setDashboardData] = useState(null); // ✅ Đúng
+// const [loading, setLoading] = useState(false);
+  // const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]); // ✅ Ngày hiện tại
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return yesterday.toISOString().split('T')[0];
+  });
+
+// const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+// const [loading, setLoading] = useState(false);
+// const [dashboardData, setDashboardData] = useState(null); // ← THÊM STATE NÀY
+
+
+
+// ✅ Chỉ gọi API một lần khi component mount (không phụ thuộc selectedDate)
+useEffect(() => {
+  fetchDashboardData();
+}, []); // ← Empty dependency array - chỉ chạy 1 lần khi load
+
+
+const fetchDashboardData = async () => {
+  setLoading(true);
+  try {
+    const apiUrl = `https://localhost:7232/api/dashboard/summary/${selectedDate}`;
+    const response = await fetch(apiUrl);
+    const data = await response.json();
+    setDashboardData(data); // ✅ Chỉ cập nhật khi bấm Refresh
+  } catch (error) {
+    console.error('❌ API Error:', error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+
 
   // Determine active tab from URL
   const getActiveTab = () => {
@@ -132,7 +186,11 @@ const R005Tabs: React.FC = () => {
     switch (activeTab) {
       case 'dashboard':
         // Use real Dashboard component if available, otherwise show fallback
-        return Dashboard ? React.createElement(Dashboard) : (
+        // return Dashboard ? React.createElement(Dashboard) : (
+          return Dashboard ? React.createElement(Dashboard, { 
+    dashboardData,  // ← THÊM PROPS
+    loading         // ← THÊM PROPS
+  }) : (
           <div style={{ padding: '40px', textAlign: 'center' }}>
             <div style={{
               display: 'inline-flex',
@@ -444,10 +502,13 @@ const R005Tabs: React.FC = () => {
         display: 'flex',
         backgroundColor: '#f8fafc',
         padding: '12px',
+        // padding: '4px', // ← CHỈNH: từ '6px' xuống '4px'
         borderRadius: '16px',
         boxShadow: '0 2px 8px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.1)',
         border: '1px solid #e2e8f0',
-        marginBottom: '32px'
+        // marginBottom: '32px'
+        height: '80px', // ← THÊM VÀO: Chiều cao cố định của khung
+        marginBottom: '10px', // ← KHOẢNG CÁCH từ khung đến content bên dưới
       }}>
         {tabs.map((tab, index) => {
           const isActive = activeTab === tab.id;
@@ -463,8 +524,10 @@ const R005Tabs: React.FC = () => {
                 position: 'relative',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '12px',
+                // gap: '12px',
+                gap: '6px', // ← CHỈNH: từ '8px' xuống '6px'
                 minWidth: '160px',
+                // minWidth: '100px', // ← CHỈNH: từ '120px' xuống '100px'
                 fontWeight: 'bold',
                 transition: 'all 0.3s ease-out',
                 border: '2px solid',
@@ -474,6 +537,7 @@ const R005Tabs: React.FC = () => {
                 borderColor: isActive ? '#bfdbfe' : 'transparent',
                 color: isActive ? tab.color : '#64748b',
                 fontSize: '14px',
+                // fontSize: '12px', // ← CHỈNH: từ '13px' xuống '12px'
                 cursor: 'pointer',
                 zIndex: isActive ? 20 : 1,
                 marginTop: isActive ? '-8px' : '0',
@@ -582,31 +646,46 @@ const R005Tabs: React.FC = () => {
         border: '1px solid #e2e8f0',
         overflow: 'hidden'
       }}>
-        {/* Content Header */}
+        {/* Content Header with Date Picker */}
         <div style={{
-          padding: '24px 32px',
+          // padding: '24px 32px',
+          // padding: '12px 16px', // ← CHỈNH: từ '16px 20px' xuống '12px 16px'
+          padding: '16px 20px', // ← CHỈNH: từ '16px 20px' xuống '12px 16px'
           borderBottom: '1px solid #e2e8f0',
-          background: 'linear-gradient(135deg, #fafbfc 0%, #f1f5f9 100%)'
+          // background: 'linear-gradient(135deg, #fafbfc 0%, #f1f5f9 100%)'
+background: 'white'
+
+
         }}>
+<div style={{
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between' // ← THÊM DÒNG NÀY
+}}>
+
+{/* Left side - Title and Icon */}
+
           <div style={{
             display: 'flex',
             alignItems: 'center',
+            // justifyContent: 'space-between', // ← THÊM DÒNG NÀY
             gap: '16px'
+            // gap: '8px' // ← CHỈNH: từ '12px' xuống '8px'
           }}>
             <div style={{
               width: '56px',
               height: '56px',
-              borderRadius: '14px',
-              background: `linear-gradient(135deg, ${tabs.find(t => t.id === activeTab)?.color}15, ${tabs.find(t => t.id === activeTab)?.color}08)`,
+              borderRadius: '16px',
+              background: '#2563eb',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              border: `2px solid ${tabs.find(t => t.id === activeTab)?.color}25`
+              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)'
             }}>
-              {createIcon(getIconComponent(tabs.find(t => t.id === activeTab)?.icon || 'FiBarChart'), { 
-                size: 28,
-                color: tabs.find(t => t.id === activeTab)?.color,
-                strokeWidth: 2
+              {createIcon(FiBarChart, { 
+                size: 24,
+                color: 'white',
+                strokeWidth: 2.5
               })}
             </div>
             <div>
@@ -616,20 +695,125 @@ const R005Tabs: React.FC = () => {
                 fontWeight: 'bold',
                 color: '#1a202c'
               }}>
-                R005 - {tabs.find(t => t.id === activeTab)?.label}
+                Sleeping Cell - Dashboard
               </h2>
               <p style={{
                 margin: '4px 0 0 0',
                 color: '#64748b',
                 fontSize: '14px'
               }}>
-                {activeTab === 'dashboard' && 'Sleeping cell detection and recovery overview'}
-                {activeTab === 'monitor' && 'Real-time monitoring and system status'}
-                {activeTab === 'configuration' && 'System settings and automation rules'}
+                Sleeping cell detection and recovery overview
               </p>
             </div>
           </div>
+
+
+
+
+{/* Right side - Date Picker Controls */}
+            {activeTab === 'dashboard' && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                // gap: '8px'
+                // gap: '10px'
+                gap: '10px', // ← CHỈNH: từ '8px' lên '10px' (khoảng cách giữa các element)
+    marginRight: '20px' // ← THÊM: đẩy sang trái 20px
+              }}>
+                <div style={{
+                  // padding: '6px',
+                  // borderRadius: '6px',
+                  padding: '8px', // ← CHỈNH: từ '6px' lên '8px' (icon to hơn)
+                  borderRadius: '8px', // ← CHỈNH: từ '6px' lên '8px'
+                  backgroundColor: '#e3f2fd',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <span style={{ fontSize: '16px' }}>📅</span>
+                </div>
+                
+                <input
+                  type="date"
+                  style={{
+                    // width: '140px',
+                    // padding: '6px 8px',
+                     width: '160px', // ← CHỈNH: từ '140px' lên '160px' (input to hơn)
+                    padding: '8px 10px', // ← CHỈNH: từ '6px 8px' lên '8px 10px'
+                    border: '1px solid #d1d5db',
+                    // borderRadius: '6px',
+                    // fontSize: '12px',
+                    borderRadius: '8px', // ← CHỈNH: từ '6px' lên '8px'
+        fontSize: '13px', // ← CHỈNH: từ '12px' lên '13px'
+                    outline: 'none'
+                  }}
+                  // defaultValue={new Date().toISOString().split('T')[0]}
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="form-control"
+
+                />
+                <button
+                  style={{
+                    // padding: '6px 12px',
+                    padding: '8px 16px', // ← CHỈNH: từ '6px 12px' lên '8px 16px' (button to hơn)
+                    backgroundColor: '#2563eb',
+                    color: 'white',
+                    border: 'none',
+                    // borderRadius: '6px',
+                    // fontSize: '12px',
+                    borderRadius: '8px', // ← CHỈNH: từ '6px' lên '8px'
+        fontSize: '13px', // ← CHỈNH: từ '12px' lên '13px'
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    // gap: '4px',
+                    gap: '6px', // ← CHỈNH: từ '4px' lên '6px'
+                    outline: 'none'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#1d4ed8';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#2563eb';
+                  }}
+
+onClick={fetchDashboardData}
+                disabled={loading}
+                className="d-flex align-items-center"
+
+
+                >
+
+{loading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    {/* // <span className="me-2">🔄</span> */}
+                    {/* // Display Data*/}
+                                      <span>🔄</span>
+                  Display
+                  </>
+                )}
+
+
+
+                </button>
+              </div>
+            )}
+
+
+
+                </div>
+
+
         </div>
+
+
 
         {/* Real Component Content */}
         <div style={{ 

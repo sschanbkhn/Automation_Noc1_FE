@@ -19,8 +19,8 @@ const R005Header: React.FC = () => {
       style={{
         ...headerAnimation,
         background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #93c5fd 100%)',
-        padding: '1.2rem 0', // chinh khoang cach noi dung den vien
-        marginBottom: '2rem',
+        padding: '0.5rem 0', // chinh khoang cach noi dung den vien
+        marginBottom: '0.7rem', // ← CHỈNH CHỖ NÀY: từ '2rem' xuống '1rem' hoặc '0.5rem'
         borderRadius: '8px',
         boxShadow: '0 8px 32px rgba(30, 64, 175, 0.3)',
         
@@ -32,8 +32,8 @@ const R005Header: React.FC = () => {
           <div 
             className="me-4"
             style={{
-              width: '60px',  // chinh kich thuoc icon
-              height: '60px',
+              width: '40px',  // chinh kich thuoc icon
+              height: '40px',
               background: 'rgba(255, 255, 255, 0.15)',
               borderRadius: '8px',
               display: 'flex',
@@ -59,7 +59,7 @@ const R005Header: React.FC = () => {
             {/* Main Icon - Radio Wave/Activity */}
             {React.createElement(FiRadio as any, {
               style: {
-                fontSize: '2.5rem',   // bieu tuong
+                fontSize: '2.0rem',   // bieu tuong
                 color: 'white',
                 position: 'relative',
                 zIndex: 2,
@@ -72,17 +72,17 @@ const R005Header: React.FC = () => {
           <div className="flex-grow-1">
             <h1 style={{
               color: 'white',
-              fontSize: '2.0rem',
+              fontSize: '1.5rem',
               fontWeight: '700',
               marginBottom: '0.5rem',
               textShadow: '0 2px 4px rgba(0,0,0,0.2)',
               letterSpacing: '0.02em'
             }}>
-              R007 - Sleeping Cell Management
+              R005 - Sleeping Cell Management
             </h1>
             <p style={{
               color: 'rgba(255, 255, 255, 0.9)',
-              fontSize: '1.1rem',
+              fontSize: '0.79rem',
               marginBottom: '0',
               fontWeight: '400',
               textShadow: '0 1px 2px rgba(0,0,0,0.1)'
@@ -95,16 +95,16 @@ const R005Header: React.FC = () => {
           <div className="ms-4">
             <div style={{
               background: 'rgba(255, 255, 255, 0.15)',
-              padding: '16px 28px',
+              padding: '10px 28px',
               borderRadius: '8px',
               border: '1px solid rgba(255, 255, 255, 0.3)',
               backdropFilter: 'blur(15px)',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.1)'
+              boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
             }}>
               <div className="d-flex align-items-center">
                 {React.createElement(FiRadio as any, {
                   style: {
-                    fontSize: '1.2rem',
+                    fontSize: '1.8rem',
                     color: '#00ff88',
                     marginRight: '10px',
                     filter: 'drop-shadow(0 0 6px #00ff88)'
