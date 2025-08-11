@@ -6,7 +6,7 @@ import "./R005Dashboard.css"; // Import CSS file
 import React, { useState, useEffect } from "react";
 
 import Zone1SleepingCellSummary from "./Zone1SleepingCellSummary";
-import Zone2ProvinceDistribution from "./Zone2ProvinceDistribution";
+import Zone2_ChartProvinceDistribution from "./Zone2_ChartProvinceDistribution";
 import Zone3CellsProgressChart from "./Zone3CellsProgressChart";
 import Zone4TableCells_DistributionChart from "./zone4TableCellsDistribution";
 
@@ -42,7 +42,6 @@ const Dashboard: React.FC<DashboardProps> = ({ sidebarWidth = 250, isSidebarColl
         {/* ===============================================================*/}
         {/* ZONE 1: 5 Cards - Same Row  */}
         {/* <Zone1SleepingCellSummary selectedDate={selectedDate} loading={loading} /> */}
-
         <Zone1SleepingCellSummary
           selectedDate={selectedDate}
           loading={loading}
@@ -55,7 +54,8 @@ const Dashboard: React.FC<DashboardProps> = ({ sidebarWidth = 250, isSidebarColl
         {/* <Zone2ProvinceDistribution /> */}
         {/*  bat dau zone 2 */}
         {/* ===============================================================*/}
-        <Zone2ProvinceDistribution dashboardData={dashboardData} loading={loading} selectedDate={selectedDate} />
+        {/* <Zone2ProvinceDistribution dashboardData={dashboardData} loading={loading} selectedDate={selectedDate} /> */}
+        <Zone2_ChartProvinceDistribution dashboardData={dashboardData} loading={loading} selectedDate={selectedDate} />
         {/*  ket thuc zone 2 */}
         {/* ===============================================================*/}
         {/*  bat dau zone 3 */}

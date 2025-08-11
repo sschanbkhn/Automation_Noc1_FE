@@ -2,13 +2,15 @@ import React, { useState, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar, AreaChart, Area } from "recharts";
 import { Card, Row, Col } from "react-bootstrap";
 
-interface Zone2TrendChartProps {
+interface Zone2_ChartProvinceDistributionProps {
   dashboardData?: any;
   loading?: boolean;
   selectedDate?: string; // ← THÊM DÒNG NÀY
 }
 
-const Zone2TrendChart: React.FC<Zone2TrendChartProps> = ({ dashboardData, loading, selectedDate }) => {
+// const Zone2ChartProvinceDistribution: React.FC<Zone2ChartProvinceDistribution> = ({ dashboardData, loading, selectedDate }) => {
+// ✅ ĐÚNG:
+const Zone2_ChartProvinceDistribution: React.FC<Zone2_ChartProvinceDistributionProps> = ({ dashboardData, loading, selectedDate }) => {
   const [selectedChart, setSelectedChart] = useState("combined");
   const [data, setData] = useState([]);
   const [chartLoading, setChartLoading] = useState(true);
@@ -630,4 +632,4 @@ const Zone2TrendChart: React.FC<Zone2TrendChartProps> = ({ dashboardData, loadin
   );
 };
 
-export default Zone2TrendChart;
+export default Zone2_ChartProvinceDistribution;

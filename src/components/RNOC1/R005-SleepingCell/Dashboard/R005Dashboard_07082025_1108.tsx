@@ -4,7 +4,7 @@ import { Container, Row, Col, Card, Button, Badge, ProgressBar } from "react-boo
 import "./R005Dashboard.css"; // Import CSS file
 
 import React, { useState, useEffect } from "react";
-import Zone2ProvinceDistribution from "./Zone2ProvinceDistribution";
+import Zone2ProvinceDistribution from "./Zone2_ChartProvinceDistribution";
 import Zone3CellsProgressChart from "./Zone3CellsProgressChart";
 
 interface DashboardProps {
