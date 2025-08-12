@@ -11,7 +11,7 @@ import Header from './layouts/Header';
 import Sidebar from './layouts/Sidebar';
 import Main from './layouts/Main';
 import Footer from './layouts/Footer';
-import { BrowserRouter as Router, Route, Routes} from "react-router-dom";
+import { HashRouter as Router, Route, Routes} from "react-router-dom";
 import FullPageRoute from 'routes/FullPageRoute';
 import { Cookie } from 'helpers/cookie';
 import Loading from 'components/common/Loading';

@@ -38,6 +38,6 @@ export const usecaseList = [
       result: "Đang chạy - chờ kết quả",
       startTime: "2024-06-10 09:00:00",
       endTime: "",
-      field: "Tổng đài"
+      field: "Chuyển mạch"
     }
   ];

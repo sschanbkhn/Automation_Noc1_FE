@@ -7,6 +7,8 @@ import { Provider } from 'react-redux';
 import store from 'store';
 import { i18n } from 'element-react'
 import locale from 'element-react/src/locale/lang/vi'
+import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 
 ReactDOM.render(
     <Provider store={store}>

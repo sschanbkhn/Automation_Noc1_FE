@@ -1,0 +1,20 @@
+{
+  "summary": {
+    "totalAlarm": 900,
+    "totalOrder": 300,
+    "successRate": 60,
+    "changeAlarm": "+8%",
+    "changeOrder": "+5%",
+    "changeSuccessRate": "+1.2%"
+  },
+  "reports": [
+    {
+      "code": "BGG",
+      "province": "Bắc Giang",
+      "device": "BGG-BNG1",
+      "ip": "10.565.134",
+      "exceed": 1.024,
+      "frequency": 7
+    }
+  ]
+}

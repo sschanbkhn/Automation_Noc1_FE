@@ -25,7 +25,7 @@ const ManufacturersList = (props: Props) => {
     const refDynamicTable = useRef<any>();
     const [dialogVisible, setDialogVisible] = useState(false);
     useEffect(() => {        
-        Actions.GetItems(dispatch);     
+        // Actions.GetItems(dispatch);     
     }, [])
     const ActionEvents = {
         onClickCreate: () => {

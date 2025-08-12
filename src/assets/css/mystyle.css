@@ -1553,3 +1553,184 @@
 .toggle-button:hover {
   color: #007bff; /* Thay đổi màu khi hover */
 }
+
+/* Sortable Table Headers */
+.sortable-header {
+    transition: background-color 0.2s ease;
+    user-select: none;
+    position: relative;
+    min-width: 120px; /* Đảm bảo cột có kích thước tối thiểu */
+    font-size: 11px; /* Giảm kích thước chữ header */
+    font-weight: 500; /* Giảm độ đậm của chữ */
+    padding: 8px 4px; /* Giảm padding */
+}
+
+.sortable-header:hover {
+    background-color: #e9ecef !important;
+    cursor: pointer;
+}
+
+.sortable-header:active {
+    background-color: #dee2e6 !important;
+}
+
+/* Sort icons - cố định kích thước nhỏ hơn */
+.sort-icon {
+    display: inline-block;
+    width: 12px; /* Giảm từ 16px xuống 12px */
+    height: 12px; /* Giảm từ 16px xuống 12px */
+    text-align: center;
+    margin-left: 3px; /* Giảm margin */
+    font-size: 10px; /* Giảm font size */
+    opacity: 0.7;
+    vertical-align: middle;
+}
+
+.sort-icon::before {
+    content: "↕️";
+}
+
+.sort-icon.asc::before {
+    content: "↑";
+}
+
+.sort-icon.desc::before {
+    content: "↓";
+}
+
+/* Đảm bảo header text không bị dịch chuyển */
+.sortable-header .header-text {
+    display: inline-block;
+    vertical-align: middle;
+    font-size: 11px; /* Đảm bảo text cũng nhỏ */
+}
+
+/* Giảm kích thước cho tất cả header trong bảng */
+.table th {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 8px 4px;
+}
+
+/* Sticky Columns */
+.sticky-column {
+    position: sticky;
+    background-color: inherit;
+    z-index: 10;
+}
+
+.sticky-column-tt {
+    left: 0;
+    min-width: 50px;
+    max-width: 50px;
+    width: 50px;
+    background-color: #f8f9fa !important;
+    border-right: 2px solid #dee2e6;
+}
+
+.sticky-column-tt:hover {
+    background-color: #e9ecef !important;
+}
+
+.sticky-column-cellname {
+    left: 50px;
+    min-width: 140px;
+    max-width: 140px;
+    width: 140px;
+    background-color: #f8f9fa !important;
+    border-right: 2px solid #dee2e6;
+}
+
+.sticky-column-cellname:hover {
+    background-color: #e9ecef !important;
+}
+
+.sticky-column-id {
+    left: 190px;
+    min-width: 100px;
+    max-width: 100px;
+    width: 100px;
+    background-color: #f8f9fa !important;
+    border-right: 2px solid #dee2e6;
+}
+
+.sticky-column-id:hover {
+    background-color: #e9ecef !important;
+}
+
+/* Table container with horizontal scroll */
+.table-container {
+    overflow-x: auto;
+    max-width: 100%;
+}
+
+/* Ensure sticky columns work properly */
+.table-responsive {
+    overflow-x: auto;
+}
+
+.table-responsive .table {
+    min-width: 1200px; /* Ensure table is wide enough to trigger scroll */
+}
+
+/* Sticky header for sticky columns */
+.sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background-color: inherit;
+}
+
+/* Nokia 4G specific sticky columns */
+.nokia4g-sticky-id_bts {
+    left: 50px;
+    min-width: 120px;
+    max-width: 120px;
+    width: 120px;
+    background-color: #e3f2fd !important;
+    border-right: 2px solid #bbdefb;
+}
+
+.nokia4g-sticky-id_bts:hover {
+    background-color: #bbdefb !important;
+}
+
+.nokia4g-sticky-cellname {
+    left: 170px;
+    min-width: 140px;
+    max-width: 140px;
+    width: 140px;
+    background-color: #e3f2fd !important;
+    border-right: 2px solid #bbdefb;
+}
+
+.nokia4g-sticky-cellname:hover {
+    background-color: #bbdefb !important;
+}
+
+/* Nokia 5G specific sticky columns */
+.nokia5g-sticky-id_bts {
+    left: 50px;
+    min-width: 120px;
+    max-width: 120px;
+    width: 120px;
+    background-color: #fff3e0 !important;
+    border-right: 2px solid #ffcc02;
+}
+
+.nokia5g-sticky-id_bts:hover {
+    background-color: #ffcc02 !important;
+}
+
+.nokia5g-sticky-cellname {
+    left: 170px;
+    min-width: 140px;
+    max-width: 140px;
+    width: 140px;
+    background-color: #fff3e0 !important;
+    border-right: 2px solid #ffcc02;
+}
+
+.nokia5g-sticky-cellname:hover {
+    background-color: #ffcc02 !important;
+}
