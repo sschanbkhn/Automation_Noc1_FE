@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import API_CONFIG from "../Designer/ApiR005SleepingCellConfig";
 
 // Constants
 const COLORS = {
@@ -66,7 +65,7 @@ const Zone3CellsProgressChart: React.FC<Zone3CellsProgressChartProps> = ({ dashb
 
       try {
         setLoadingData(true);
-        const response = await fetch(`${API_CONFIG.BASE_URL}/dashboard/zone4-summary/${date}`);
+        const response = await fetch(`https://localhost:7232/api/dashboard/zone4-summary/${date}`);
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);

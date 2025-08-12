@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar, AreaChart, Area } from "recharts";
 import { Card, Row, Col } from "react-bootstrap";
-import API_CONFIG from "../Designer/ApiR005SleepingCellConfig";
 
 interface Zone2_ChartProvinceDistributionProps {
   dashboardData?: any;
@@ -34,7 +33,7 @@ const Zone2_ChartProvinceDistribution: React.FC<Zone2_ChartProvinceDistributionP
 
       try {
         setHeaderLoading(true);
-        const response = await fetch(`${API_CONFIG.BASE_URL}/dashboard/province-summary/${selectedDate}`);
+        const response = await fetch(`https://localhost:7232/api/dashboard/province-summary/${selectedDate}`);
         const result = await response.json();
 
         if (result.success && isMounted) {
@@ -81,9 +80,9 @@ const Zone2_ChartProvinceDistribution: React.FC<Zone2_ChartProvinceDistributionP
         const endDate = selectedDate || new Date().toISOString().split("T")[0];
 
         // ✅ Gọi API với endDate parameter
-        const response = await fetch(`${API_CONFIG.BASE_URL}/dashboard/trend?endDate=${endDate}`);
+        const response = await fetch(`https://localhost:7232/api/dashboard/trend?endDate=${endDate}`);
 
-        // const response = await fetch("${API_CONFIG.BASE_URL}/dashboard/trend");
+        // const response = await fetch("https://localhost:7232/api/dashboard/trend");
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -147,10 +146,10 @@ const Zone2_ChartProvinceDistribution: React.FC<Zone2_ChartProvinceDistributionP
       try {
         console.log("🔄 fetchDistributionData called with date:", date); // ← THÊM LOG
         setDistributionLoading(true);
-        // const response = await fetch(`${API_CONFIG.BASE_URL}/dashboard/distribution/${date}`);
-        // ${API_CONFIG.BASE_URL}/dashboard/province-summary/2025-08-04
+        // const response = await fetch(`https://localhost:7232/api/dashboard/distribution/${date}`);
+        // https://localhost:7232/api/dashboard/province-summary/2025-08-04
         // ← SỬA DÒNG NÀY:
-        const response = await fetch(`${API_CONFIG.BASE_URL}/dashboard/province-summary/${date}`);
+        const response = await fetch(`https://localhost:7232/api/dashboard/province-summary/${date}`);
 
         console.log("📥 API Response status:", response.status); // ← THÊM LOG
 

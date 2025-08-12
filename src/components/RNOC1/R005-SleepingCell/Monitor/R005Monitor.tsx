@@ -5,6 +5,8 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import * as ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 
+import API_CONFIG from "../Designer/ApiR005SleepingCellConfig";
+
 interface KpiRecord {
   id: number;
   original_id: number;
@@ -326,7 +328,8 @@ const KpiMonitorTab: React.FC = () => {
       setEndDate(yesterdayString);
 
       try {
-        const response = await fetch(`https://localhost:7232/api/monitoring/kpi-monitor/${yesterdayString}`);
+        // const response = await fetch(`https://localhost:7232/api/monitoring/kpi-monitor/${yesterdayString}`);
+        const response = await fetch(`${API_CONFIG.BASE_URL}/monitoring/kpi-monitor/${yesterdayString}`);
         const result = await response.json();
 
         if (result.success) {
@@ -372,7 +375,8 @@ const KpiMonitorTab: React.FC = () => {
         return;
       }
 
-      const response = await fetch(`https://localhost:7232/api/monitoring/kpi-monitor-range?startDate=${startDate}&endDate=${endDate}`);
+      // const response = await fetch(`https://localhost:7232/api/monitoring/kpi-monitor-range?startDate=${startDate}&endDate=${endDate}`);
+      const response = await fetch(`${API_CONFIG.BASE_URL}/monitoring/kpi-monitor-range?startDate=${startDate}&endDate=${endDate}`);
       const result = await response.json();
 
       if (result.success) {

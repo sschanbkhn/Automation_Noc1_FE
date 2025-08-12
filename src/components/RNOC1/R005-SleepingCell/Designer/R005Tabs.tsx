@@ -2,6 +2,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import React, { useState, useEffect, useCallback } from "react";
 // import { useLocation, useNavigate } from 'react-router-dom';
+import API_CONFIG from "../Designer/ApiR005SleepingCellConfig";
 
 // Import icons using require to avoid type issues
 const FiBarChart = require("react-icons/fi").FiBarChart;
@@ -77,7 +78,7 @@ const R005Tabs: React.FC = () => {
   const fetchDashboardData = useCallback(async () => {
     setLoading(true);
     try {
-      const apiUrl = `https://localhost:7232/api/dashboard/summary/${selectedDate}`;
+      const apiUrl = `${API_CONFIG.BASE_URL}/dashboard/summary/${selectedDate}`;
       const response = await fetch(apiUrl);
 
       if (!response.ok) {

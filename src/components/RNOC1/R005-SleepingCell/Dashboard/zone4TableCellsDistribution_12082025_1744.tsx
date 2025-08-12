@@ -2,8 +2,6 @@ import React, { useState, useEffect } from "react";
 // import { Card, Table, Badge, Button } from "react-bootstrap";
 import { Card, Table, Badge, Button, Form } from "react-bootstrap";
 
-import API_CONFIG from "../Designer/ApiR005SleepingCellConfig";
-
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 
@@ -86,7 +84,7 @@ const Zone4TableCells_DistributionChart: React.FC<Zone4TableCells_DistributionCh
         setTableLoading(true);
         // const response = await fetch(`https://localhost:7232/api/dashboard/zone4-summary/${date}`);
         // https://localhost:7232/api/dashboard/zone4-summary/2025-08-05
-        const response = await fetch(`${API_CONFIG.BASE_URL}/dashboard/zone4-summary/${date}`);
+        const response = await fetch(`https://localhost:7232/api/dashboard/zone4-summary/${date}`);
         console.log("📥 API Response status:", response.status);
 
         if (!response.ok) {

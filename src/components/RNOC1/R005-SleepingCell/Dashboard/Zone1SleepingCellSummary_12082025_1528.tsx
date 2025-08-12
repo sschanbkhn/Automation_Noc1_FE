@@ -1,13 +1,9 @@
 // import React, { useState, useEffect } from "react";
 // import { Card, Row, Col } from "react-bootstrap";
-// check code
 
 // ✅ ĐÚNG - thêm import:
 import React, { useState, useEffect } from "react";
 import { Card, Row, Col, Modal, Table, Badge } from "react-bootstrap";
-// import API_CONFIG from "./Designer/ApiR005SleepingCellConfig"; // Điều chỉnh đường dẫn cho đúng
-import API_CONFIG from "../Designer/ApiR005SleepingCellConfig";
-// import R005Tabs from "./Designer/R005Tabs";
 
 interface Zone1SleepingCellSummaryProps {
   selectedDate?: string;
@@ -48,32 +44,21 @@ const Zone1SleepingCellSummary: React.FC<Zone1SleepingCellSummaryProps> = ({
     setModalType(cardType);
     setShowModal(true);
     setModalLoading(true);
-    // const response = await fetch(`${API_CONFIG.BASE_URL}/dashboard/province-summary/${selectedDate}`);
-    // const response = await fetch(`${API_CONFIG.BASE_URL}/dashboard/trend?endDate=${endDate}`);
-    // const response = await fetch(`${API_CONFIG.BASE_URL}/dashboard/province-summary/${date}`);
-
-    // ? "https://localhost:7232/api" // Local development
-    // : "http://10.155.43.202:8081/api", // Production server
 
     try {
       let endpoint = "";
       switch (cardType) {
         case "sleeping":
-          // endpoint = `http://10.155.43.202:8081/api/dashboard/sleeping-cells/${selectedDate}`;
-          endpoint = `${API_CONFIG.BASE_URL}/dashboard/sleeping-cells/${selectedDate}`;
-
+          endpoint = `https://localhost:7232/api/dashboard/sleeping-cells/${selectedDate}`;
           break; // ✅ FIX: Bỏ "https:" trước break
         case "process":
-          // endpoint = `http://10.155.43.202:8081/api/dashboard/process-cells/${selectedDate}`;
-          endpoint = `${API_CONFIG.BASE_URL}/dashboard/process-cells/${selectedDate}`;
+          endpoint = `https://localhost:7232/api/dashboard/process-cells/${selectedDate}`;
           break;
         case "execution":
-          // endpoint = `http://10.155.43.202:8081/api/dashboard/execution-cells/${selectedDate}`;
-          endpoint = `${API_CONFIG.BASE_URL}/dashboard/execution-cells/${selectedDate}`;
+          endpoint = `https://localhost:7232/api/dashboard/execution-cells/${selectedDate}`;
           break;
         case "recheck":
-          // endpoint = `http://10.155.43.202:8081/api/dashboard/recheck-cells/${selectedDate}`;
-          endpoint = `${API_CONFIG.BASE_URL}/dashboard/recheck-cells/${selectedDate}`;
+          endpoint = `https://localhost:7232/api/dashboard/recheck-cells/${selectedDate}`;
           break;
       }
 
@@ -105,17 +90,17 @@ const Zone1SleepingCellSummary: React.FC<Zone1SleepingCellSummaryProps> = ({
       let endpoint = "";
       switch (cardType) {
         case "sleeping":
-          endpoint = `http://10.155.43.202:8081/api/dashboard/sleeping-cells/${selectedDate}`;
+          endpoint = `https://localhost:7232/api/dashboard/sleeping-cells/${selectedDate}`;
 
           break;
         case "process":
-          endpoint = `http://10.155.43.202:8081/api/dashboard/process-cells/${selectedDate}`;
+          endpoint = `https://localhost:7232/api/dashboard/process-cells/${selectedDate}`;
           break;
         case "execution":
-          endpoint = `http://10.155.43.202:8081/api/dashboard/execution-cells/${selectedDate}`;
+          endpoint = `https://localhost:7232/api/dashboard/execution-cells/${selectedDate}`;
           break;
         case "recheck":
-          endpoint = `http://10.155.43.202:8081/api/dashboard/recheck-cells/${selectedDate}`;
+          endpoint = `https://localhost:7232/api/dashboard/recheck-cells/${selectedDate}`;
           break;
       }
 
