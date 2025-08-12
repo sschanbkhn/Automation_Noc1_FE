@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Button, Card, Col, Modal, Row, Spinner } from "react-bootstrap";
 import { Provider, useDispatch, useSelector } from "react-redux";
 import Alert from "../../../components/Alert/Alert";
-import Clock from "../../../components/Clock";
 import WebSocketStatusBanner from "../../../components/WebSocketStatusBanner";
 import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
 import {
@@ -54,10 +53,7 @@ const renderLastUpdatedOneLine = (dateStr, small = false) => {
 
   const display = `${formatDateShort(dateObj)} ${dateObj.toLocaleTimeString(
     [],
-    {
-      hour: "2-digit",
-      minute: "2-digit",
-    }
+    { hour: "2-digit", minute: "2-digit" }
   )}`;
 
   const textColor = diffHours > 24 ? "text-danger" : "text-muted";
@@ -87,10 +83,7 @@ const renderLastUpdatedTwoLines = (dateStr, small = false) => {
     >
       <span>{formatDateShort(dateObj)}</span>
       <span>
-        {dateObj.toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        })}
+        {dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
       </span>
     </div>
   );
@@ -126,31 +119,106 @@ const SystemHealthContent = () => {
     dispatch(fetchSystemStatus());
   };
 
+  // 🔸 TÍNH TỔNG HỢP: đếm theo status của từng subsystem
+  const summary = useMemo(() => {
+    let normal = 0,
+      warning = 0,
+      error = 0,
+      total = 0;
+
+    Object.values(systemStatus).forEach((group) => {
+      const children = group?.children || {};
+      Object.values(children).forEach((child) => {
+        const st = child?.status || "Unknown";
+        if (st === "Normal") normal += 1;
+        else if (st === "Warning") warning += 1;
+        else if (st === "Error") error += 1;
+        total += 1;
+      });
+    });
+
+    if (total === 0 && platformSchema && Object.keys(platformSchema).length) {
+      Object.values(platformSchema).forEach((subsystems) => {
+        total += Object.keys(subsystems || {}).length;
+      });
+    }
+
+    return { normal, warning, error, total };
+  }, [systemStatus, platformSchema]);
+
+  // 🔸 Card tổng hợp (light)
+  const SummaryCard = ({ title, value, icon, accent = "secondary" }) => (
+    <Card className="shadow-sm border bg-white">
+      <Card.Body className="d-flex align-items-center justify-content-between p-3">
+        <div className="d-flex align-items-center gap-2">
+          <div
+            className={`rounded-3 border d-flex align-items-center justify-content-center text-${accent}`}
+            style={{ width: 36, height: 36, background: "#f8f9fa" }}
+            aria-label={title}
+          >
+            <span style={{ fontSize: 18 }}>{icon}</span>
+          </div>
+          <div className="text-secondary" style={{ fontSize: 14 }}>
+            {title}
+          </div>
+        </div>
+        <div className="fw-bold text-dark" style={{ fontSize: 22 }}>
+          {value}
+        </div>
+      </Card.Body>
+    </Card>
+  );
+
   return (
     <>
       <TopNavbarHealth />
       <WebSocketStatusBanner />
       <Alert />
-      <div className={styles.container}>
+      <div className={`${styles.container}`}>
         <Row>
           <Col md={12}>
-            <h3 className={styles.pageTitle}>
-              System Health Dashboard
-              <Clock
-                style={{
-                  float: "right",
-                  fontSize: "1rem",
-                  fontWeight: "normal",
-                }}
-              />
-            </h3>
-
-            {/* ✅ Tổng thể 1 dòng */}
+            {/* ✅ Last updated tổng thể */}
             {systemLastUpdated && (
               <div className="text-end mb-2" style={{ fontSize: "0.9rem" }}>
                 Last updated: {renderLastUpdatedOneLine(systemLastUpdated)}
               </div>
             )}
+
+            {/* ✅ DẢI TỔNG HỢP (light) */}
+            <Row className="g-3 mb-4">
+              <Col md={3} sm={6} xs={12}>
+                <SummaryCard
+                  title="Systems Normal"
+                  value={summary.normal}
+                  icon="✅"
+                  accent="success"
+                />
+              </Col>
+              <Col md={3} sm={6} xs={12}>
+                <SummaryCard
+                  title="Systems Warning"
+                  value={summary.warning}
+                  icon="⚠️"
+                  accent="warning"
+                />
+              </Col>
+              <Col md={3} sm={6} xs={12}>
+                <SummaryCard
+                  title="Systems Error"
+                  value={summary.error}
+                  icon="⛔"
+                  accent="danger"
+                />
+              </Col>
+              <Col md={3} sm={6} xs={12}>
+                <SummaryCard
+                  title="Total Systems"
+                  value={summary.total}
+                  icon="📶"
+                  accent="primary"
+                />
+              </Col>
+            </Row>
 
             <Row>
               {Object.entries(platformSchema).map(([groupName, subsystems]) => {
@@ -162,11 +230,13 @@ const SystemHealthContent = () => {
                 return (
                   <Col md={6} key={groupName} className="mb-4">
                     <Card
-                      className={`shadow ${styles.cardCommon} ${cardClass}`}
+                      className={`shadow-sm bg-white border ${styles.cardCommon} ${cardClass}`}
                     >
                       <Card.Body className="p-4">
                         <div className="d-flex align-items-center justify-content-between mb-3">
-                          <h5 className="mb-0 fw-bold fs-4">{groupName}</h5>
+                          <h5 className="mb-0 fw-bold fs-4 text-dark">
+                            {groupName}
+                          </h5>
                           {loading ? (
                             <Spinner animation="border" size="sm" />
                           ) : (
@@ -174,6 +244,11 @@ const SystemHealthContent = () => {
                               className={`${styles.statusBadge} ${
                                 styles[statusColorClass[groupStatus]]
                               }`}
+                              style={{
+                                background: "#f8f9fa",
+                                color: "#212529",
+                                border: "1px solid #e9ecef",
+                              }}
                             >
                               {statusIcon[groupStatus]} {groupStatus}
                             </span>
@@ -182,7 +257,7 @@ const SystemHealthContent = () => {
 
                         {/* ✅ Group 1 dòng */}
                         {groupData.last_updated && (
-                          <div className="mb-2">
+                          <div className="mb-2 text-muted">
                             Updated:{" "}
                             {renderLastUpdatedOneLine(groupData.last_updated)}
                           </div>
@@ -212,7 +287,10 @@ const SystemHealthContent = () => {
                                 return (
                                   <div
                                     key={subsystemLabel}
-                                    className={`${styles.subItem} ${dynamicClass}`}
+                                    className={`${styles.subItem} ${dynamicClass} bg-white border`}
+                                    style={{
+                                      boxShadow: "0 1px 2px rgba(0,0,0,.05)",
+                                    }}
                                     onClick={() =>
                                       handleSubsystemClick(
                                         groupName,
@@ -223,7 +301,7 @@ const SystemHealthContent = () => {
                                   >
                                     {statusIcon[childStatus]}
                                     <div className="d-flex flex-column">
-                                      <span className="fw-semibold fs-6">
+                                      <span className="fw-semibold fs-6 text-dark">
                                         {subsystemLabel}
                                       </span>
 
@@ -266,7 +344,7 @@ const SystemHealthContent = () => {
                         )}
 
                         {!loading && (
-                          <div className={styles.statRow}>
+                          <div className={`${styles.statRow} text-dark`}>
                             <div
                               className={
                                 groupData.ok_count > 0
@@ -274,8 +352,7 @@ const SystemHealthContent = () => {
                                   : styles.total
                               }
                             >
-                              {groupData.ok_count > 0 ? "🟢" : "⚪"} OK:{" "}
-                              <strong>{groupData.ok_count || 0}</strong>
+                              🟢 OK: <strong>{groupData.ok_count || 0}</strong>
                             </div>
                             <div
                               className={
@@ -284,11 +361,11 @@ const SystemHealthContent = () => {
                                   : styles.total
                               }
                             >
-                              {groupData.nok_count > 0 ? "🔴" : "⚪"} NOK:{" "}
+                              🔴 NOK:{" "}
                               <strong>{groupData.nok_count || 0}</strong>
                             </div>
                             <div className={styles.total}>
-                              {groupData.total_devices > 0 ? "📦" : "⚪"} Total:{" "}
+                              📦 Total:{" "}
                               <strong>{groupData.total_devices || 0}</strong>
                             </div>
                           </div>
@@ -309,7 +386,6 @@ const SystemHealthContent = () => {
             onHide={handleCloseModal}
             size="xl"
             centered
-            dialogClassName={styles.modalWide} // ✅ dùng class trong CSS module
           >
             <Modal.Header closeButton>
               <Modal.Title>

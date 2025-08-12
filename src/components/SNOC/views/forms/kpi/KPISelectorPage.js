@@ -266,54 +266,55 @@ const KPISelectorPageContent = () => {
             </Col>
             <Col md={3}>
               <Select
-                isMulti
-                isSearchable
-                closeMenuOnSelect={false}
-                blurInputOnSelect={false}
-                menuIsOpen={kpiMenuOpen}
-                onMenuOpen={() => setKpiMenuOpen(true)}
-                onMenuClose={() => {
-                  setKpiMenuOpen(false);
-                  // ⚠️ Ngăn react-select reset inputValue
-                  setTimeout(() => {
-                    setKpiSearchInput(kpiInputRef.current);
-                  }, 0);
-                }}
-                inputValue={kpiSearchInput}
-                onInputChange={(value, { action }) => {
-                  if (action === "input-change") {
-                    kpiInputRef.current = value;
-                    setKpiSearchInput(value);
-                  }
-                  if (action === "menu-close") {
-                    setKpiMenuOpen(false);
-                  }
-                }}
-                onChange={(selected, meta) => {
-                  setSelectedKPIs(selected || []);
-                  if (meta.action === "select-option") {
-                    setTimeout(() => {
-                      setKpiSearchInput(kpiInputRef.current);
-                    }, 0);
-                  }
-                }}
-                hideSelectedOptions={false}
-                options={kpiOptions}
-                value={selectedKPIs}
-                placeholder="-- Chọn KPI --"
-                styles={{
-                  valueContainer: (base) => ({
-                    ...base,
-                    maxHeight: "38px",
-                    overflowX: "auto",
-                    flexWrap: "nowrap",
-                  }),
-                  multiValue: (base) => ({
-                    ...base,
-                    margin: "1px 2px",
-                  }),
-                }}
-              />
+  isMulti
+  isSearchable
+  closeMenuOnSelect={false}
+  blurInputOnSelect={false}
+  menuIsOpen={kpiMenuOpen}
+  onMenuOpen={() => setKpiMenuOpen(true)}
+  onMenuClose={() => {
+    setKpiMenuOpen(false);
+    // ⚠️ Ngăn react-select reset inputValue
+    setTimeout(() => {
+      setKpiSearchInput(kpiInputRef.current);
+    }, 0);
+  }}
+  inputValue={kpiSearchInput}
+  onInputChange={(value, { action }) => {
+    if (action === "input-change") {
+      kpiInputRef.current = value;
+      setKpiSearchInput(value);
+    }
+    if (action === "menu-close") {
+      setKpiMenuOpen(false);
+    }
+  }}
+  onChange={(selected, meta) => {
+    setSelectedKPIs(selected || []);
+    if (meta.action === "select-option") {
+      setTimeout(() => {
+        setKpiSearchInput(kpiInputRef.current);
+      }, 0);
+    }
+  }}
+  hideSelectedOptions={false}
+  options={kpiOptions}
+  value={selectedKPIs}
+  placeholder="-- Chọn KPI --"
+  styles={{
+    valueContainer: (base) => ({
+      ...base,
+      maxHeight: "38px",
+      overflowX: "auto",
+      flexWrap: "nowrap",
+    }),
+    multiValue: (base) => ({
+      ...base,
+      margin: "1px 2px",
+    }),
+  }}
+/>
+
             </Col>
             <Col md={3}>
               <Button className="w-100" onClick={handleCheckKPI}>
