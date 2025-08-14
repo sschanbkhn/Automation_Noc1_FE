@@ -1,0 +1,37 @@
+{
+	"Key" : "Role",
+	"Title" : "vai trò",
+	"Rows": 2,		
+	"Controls" : [
+		{
+			"Key": "Code",
+			"Title": "Mã",     
+			"Type": "InputText",
+			"IsRequired": true,
+			"Row": 1,
+			"ColLabel": 2, 
+			"ColControl": 10, 
+			"ColSpanControl": 12
+		},
+		{
+			"Key": "Name",
+			"Title": "Tên",     
+			"Type": "InputText",
+			"IsRequired": true,
+			"Row": 2,
+			"ColLabel": 2, 
+			"ColControl": 10, 
+			"ColSpanControl": 12
+		}
+	],
+	"ActionDefs" : [
+		{
+			"Key": "Save", 
+			"Title": "Lưu",
+			"Type": "Submit",
+			"TitleTooltip": "",
+			"Icon": "circle-check",
+			"Action": "onClickSave"
+		}
+	]
+}

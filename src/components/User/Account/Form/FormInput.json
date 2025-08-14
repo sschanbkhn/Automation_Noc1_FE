@@ -1,0 +1,103 @@
+{
+	"Key" : "Account",
+	"Title" : "tài khoản",
+	"Rows": 8,		
+	"Controls" : [
+		{
+			"Key": "RoleId",
+			"Title": "Vai trò",     
+			"Type": "Select",
+			"IsRequired": false,
+			"Placeholder": "---Chọn---", 
+			"Options": [],
+			"KeyOptions": {"label": "Name", "value": "Id"},
+			"Row": 1,
+			"ColLabel": 3, 
+			"ColControl": 9, 
+			"ColSpanControl": 12
+		},
+		{
+			"Key": "FullName",
+			"Title": "Họ và tên",     
+			"Type": "InputText",
+			"IsRequired": true,
+			"Row": 2,
+			"ColLabel": 3, 
+			"ColControl": 9, 
+			"ColSpanControl": 12
+		},
+		{
+			"Key": "UserName",
+			"Title": "Tên đăng nhập",     
+			"Type": "InputText",
+			"IsRequired": true,
+			"Row": 3,
+			"ColLabel": 3, 
+			"ColControl": 9, 
+			"ColSpanControl": 12
+		},
+		{
+			"Key": "PassWord",
+			"Title": "Mật khẩu",     
+			"Type": "InputText",
+			"IsPassword": true,
+			"IsRequired": false,
+			"Row": 4,
+			"ColLabel": 3, 
+			"ColControl": 9, 
+			"ColSpanControl": 12
+		},
+		{
+			"Key": "Email",
+			"Title": "Email",     
+			"Type": "InputText",
+			"IsRequired": true,
+			"Row": 5,
+			"ColLabel": 3, 
+			"ColControl": 9, 
+			"ColSpanControl": 12
+		},
+		{
+			"Key": "Phone",
+			"Title": "SĐT",     
+			"Type": "InputText",
+			"IsRequired": false,
+			"Row": 6,
+			"ColLabel": 3, 
+			"ColControl": 9, 
+			"ColSpanControl": 12
+		},
+		{
+			"Key": "Address",
+			"Title": "Địa chỉ",     
+			"Type": "InputText",
+			"IsRequired": false,
+			"Row": 7,
+			"ColLabel": 3, 
+			"ColControl": 9, 
+			"ColSpanControl": 12
+		},
+		{
+			"Key": "IsActive",
+			"Title": "",     			
+			"CheckboxLabel": "Hoạt động",     			
+			"Type": "Checkbox",
+			"Placeholder": "---Chọn---", 
+			"Options": [{ "value": true, "label": "Hoạt động" },{ "value": false, "label": "Không hoạt động" }], 
+			"Row": 8,
+			"ColLabel": 3, 
+			"ColControl": 9, 
+			"ColSpanControl": 12
+		}
+	],
+	"ActionDefs" : [
+		{
+			"Key": "Save", 
+			"Title": "Lưu",
+			"Type": "Submit",
+			"TitleTooltip": "",
+			"Icon": "circle-check",
+			"Action": "onClickSave"
+		}
+	]
+}

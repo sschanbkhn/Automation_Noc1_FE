@@ -1,0 +1,21 @@
+{
+    "DataGrid": {
+        "Key": "RoleList",
+        "Title": "Danh sách vai trò",
+        "ColumnDefs": [
+            {                
+                "Key": "Code",
+                "Title": "Mã",                
+                "Align": "center"    
+            },
+            {
+                "Key": "Name",
+                "Title": "Tên",                
+                "Align": "center"   
+            }
+        ],
+        "ActionDefs": [
+
+        ]
+    } 
+}
