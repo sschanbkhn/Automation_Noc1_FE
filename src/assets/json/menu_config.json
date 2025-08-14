@@ -115,39 +115,33 @@
           "icon": "bi bi-bar-chart"
         },
         {
-          "code": "CableManagement",
+          "code": "DashboardR002",
           "name": "Tối ưu cell di động",
-          "url": "/cable-management",
+          "url": "/dashboardrnoc2",
           "icon": "bi bi-grid"
         },
         {
-          "code": "R005SleepingCellManagement",
-          "name": "R005-Sleeping Cell Management",
-          "url": "/R005-Sleeping-Cell",
-          "icon": "bi bi-grid"
-        },
-        {
-          "code": "CurenAlarm",
+          "code": "DashboardR004",
           "name": "Phát hiện bất thường site 0",
-          "url": "/curen-alarm",
+          "url": "/dashboardrnoc4",
           "icon": "bi bi-grid"
         },
         {
-          "code": "HistoryCurenAlarm",
+          "code": "DashboardR005",
           "name": "Tự động khai báo trạm 5G",
-          "url": "/history-curen-alarm",
+          "url": "/dashboardrnoc5",
           "icon": "bi bi-grid"
         },
         {
-          "code": "DevicePorts",
+          "code": "DashboardR006",
           "name": "Công cụ tiết kiệm điện",
-          "url": "/device-ports",
+          "url": "/dashboardrnoc6",
           "icon": "bi bi-grid"
         },
         {
-          "code": "ConfigReport",
+          "code": "DashboardR007",
           "name": "Công cụ tự động báo cáo cấu hình",
-          "url": "/config-report",
+          "url": "/dashboardrnoc7",
           "icon": "bi bi-grid"
         }
       ]
@@ -186,9 +180,9 @@
       "icon": "bi bi-globe",
       "subMenu": [
         {
-          "code": "LinksMaps",
-          "name": "Cân chỉnh internet quốc tế ",
-          "url": "/link-cabman",
+          "code": "ClearThuebaoDaphien",
+          "name": "Clear thuê bao đa phiên ",
+          "url": "/ClearThuebaoDaphien",
           "icon": "bi bi-grid"
         },
         {
@@ -198,11 +192,19 @@
           "icon": "bi bi-grid"
         },
         {
-          "code": "ucppoe",
-          "name": "Kiểm soát số phiên pppoe",
-          "url": "/ucppoe",
+            "code": "LspQuocte",
+          "name": "Kiểm soát LSP quốc tế",
+          "url": "/LspQuocte",
           "icon": "bi bi-grid"
-        },
+
+            },
+        {
+            "code": "DataLspQuocte",
+          "name": "Dữ liệu LSP quốc tế",
+          "url": "/DataLspQuocte",
+          "icon": "bi bi-grid"
+
+            },
         {
           "code": "ConfigurationLogs",
           "name": "Xử lý cảnh báo phần cứng",

@@ -26,10 +26,10 @@ const DevicesList = (props: Props) => {
     const [dialogVisible, setDialogVisible] = useState(false);
     const OrganId_Tree = useRef(Guid.Empty);
     useEffect(() => {  
-        Actions.GetTree(dispatch);      
-        Actions.GetItem_DeviceType(dispatch);     
-        Actions.GetItem_Manufacturer(dispatch);    
-        Actions.GetItem_Organ(dispatch);             
+        // Actions.GetTree(dispatch);      
+        // Actions.GetItem_DeviceType(dispatch);     
+        // Actions.GetItem_Manufacturer(dispatch);    
+        // Actions.GetItem_Organ(dispatch);             
     }, [])
     const ActionEvents = {
         onClickCreate: () => {

@@ -1,8 +1,4 @@
 import React, { useEffect, useState } from "react";
-
-
-
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { connect } from "react-redux";
 import Home from "components/Home";
 import { Config } from "components/System";
@@ -41,6 +37,7 @@ import DashboardRnocRoom from "../DashboardAutomation/DashboardRnoc/DashboardRno
 import ScheduleTriggerForm from "components/RNOC1/R009";
 import Anm_uc1 from "components/ANM/UC1";
 import DashboardR001 from "components/RNOC1/R001";
+import DashboardR007 from "components/RNOC1/R009"
 import Ucppoe from "components/INOC1/I003";
 import NornirPlatformView from "components/SNOC/components/NornirPlatformView";
 import DashOrigin from "components/SNOC/views/dashboard/DashOrigin/SystemHealthDashboard";
@@ -61,16 +58,6 @@ import DeclareNumberForm from "components/SNOC/views/forms/sbc/DeclareNumberForm
 import RoutingDeclarationForm from "components/SNOC/views/forms/sbc/RoutingDeclarationForm";
 import RequestHistoryTable from "components/SNOC/views/forms/sbc/RequestHistoryTable";
 import ConfigReport from "components/RNOC1/R009";
-
-import HomeSleepingCell from "components/RNOC1/R005-SleepingCell/R005HomeSleepingCell";
-
-import R005Monitor from '../components/RNOC1/R005-SleepingCell/Monitor/R005Monitor';
-import R005Configuration from '../components/RNOC1/R005-SleepingCell/Configuration/R005Configuration';
-
-
-
-
-
 
 interface Props {
   Apps: any;
@@ -135,6 +122,18 @@ const MainPageRoute = (props: Props) => {
         return <ConfigReport />;
       case "DashboardR001":
         return <DashboardR001 />;
+      case "DashboardR002":
+        return <DashboardR001 />; // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
+      case "DashboardR003":
+        return <DashboardR001 />; // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
+      case "DashboardR004":
+        return <DashboardR001 />; // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
+      case "DashboardR005":
+        return <DashboardR001 />; // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
+      case "DashboardR006":
+        return <DashboardR001 />; // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
+      case "DashboardR007":
+        return <DashboardR007 />; // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
       case "CableManagement":
         return <CableManagement />;
       case "ConfigurationLogs":
@@ -183,21 +182,6 @@ const MainPageRoute = (props: Props) => {
         return <DnsLacracrnc />;
       case "hc-dashboard-sbc":
         return <SbcDashboardWithNavbar />;
-
-      case "R005SleepingCellManagement":  // ← Match với code trong menu
-         return <HomeSleepingCell />;
-
-
-
-
-
-
-
-
-
-
-
-
       default:
         return <Page404 />;
     }
