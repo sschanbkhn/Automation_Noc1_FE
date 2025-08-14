@@ -1,11 +1,14 @@
+// src/hooks/useScheduleWebSocket.js
 import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import {
   updateLastRunAt,
   setWebSocketStatus,
-  updateSystemStatusPatch, // ✅ Thêm action mới
+  updateSystemStatusPatch,
+  wsMergeHourlyItems, // 👈 NHẬN GÓI CHART REALTIME
 } from "../redux/Healthcheck/healthcheckSlice";
-import { showTemporaryAlert } from "../redux/Alert/alertSlice"; // ✅ Thêm action mới
+import { showTemporaryAlert } from "../redux/Alert/alertSlice";
+
 const WS_URL = "ws://10.155.43.201:8000/ws/healthcheck/";
 const RECONNECT_INTERVAL = 5000;
 
@@ -16,7 +19,7 @@ const useScheduleWebSocket = () => {
 
   const socketRef = useRef(null);
   const timerRef = useRef(null);
-  const isMountedRef = useRef(true); // ✅ để kiểm tra còn mounted không
+  const isMountedRef = useRef(true);
 
   const connect = () => {
     const socket = new WebSocket(WS_URL);
@@ -36,9 +39,9 @@ const useScheduleWebSocket = () => {
 
       try {
         const data = JSON.parse(event.data);
-        console.log("📥 WebSocket message:", data); // ✅ Debug mọi gói tin
+        console.log("📥 WebSocket message:", data);
 
-        // ✅ Cập nhật last_run_at của schedule
+        // 1) Cập nhật last_run_at của schedule (nếu có)
         if (data.schedule_name && data.last_run_at) {
           dispatch(
             updateLastRunAt({
@@ -49,7 +52,7 @@ const useScheduleWebSocket = () => {
           );
         }
 
-        // ✅ Cập nhật dashboard subsystem (patch update)
+        // 2) Patch subsystem trên dashboard (system_status_patch)
         if (data.type === "system_status_patch" && data.payload) {
           dispatch(updateSystemStatusPatch(data.payload));
           dispatch(
@@ -58,7 +61,17 @@ const useScheduleWebSocket = () => {
               message: `🔁 Subsystem "${data.payload.subsystem}" trong nhóm "${data.payload.group}" vừa được cập nhật.`,
             })
           );
+          return; // tránh rơi qua các nhánh khác
         }
+
+        // 3) 🔥 Dữ liệu biểu đồ NOK theo giờ (realtime) từ schedule/manual
+        if (data.type === "hourly_items" && Array.isArray(data.items)) {
+          // Merge theo platform; reducer sẽ dedup host|hour|platform + prune > 24h
+          dispatch(wsMergeHourlyItems({ items: data.items, platform: data.platform }));
+          return;
+        }
+
+        // (tuỳ chọn) xử lý thêm các loại message khác (causecode_result, logs, ...)
       } catch (err) {
         console.error("❌ JSON parse error:", err);
       }
@@ -74,7 +87,10 @@ const useScheduleWebSocket = () => {
     };
 
     socket.onerror = () => {
-      socket.close(); // Kích hoạt onclose để reconnect
+      // Kích hoạt onclose để reconnect
+      try {
+        socket.close();
+      } catch (_) {}
     };
   };
 
@@ -89,7 +105,9 @@ const useScheduleWebSocket = () => {
 
     return () => {
       isMountedRef.current = false;
-      if (socketRef.current) socketRef.current.close();
+      try {
+        if (socketRef.current) socketRef.current.close();
+      } catch (_) {}
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, []);

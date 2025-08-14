@@ -559,7 +559,17 @@ export const GenericHealthCheckView = createAsyncThunk(
     }
   }
 );
+// ===== (1) Helpers: đặt TRÊN createSlice, không export =====
+function _hourKeyISO(starttime) {
+  const d = new Date(starttime);
+  if (Number.isNaN(d.getTime())) return null;
+  d.setMinutes(0, 0, 0);
+  return d.toISOString();
+}
 
+function _pruneCutoff(hours = 24) {
+  return Date.now() - (hours || 24) * 60 * 60 * 1000;
+}
 const psCoreSlice = createSlice({
   name: "pscore",
   initialState: {
@@ -599,8 +609,52 @@ const psCoreSlice = createSlice({
     hourlyItems: [],
     hourlyByKey: {}, // { [storeKey]: items[] }
     hourlyLoadingByKey: {}, // { [storeKey]: boolean }
+    hourlyByPlatform: {}, // { [platform]: Array<HourlyItem> }
+    hourPruneHours: 24, // số giờ giữ lại trong bộ nhớ
   },
   reducers: {
+    wsMergeHourlyItems: (state, action) => {
+      const { items = [], platform: fallbackPlatform } = action.payload || {};
+      const byPlat = state.hourlyByPlatform || (state.hourlyByPlatform = {});
+      const cutoff = _pruneCutoff(state.hourPruneHours);
+
+      // group theo platform
+      const grouped = {};
+      for (const it of items) {
+        const p = it?.platform || fallbackPlatform;
+        if (!p || !it?.starttime) continue;
+        (grouped[p] ||= []).push(it);
+      }
+
+      // merge từng platform
+      for (const [p, arr] of Object.entries(grouped)) {
+        const existing = byPlat[p] || [];
+        const map = new Map(); // key = platform|host|hourISO
+
+        // nạp sẵn existing để dedup
+        for (const it of existing) {
+          const hourISO = _hourKeyISO(it.starttime);
+          if (!hourISO) continue;
+          map.set(`${p}|${it.host}|${hourISO}`, it);
+        }
+        // add/update new items
+        for (const it of arr) {
+          const hourISO = _hourKeyISO(it.starttime);
+          if (!hourISO) continue;
+          map.set(`${p}|${it.host}|${hourISO}`, it);
+        }
+
+        // prune > cutoff và sort theo thời gian
+        const merged = Array.from(map.values())
+          .filter((it) => {
+            const ts = new Date(it.starttime).getTime();
+            return !Number.isNaN(ts) && ts >= cutoff;
+          })
+          .sort((a, b) => new Date(a.starttime) - new Date(b.starttime));
+
+        byPlat[p] = merged;
+      }
+    },
     updateLastRunAt: (state, action) => {
       const { name, last_run_at, status } = action.payload;
       const task = state.scheduledTasks.find((t) => t.name === name);
@@ -1096,6 +1150,6 @@ const psCoreSlice = createSlice({
       });
   },
 });
-export const { updateLastRunAt, setWebSocketStatus, updateSystemStatusPatch } =
+export const { updateLastRunAt, setWebSocketStatus, updateSystemStatusPatch , wsMergeHourlyItems} =
   psCoreSlice.actions;
 export default psCoreSlice.reducer;

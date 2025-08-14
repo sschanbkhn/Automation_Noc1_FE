@@ -74,6 +74,7 @@ const buildHourlySeries = (items) => {
   (items || []).forEach((it) => {
     if (!it?.starttime) return;
     const t = new Date(it.starttime);
+    if (isNaN(t.getTime())) return;
     const h = new Date(t);
     h.setMinutes(0, 0, 0);
     const k = key(h);
@@ -88,20 +89,17 @@ const buildHourlySeries = (items) => {
 };
 
 // ====== Chart ngoài dashboard (theo group) ======
-// ====== Chart ngoài dashboard (theo group) ======
 const GroupNokChart = ({ platformList = [], storeKey, height = 160, title }) => {
   const dispatch = useDispatch();
 
-  // Hỗ trợ cả 2 kiểu slice: map theo key (hourlyByKey) hoặc single (hourlyItems)
+  // Backfill (nếu còn dùng fetch theo storeKey)
   const byKeyItems = useSelector((s) => s.pscore?.hourlyByKey?.[storeKey]);
   const byKeyLoading = useSelector((s) => s.pscore?.hourlyLoadingByKey?.[storeKey]);
-  const singleItems = useSelector((s) => s.pscore?.hourlyItems);
-  const singleLoading = useSelector((s) => s.pscore?.hourlyLoading);
 
-  const items = byKeyItems ?? singleItems ?? [];
-  const loading = (byKeyLoading ?? singleLoading) || false;
+  // 🔥 Realtime từ WS: gộp theo platform
+  const byPlatform = useSelector((s) => s.pscore?.hourlyByPlatform || {});
 
-  // Khoá ổn định để tránh ref thay đổi (chống spam API)
+  // Khoá ổn định để tránh spam API backfill
   const platformKey = useMemo(() => {
     const set = new Set(platformList || []);
     return JSON.stringify(Array.from(set).sort());
@@ -116,20 +114,46 @@ const GroupNokChart = ({ platformList = [], storeKey, height = 160, title }) => 
         page_size: 1000,
         hours: 24,
         option: "",
-        storeKey, // ưu tiên dạng map; nếu slice chưa map, fallback single vẫn chạy
+        storeKey, // backfill một lần; WS sẽ đổ thêm realtime
       })
     );
   }, [dispatch, platformKey, storeKey, platformList]);
 
+  // Gộp items từ WS (theo platformList) + (tuỳ chọn) backfill byKeyItems, rồi dedup theo platform|host|hour
+  const items = useMemo(() => {
+    const out = [];
+    (platformList || []).forEach((p) => {
+      const arr = byPlatform[p] || [];
+      if (arr.length) out.push(...arr);
+    });
+    if (byKeyItems?.length) out.push(...byKeyItems);
+
+    const seen = new Set();
+    const dedup = [];
+    for (const it of out) {
+      if (!it?.starttime) continue;
+      const d = new Date(it.starttime);
+      if (isNaN(d.getTime())) continue;
+      d.setMinutes(0, 0, 0); // bucket theo giờ
+      const k = `${it.platform}|${it.host}|${d.toISOString()}`;
+      if (!seen.has(k)) {
+        seen.add(k);
+        dedup.push(it);
+      }
+    }
+    return dedup;
+  }, [platformList, byPlatform, byKeyItems]);
+
   // Dữ liệu cột NOK theo giờ
   const hourlySeries = useMemo(() => buildHourlySeries(items), [items]);
 
-  // Index theo giờ -> danh sách NOK items (để hiện host trong tooltip)
+  // Index theo giờ -> danh sách NOK items (tooltip hiện host)
   const hourIndex = useMemo(() => {
     const m = new Map();
     (items || []).forEach((it) => {
       if (!it?.starttime) return;
       const t = new Date(it.starttime);
+      if (isNaN(t.getTime())) return;
       const h = new Date(t);
       h.setMinutes(0, 0, 0);
       const label = String(h.getHours()).padStart(2, "0") + ":00";
@@ -141,11 +165,12 @@ const GroupNokChart = ({ platformList = [], storeKey, height = 160, title }) => 
     return m;
   }, [items]);
 
+  const loading = !!byKeyLoading; // backfill đang tải (WS thì realtime không cần loading)
+
   // Tooltip tùy biến: liệt kê một số host NOK của giờ đang hover
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload || !payload.length) return null;
     const arr = hourIndex.get(label) || [];
-    // Lấy unique host theo giờ
     const uniqHosts = Array.from(new Set(arr.map((x) => x.host)));
     const top = uniqHosts.slice(0, 6);
     const more = uniqHosts.length - top.length;

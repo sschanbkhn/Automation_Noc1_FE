@@ -31,7 +31,7 @@ const Alert = () => {
             className={toastClass}
             onClose={() => dispatch(hideAlert(alert.id))}
             show={true}
-            delay={3000}
+            delay={5000}
             autohide
           >
             <Toast.Body>{alert.message}</Toast.Body>
