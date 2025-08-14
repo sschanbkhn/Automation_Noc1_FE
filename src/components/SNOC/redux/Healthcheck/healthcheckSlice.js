@@ -357,23 +357,89 @@ export const updateHealthcheckSchedule = createAsyncThunk(
   }
 );
 
+// export const fetchPSCoreStatus = createAsyncThunk(
+//   "pscore/fetchPSCoreStatus",
+//   async (
+//     { host, page = 1, platform = [], option = "" },
+//     { rejectWithValue, dispatch }
+//   ) => {
+//     try {
+//       const params = new URLSearchParams();
+//       if (host) params.append("host", host);
+//       if (option) params.append("option", option);
+//       params.append("page", page);
+//       platform.forEach((p) => params.append("platform", p));
+
+//       const response = await snocApi.get(
+//         `/nornirps/healthcheck/history/?${params.toString()}`
+//       );
+//       return response.data;
+//     } catch (error) {
+//       const msg =
+//         error?.response?.data?.detail || "Không thể tải dữ liệu PS Core";
+//       dispatch(showTemporaryAlert({ message: msg, type: "error" }));
+//       return rejectWithValue(error?.response?.data);
+//     }
+//   }
+// );
+
+// export const fetchPSCoreStatus = createAsyncThunk(
+//   "pscore/fetchPSCoreStatus",
+//   async (
+//     { host, page = 1, platform = [], option = "", storeKey, hours, page_size },
+//     { rejectWithValue, dispatch }
+//   ) => {
+//     try {
+//       const params = new URLSearchParams();
+//       if (host) params.append("host", host);
+//       if (option) params.append("option", option);
+//       params.append("page", String(page));
+//       platform.forEach((p) => params.append("platform", p));
+//       // ✅ bổ sung mới (tương thích ngược)
+//       if (hours) params.append("hours", String(hours));
+//       if (page_size) params.append("page_size", String(page_size));
+
+//       const response = await snocApi.get(
+//         `/nornirps/healthcheck/history/?${params.toString()}`
+//       );
+//       return response.data; // KHÔNG đổi payload
+//     } catch (error) {
+//       const msg =
+//         error?.response?.data?.detail || "Không thể tải dữ liệu PS Core";
+//       dispatch(showTemporaryAlert({ message: msg, type: "error" }));
+//       return rejectWithValue(error?.response?.data);
+//     }
+//   }
+// );
+
 export const fetchPSCoreStatus = createAsyncThunk(
   "pscore/fetchPSCoreStatus",
   async (
-    { host, page = 1, platform = [], option = "" },
+    { host, page = 1, platform = [], option = "", storeKey, hours, page_size },
     { rejectWithValue, dispatch }
   ) => {
     try {
       const params = new URLSearchParams();
+
       if (host) params.append("host", host);
       if (option) params.append("option", option);
-      params.append("page", page);
+      params.append("page", String(page));
       platform.forEach((p) => params.append("platform", p));
+
+      const hasHours =
+        hours !== undefined && hours !== null && `${hours}` !== "";
+      if (hasHours) params.append("hours", String(hours));
+      if (page_size) params.append("page_size", String(page_size));
+
+      // ✅ Quy tắc: có hours -> KHÔNG gửi notes; không có hours -> gửi notes
+      if (!hasHours) {
+        params.append("include_notes", "1");
+      }
 
       const response = await snocApi.get(
         `/nornirps/healthcheck/history/?${params.toString()}`
       );
-      return response.data;
+      return response.data; // giữ nguyên payload
     } catch (error) {
       const msg =
         error?.response?.data?.detail || "Không thể tải dữ liệu PS Core";
@@ -522,7 +588,17 @@ const psCoreSlice = createSlice({
     availableKPIs: [], // ✅ Danh sách KPI có sẵn
     kpiChartData: {}, // Updated to object keyed by KPI
     genericSchedules: {}, // { healthcheck: [], causecode: [], ... }
+    // ✅ Lịch generic đang tải
     loadingGenericSchedules: {},
+    hostHistoryLoading: false,
+    hostHistoryItems: [],
+    hostHistoryCount: 0,
+    hostHistoryNext: null,
+    hostHistoryPrevious: null,
+    hourlyLoading: false,
+    hourlyItems: [],
+    hourlyByKey: {}, // { [storeKey]: items[] }
+    hourlyLoadingByKey: {}, // { [storeKey]: boolean }
   },
   reducers: {
     updateLastRunAt: (state, action) => {
@@ -587,19 +663,158 @@ const psCoreSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchPSCoreStatus.pending, (state) => {
-        state.loading = true;
+      // .addCase(fetchPSCoreStatus.pending, (state) => {
+      //   state.loading = true;
+      // })
+      // .addCase(fetchPSCoreStatus.fulfilled, (state, action) => {
+      //   state.loading = false;
+      //   state.items = action.payload.results || [];
+      //   state.count = action.payload.count || 0;
+      //   state.next = action.payload.next;
+      //   state.previous = action.payload.previous;
+      // })
+      // .addCase(fetchPSCoreStatus.rejected, (state) => {
+      //   state.loading = false;
+      //   state.items = [];
+      // })
+
+      // .addCase(fetchPSCoreStatus.pending, (state, action) => {
+      //   const storeKey = action.meta?.arg?.storeKey;
+      //   if (storeKey === "hostHistory") {
+      //     state.hostHistoryLoading = true;
+      //   } else {
+      //     state.loading = true;
+      //   }
+      // })
+      // .addCase(fetchPSCoreStatus.fulfilled, (state, action) => {
+      //   const storeKey = action.meta?.arg?.storeKey;
+      //   if (storeKey === "hostHistory") {
+      //     state.hostHistoryLoading = false;
+      //     state.hostHistoryItems = action.payload.results || [];
+      //     state.hostHistoryCount = action.payload.count || 0;
+      //     state.hostHistoryNext = action.payload.next || null;
+      //     state.hostHistoryPrevious = action.payload.previous || null;
+      //   } else {
+      //     state.loading = false;
+      //     state.items = action.payload.results || [];
+      //     state.count = action.payload.count || 0;
+      //     state.next = action.payload.next;
+      //     state.previous = action.payload.previous;
+      //   }
+      // })
+      // .addCase(fetchPSCoreStatus.rejected, (state, action) => {
+      //   const storeKey = action.meta?.arg?.storeKey;
+      //   if (storeKey === "hostHistory") {
+      //     state.hostHistoryLoading = false;
+      //     state.hostHistoryItems = [];
+      //     state.hostHistoryCount = 0;
+      //     state.hostHistoryNext = null;
+      //     state.hostHistoryPrevious = null;
+      //   } else {
+      //     state.loading = false;
+      //     state.items = [];
+      //   }
+      // })
+
+      // .addCase(fetchPSCoreStatus.pending, (state, action) => {
+      //   const key = action.meta?.arg?.storeKey;
+      //   if (key === "hourly") {
+      //     state.hourlyLoading = true;
+      //   } else if (key === "hostHistory") {
+      //     state.hostHistoryLoading = true;
+      //   } else {
+      //     state.loading = true;
+      //   }
+      // })
+      // .addCase(fetchPSCoreStatus.fulfilled, (state, action) => {
+      //   const key = action.meta?.arg?.storeKey;
+      //   if (key === "hourly") {
+      //     state.hourlyLoading = false;
+      //     state.hourlyItems = action.payload?.results || [];
+      //   } else if (key === "hostHistory") {
+      //     state.hostHistoryLoading = false;
+      //     state.hostHistoryItems = action.payload.results || [];
+      //     state.hostHistoryCount = action.payload.count || 0;
+      //     state.hostHistoryNext = action.payload.next || null;
+      //     state.hostHistoryPrevious = action.payload.previous || null;
+      //   } else {
+      //     state.loading = false;
+      //     state.items = action.payload.results || [];
+      //     state.count = action.payload.count || 0;
+      //     state.next = action.payload.next;
+      //     state.previous = action.payload.previous;
+      //   }
+      // })
+      // .addCase(fetchPSCoreStatus.rejected, (state, action) => {
+      //   const key = action.meta?.arg?.storeKey;
+      //   if (key === "hourly") {
+      //     state.hourlyLoading = false;
+      //     state.hourlyItems = [];
+      //   } else if (key === "hostHistory") {
+      //     state.hostHistoryLoading = false;
+      //     state.hostHistoryItems = [];
+      //     state.hostHistoryCount = 0;
+      //     state.hostHistoryNext = null;
+      //     state.hostHistoryPrevious = null;
+      //   } else {
+      //     state.loading = false;
+      //     state.items = [];
+      //   }
+      // })
+
+      .addCase(fetchPSCoreStatus.pending, (state, action) => {
+        const key = action.meta?.arg?.storeKey;
+        if (key === "hourly") {
+          state.hourlyLoading = true; // ✅ modal cũ vẫn OK
+        } else if (key === "hostHistory") {
+          state.hostHistoryLoading = true;
+        } else if (key?.startsWith("hourly_")) {
+          state.hourlyLoadingByKey[key] = true; // ✅ chart trong card
+        } else {
+          state.loading = true;
+        }
       })
       .addCase(fetchPSCoreStatus.fulfilled, (state, action) => {
-        state.loading = false;
-        state.items = action.payload.results || [];
-        state.count = action.payload.count || 0;
-        state.next = action.payload.next;
-        state.previous = action.payload.previous;
+        const key = action.meta?.arg?.storeKey;
+        const results = action.payload?.results || [];
+        if (key === "hourly") {
+          state.hourlyLoading = false; // ✅ modal cũ
+          state.hourlyItems = results;
+        } else if (key === "hostHistory") {
+          state.hostHistoryLoading = false;
+          state.hostHistoryItems = results;
+          state.hostHistoryCount = action.payload?.count || 0;
+          state.hostHistoryNext = action.payload?.next || null;
+          state.hostHistoryPrevious = action.payload?.previous || null;
+        } else if (key?.startsWith("hourly_")) {
+          state.hourlyLoadingByKey[key] = false; // ✅ chart trong card
+          state.hourlyByKey[key] = results;
+        } else {
+          state.loading = false;
+          state.items = results;
+          state.count = action.payload?.count || 0;
+          state.next = action.payload?.next;
+          state.previous = action.payload?.previous;
+        }
       })
-      .addCase(fetchPSCoreStatus.rejected, (state) => {
-        state.loading = false;
-        state.items = [];
+      .addCase(fetchPSCoreStatus.rejected, (state, action) => {
+        const key = action.meta?.arg?.storeKey;
+        if (key === "hourly") {
+          state.hourlyLoading = false; // ✅ modal cũ
+          state.hourlyItems = [];
+        } else if (key === "hostHistory") {
+          state.hostHistoryLoading = false;
+          state.hostHistoryItems = [];
+          state.hostHistoryCount = 0;
+          state.hostHistoryNext = null;
+          state.hostHistoryPrevious = null;
+        } else if (key?.startsWith("hourly_")) {
+          state.hourlyLoadingByKey[key] = false; // ✅ chart trong card
+          state.hourlyByKey[key] = [];
+        } else {
+          state.loading = false;
+          state.items = [];
+        }
       })
 
       .addCase(fetchLatestHealthcheckView.pending, (state) => {

@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+// src/components/SNOC/views/dashboard/DashOrigin/SystemHealthDashboard.js
+import React, { useEffect, useMemo, useState } from "react";
 import { Button, Card, Col, Modal, Row, Spinner } from "react-bootstrap";
 import { Provider, useDispatch, useSelector } from "react-redux";
 import Alert from "../../../components/Alert/Alert";
@@ -7,12 +8,26 @@ import WebSocketStatusBanner from "../../../components/WebSocketStatusBanner";
 import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
 import {
   fetchPlatformGroupSchema,
+  fetchPSCoreStatus,
   fetchSystemStatus,
 } from "../../../redux/Healthcheck/healthcheckSlice";
 import snocStore from "../../../store/snocStore";
 import HealthcheckTable from "../../tables/health/HealthcheckTable";
 import styles from "./../../../styles/SystemHealth.module.scss";
 import TopNavbarHealth from "./TopNavbarHealth";
+
+// ✅ Recharts giống modal
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+
+const NOK_BAR_COLOR = "#dc3545"; // bootstrap danger red
 
 const statusColorClass = {
   Normal: "success",
@@ -37,6 +52,142 @@ const cardClassMapping = {
   "UDC Core": styles.cardUdc,
 };
 
+const slug = (s = "") =>
+  s.toString().trim().replace(/\s+/g, "_").replace(/[^\w]/g, "");
+
+// ====== Build series NOK theo giờ (24h) ======
+const buildHourlySeries = (items) => {
+  const now = new Date();
+  const hours = [];
+  for (let i = 23; i >= 0; i--) {
+    const d = new Date(now.getTime() - i * 60 * 60 * 1000);
+    d.setMinutes(0, 0, 0);
+    hours.push(d);
+  }
+  const key = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+      d.getDate()
+    ).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:00`;
+
+  const bucket = new Map(hours.map((d) => [key(d), 0]));
+
+  (items || []).forEach((it) => {
+    if (!it?.starttime) return;
+    const t = new Date(it.starttime);
+    const h = new Date(t);
+    h.setMinutes(0, 0, 0);
+    const k = key(h);
+    const isNok = it.status === "NOK" || it.status === "Error";
+    if (isNok && bucket.has(k)) bucket.set(k, bucket.get(k) + 1);
+  });
+
+  return hours.map((d) => ({
+    hour: key(d).slice(11, 16), // HH:00
+    nok: bucket.get(key(d)) || 0,
+  }));
+};
+
+// ====== Chart ngoài dashboard (theo group) ======
+// ====== Chart ngoài dashboard (theo group) ======
+const GroupNokChart = ({ platformList = [], storeKey, height = 160, title }) => {
+  const dispatch = useDispatch();
+
+  // Hỗ trợ cả 2 kiểu slice: map theo key (hourlyByKey) hoặc single (hourlyItems)
+  const byKeyItems = useSelector((s) => s.pscore?.hourlyByKey?.[storeKey]);
+  const byKeyLoading = useSelector((s) => s.pscore?.hourlyLoadingByKey?.[storeKey]);
+  const singleItems = useSelector((s) => s.pscore?.hourlyItems);
+  const singleLoading = useSelector((s) => s.pscore?.hourlyLoading);
+
+  const items = byKeyItems ?? singleItems ?? [];
+  const loading = (byKeyLoading ?? singleLoading) || false;
+
+  // Khoá ổn định để tránh ref thay đổi (chống spam API)
+  const platformKey = useMemo(() => {
+    const set = new Set(platformList || []);
+    return JSON.stringify(Array.from(set).sort());
+  }, [platformList]);
+
+  useEffect(() => {
+    if (!platformList || platformList.length === 0 || !storeKey) return;
+    dispatch(
+      fetchPSCoreStatus({
+        platform: platformList,
+        page: 1,
+        page_size: 1000,
+        hours: 24,
+        option: "",
+        storeKey, // ưu tiên dạng map; nếu slice chưa map, fallback single vẫn chạy
+      })
+    );
+  }, [dispatch, platformKey, storeKey, platformList]);
+
+  // Dữ liệu cột NOK theo giờ
+  const hourlySeries = useMemo(() => buildHourlySeries(items), [items]);
+
+  // Index theo giờ -> danh sách NOK items (để hiện host trong tooltip)
+  const hourIndex = useMemo(() => {
+    const m = new Map();
+    (items || []).forEach((it) => {
+      if (!it?.starttime) return;
+      const t = new Date(it.starttime);
+      const h = new Date(t);
+      h.setMinutes(0, 0, 0);
+      const label = String(h.getHours()).padStart(2, "0") + ":00";
+      const isNok = it.status === "NOK" || it.status === "Error";
+      if (!isNok) return;
+      if (!m.has(label)) m.set(label, []);
+      m.get(label).push(it);
+    });
+    return m;
+  }, [items]);
+
+  // Tooltip tùy biến: liệt kê một số host NOK của giờ đang hover
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (!active || !payload || !payload.length) return null;
+    const arr = hourIndex.get(label) || [];
+    // Lấy unique host theo giờ
+    const uniqHosts = Array.from(new Set(arr.map((x) => x.host)));
+    const top = uniqHosts.slice(0, 6);
+    const more = uniqHosts.length - top.length;
+
+    return (
+      <div className="p-2 bg-white border rounded shadow-sm">
+        <div><strong>{label}</strong></div>
+        <div>NOK: {payload[0]?.value ?? 0}</div>
+        {top.map((h) => (
+          <div key={h} style={{ fontSize: "0.85rem" }}>• {h}</div>
+        ))}
+        {more > 0 && (
+          <div style={{ fontSize: "0.85rem" }}>+{more} node nữa…</div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="mb-2">
+      <div className="d-flex justify-content-between align-items-center mb-1">
+        <small className="text-muted">{title || "NOK theo giờ (24h gần nhất)"}</small>
+        {loading && <Spinner animation="border" size="sm" />}
+      </div>
+      <div style={{ width: "100%", height }}>
+        <ResponsiveContainer>
+          <BarChart
+            data={hourlySeries}
+            margin={{ top: 4, right: 8, bottom: 12, left: 12 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="hour" />
+            <YAxis allowDecimals={false} />
+            <Tooltip content={<CustomTooltip />} />
+            <Bar dataKey="nok" name="NOK" fill={NOK_BAR_COLOR} stroke={NOK_BAR_COLOR} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+};
+
 // 🔹 Format ngày ngắn gọn dd/mm/yy
 const formatDateShort = (dateObj) => {
   const dd = String(dateObj.getDate()).padStart(2, "0");
@@ -54,10 +205,7 @@ const renderLastUpdatedOneLine = (dateStr, small = false) => {
 
   const display = `${formatDateShort(dateObj)} ${dateObj.toLocaleTimeString(
     [],
-    {
-      hour: "2-digit",
-      minute: "2-digit",
-    }
+    { hour: "2-digit", minute: "2-digit" }
   )}`;
 
   const textColor = diffHours > 24 ? "text-danger" : "text-muted";
@@ -87,10 +235,7 @@ const renderLastUpdatedTwoLines = (dateStr, small = false) => {
     >
       <span>{formatDateShort(dateObj)}</span>
       <span>
-        {dateObj.toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        })}
+        {dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
       </span>
     </div>
   );
@@ -115,6 +260,19 @@ const SystemHealthContent = () => {
     dispatch(fetchPlatformGroupSchema());
     dispatch(fetchSystemStatus());
   }, [dispatch]);
+
+  // ✅ Memo: group → platforms (dedupe + sort) để ổn định ref
+  const groupPlatformsMap = useMemo(() => {
+    const map = {};
+    Object.entries(platformSchema || {}).forEach(([groupName, subsystems]) => {
+      const set = new Set();
+      Object.values(subsystems || {}).forEach((arr) => {
+        if (Array.isArray(arr)) arr.forEach((p) => p && set.add(p));
+      });
+      map[groupName] = Array.from(set).sort();
+    });
+    return map;
+  }, [platformSchema]);
 
   const handleSubsystemClick = (group, subsystem, platform) => {
     setSelectedSubsystem({ group, subsystem, platform });
@@ -159,6 +317,8 @@ const SystemHealthContent = () => {
                 const groupChildren = groupData.children || {};
                 const cardClass = cardClassMapping[groupName] || "";
 
+                const groupPlatforms = groupPlatformsMap[groupName] || [];
+
                 return (
                   <Col md={6} key={groupName} className="mb-4">
                     <Card
@@ -188,111 +348,136 @@ const SystemHealthContent = () => {
                           </div>
                         )}
 
-                        {!loading && Object.keys(subsystems).length > 0 && (
-                          <div className="d-flex flex-wrap gap-3 mt-3">
-                            {Object.entries(subsystems).map(
-                              ([subsystemLabel, platforms]) => {
-                                const childData =
-                                  groupChildren[subsystemLabel] || {};
-                                const childStatus =
-                                  childData.status || "Unknown";
+                        {/* ✅ Bố cục 2 cột: Trái = Subsystems + Stats, Phải = Chart */}
+                        <Row className="g-3 align-items-stretch">
+                          {/* LEFT: Subsystems + Stats */}
+                          <Col md={9} className="d-flex flex-column">
+                            {/* ✅ Danh sách subsystem (không có chart) */}
+                            {!loading && Object.keys(subsystems).length > 0 && (
+                              <div className="d-flex flex-wrap gap-3 mt-2">
+                                {Object.entries(subsystems).map(
+                                  ([subsystemLabel, platforms]) => {
+                                    const childData =
+                                      groupChildren[subsystemLabel] || {};
+                                    const childStatus =
+                                      childData.status || "Unknown";
 
-                                const updatedRecently =
-                                  recentlyUpdated?.[groupName]?.[
-                                    subsystemLabel
-                                  ] &&
-                                  Date.now() -
-                                    recentlyUpdated[groupName][subsystemLabel] <
-                                    3000;
+                                    const updatedRecently =
+                                      recentlyUpdated?.[groupName]?.[
+                                        subsystemLabel
+                                      ] &&
+                                      Date.now() -
+                                        recentlyUpdated[groupName][
+                                          subsystemLabel
+                                        ] <
+                                        3000;
 
-                                const dynamicClass = updatedRecently
-                                  ? styles.updated
-                                  : "";
+                                    const dynamicClass = updatedRecently
+                                      ? styles.updated
+                                      : "";
 
-                                return (
-                                  <div
-                                    key={subsystemLabel}
-                                    className={`${styles.subItem} ${dynamicClass}`}
-                                    onClick={() =>
-                                      handleSubsystemClick(
-                                        groupName,
-                                        subsystemLabel,
-                                        platforms
-                                      )
-                                    }
-                                  >
-                                    {statusIcon[childStatus]}
-                                    <div className="d-flex flex-column">
-                                      <span className="fw-semibold fs-6">
-                                        {subsystemLabel}
-                                      </span>
+                                    return (
+                                      <div
+                                        key={subsystemLabel}
+                                        className={`${styles.subItem} ${dynamicClass}`}
+                                        onClick={() =>
+                                          handleSubsystemClick(
+                                            groupName,
+                                            subsystemLabel,
+                                            platforms
+                                          )
+                                        }
+                                      >
+                                        {statusIcon[childStatus]}
+                                        <div className="d-flex flex-column">
+                                          <span className="fw-semibold fs-6">
+                                            {subsystemLabel}
+                                          </span>
 
-                                      {/* ✅ Subsystem 2 dòng */}
-                                      {childData.last_updated && (
-                                        <span className="mt-1">
-                                          {renderLastUpdatedTwoLines(
-                                            childData.last_updated,
-                                            true
+                                          {/* ✅ Subsystem 2 dòng */}
+                                          {childData.last_updated && (
+                                            <span className="mt-1">
+                                              {renderLastUpdatedTwoLines(
+                                                childData.last_updated,
+                                                true
+                                              )}
+                                            </span>
                                           )}
-                                        </span>
-                                      )}
 
-                                      <div className="d-flex gap-2 mt-1">
-                                        <span
-                                          className={
-                                            childData.ok_count > 0
-                                              ? styles.ok
-                                              : styles.total
-                                          }
-                                        >
-                                          {childData.ok_count || 0}
-                                        </span>
-                                        <span
-                                          className={
-                                            childData.nok_count > 0
-                                              ? styles.nok
-                                              : styles.total
-                                          }
-                                        >
-                                          {childData.nok_count || 0}
-                                        </span>
+                                          <div className="d-flex gap-2 mt-1">
+                                            <span
+                                              className={
+                                                childData.ok_count > 0
+                                                  ? styles.ok
+                                                  : styles.total
+                                              }
+                                            >
+                                              {childData.ok_count || 0}
+                                            </span>
+                                            <span
+                                              className={
+                                                childData.nok_count > 0
+                                                  ? styles.nok
+                                                  : styles.total
+                                              }
+                                            >
+                                              {childData.nok_count || 0}
+                                            </span>
+                                          </div>
+                                        </div>
                                       </div>
-                                    </div>
-                                  </div>
-                                );
-                              }
+                                    );
+                                  }
+                                )}
+                              </div>
                             )}
-                          </div>
-                        )}
 
-                        {!loading && (
-                          <div className={styles.statRow}>
-                            <div
-                              className={
-                                groupData.ok_count > 0
-                                  ? styles.ok
-                                  : styles.total
-                              }
-                            >
-                              {groupData.ok_count > 0 ? "🟢" : "⚪"} OK:{" "}
-                              <strong>{groupData.ok_count || 0}</strong>
-                            </div>
-                            <div
-                              className={
-                                groupData.nok_count > 0
-                                  ? styles.nok
-                                  : styles.total
-                              }
-                            >
-                              {groupData.nok_count > 0 ? "🔴" : "⚪"} NOK:{" "}
-                              <strong>{groupData.nok_count || 0}</strong>
-                            </div>
-                            <div className={styles.total}>
-                              {groupData.total_devices > 0 ? "📦" : "⚪"} Total:{" "}
-                              <strong>{groupData.total_devices || 0}</strong>
-                            </div>
-                          </div>
-                        )}
+                            {/* ✅ Stats row */}
+                            {!loading && (
+                              <div className={`${styles.statRow} mt-auto`}>
+                                <div
+                                  className={
+                                    groupData.ok_count > 0
+                                      ? styles.ok
+                                      : styles.total
+                                  }
+                                >
+                                  {groupData.ok_count > 0 ? "🟢" : "⚪"} OK:{" "}
+                                  <strong>{groupData.ok_count || 0}</strong>
+                                </div>
+                                <div
+                                  className={
+                                    groupData.nok_count > 0
+                                      ? styles.nok
+                                      : styles.total
+                                  }
+                                >
+                                  {groupData.nok_count > 0 ? "🔴" : "⚪"} NOK:{" "}
+                                  <strong>{groupData.nok_count || 0}</strong>
+                                </div>
+                                <div className={styles.total}>
+                                  {groupData.total_devices > 0 ? "📦" : "⚪"}{" "}
+                                  Total:{" "}
+                                  <strong>
+                                    {groupData.total_devices || 0}
+                                  </strong>
+                                </div>
+                              </div>
+                            )}
+                          </Col>
+
+                          {/* RIGHT: Chart */}
+                          <Col md={3}>
+                            {groupPlatforms.length > 0 && (
+                              <GroupNokChart
+                                platformList={groupPlatforms}
+                                storeKey={`hourly_${slug(groupName)}_group`}
+                                height={180}
+                                title={`NOK theo giờ (24h) — ${groupName}`}
+                              />
+                            )}
+                          </Col>
+                        </Row>
                       </Card.Body>
                     </Card>
                   </Col>
@@ -302,14 +487,14 @@ const SystemHealthContent = () => {
           </Col>
         </Row>
 
-        {/* ✅ Modal hiển thị HealthcheckTable */}
+        {/* ✅ Modal: Chart + Table */}
         {modalVisible && selectedSubsystem && (
           <Modal
             show={modalVisible}
             onHide={handleCloseModal}
             size="xl"
             centered
-            dialogClassName={styles.modalWide} // ✅ dùng class trong CSS module
+            dialogClassName={styles.modalWide}
           >
             <Modal.Header closeButton>
               <Modal.Title>
@@ -317,10 +502,20 @@ const SystemHealthContent = () => {
               </Modal.Title>
             </Modal.Header>
             <Modal.Body style={{ maxHeight: "80vh", overflowY: "auto" }}>
+              <GroupNokChart
+                platformList={selectedSubsystem.platform}
+                storeKey={`hourly_${slug(selectedSubsystem.group)}_${slug(
+                  selectedSubsystem.subsystem
+                )}_modal`}
+                height={220}
+                title={`NOK theo giờ (24h): ${selectedSubsystem.group} / ${selectedSubsystem.subsystem}`}
+              />
+
               <HealthcheckTable
                 group={selectedSubsystem.group}
                 subsystem={selectedSubsystem.subsystem}
                 platformList={selectedSubsystem.platform}
+                hideChart
               />
             </Modal.Body>
             <Modal.Footer>
