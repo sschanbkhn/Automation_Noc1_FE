@@ -1,4 +1,5 @@
 {
+    
   "compilerOptions": {
     "outDir": "./dist/",
     "noImplicitAny": true,
@@ -7,22 +8,35 @@
     "target": "es5",
     "jsx": "react",
     "allowJs": true,
-    "moduleResolution": "node",  
-    "baseUrl": "./src",    
-    "resolveJsonModule": true,    
-    "paths": {      
+    "moduleResolution": "node",
+    "baseUrl": "./src",
+    "resolveJsonModule": true,
+    "paths": {
       "app/*": ["app/*"],
       "store/*": ["store/*"],
       "assets/*": ["assets/*"],
       "components/*": ["components/*"],
-      "helpers/*": ["helpers/*"],             
-      "routes/*": ["routes/*"],      
+      "helpers/*": ["helpers/*"],
+      "routes/*": ["routes/*"],
       "services/*": ["services/*"],
-      "models/*": ["models/*"],      
-    },
+      "models/*": ["models/*"],
+      "@/*": ["./*"]
+    }
   },
   "include": [
-    "src", 
+    "src",
     "index.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.backup",
+    "**/*.bak",
+    "**/Luu Tru/**/*",
+    "**/backup/**/*",
+    "**/old/**/*",
+    "**/*_backup.*",
+    "**/*_old.*",
+    "src/components/RNOC1/R005-SleepingCell/Designer/R005Tabs_9.tsx",
+    "src/components/RNOC1/R005-SleepingCell/Designer/R005Tabs_7.tsx"
   ]
 }

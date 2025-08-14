@@ -121,12 +121,6 @@
           "icon": "bi bi-grid"
         },
         {
-          "code": "DashboardR003",
-          "name": "Tự động thực hiện reset cell",
-          "url": "/dashboardrnoc3",
-          "icon": "bi bi-grid"
-        },
-        {
           "code": "DashboardR004",
           "name": "Phát hiện bất thường site 0",
           "url": "/dashboardrnoc4",

@@ -15,17 +15,24 @@ const devMode  = process.env.NODE_ENV === 'development';
 const config = {
   devtool: 'inline-source-map',
   mode: devMode  ? 'development' : 'production',
-  devServer: {
-    contentBase: resolve(__dirname, 'dist'),
-    compress: true,
-    port: 80,
-    historyApiFallback: true,
+devServer: {
+  contentBase: resolve(__dirname, 'dist'),
+  compress: true,
+  port: 3000,
+  host: 'localhost',
+  open: true,
+  historyApiFallback: true,
+  disableHostCheck: true,
+  headers: {
+    'Access-Control-Allow-Origin': '*',
   },
+},
   entry: {
     index: './src/index.tsx',
   },
   output: {
-    publicPath: devMode ? 'http://localhost:80/' : '',
+    // publicPath: devMode ? 'http://localhost:80/' : '',
+    publicPath: devMode ? 'http://localhost:3000/' : '',
     path: resolve(__dirname, 'dist'),    
     filename: devMode ? '[name].js' : 'javascripts/[name].js'
   },
