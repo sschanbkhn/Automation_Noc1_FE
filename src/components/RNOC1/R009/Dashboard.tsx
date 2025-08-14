@@ -1214,43 +1214,13 @@ const Dashboard = () => {
         <div className="row mt-4">
           <div className="col-12">
             <Card title="Biến động cell trong 7 ngày" icon="fas fa-chart-line">
-              <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={dashboardData.dailyTrend} margin={{ top: 20, right: 30, left: 80, bottom: 20 }}>
-                  <CartesianGrid strokeDasharray="2 2" stroke="#e0e0e0" strokeOpacity={0.7} />
-                  <XAxis 
-                    dataKey="date" 
-                    tick={{ fontSize: 12 }}
-                    axisLine={{ stroke: '#666' }}
-                  />
-                  <YAxis 
-                    domain={['dataMin - 100', 'dataMax + 100']}
-                    tickCount={25}
-                    tick={{ fontSize: 12 }}
-                    axisLine={{ stroke: '#666' }}
-                    tickFormatter={(value) => value.toLocaleString()}
-                    width={80}
-                    scale="linear"
-                  />
-                  <Tooltip 
-                    formatter={(value: any) => [value.toLocaleString(), 'Cells']}
-                    labelFormatter={(label) => `Ngày: ${label}`}
-                    contentStyle={{
-                      backgroundColor: '#f8f9fa',
-                      border: '1px solid #dee2e6',
-                      borderRadius: '8px'
-                    }}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="cells" 
-                    stroke="#007bff" 
-                    strokeWidth={4} 
-                    dot={{ r: 8, fill: '#007bff', strokeWidth: 3, stroke: '#fff' }}
-                    activeDot={{ r: 10, fill: '#0056b3', strokeWidth: 2, stroke: '#fff' }}
-                    connectNulls={false}
-                    strokeDasharray="0"
-                    animationDuration={1000}
-                  />
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={dashboardData.dailyTrend} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="cells" stroke="#007bff" strokeWidth={2} dot={{ r: 4 }} />
                 </LineChart>
               </ResponsiveContainer>
             </Card>
