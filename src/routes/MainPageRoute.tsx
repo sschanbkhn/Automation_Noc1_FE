@@ -60,6 +60,7 @@ import ClearThuebaoDaphien from "components/INOC1/I003";
 import LspQuocte from "components/INOC1/I004";
 import DataLspQuocte from "components/INOC1/I004_1";
 import ConfigReport from "components/RNOC1/R009";
+import Sleeping from "components/RNOC1/R005-SleepingCell/R005HomeSleepingCell";
 import DashboardR001 from "components/RNOC1/R001";
 import DashboardR007 from "components/RNOC1/R009"
 interface Props {
@@ -129,7 +130,10 @@ const MainPageRoute = (props: Props) => {
             case "DashboardR006":
               return <DashboardR001 />; // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
             case "DashboardR007":
-              return <DashboardR007 />; // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
+              return <DashboardR007 />;
+            case "SleepingCellManagement":
+              return <Sleeping />;
+              // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
             case "ScheduleTriggerForm":
                 return <ScheduleTriggerForm />;
             case "anm_uc1":

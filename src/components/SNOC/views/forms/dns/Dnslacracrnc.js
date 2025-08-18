@@ -1,13 +1,14 @@
 import React, { useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { Row, Col, Form, Button, Spinner } from "react-bootstrap";
-import TopNavbarDns from "../../dashboard/DashOrigin/TopNavbarDns";
+import { Button, Col, Form, Row, Spinner } from "react-bootstrap";
+import { Provider, useDispatch, useSelector } from "react-redux";
 import {
-  fetchDnsCheckResult3G,
   clearDnsResult,
+  fetchDnsCheckResult3G,
 } from "../../../redux/Dns/dnsSlice";
+import snocStore from "../../../store/snocStore";
+import TopNavbarDns from "../../dashboard/DashOrigin/TopNavbarDns";
 
-const Dnslacracrnc = () => {
+const DnslacracrncContent = () => {
   const dispatch = useDispatch();
   const [selectedNode, setSelectedNode] = useState("dnsgn");
   const [selectedMme, setSelectedMme] = useState("mmee1d");
@@ -20,7 +21,8 @@ const Dnslacracrnc = () => {
     dns2b = [],
     loading = false,
   } = useSelector((state) => state.dns || {});
-
+  const dnsState = useSelector((state) => state.dns);
+  console.log("💥 Toàn bộ state.dns:", dnsState);
   const handleCheck = () => {
     dispatch(
       fetchDnsCheckResult3G({
@@ -76,7 +78,30 @@ const Dnslacracrnc = () => {
                 value={selectedMme}
                 onChange={(e) => setSelectedMme(e.target.value)}
               >
+                <option value="mmee1a">mmee1a</option>
+                <option value="mmee1b">mmee1b</option>
+                <option value="mmee1c">mmee1c</option>
                 <option value="mmee1d">mmee1d</option>
+                <option value="mmee1e">mmee1e</option>
+                <option value="mmee1f">mmee1f</option>
+                <option value="mmee1g">mmee1g</option>
+                <option value="mmee1h">mmee1h</option>
+                <option value="mmee1i">mmee1i</option>
+                <option value="mmee1k">mmee1k</option>
+                <option value="mmee3c">mmee3c</option>
+                <option value="mmee3c">mmee3c</option>
+                <option value="mmee3c">mmee3c</option>
+                <option value="mmee3d">mmee3d</option>
+                <option value="mmee2a">mmee2a</option>
+                <option value="mmee2b">mmee2b</option>
+                <option value="mmee2c">mmee2c</option>
+                <option value="mmee2d">mmee2d</option>
+                <option value="mmee2e">mmee2e</option>
+                <option value="mmee2f">mmee2f</option>
+                <option value="mmee2g">mmee2g</option>
+                <option value="mmee2h">mmee2h</option>
+                <option value="mmeeet1a">mmeeet1a</option>
+                <option value="mmeeet1b">mmeeet1b</option>
               </Form.Select>
             </Form.Group>
           </Col>
@@ -159,7 +184,7 @@ const Dnslacracrnc = () => {
               <Form.Control
                 as="textarea"
                 rows={30}
-                value={dns1b.join("\n")}
+                value={dns1b.map((line) => line.trim()).join("\n")}
                 readOnly
               />
             </Form.Group>
@@ -179,7 +204,7 @@ const Dnslacracrnc = () => {
               <Form.Control
                 as="textarea"
                 rows={30}
-                value={dns2b.join("\n")}
+                value={dns2b.map((line) => line.trim()).join("\n")}
                 readOnly
               />
             </Form.Group>
@@ -189,5 +214,11 @@ const Dnslacracrnc = () => {
     </>
   );
 };
+
+const Dnslacracrnc = () => (
+  <Provider store={snocStore}>
+    <DnslacracrncContent />
+  </Provider>
+);
 
 export default Dnslacracrnc;

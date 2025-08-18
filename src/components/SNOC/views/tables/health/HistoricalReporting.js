@@ -1,19 +1,23 @@
-import React, { useEffect, useState, useRef } from "react";
-import { Provider, useDispatch, useSelector } from "react-redux";
+import { saveAs } from "file-saver";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  Row,
-  Col,
-  Card,
-  Table,
-  Spinner,
-  Form,
   Button,
+  Card,
+  Col,
+  Form,
   Pagination,
+  Row,
+  Spinner,
+  Table,
 } from "react-bootstrap";
-import { fetchPSCoreStatus } from "../../../redux/Healthcheck/healthcheckSlice";
+import { Provider, useDispatch, useSelector } from "react-redux";
+import * as ExcelJS from "exceljs";
 import { SERVER_MEDIA } from "../../../config/constant";
-import snocStore, { RootState, AppDispatch } from "../../../store/snocStore";
+import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
+import { fetchPSCoreStatus } from "../../../redux/Healthcheck/healthcheckSlice";
+import snocStore from "../../../store/snocStore";
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
+import WebSocketStatusBanner from "./../../../components/WebSocketStatusBanner";
 
 const statusRowClass = {
   OK: "table-success",
@@ -24,6 +28,8 @@ const statusRowClass = {
 };
 
 const HistoricalReportingContent = () => {
+  useScheduleWebSocket(); // ✅ Gọi ở đây
+
   const dispatch = useDispatch();
   const {
     items = [],
@@ -73,35 +79,85 @@ const HistoricalReportingContent = () => {
     return 0;
   });
 
+  const exportToExcel = async () => {
+    const data = sortedItems.map((item, index) => ({
+      STT: (currentPage - 1) * pageSize + index + 1,
+      Host: item.host,
+      IP: item.ip || "-", // ✅ Xuất IP
+      "Thời gian": new Date(item.created_at).toLocaleString(),
+      "Trạng thái": item.status,
+      "Ghi chú": Array.isArray(item.notes)
+        ? item.notes.map((n) => n.note).join(" | ")
+        : item.notes || "",
+      "File kết quả": item.result_file || "",
+    }));
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("HistoricalReport");
+
+    // Định nghĩa columns
+    const columns = Object.keys(data[0] || {}).map(key => ({
+      header: key,
+      key: key,
+      width: 20
+    }));
+    worksheet.columns = columns;
+
+    // Thêm data
+    data.forEach(row => {
+      worksheet.addRow(row);
+    });
+
+    // Generate Excel file
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
+    });
+    saveAs(blob, `historical_healthcheck_export.xlsx`);
+  };
+
   return (
     <>
       <TopNavbarHealth />
+      <WebSocketStatusBanner />
 
       <React.Fragment>
         <Row>
-          <Col md={12} className="mb-3">
-            <Form onSubmit={handleSearch} className="d-flex">
-              <Form.Control
-                type="text"
-                placeholder="Nhập tên node (host)"
-                value={host}
-                onChange={(e) => setHost(e.target.value)}
-                className="me-2"
-              />
-              <Button variant="primary" type="submit">
-                Tìm kiếm
-              </Button>
-            </Form>
-          </Col>
+          <Col md={12} className="mb-3"></Col>
         </Row>
 
         <Row>
           <Col md={12}>
             <Card>
-              <Card.Header>
-                <Card.Title as="h5">
+              <Card.Header className="d-flex justify-content-between align-items-center flex-wrap">
+                <Card.Title as="h5" className="mb-0">
                   Historical Reporting - Danh sách bản ghi healthcheck
                 </Card.Title>
+                <Form
+                  onSubmit={handleSearch}
+                  className="d-flex align-items-center ms-3"
+                  style={{ flexWrap: "nowrap", whiteSpace: "nowrap" }}
+                >
+                  <Form.Control
+                    type="text"
+                    placeholder="Nhập host hoặc IP"
+                    value={host}
+                    onChange={(e) => setHost(e.target.value)}
+                    className="me-2"
+                    style={{ width: "200px" }}
+                  />
+                  <Button variant="primary" type="submit" className="px-3">
+                    Tìm kiếm
+                  </Button>
+                  <Button
+                    variant="outline-success"
+                    type="button"
+                    className="px-3 ms-2"
+                    onClick={exportToExcel}
+                  >
+                    Xuất Excel
+                  </Button>
+                </Form>
               </Card.Header>
               <Card.Body>
                 {loading ? (
@@ -125,6 +181,7 @@ const HistoricalReportingContent = () => {
                           >
                             Host
                           </th>
+                          <th>IP</th> {/* ✅ Thêm cột IP */}
                           <th
                             onClick={() => handleSort("created_at")}
                             style={{ cursor: "pointer" }}
@@ -149,20 +206,15 @@ const HistoricalReportingContent = () => {
                           >
                             <td>{(currentPage - 1) * pageSize + index + 1}</td>
                             <td>{item.host}</td>
+                            <td>{item.ip || "-"}</td> {/* ✅ Hiển thị IP */}
                             <td>
                               {new Date(item.created_at).toLocaleString()}
                             </td>
                             <td>{item.status}</td>
-                            <td>
-                              <ul className="mb-0 ps-3">
-                                {Array.isArray(item.notes) ? (
-                                  item.notes.map((noteObj, idx) => (
-                                    <li key={idx}>{noteObj.note}</li>
-                                  ))
-                                ) : (
-                                  <li>Không có ghi chú</li>
-                                )}
-                              </ul>
+                            <td style={{ whiteSpace: "pre-line" }}>
+                              {Array.isArray(item.notes)
+                                ? item.notes.map((n) => n.note).join("\n")
+                                : item.notes || ""}
                             </td>
                             <td>
                               {item.result_file ? (

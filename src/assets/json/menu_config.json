@@ -103,9 +103,9 @@
           "icon": "bi bi-grid"
         },
         {
-          "code": "DashboardRnocRoom",
-          "name": "Dashboard detail",
-          "url": "/dashboardrnocroom",
+          "code": "SleepingCellManagement",
+          "name": "Sleeping Cell Management",
+          "url": "/sleepingcellmanagement",
           "icon": "bi bi-grid"
         },
         {

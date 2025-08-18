@@ -3,17 +3,18 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import snocApi from "../../api/snocApiWithAutoToken";
 import { showTemporaryAlert } from "../Alert/alertSlice";
 
+// Lấy danh sách Platform từ backend
 export const fetchPlatforms = createAsyncThunk(
   "platformDevice/fetchPlatforms",
   async (_, { rejectWithValue, dispatch }) => {
     try {
       const response = await snocApi.get("/nornirps/NornirGetPlatformView/");
-
-      // Đảm bảo response trả về đúng định dạng [{ name, device_count }]
-      const platforms = response.data.map((p) =>
-        typeof p === "object" && p.name ? p : { name: p, device_count: 0 }
-      );
-
+      // Đảm bảo trả về [{id, name, device_count}]
+      const platforms = response.data.map((p, idx) => ({
+        id: p.id || idx + 1,
+        name: p.name,
+        device_count: p.device_count || 0,
+      }));
       return platforms;
     } catch (error) {
       const msg =

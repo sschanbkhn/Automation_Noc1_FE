@@ -1,43 +1,118 @@
-import { useEffect } from "react";
+// src/hooks/useScheduleWebSocket.js
+import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
-import { updateLastRunAt } from "../redux/Healthcheck/healthcheckSlice";
+import {
+  updateLastRunAt,
+  setWebSocketStatus,
+  updateSystemStatusPatch,
+  wsMergeHourlyItems, // 👈 NHẬN GÓI CHART REALTIME
+} from "../redux/Healthcheck/healthcheckSlice";
+import { showTemporaryAlert } from "../redux/Alert/alertSlice";
 
-/*
+const WS_URL = "ws://10.155.43.201:8000/ws/healthcheck/";
+const RECONNECT_INTERVAL = 5000;
+
 const useScheduleWebSocket = () => {
   const dispatch = useDispatch();
+  const [isConnected, setIsConnected] = useState(null);
+  const [hasEverConnected, setHasEverConnected] = useState(false);
 
-  useEffect(() => {
-    console.log("⚠️ WebSocket tạm thời được disable");
+  const socketRef = useRef(null);
+  const timerRef = useRef(null);
+  const isMountedRef = useRef(true);
 
-    // Tạm thời không làm gì, chỉ return cleanup function rỗng
-    return () => {
-      // Cleanup rỗng
+  const connect = () => {
+    const socket = new WebSocket(WS_URL);
+    socketRef.current = socket;
+
+    socket.onopen = () => {
+      console.log("✅ WebSocket connected");
+      if (!isMountedRef.current) return;
+
+      setIsConnected(true);
+      setHasEverConnected(true);
+      dispatch(setWebSocketStatus(true));
     };
-  }, [dispatch]);
 
-  // Return empty object hoặc null
-  return {};
-};
+    socket.onmessage = (event) => {
+      if (!isMountedRef.current) return;
 
-export default useScheduleWebSocket;
+      try {
+        const data = JSON.parse(event.data);
+        console.log("📥 WebSocket message:", data);
 
-*/
+        // 1) Cập nhật last_run_at của schedule (nếu có)
+        if (data.schedule_name && data.last_run_at) {
+          dispatch(
+            updateLastRunAt({
+              name: data.schedule_name,
+              status: data.status,
+              last_run_at: data.last_run_at,
+            })
+          );
+        }
 
-const useScheduleWebSocket = () => {
-  const dispatch = useDispatch();
+        // 2) Patch subsystem trên dashboard (system_status_patch)
+        if (data.type === "system_status_patch" && data.payload) {
+          dispatch(updateSystemStatusPatch(data.payload));
+          dispatch(
+            showTemporaryAlert({
+              type: "success",
+              message: `🔁 Subsystem "${data.payload.subsystem}" trong nhóm "${data.payload.group}" vừa được cập nhật.`,
+            })
+          );
+          return; // tránh rơi qua các nhánh khác
+        }
+
+        // 3) 🔥 Dữ liệu biểu đồ NOK theo giờ (realtime) từ schedule/manual
+        if (data.type === "hourly_items" && Array.isArray(data.items)) {
+          // Merge theo platform; reducer sẽ dedup host|hour|platform + prune > 24h
+          dispatch(wsMergeHourlyItems({ items: data.items, platform: data.platform }));
+          return;
+        }
+
+        // (tuỳ chọn) xử lý thêm các loại message khác (causecode_result, logs, ...)
+      } catch (err) {
+        console.error("❌ JSON parse error:", err);
+      }
+    };
+
+    socket.onclose = () => {
+      console.warn("⚠️ WebSocket closed");
+      if (!isMountedRef.current) return;
+
+      setIsConnected(false);
+      dispatch(setWebSocketStatus(false));
+      reconnect();
+    };
+
+    socket.onerror = () => {
+      // Kích hoạt onclose để reconnect
+      try {
+        socket.close();
+      } catch (_) {}
+    };
+  };
+
+  const reconnect = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(connect, RECONNECT_INTERVAL);
+  };
 
   useEffect(() => {
+    isMountedRef.current = true;
+    connect();
 
-  }, [dispatch]);
+    return () => {
+      isMountedRef.current = false;
+      try {
+        if (socketRef.current) socketRef.current.close();
+      } catch (_) {}
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  return { isConnected, hasEverConnected };
 };
 
 export default useScheduleWebSocket;
-
-// const socket = new WebSocket("ws://localhost:8000/ws/healthcheck/");
-
-// socket.onopen = () => console.log("✅ Connected to backend WebSocket");
-// socket.onmessage = (e) => {
-//   console.log("📡 Message from backend:", e.data);
-// };
-// socket.onerror = (err) => console.error("❌ WebSocket error:", err);
-// socket.onclose = () => console.warn("⚠️ WebSocket closed");

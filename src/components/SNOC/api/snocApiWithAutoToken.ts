@@ -41,6 +41,7 @@ export const loginAndGetToken = async (): Promise<string> => {
 
   if (response.data?.success && response.data?.token) {
     return response.data.token;
+    
   }
 
   throw new Error(response.data?.message || "Đăng nhập SNOC thất bại");
