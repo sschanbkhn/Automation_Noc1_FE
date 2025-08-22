@@ -18,7 +18,8 @@ const CtrlDynamicButton = (props: Props) => {
         }
         for(let i = 0;i < ActionDefs.length;i++)
         {
-            html.push(<CtrlButton title={ActionDefs[i].Title} titleTooltip={ActionDefs[i].TitleTooltip} key={ActionDefs[i].Key} icon={ActionDefs[i].Icon} onClick={() => { onAction(ActionDefs[i].Action) }} />);
+            const key = ActionDefs[i].Key || `action-${i}`;
+            html.push(<CtrlButton title={ActionDefs[i].Title} titleTooltip={ActionDefs[i].TitleTooltip} key={key} icon={ActionDefs[i].Icon} onClick={() => { onAction(ActionDefs[i].Action) }} />);
         }
         return html;
     }

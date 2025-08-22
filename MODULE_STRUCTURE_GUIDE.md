@@ -236,59 +236,206 @@ export const Reducer = (state: IState = InitState, action: any) => {
 
 ### 5. Frontend - ListView.json
 
-**Mục đích:** Configuration cho table display.
+**Mục đích:** Configuration cho table display và action buttons.
+
+**📋 Cấu trúc chuẩn:**
 
 ```json
 {
   "DataGrid": {
-    "Key": "ModuleGrid",
-    "Title": "Quản lý Module",
+    "Key": "[ModuleName]_Grid",
+    "Title": "Quản lý [Tên Module]",
     "ColumnDefs": [
       {
-        "field": "Code",
-        "headerName": "Mã",
-        "width": 150,
-        "sortable": true,
-        "filter": true
-      },
-      {
-        "field": "Name", 
-        "headerName": "Tên",
-        "width": 200,
-        "sortable": true,
-        "filter": true
-      },
-      {
-        "field": "Description",
-        "headerName": "Mô tả",
-        "width": 300,
-        "sortable": true,
-        "filter": true
+        "Key": "field_name",
+        "Title": "Tiêu đề cột",
+        "Align": "center|left|right",
+        "Width": 150,
+        "CellRenderer": "function(params) { return params.value; }"
       }
     ],
     "ActionDefs": [
       {
-        "name": "onClickCreate",
-        "text": "Tạo mới",
-        "icon": "bi bi-plus-circle",
-        "type": "primary"
-      },
-      {
-        "name": "onClickUpdate",
-        "text": "Sửa",
-        "icon": "bi bi-pencil",
-        "type": "warning"
-      },
-      {
-        "name": "onClickDelete",
-        "text": "Xóa",
-        "icon": "bi bi-trash",
-        "type": "danger"
+        "Key": "ActionName",
+        "Title": "Tooltip text",
+        "Type": "Button",
+        "TitleTooltip": "Mô tả action",
+        "Icon": "icon-name",
+        "Action": "onClickActionName"
       }
     ]
   }
 }
 ```
+
+**🔧 Chi tiết các thành phần:**
+
+#### DataGrid Configuration:
+- **Key**: Unique identifier cho grid (format: `[ModuleName]_Grid`)
+- **Title**: Tiêu đề hiển thị trên card chứa table
+
+#### ColumnDefs Properties:
+- **Key**: Tên field trong data object (mapping với backend)
+- **Title**: Tiêu đề cột hiển thị trên UI
+- **Align**: Căn chỉnh nội dung (`center`, `left`, `right`)
+- **Width**: Độ rộng cột (optional)
+- **Format**: Format cho data type (`dd/MM/yyyy`, `dd/MM/yyyy HH:mm`) (optional)
+- **CellRenderer**: Custom function để format cell (optional - không được CtrlDynamicTable hỗ trợ)
+
+#### ActionDefs Properties:
+- **Key**: Unique identifier cho action button
+- **Title**: Text hiển thị trên button (để trống cho icon-only)
+- **Type**: Loại button (`Button`, `primary`, `danger`, etc.)
+- **TitleTooltip**: Tooltip text khi hover
+- **Icon**: Icon class name (FontAwesome, Bootstrap Icons)
+- **Action**: Tên function handler trong component
+
+**📝 Ví dụ thực tế từ I004_1:**
+
+```json
+{
+  "DataGrid": {
+    "Key": "I004_1_Grid",
+    "Title": "Quản lý dữ liệu LSP",
+    "ColumnDefs": [
+      {
+        "Key": "name",
+        "Title": "Tên LSP",
+        "Align": "center"
+      },
+      {
+        "Key": "host_name_from", 
+        "Title": "From Host",
+        "Align": "center"
+      },
+      {
+        "Key": "bandwidth",
+        "Title": "Bandwidth (GB)",
+        "Align": "center"
+      },
+      {
+        "Key": "last_update",
+        "Title": "Last Update",
+        "Align": "center",
+        "Format": "dd/MM/yyyy HH:mm"
+      }
+    ],
+    "ActionDefs": [
+      {
+        "Key": "Refresh",
+        "Title": "",
+        "Type": "Button",
+        "TitleTooltip": "Làm mới dữ liệu",
+        "Icon": "edit",
+        "Action": "onClickRefresh"
+      },
+      {
+        "Key": "Filter",
+        "Title": "",
+        "Type": "Button", 
+        "TitleTooltip": "Lọc theo khoảng thời gian",
+        "Icon": "search",
+        "Action": "onClickFilter"
+      },
+      {
+        "Key": "ExportCSV",
+        "Title": "",
+        "Type": "Button",
+        "TitleTooltip": "Xuất CSV",
+        "Icon": "download",
+        "Action": "onClickExportCSV"
+      }
+    ]
+  }
+}
+```
+
+**🎨 Format Examples:**
+
+```javascript
+// Date only formatting
+"Format": "dd/MM/yyyy"
+
+// DateTime formatting (with hours and minutes)  
+"Format": "dd/MM/yyyy HH:mm"
+```
+
+**🎨 CellRenderer Examples (Not supported by CtrlDynamicTable):**
+
+```javascript
+// Note: CellRenderer is not supported by CtrlDynamicTable component
+// Use Format property instead for date/time formatting
+
+// For custom formatting needs, consider extending CtrlDynamicTable
+// or using a different table component
+```
+
+**🔤 Icon Classes hỗ trợ:**
+- **FontAwesome**: `fa fa-plus`, `fa fa-edit`, `fa fa-trash`, `fa fa-download`
+- **Bootstrap Icons**: `bi bi-plus-circle`, `bi bi-pencil`, `bi bi-trash`
+- **Custom Icons**: `edit`, `search`, `download`, `add`, `delete`
+
+**⚡ Action Handlers mapping:**
+
+```typescript
+// Trong component index.tsx
+const ActionEvents = {
+    onClickRefresh: async () => {
+        await loadData();
+        refNotification.current.showNotification("success", "Dữ liệu đã được làm mới");
+    },
+    onClickFilter: () => {
+        setShowDateFilter(!showDateFilter);
+    },
+    onClickExportCSV: () => {
+        exportToCSV();
+    },
+    onClickCreate: () => {
+        setModuleId('');
+        setDialogVisible(true);
+    },
+    onClickUpdate: () => {
+        if(!getRowId()) { 
+            refNotification.current.showNotification("warning", Message.Require_Row_Selection); 
+            return; 
+        }
+        setModuleId(getRowId());
+        setDialogVisible(true);
+    },
+    onClickDelete: async () => {
+        if(!getRowId()) { 
+            refNotification.current.showNotification("warning", Message.Require_Row_Selection); 
+            return; 
+        }
+        refConfirm_DeleteItem.current.showConfirm();
+    }
+}
+```
+
+**🎯 Best Practices:**
+
+1. **Naming Convention**: 
+   - Key: PascalCase cho actions, snake_case cho fields
+   - Action handlers: `onClickActionName` format
+
+2. **Responsive Design**:
+   - Không set Width cho tất cả columns, để table tự responsive
+   - Ưu tiên Align="center" cho numbers và dates
+
+3. **Performance**:
+   - CellRenderer nên đơn giản, tránh logic phức tạp
+   - Cache date formatters nếu có nhiều date columns
+
+4. **User Experience**:
+   - TitleTooltip rõ ràng cho tất cả actions
+   - Icon phù hợp với action (create=plus, edit=pencil, delete=trash)
+
+5. **Data Types Support**:
+   - String: No special handling needed
+   - Number: Use CellRenderer for formatting
+   - Date: Always use CellRenderer với Vietnamese locale
+   - Boolean: Convert to badge/status display
+   - Array/Object: Convert to string representation
 
 ### 6. Frontend - Form Component
 

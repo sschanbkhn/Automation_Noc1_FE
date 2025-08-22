@@ -1,0 +1,85 @@
+{
+  "DataGrid": {
+    "Key": "I004_1_Grid",
+    "Title": "Quản lý dữ liệu LSP",
+    "ColumnDefs": [
+      {
+        "Key": "name",
+        "Title": "Tên LSP",
+        "Align": "center"
+      },
+      {
+        "Key": "host_name_from", 
+        "Title": "From Host",
+        "Align": "center"
+      },
+      {
+        "Key": "from_address",
+        "Title": "From Address",
+        "Align": "center"
+      },
+      {
+        "Key": "host_name_to",
+        "Title": "To Host",
+        "Align": "center"
+      },
+      {
+        "Key": "to_address",
+        "Title": "To Address", 
+        "Align": "center"
+      },
+      {
+        "Key": "action",
+        "Title": "Action",
+        "Align": "center"
+      },
+      {
+        "Key": "operational_status",
+        "Title": "Status",
+        "Align": "center"
+      },
+      {
+        "Key": "bandwidth",
+        "Title": "Bandwidth (GB)",
+        "Align": "center"
+      },
+      {
+        "Key": "path_lsp",
+        "Title": "Path LSP",
+        "Align": "center"
+      },
+      {
+        "Key": "last_update",
+        "Title": "Last Update",
+        "Align": "center",
+        "Format": "dd/MM/yyyy HH:mm"
+      }
+    ],
+    "ActionDefs": [
+      {
+        "Key": "Refresh",
+        "Title": "",
+        "Type": "Button",
+        "TitleTooltip": "Làm mới dữ liệu",
+        "Icon": "edit",
+        "Action": "onClickRefresh"
+      },
+      {
+        "Key": "Filter",
+        "Title": "",
+        "Type": "Button", 
+        "TitleTooltip": "Lọc theo khoảng thời gian",
+        "Icon": "search",
+        "Action": "onClickFilter"
+      },
+      {
+        "Key": "ExportCSV",
+        "Title": "Xuất CSV",
+        "Type": "Button",
+        "TitleTooltip": "Xuất CSV",
+        "Icon": "download",
+        "Action": "onClickExportCSV"
+      }
+    ]
+  }
+}

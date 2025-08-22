@@ -8,7 +8,7 @@ import RnocR009Service from 'services/RnocR009Service';
 import { downloadFile } from 'helpers/downloadHelper';
 import dailyBtsSummary from './daily_bts_summary.json';
 import provincialSummary from './provincial_summary.json';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, ComposedChart } from 'recharts';
 
 interface DashboardData {
   totalSites: number;
@@ -162,13 +162,13 @@ const Dashboard = () => {
     technologyBreakdown: { '4G': 0, '5G': 0 },
     bandBreakdown: { '900MHz': 0, '1800MHz': 0, '2100MHz': 0, '2600MHz': 0 },
     dailyTrend: [
-      { date: '2025-07-21', sites: 35678, cells: 47890 },
-      { date: '2025-07-22', sites: 35789, cells: 48123 },
-      { date: '2025-07-23', sites: 35890, cells: 48345 },
-      { date: '2025-07-24', sites: 35901, cells: 48567 },
-      { date: '2025-07-25', sites: 36012, cells: 48789 },
-      { date: '2025-07-26', sites: 36123, cells: 49012 },
-      { date: '2025-07-27', sites: 36234, cells: 49234 },
+      { date: '2025-08-15', sites: 35678, cells: 127890 },
+      { date: '2025-08-16', sites: 35685, cells: 127923 },
+      { date: '2025-08-17', sites: 35690, cells: 127945 },
+      { date: '2025-08-18', sites: 35688, cells: 127938 },
+      { date: '2025-08-19', sites: 35695, cells: 127956 },
+      { date: '2025-08-20', sites: 35701, cells: 127974 },
+      { date: '2025-08-21', sites: 35704, cells: 127981 },
     ],
     detailedData: {
       huawei4G: [],
@@ -302,6 +302,78 @@ const Dashboard = () => {
     });
   }, [dashboardData.provincialData, sortConfig]);
 
+  // Generate 7 days array from selected date
+  const generateLast7Days = (selectedDate: string) => {
+    const endDate = new Date(selectedDate);
+    const dates = [];
+    
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(endDate);
+      date.setDate(endDate.getDate() - i);
+      dates.push(date.toISOString().split('T')[0]);
+    }
+    
+    return dates;
+  };
+
+  // Load 7 days trend data
+  const load7DaysTrendData = async (selectedDate: string, technology: string) => {
+    const dates = generateLast7Days(selectedDate);
+    const trendData = [];
+    
+    try {
+      for (const date of dates) {
+        let dayResponse: any;
+        
+        if (technology === '4G') {
+          dayResponse = await RnocR009Service.GetDashboard4GData(date);
+        } else if (technology === '5G') {
+          dayResponse = await RnocR009Service.GetDashboard5GData(date);
+        }
+        
+        // Check if response has Data property
+        if (dayResponse && dayResponse.Data) {
+          dayResponse = dayResponse.Data;
+        }
+        
+        // Extract total cells from response or use demo data
+        let totalCells = 0;
+        let totalSites = 0;
+        
+        if (dayResponse && dayResponse.provincialTotals) {
+          totalCells = technology === '4G' 
+            ? (dayResponse.provincialTotals.total_4g_cells || 0)
+            : (dayResponse.provincialTotals.total5GCells || 0);
+          totalSites = (dayResponse.provincialTotals.nokia_sites || 0) + (dayResponse.provincialTotals.huawei_sites || 0);
+        } else {
+          // Demo data với slight variations
+          const baseDate = new Date(date);
+          const dayIndex = dates.indexOf(date);
+          totalCells = technology === '4G' ? 127890 + (dayIndex * 15) + Math.floor(Math.random() * 10) : 48500 + (dayIndex * 8) + Math.floor(Math.random() * 5);
+          totalSites = 35678 + (dayIndex * 3) + Math.floor(Math.random() * 3);
+        }
+        
+        trendData.push({
+          date: date,
+          sites: totalSites,
+          cells: totalCells
+        });
+      }
+    } catch (error) {
+      console.error('Error loading 7 days trend data:', error);
+      // Fallback to demo data
+      dates.forEach((date, index) => {
+        trendData.push({
+          date: date,
+          sites: 35678 + (index * 3),
+          cells: selectedTechnology === '4G' ? 127890 + (index * 15) : 48500 + (index * 8)
+        });
+      });
+    }
+    
+    return trendData;
+  };
+
   // Load dashboard data
   const loadDashboardData = useCallback(async () => {
     if (!selectedDate) {
@@ -317,6 +389,9 @@ const Dashboard = () => {
       console.log('=== DATE DEBUG ===');
       console.log('Selected date:', formattedDate);
       console.log('=== END DATE DEBUG ===');
+
+      // Load 7 days trend data
+      const trendData = await load7DaysTrendData(selectedDate, selectedTechnology);
 
       let dashboardResponse: any;
 
@@ -363,13 +438,13 @@ const Dashboard = () => {
               Band2600MHz: 0
             },
             dailyTrend: [
-              { date: '2025-07-21', sites: 1450, cells: 4350 },
-              { date: '2025-07-22', sites: 1460, cells: 4380 },
-              { date: '2025-07-23', sites: 1470, cells: 4410 },
-              { date: '2025-07-24', sites: 1480, cells: 4440 },
-              { date: '2025-07-25', sites: 1490, cells: 4470 },
-              { date: '2025-07-26', sites: 1495, cells: 4485 },
-              { date: '2025-07-27', sites: 1500, cells: 4500 },
+              { date: '2025-08-15', sites: 1450, cells: 4350 },
+              { date: '2025-08-16', sites: 1455, cells: 4365 },
+              { date: '2025-08-17', sites: 1460, cells: 4380 },
+              { date: '2025-08-18', sites: 1458, cells: 4374 },
+              { date: '2025-08-19', sites: 1463, cells: 4389 },
+              { date: '2025-08-20', sites: 1467, cells: 4401 },
+              { date: '2025-08-21', sites: 1470, cells: 4410 },
             ],
             provincialData: [
               {
@@ -459,15 +534,6 @@ const Dashboard = () => {
               Chbw40Mhz: 200,
               Chbw20Mhz: 100
             },
-            dailyTrend: [
-              { date: '2025-07-21', sites: 480, cells: 1440 },
-              { date: '2025-07-22', sites: 485, cells: 1455 },
-              { date: '2025-07-23', sites: 490, cells: 1470 },
-              { date: '2025-07-24', sites: 495, cells: 1485 },
-              { date: '2025-07-25', sites: 498, cells: 1494 },
-              { date: '2025-07-26', sites: 499, cells: 1497 },
-              { date: '2025-07-27', sites: 500, cells: 1500 },
-            ],
             provincialData: [
               {
                 province: 'Hà Nội',
@@ -545,11 +611,7 @@ const Dashboard = () => {
             '2100MHz': dashboardResponse?.BandBreakdown?.Band2100MHz || 0,
             '2600MHz': dashboardResponse?.BandBreakdown?.Band2600MHz || 0
           },
-          dailyTrend: dashboardResponse?.DailyTrend?.map((item: any) => ({
-            date: item.Date,
-            sites: item.Sites,
-            cells: item.Cells
-          })) || [],
+          dailyTrend: trendData,
           detailedData: {
             huawei4G: [],
             nokia4G: [],
@@ -643,11 +705,7 @@ const Dashboard = () => {
             '2100MHz': dashboardResponse?.BandBreakdown?.Chbw60Mhz || 0,
             '2600MHz': dashboardResponse?.BandBreakdown?.Chbw40Mhz || 0
           },
-          dailyTrend: dashboardResponse?.DailyTrend?.map((item: any) => ({
-            date: item.Date,
-            sites: item.Sites,
-            cells: item.Cells
-          })) || [],
+          dailyTrend: trendData,
           detailedData: {
             huawei4G: [],
             nokia4G: [],
@@ -902,67 +960,307 @@ const Dashboard = () => {
           </div>
         </div>
 
-                 {/* Statistics Grid */}
-         <div className="row mb-4">
-           <StatCard
-             title="Tổng Sites"
-             value={dashboardData.totalSites}
-             icon={{ class: "fas fa-broadcast-tower", color: "text-white", bg: "bg-gradient-primary" }}
-             color="border-0 shadow-lg"
-             description="Tổng số trạm"
-           />
-           <StatCard
-             title={selectedTechnology === '4G' ? "Tổng Cell 4G" : `${selectedTechnology} Cells`}
-             value={selectedTechnology === '4G' 
-               ? (dashboardData.provincialTotals.moran_cells || 0) + 
-                 (dashboardData.provincialTotals.iot_cells || 0) + 
-                 (dashboardData.provincialTotals.huawei_4g_cells || 0) + 
-                 (dashboardData.provincialTotals.nokia_4g_cells || 0)
-               : (dashboardData.provincialTotals as any).total5GCells || 0}
-             icon={{ class: "fas fa-signal", color: "text-white", bg: "bg-gradient-info" }}
-             color="border-0 shadow-lg"
-             description={selectedTechnology === '4G' ? "Tổng tất cả Cell 4G" : `Cell ${selectedTechnology}`}
-           />
-           {selectedTechnology === '4G' && (
-             <>
-               <StatCard
-                 title="Cell Moran"
-                 value={dashboardData.provincialTotals.moran_cells}
-                 icon={{ class: "fas fa-wifi", color: "text-white", bg: "bg-gradient-success" }}
-                 color="border-0 shadow-lg"
-                 description="Cell Moran"
-               />
-               <StatCard
-                 title="Cell IOT"
-                 value={dashboardData.provincialTotals.iot_cells}
-                 icon={{ class: "fas fa-network-wired", color: "text-white", bg: "bg-gradient-warning" }}
-                 color="border-0 shadow-lg"
-                 description="Cell IOT"
-               />
-               <StatCard
-                 title="Tổng cell Nokia"
-                 value={dashboardData.provincialTotals.nokia_4g_cells || 0}
-                 icon={{ class: "fas fa-tower-broadcast", color: "text-white", bg: "bg-gradient-danger" }}
-                 color="border-0 shadow-lg"
-                 description="Tổng cell Nokia 4G"
-               />
-               <StatCard
-                 title="Tổng cell Huawei"
-                 value={dashboardData.provincialTotals.huawei_4g_cells || 0}
-                 icon={{ class: "fas fa-tower-broadcast", color: "text-white", bg: "bg-gradient-warning" }}
-                 color="border-0 shadow-lg"
-                 description="Tổng cell Huawei 4G"
-               />
-             </>
-           )}
-         </div>
+                 {/* Compact Layout: Statistics + Band + MIMO (Left) + Vendor Distribution (Right) */}
+         <div className="row mb-3">
+           {/* Left Side: Statistics + Band Distribution + MIMO Config */}
+           <div className="col-lg-6">
+             {/* Statistics Cards */}
+             <div className="row mb-2">
+               <div className="col-md-6 mb-2">
+                 <div className="card border-0 shadow-sm h-100" style={{
+                   background: 'linear-gradient(135deg, #007bff 0%, #0056b3 100%)',
+                   transition: 'all 0.3s ease'
+                 }}>
+                   <div className="card-body text-white p-2">
+                     <div className="d-flex justify-content-between align-items-center">
+                       <div>
+                         <h6 className="card-title text-white-75 mb-1 fs-6">Tổng Sites</h6>
+                         <h3 className="font-weight-bold mb-0 text-white">
+                           {((dashboardData.provincialTotals.nokia_sites || 0) + 
+                             (dashboardData.provincialTotals.huawei_sites || 0)).toLocaleString()}
+                         </h3>
+                       </div>
+                       <div className="p-2 rounded" style={{ background: 'rgba(255, 255, 255, 0.2)' }}>
+                         <i className="fas fa-broadcast-tower text-white"></i>
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+               
+               <div className="col-md-6 mb-2">
+                 <div className="card border-0 shadow-sm h-100" style={{
+                   background: 'linear-gradient(135deg, #17a2b8 0%, #138496 100%)',
+                   transition: 'all 0.3s ease'
+                 }}>
+                   <div className="card-body text-white p-2">
+                     <div className="d-flex justify-content-between align-items-center">
+                       <div>
+                         <h6 className="card-title text-white-75 mb-1 fs-6">
+                           {selectedTechnology === '4G' ? "Tổng cell 4G" : `${selectedTechnology} Cells`}
+                         </h6>
+                         <h3 className="font-weight-bold mb-0 text-white">
+                           {selectedTechnology === '4G' 
+                             ? ((dashboardData.provincialTotals.total_4g_cells || 0) - 
+                                (dashboardData.provincialTotals.moran_cells || 0) - 
+                                (dashboardData.provincialTotals.iot_cells || 0)).toLocaleString()
+                             : ((dashboardData.provincialTotals as any).total5GCells || 0).toLocaleString()
+                           }
+                         </h3>
+                       </div>
+                       <div className="p-2 rounded" style={{ background: 'rgba(255, 255, 255, 0.2)' }}>
+                         <i className="fas fa-signal text-white"></i>
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+               </div>
 
-                 {/* Vendor Distribution Pie Chart */}
-         <div className="row mb-4">
-           <div className="col-12">
+               {selectedTechnology === '4G' && (
+                 <>
+                   <div className="col-md-6 mb-2">
+                     <div className="card border-0 shadow-sm h-100" style={{
+                       background: 'linear-gradient(135deg, #28a745 0%, #1e7e34 100%)',
+                       transition: 'all 0.3s ease'
+                     }}>
+                       <div className="card-body text-white p-2">
+                         <div className="d-flex justify-content-between align-items-center">
+                           <div>
+                             <h6 className="card-title text-white-75 mb-1 fs-6">Cell Moran</h6>
+                             <h3 className="font-weight-bold mb-0 text-white">{dashboardData.provincialTotals.moran_cells?.toLocaleString() || '0'}</h3>
+                           </div>
+                           <div className="p-2 rounded" style={{ background: 'rgba(255, 255, 255, 0.2)' }}>
+                             <i className="fas fa-wifi text-white"></i>
+                           </div>
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+                   
+                   <div className="col-md-6 mb-2">
+                     <div className="card border-0 shadow-sm h-100" style={{
+                       background: 'linear-gradient(135deg, #ffc107 0%, #e0a800 100%)',
+                       transition: 'all 0.3s ease'
+                     }}>
+                       <div className="card-body text-white p-2">
+                         <div className="d-flex justify-content-between align-items-center">
+                           <div>
+                             <h6 className="card-title text-white-75 mb-1 fs-6">Cell IOT</h6>
+                             <h3 className="font-weight-bold mb-0 text-white">{dashboardData.provincialTotals.iot_cells?.toLocaleString() || '0'}</h3>
+                           </div>
+                           <div className="p-2 rounded" style={{ background: 'rgba(255, 255, 255, 0.2)' }}>
+                             <i className="fas fa-network-wired text-white"></i>
+                           </div>
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+                 </>
+               )}
+             </div>
+             
+             {/* Band Distribution */}
+             <div className="row mb-2">
+               <div className="col-12">
+                 <Card title="Phân Bố Tần Số" icon="fas fa-signal">
+                   <div className="row">
+                     {selectedTechnology === '4G' ? (
+                       <>
+                         <div className="col-6 mb-1">
+                           <div className="text-center py-1 px-2 rounded" style={{
+                             background: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)',
+                             color: 'white'
+                           }}>
+                             <i className="fas fa-wifi" style={{ fontSize: '12px' }}></i>
+                             <div className="fs-8 mb-0">900MHz</div>
+                             <div className="fw-bold mb-0" style={{ fontSize: '14px' }}>{dashboardData.bandBreakdown['900MHz']}</div>
+                           </div>
+                         </div>
+                         <div className="col-6 mb-1">
+                           <div className="text-center py-1 px-2 rounded" style={{
+                             background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
+                             color: 'white'
+                           }}>
+                             <i className="fas fa-broadcast-tower" style={{ fontSize: '12px' }}></i>
+                             <div className="fs-8 mb-0">1800MHz</div>
+                             <div className="fw-bold mb-0" style={{ fontSize: '14px' }}>{dashboardData.bandBreakdown['1800MHz']}</div>
+                           </div>
+                         </div>
+                         <div className="col-6 mb-1">
+                           <div className="text-center py-1 px-2 rounded" style={{
+                             background: 'linear-gradient(135deg, #f39c12 0%, #e67e22 100%)',
+                             color: 'white'
+                           }}>
+                             <i className="fas fa-satellite-dish" style={{ fontSize: '12px' }}></i>
+                             <div className="fs-8 mb-0">2100MHz</div>
+                             <div className="fw-bold mb-0" style={{ fontSize: '14px' }}>{dashboardData.bandBreakdown['2100MHz']}</div>
+                           </div>
+                         </div>
+                         <div className="col-6 mb-1">
+                           <div className="text-center py-1 px-2 rounded" style={{
+                             background: 'linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%)',
+                             color: 'white'
+                           }}>
+                             <i className="fas fa-network-wired" style={{ fontSize: '12px' }}></i>
+                             <div className="fs-8 mb-0">2600MHz</div>
+                             <div className="fw-bold mb-0" style={{ fontSize: '14px' }}>{dashboardData.bandBreakdown['2600MHz']}</div>
+                           </div>
+                         </div>
+                       </>
+                     ) : (
+                       <>
+                         <div className="col mb-1">
+                           <div className="text-center py-1 px-1 rounded" style={{
+                             background: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)',
+                             color: 'white'
+                           }}>
+                             <i className="fas fa-wifi" style={{ fontSize: '10px' }}></i>
+                             <div style={{ fontSize: '10px' }}>100MHz</div>
+                             <div className="fw-bold" style={{ fontSize: '12px' }}>{((dashboardData.provincialTotals as any).chbw100Mhz || 0).toLocaleString()}</div>
+                           </div>
+                         </div>
+                         <div className="col mb-1">
+                           <div className="text-center py-1 px-1 rounded" style={{
+                             background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
+                             color: 'white'
+                           }}>
+                             <i className="fas fa-broadcast-tower" style={{ fontSize: '10px' }}></i>
+                             <div style={{ fontSize: '10px' }}>80MHz</div>
+                             <div className="fw-bold" style={{ fontSize: '12px' }}>{((dashboardData.provincialTotals as any).chbw80Mhz || 0).toLocaleString()}</div>
+                           </div>
+                         </div>
+                         <div className="col mb-1">
+                           <div className="text-center py-1 px-1 rounded" style={{
+                             background: 'linear-gradient(135deg, #f39c12 0%, #e67e22 100%)',
+                             color: 'white'
+                           }}>
+                             <i className="fas fa-satellite-dish" style={{ fontSize: '10px' }}></i>
+                             <div style={{ fontSize: '10px' }}>60MHz</div>
+                             <div className="fw-bold" style={{ fontSize: '12px' }}>{((dashboardData.provincialTotals as any).chbw60Mhz || 0).toLocaleString()}</div>
+                           </div>
+                         </div>
+                         <div className="col mb-1">
+                           <div className="text-center py-1 px-1 rounded" style={{
+                             background: 'linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%)',
+                             color: 'white'
+                           }}>
+                             <i className="fas fa-network-wired" style={{ fontSize: '10px' }}></i>
+                             <div style={{ fontSize: '10px' }}>40MHz</div>
+                             <div className="fw-bold" style={{ fontSize: '12px' }}>{((dashboardData.provincialTotals as any).chbw40Mhz || 0).toLocaleString()}</div>
+                           </div>
+                         </div>
+                         <div className="col mb-1">
+                           <div className="text-center py-1 px-1 rounded" style={{
+                             background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+                             color: 'white'
+                           }}>
+                             <i className="fas fa-signal" style={{ fontSize: '10px' }}></i>
+                             <div style={{ fontSize: '10px' }}>20MHz</div>
+                             <div className="fw-bold" style={{ fontSize: '12px' }}>{((dashboardData.provincialTotals as any).chbw20Mhz || 0).toLocaleString()}</div>
+                           </div>
+                         </div>
+                       </>
+                     )}
+                   </div>
+                 </Card>
+               </div>
+             </div>
+             
+             {/* MIMO Configuration */}
+             <div className="row">
+               <div className="col-12">
+                 <Card title="Cấu Hình Mimo" icon="fas fa-antenna">
+                   <div className="row">
+                     {selectedTechnology === '4G' ? (
+                       <>
+                         <div className="col mb-1">
+                           <div className="text-center py-1 px-1 rounded" style={{
+                             background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+                             color: 'white'
+                           }}>
+                             <i className="fas fa-broadcast-tower" style={{ fontSize: '10px' }}></i>
+                             <div style={{ fontSize: '10px' }}>4T4R</div>
+                             <div className="fw-bold" style={{ fontSize: '12px' }}>{(dashboardData.provincialTotals.config_4t4r || 0).toLocaleString()}</div>
+                           </div>
+                         </div>
+                         <div className="col mb-1">
+                           <div className="text-center py-1 px-1 rounded" style={{
+                             background: 'linear-gradient(135deg, #007bff 0%, #6610f2 100%)',
+                             color: 'white'
+                           }}>
+                             <i className="fas fa-signal" style={{ fontSize: '10px' }}></i>
+                             <div style={{ fontSize: '10px' }}>2T4R</div>
+                             <div className="fw-bold" style={{ fontSize: '12px' }}>{(dashboardData.provincialTotals.config_2t4r || 0).toLocaleString()}</div>
+                           </div>
+                         </div>
+                         <div className="col mb-1">
+                           <div className="text-center py-1 px-1 rounded" style={{
+                             background: 'linear-gradient(135deg, #ffc107 0%, #fd7e14 100%)',
+                             color: 'white'
+                           }}>
+                             <i className="fas fa-wifi" style={{ fontSize: '10px' }}></i>
+                             <div style={{ fontSize: '10px' }}>2T2R</div>
+                             <div className="fw-bold" style={{ fontSize: '12px' }}>{(dashboardData.provincialTotals.config_2t2r || 0).toLocaleString()}</div>
+                           </div>
+                         </div>
+                         <div className="col mb-1">
+                           <div className="text-center py-1 px-1 rounded" style={{
+                             background: 'linear-gradient(135deg, #dc3545 0%, #e83e8c 100%)',
+                             color: 'white'
+                           }}>
+                             <i className="fas fa-network-wired" style={{ fontSize: '10px' }}></i>
+                             <div style={{ fontSize: '10px' }}>1T2R</div>
+                             <div className="fw-bold" style={{ fontSize: '12px' }}>{(dashboardData.provincialTotals.config_1t2r || 0).toLocaleString()}</div>
+                           </div>
+                         </div>
+                         <div className="col mb-1">
+                           <div className="text-center py-1 px-1 rounded" style={{
+                             background: 'linear-gradient(135deg, #6c757d 0%, #495057 100%)',
+                             color: 'white'
+                           }}>
+                             <i className="fas fa-satellite-dish" style={{ fontSize: '10px' }}></i>
+                             <div style={{ fontSize: '10px' }}>1T1R</div>
+                             <div className="fw-bold" style={{ fontSize: '12px' }}>{(dashboardData.provincialTotals.config_1t1r || 0).toLocaleString()}</div>
+                           </div>
+                         </div>
+                       </>
+                     ) : (
+                       <>
+                         <div className="col-6 mb-1">
+                           <div className="text-center py-1 px-2 rounded" style={{
+                             background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+                             color: 'white'
+                           }}>
+                             <i className="fas fa-broadcast-tower" style={{ fontSize: '12px' }}></i>
+                             <div className="fs-8 mb-0">TxRx 48/12</div>
+                             <div className="fw-bold mb-0" style={{ fontSize: '14px' }}>{((dashboardData.provincialTotals as any).txRx4812 || 0).toLocaleString()}</div>
+                           </div>
+                         </div>
+                         <div className="col-6 mb-1">
+                           <div className="text-center py-1 px-2 rounded" style={{
+                             background: 'linear-gradient(135deg, #007bff 0%, #6610f2 100%)',
+                             color: 'white'
+                           }}>
+                             <i className="fas fa-signal" style={{ fontSize: '12px' }}></i>
+                             <div className="fs-8 mb-0">TxRx 32/8</div>
+                             <div className="fw-bold mb-0" style={{ fontSize: '14px' }}>{((dashboardData.provincialTotals as any).txRx328 || 0).toLocaleString()}</div>
+                           </div>
+                         </div>
+                       </>
+                     )}
+                   </div>
+                 </Card>
+               </div>
+             </div>
+           </div>
+           
+           {/* Right Side: Vendor Distribution - Full Height */}
+           <div className="col-lg-6">
              <Card title="Phân Bố Vendor" icon="fas fa-chart-pie">
-               <div className="row">
-                 <div className="col-md-8">
+               <div className="row h-100">
+                 {/* Sites Chart */}
+                 <div className="col-md-6">
+                   <h6 className="text-center mb-3">Sites theo Vendor</h6>
                    <ResponsiveContainer width="100%" height={300}>
                      <PieChart>
                        <Pie
@@ -974,7 +1272,7 @@ const Dashboard = () => {
                          }))}
                          cx="50%"
                          cy="50%"
-                         outerRadius={100}
+                         outerRadius={90}
                          dataKey="value"
                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                        >
@@ -990,245 +1288,363 @@ const Dashboard = () => {
                      </PieChart>
                    </ResponsiveContainer>
                  </div>
-                 <div className="col-md-4">
-                   <div className="d-flex flex-column justify-content-center h-100">
-                     {Object.entries(dashboardData.vendorBreakdown).map(([vendor, count]) => (
-                       <div key={vendor} className="d-flex align-items-center mb-3">
-                         <div 
-                           className="rounded-circle me-3" 
-                           style={{
-                             width: '20px',
-                             height: '20px',
-                             backgroundColor: vendor === 'Huawei' ? '#ffc107' :
-                                              vendor === 'Nokia' ? '#dc3545' : '#007bff'
-                           }}
-                         ></div>
-                         <div>
-                           <strong>{vendor}</strong>
-                           <div className="text-muted">{count.toLocaleString()} sites</div>
+                 
+                 {/* Cells Chart */}
+                 <div className="col-md-6">
+                   <h6 className="text-center mb-3">
+                     {selectedTechnology === '4G' ? '4G Cells theo Vendor' : '5G Cells theo Vendor'}
+                   </h6>
+                   <ResponsiveContainer width="100%" height={300}>
+                     <PieChart>
+                       <Pie
+                         data={selectedTechnology === '4G' ? [
+                           {
+                             name: 'Nokia',
+                             value: dashboardData.provincialTotals.nokia_4g_cells || 0,
+                             fill: '#28a745'
+                           },
+                           {
+                             name: 'Huawei',
+                             value: dashboardData.provincialTotals.huawei_4g_cells || 0,
+                             fill: '#17a2b8'
+                           }
+                         ] : [
+                           {
+                             name: 'Nokia',
+                             value: (dashboardData.provincialTotals as any).total5GCells || 0,
+                             fill: '#28a745'
+                           }
+                         ]}
+                         cx="50%"
+                         cy="50%"
+                         outerRadius={90}
+                         dataKey="value"
+                         label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                       >
+                         {(selectedTechnology === '4G' ? [
+                           { name: 'Nokia', fill: '#28a745' },
+                           { name: 'Huawei', fill: '#17a2b8' }
+                         ] : [
+                           { name: 'Nokia', fill: '#28a745' }
+                         ]).map((item, index) => (
+                           <Cell key={`cell-${index}`} fill={item.fill} />
+                         ))}
+                       </Pie>
+                       <Tooltip formatter={(value) => [value.toLocaleString(), 'Cells']} />
+                     </PieChart>
+                   </ResponsiveContainer>
+                 </div>
+               </div>
+               
+               {/* Summary Stats - Bottom */}
+               <div className="row mt-3">
+                 <div className="col-md-6">
+                   <h6 className="text-center mb-2">Tổng Sites</h6>
+                   {Object.entries(dashboardData.vendorBreakdown).map(([vendor, count]) => (
+                     <div key={vendor} className="d-flex align-items-center mb-2">
+                       <div 
+                         className="rounded-circle me-2" 
+                         style={{
+                           width: '14px',
+                           height: '14px',
+                           backgroundColor: vendor === 'Huawei' ? '#ffc107' :
+                                            vendor === 'Nokia' ? '#dc3545' : '#007bff'
+                         }}
+                       ></div>
+                       <div className="flex-grow-1">
+                         <small><strong>{vendor}</strong> <span className="text-muted">{count.toLocaleString()}</span></small>
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+                 <div className="col-md-6">
+                   <h6 className="text-center mb-2">
+                     {selectedTechnology === '4G' ? 'Tổng 4G Cells' : 'Tổng 5G Cells'}
+                   </h6>
+                   {selectedTechnology === '4G' ? (
+                     <>
+                       <div className="d-flex align-items-center mb-2">
+                         <div className="rounded-circle me-2" style={{ width: '14px', height: '14px', backgroundColor: '#28a745' }}></div>
+                         <div className="flex-grow-1">
+                           <small><strong>Nokia</strong> <span className="text-muted">{(dashboardData.provincialTotals.nokia_4g_cells || 0).toLocaleString()}</span></small>
                          </div>
                        </div>
-                     ))}
-                   </div>
+                       <div className="d-flex align-items-center mb-2">
+                         <div className="rounded-circle me-2" style={{ width: '14px', height: '14px', backgroundColor: '#17a2b8' }}></div>
+                         <div className="flex-grow-1">
+                           <small><strong>Huawei</strong> <span className="text-muted">{(dashboardData.provincialTotals.huawei_4g_cells || 0).toLocaleString()}</span></small>
+                         </div>
+                       </div>
+                     </>
+                   ) : (
+                     <div className="d-flex align-items-center mb-2">
+                       <div className="rounded-circle me-2" style={{ width: '14px', height: '14px', backgroundColor: '#28a745' }}></div>
+                       <div className="flex-grow-1">
+                         <small><strong>Nokia</strong> <span className="text-muted">{((dashboardData.provincialTotals as any).total5GCells || 0).toLocaleString()}</span></small>
+                       </div>
+                     </div>
+                   )}
                  </div>
                </div>
              </Card>
            </div>
          </div>
 
-                 {/* Band Distribution */}
-         <div className="row mt-4">
-           <div className="col-12">
-             <Card title="Phân Bố Tần Số" icon="fas fa-signal">
-               <div className="row">
-                 {selectedTechnology === '4G' ? (
-                   <>
-                     <div className="col-md-3 mb-3">
-                       <div className="text-center p-3 rounded" style={{
-                         background: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)',
-                         color: 'white'
-                       }}>
-                         <i className="fas fa-wifi fa-2x mb-2"></i>
-                         <h5>900MHz</h5>
-                         <h3 className="mb-0">{dashboardData.bandBreakdown['900MHz']}</h3>
-                       </div>
-                     </div>
-                     <div className="col-md-3 mb-3">
-                       <div className="text-center p-3 rounded" style={{
-                         background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
-                         color: 'white'
-                       }}>
-                         <i className="fas fa-broadcast-tower fa-2x mb-2"></i>
-                         <h5>1800MHz</h5>
-                         <h3 className="mb-0">{dashboardData.bandBreakdown['1800MHz']}</h3>
-                       </div>
-                     </div>
-                     <div className="col-md-3 mb-3">
-                       <div className="text-center p-3 rounded" style={{
-                         background: 'linear-gradient(135deg, #f39c12 0%, #e67e22 100%)',
-                         color: 'white'
-                       }}>
-                         <i className="fas fa-satellite-dish fa-2x mb-2"></i>
-                         <h5>2100MHz</h5>
-                         <h3 className="mb-0">{dashboardData.bandBreakdown['2100MHz']}</h3>
-                       </div>
-                     </div>
-                     <div className="col-md-3 mb-3">
-                       <div className="text-center p-3 rounded" style={{
-                         background: 'linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%)',
-                         color: 'white'
-                       }}>
-                         <i className="fas fa-network-wired fa-2x mb-2"></i>
-                         <h5>2600MHz</h5>
-                         <h3 className="mb-0">{dashboardData.bandBreakdown['2600MHz']}</h3>
-                       </div>
-                     </div>
-                   </>
-                 ) : (
-                   <>
-                     <div className="col-md-2 mb-3">
-                       <div className="text-center p-3 rounded" style={{
-                         background: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)',
-                         color: 'white'
-                       }}>
-                         <i className="fas fa-wifi fa-2x mb-2"></i>
-                         <h5>100MHz</h5>
-                         <h3 className="mb-0">{((dashboardData.provincialTotals as any).chbw100Mhz || 0).toLocaleString()}</h3>
-                       </div>
-                     </div>
-                     <div className="col-md-2 mb-3">
-                       <div className="text-center p-3 rounded" style={{
-                         background: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
-                         color: 'white'
-                       }}>
-                         <i className="fas fa-broadcast-tower fa-2x mb-2"></i>
-                         <h5>80MHz</h5>
-                         <h3 className="mb-0">{((dashboardData.provincialTotals as any).chbw80Mhz || 0).toLocaleString()}</h3>
-                       </div>
-                     </div>
-                     <div className="col-md-2 mb-3">
-                       <div className="text-center p-3 rounded" style={{
-                         background: 'linear-gradient(135deg, #f39c12 0%, #e67e22 100%)',
-                         color: 'white'
-                       }}>
-                         <i className="fas fa-satellite-dish fa-2x mb-2"></i>
-                         <h5>60MHz</h5>
-                         <h3 className="mb-0">{((dashboardData.provincialTotals as any).chbw60Mhz || 0).toLocaleString()}</h3>
-                       </div>
-                     </div>
-                     <div className="col-md-2 mb-3">
-                       <div className="text-center p-3 rounded" style={{
-                         background: 'linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%)',
-                         color: 'white'
-                       }}>
-                         <i className="fas fa-network-wired fa-2x mb-2"></i>
-                         <h5>40MHz</h5>
-                         <h3 className="mb-0">{((dashboardData.provincialTotals as any).chbw40Mhz || 0).toLocaleString()}</h3>
-                       </div>
-                     </div>
-                     <div className="col-md-2 mb-3">
-                       <div className="text-center p-3 rounded" style={{
-                         background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
-                         color: 'white'
-                       }}>
-                         <i className="fas fa-signal fa-2x mb-2"></i>
-                         <h5>20MHz</h5>
-                         <h3 className="mb-0">{((dashboardData.provincialTotals as any).chbw20Mhz || 0).toLocaleString()}</h3>
-                       </div>
-                     </div>
-                   </>
-                 )}
-               </div>
-             </Card>
-           </div>
-         </div>
-
-         {/* Cấu Hình Antenna */}
-         <div className="row mt-4">
-           <div className="col-12">
-             <Card title="Cấu Hình Mimo" icon="fas fa-antenna">
-               <div className="row">
-                 {selectedTechnology === '4G' ? (
-                   <>
-                     <div className="col mb-3">
-                       <div className="text-center p-3 rounded" style={{
-                         background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
-                         color: 'white'
-                       }}>
-                         <i className="fas fa-broadcast-tower fa-2x mb-2"></i>
-                         <h5>4T4R</h5>
-                         <h3 className="mb-0">{(dashboardData.provincialTotals.config_4t4r || 0).toLocaleString()}</h3>
-                       </div>
-                     </div>
-                     <div className="col mb-3">
-                       <div className="text-center p-3 rounded" style={{
-                         background: 'linear-gradient(135deg, #007bff 0%, #6610f2 100%)',
-                         color: 'white'
-                       }}>
-                         <i className="fas fa-signal fa-2x mb-2"></i>
-                         <h5>2T4R</h5>
-                         <h3 className="mb-0">{(dashboardData.provincialTotals.config_2t4r || 0).toLocaleString()}</h3>
-                       </div>
-                     </div>
-                     <div className="col mb-3">
-                       <div className="text-center p-3 rounded" style={{
-                         background: 'linear-gradient(135deg, #ffc107 0%, #fd7e14 100%)',
-                         color: 'white'
-                       }}>
-                         <i className="fas fa-wifi fa-2x mb-2"></i>
-                         <h5>2T2R</h5>
-                         <h3 className="mb-0">{(dashboardData.provincialTotals.config_2t2r || 0).toLocaleString()}</h3>
-                       </div>
-                     </div>
-                     <div className="col mb-3">
-                       <div className="text-center p-3 rounded" style={{
-                         background: 'linear-gradient(135deg, #dc3545 0%, #e83e8c 100%)',
-                         color: 'white'
-                       }}>
-                         <i className="fas fa-network-wired fa-2x mb-2"></i>
-                         <h5>1T2R</h5>
-                         <h3 className="mb-0">{(dashboardData.provincialTotals.config_1t2r || 0).toLocaleString()}</h3>
-                       </div>
-                     </div>
-                     <div className="col mb-3">
-                       <div className="text-center p-3 rounded" style={{
-                         background: 'linear-gradient(135deg, #6c757d 0%, #495057 100%)',
-                         color: 'white'
-                       }}>
-                         <i className="fas fa-satellite-dish fa-2x mb-2"></i>
-                         <h5>1T1R</h5>
-                         <h3 className="mb-0">{(dashboardData.provincialTotals.config_1t1r || 0).toLocaleString()}</h3>
-                       </div>
-                     </div>
-                   </>
-                 ) : (
-                   <>
-                     <div className="col mb-3">
-                       <div className="text-center p-3 rounded" style={{
-                         background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
-                         color: 'white'
-                       }}>
-                         <i className="fas fa-broadcast-tower fa-2x mb-2"></i>
-                         <h5>TxRx 48/12</h5>
-                         <h3 className="mb-0">{((dashboardData.provincialTotals as any).txRx4812 || 0).toLocaleString()}</h3>
-                       </div>
-                     </div>
-                     <div className="col mb-3">
-                       <div className="text-center p-3 rounded" style={{
-                         background: 'linear-gradient(135deg, #007bff 0%, #6610f2 100%)',
-                         color: 'white'
-                       }}>
-                         <i className="fas fa-signal fa-2x mb-2"></i>
-                         <h5>TxRx 32/8</h5>
-                         <h3 className="mb-0">{((dashboardData.provincialTotals as any).txRx328 || 0).toLocaleString()}</h3>
-                       </div>
-                     </div>
-                   </>
-                 )}
-               </div>
-             </Card>
-           </div>
-         </div>
-
-         {/* Biến động cell trong 7 ngày */}
-        <div className="row mt-4">
+         {/* Biến động cell trong 7 ngày - Enhanced Bar Chart */}
+        <div className="row mb-3">
           <div className="col-12">
-            <Card title="Biến động cell trong 7 ngày" icon="fas fa-chart-line">
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={dashboardData.dailyTrend} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="cells" stroke="#007bff" strokeWidth={2} dot={{ r: 4 }} />
-                </LineChart>
-              </ResponsiveContainer>
+            <Card title="Biến động Cell trong 7 ngày" icon="fas fa-chart-bar">
+              <div className="row">
+                {/* Main Chart */}
+                <div className="col-lg-8">
+                  <ResponsiveContainer width="100%" height={300}>
+                    <ComposedChart 
+                      data={dashboardData.dailyTrend.map((item, index) => {
+                        if (index === 0) {
+                          return {
+                            ...item,
+                            change: 0,
+                            changePercent: 0
+                          };
+                        }
+                        const prevValue = dashboardData.dailyTrend[index - 1].cells;
+                        const change = item.cells - prevValue;
+                        const changePercent = prevValue > 0 ? ((change / prevValue) * 100) : 0;
+                        
+                        console.log(`Day ${index}: ${item.date}, Current: ${item.cells}, Previous: ${prevValue}, Change: ${change}`);
+                        
+                        return {
+                          ...item,
+                          change: change,
+                          changePercent: changePercent.toFixed(2)
+                        };
+                      })} 
+                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                      barCategoryGap="20%"
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                      <XAxis 
+                        dataKey="date" 
+                        tick={{ fontSize: 12 }}
+                        stroke="#666"
+                      />
+                      <YAxis 
+                        yAxisId="cells"
+                        orientation="left"
+                        tick={{ fontSize: 12 }}
+                        stroke="#666"
+                        domain={['dataMin - 50', 'dataMax + 50']}
+                      />
+                      <YAxis 
+                        yAxisId="change"
+                        orientation="right"
+                        tick={{ fontSize: 12 }}
+                        stroke="#28a745"
+                        domain={['dataMin - 10', 'dataMax + 10']}
+                      />
+                      <Tooltip 
+                        contentStyle={{
+                          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                          border: '1px solid #ddd',
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
+                        }}
+                        formatter={(value: any, name: string) => {
+                          if (name === 'cells') return [value?.toLocaleString(), 'Tổng Cells'];
+                          if (name === 'change') return [
+                            `${value > 0 ? '+' : ''}${value?.toLocaleString()}`, 
+                            'Biến động'
+                          ];
+                          return [value, name];
+                        }}
+                        labelFormatter={(label) => `Ngày: ${label}`}
+                      />
+                      
+                      {/* Bar Chart for Total Cells */}
+                      <Bar 
+                        yAxisId="cells"
+                        dataKey="cells" 
+                        fill="url(#colorGradient)"
+                        radius={[4, 4, 0, 0]}
+                        stroke="#007bff"
+                        strokeWidth={1}
+                        opacity={0.7}
+                      />
+                      
+                      {/* Line Chart for Daily Change */}
+                      <Line 
+                        yAxisId="change"
+                        type="monotone" 
+                        dataKey="change" 
+                        stroke="#28a745" 
+                        strokeWidth={3}
+                        dot={{ 
+                          fill: '#28a745', 
+                          strokeWidth: 2, 
+                          r: 4,
+                          stroke: '#fff'
+                        }}
+                        activeDot={{ 
+                          r: 6, 
+                          fill: '#28a745',
+                          strokeWidth: 2,
+                          stroke: '#fff'
+                        }}
+                        connectNulls={false}
+                      />
+                      
+                      <defs>
+                        <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#007bff" stopOpacity={0.8}/>
+                          <stop offset="100%" stopColor="#66b3ff" stopOpacity={0.4}/>
+                        </linearGradient>
+                      </defs>
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+                
+                {/* Statistics Summary */}
+                <div className="col-lg-4">
+                  <div className="h-100 d-flex flex-column justify-content-center">
+                    <h6 className="text-center mb-3">Thống Kê 7 Ngày</h6>
+                    
+                    {/* Max Day */}
+                    <div className="mb-3 p-3 rounded" style={{
+                      background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
+                      color: 'white'
+                    }}>
+                      <div className="d-flex align-items-center">
+                        <i className="fas fa-arrow-up me-2"></i>
+                        <div>
+                          <small>Cao nhất</small>
+                          <div className="fw-bold">
+                            {Math.max(...dashboardData.dailyTrend.map(d => d.cells)).toLocaleString()} cells
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Min Day */}
+                    <div className="mb-3 p-3 rounded" style={{
+                      background: 'linear-gradient(135deg, #dc3545 0%, #e83e8c 100%)',
+                      color: 'white'
+                    }}>
+                      <div className="d-flex align-items-center">
+                        <i className="fas fa-arrow-down me-2"></i>
+                        <div>
+                          <small>Thấp nhất</small>
+                          <div className="fw-bold">
+                            {Math.min(...dashboardData.dailyTrend.map(d => d.cells)).toLocaleString()} cells
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Average */}
+                    <div className="mb-3 p-3 rounded" style={{
+                      background: 'linear-gradient(135deg, #ffc107 0%, #fd7e14 100%)',
+                      color: 'white'
+                    }}>
+                      <div className="d-flex align-items-center">
+                        <i className="fas fa-chart-line me-2"></i>
+                        <div>
+                          <small>Trung bình</small>
+                          <div className="fw-bold">
+                            {Math.round(dashboardData.dailyTrend.reduce((sum, d) => sum + d.cells, 0) / dashboardData.dailyTrend.length).toLocaleString()} cells
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Variance */}
+                    <div className="p-3 rounded" style={{
+                      background: 'linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%)',
+                      color: 'white'
+                    }}>
+                      <div className="d-flex align-items-center">
+                        <i className="fas fa-exchange-alt me-2"></i>
+                        <div>
+                          <small>Biến động</small>
+                          <div className="fw-bold">
+                            {(Math.max(...dashboardData.dailyTrend.map(d => d.cells)) - 
+                              Math.min(...dashboardData.dailyTrend.map(d => d.cells))).toLocaleString()} cells
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Daily Change Indicators & Legend */}
+              <div className="row mt-3">
+                {/* Legend */}
+                <div className="col-md-4">
+                  <h6 className="mb-2">Chú thích:</h6>
+                  <div className="d-flex flex-column gap-2">
+                    <div className="d-flex align-items-center">
+                      <div 
+                        className="me-2" 
+                        style={{
+                          width: '20px',
+                          height: '12px',
+                          background: 'linear-gradient(135deg, #007bff 0%, #66b3ff 100%)',
+                          borderRadius: '2px'
+                        }}
+                      ></div>
+                      <small>Tổng Cells (Cột)</small>
+                    </div>
+                    <div className="d-flex align-items-center">
+                      <div 
+                        className="me-2" 
+                        style={{
+                          width: '20px',
+                          height: '3px',
+                          backgroundColor: '#28a745',
+                          borderRadius: '2px'
+                        }}
+                      ></div>
+                      <small>Biến động hàng ngày (Đường)</small>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Daily Changes */}
+                <div className="col-md-8">
+                  <h6 className="mb-2">Biến Động Hàng Ngày:</h6>
+                  <div className="d-flex flex-wrap gap-2">
+                    {dashboardData.dailyTrend.map((item, index) => {
+                      if (index === 0) return null;
+                      const prevValue = dashboardData.dailyTrend[index - 1].cells;
+                      const change = item.cells - prevValue;
+                      const isPositive = change > 0;
+                      const changePercent = ((change / prevValue) * 100).toFixed(2);
+                      
+                      return (
+                        <div 
+                          key={index}
+                          className="badge px-3 py-2"
+                          style={{
+                            backgroundColor: isPositive ? '#28a745' : change < 0 ? '#dc3545' : '#6c757d',
+                            color: 'white',
+                            fontSize: '11px'
+                          }}
+                          title={`Thay đổi: ${changePercent}%`}
+                        >
+                          {item.date}: {isPositive ? '+' : ''}{change.toLocaleString()}
+                          <i className={`fas fa-${isPositive ? 'arrow-up' : change < 0 ? 'arrow-down' : 'minus'} ms-1`}></i>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
             </Card>
           </div>
         </div>
 
-        {/* Bảng Theo Tỉnh/Thành Phố */}
-        <div className="row mt-4">
+        {/* Bảng Theo Tỉnh/Thành Phố - Compact */}
+        <div className="row">
           <div className="col-12">
             <Card title="Báo Cáo Theo Tỉnh/Thành Phố" icon="fas fa-map-marker-alt" buttonGroups={
               <div className="d-flex gap-2">

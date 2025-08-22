@@ -216,6 +216,22 @@ const CtrlDynamicTable = forwardRef((props: Props, ref) => {
                         catch {}
                         value = valueDate;
                     }
+                    else if(columnDefs[j].Format == "dd/MM/yyyy HH:mm")
+                    {
+                        let valueDateTime = "";
+                        try
+                        {
+                            let date = new Date(value);
+                            let day = date.getDate().toString().padStart(2, '0');
+                            let month = (date.getMonth() + 1).toString().padStart(2, '0');
+                            let year = date.getFullYear();
+                            let hours = date.getHours().toString().padStart(2, '0');
+                            let minutes = date.getMinutes().toString().padStart(2, '0');
+                            valueDateTime = `${day}/${month}/${year} ${hours}:${minutes}`;
+                        }
+                        catch {}
+                        value = valueDateTime;
+                    }
                 }
                 if(columnDefs[j].Key == "#")
                 {

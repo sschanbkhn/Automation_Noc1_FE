@@ -38,6 +38,7 @@ import DashboardRnocRoom from "../DashboardAutomation/DashboardRnoc/DashboardRno
 import ScheduleTriggerForm from "components/RNOC1/R009";
 import Anm_uc1 from "components/ANM/UC1";
 import Ucppoe from "components/INOC1/I003";
+import I004_1List from "components/I004_1";
 import NornirPlatformView from "components/SNOC/components/NornirPlatformView";
 import DashOrigin from "components/SNOC/views/dashboard/DashOrigin/SystemHealthDashboard";
 
@@ -140,6 +141,8 @@ const MainPageRoute = (props: Props) => {
                 return <Anm_uc1 />;
             case "ucppoe":
                 return <Ucppoe />;
+            case "i004_1":
+                return <I004_1List />;
             case "hc-dashboard":
                 return <DashOrigin />;
             case "hc-schedule":

@@ -199,12 +199,11 @@
 
             },
         {
-            "code": "DataLspQuocte",
+          "code": "i004_1",
           "name": "Dữ liệu LSP quốc tế",
-          "url": "/DataLspQuocte",
-          "icon": "bi bi-grid"
-
-            },
+          "url": "/i004_1",
+          "icon": "bi bi-diagram-3"
+        },
         {
           "code": "ConfigurationLogs",
           "name": "Xử lý cảnh báo phần cứng",
