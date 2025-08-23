@@ -1,12 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Button,
-  Card,
-  Col,
-  FormControl,
-  InputGroup,
-  Row,
-} from "react-bootstrap";
+import { Button, Card, Col, FormControl, InputGroup, Row } from "react-bootstrap";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { Provider, useDispatch, useSelector } from "react-redux";
@@ -22,30 +15,36 @@ import {
   YAxis,
 } from "recharts";
 import WebSocketStatusBanner from "../../../components/WebSocketStatusBanner";
-import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
-import {
-  fetchAvailableKPIs,
-  fetchKPIChartData,
-} from "../../../redux/Healthcheck/healthcheckSlice";
+import useCausecodeWebSocket from "../../../hooks/useCausecodeWebSocket";
 import { fetchDevicesByPlatform } from "../../../redux/Healthcheck/platformDeviceSlice";
+import { fetchAvailableKPIs, fetchKPIChartData } from "../../../redux/KPI/kpiSlice";
 import snocStore from "../../../store/snocStore";
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
+
+/** Format giờ ICT (Asia/Bangkok ~ UTC+7) */
+function formatTimeLocal(ts, withDate = false) {
+  const d = new Date(ts);
+  return d.toLocaleString(undefined, {
+    timeZone: "Asia/Bangkok",
+    hour12: false,
+    ...(withDate
+      ? { year: "2-digit", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }
+      : { hour: "2-digit", minute: "2-digit" }),
+  });
+}
 
 const KPISelectorPageContent = () => {
   const { system, subsystem } = useParams();
   const location = useLocation();
   const { platformOptions = [] } = location.state || {};
   const dispatch = useDispatch();
-  useScheduleWebSocket();
 
   const { devices } = useSelector((state) => state.platformDevice || {});
-  const { kpiChartData = {}, availableKPIs = { kpis: [] } } = useSelector(
-    (state) => state.pscore || {}
-  );
+  const { kpiChartData = {}, availableKPIs = { kpis: [] } } = useSelector((state) => state.kpi || {});
 
   const [selectedPlatform, setSelectedPlatform] = useState("");
-  const [selectedDevices, setSelectedDevices] = useState([]);
-  const [selectedKPIs, setSelectedKPIs] = useState([]);
+  const [selectedDevices, setSelectedDevices] = useState([]);      // [{label, value}]
+  const [selectedKPIs, setSelectedKPIs] = useState([]);            // [{label, value}]
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [startTime, setStartTime] = useState("00:00");
@@ -53,6 +52,25 @@ const KPISelectorPageContent = () => {
   const [visibleDevices, setVisibleDevices] = useState([]);
   const [showAll, setShowAll] = useState(true);
   const [chartMode, setChartMode] = useState("absolute");
+
+  // Cho phép auto-pick KPI lần đầu sau khi đổi filter
+  const [allowAutoPick, setAllowAutoPick] = useState(true);
+  const filterKey = useMemo(() => {
+    const devs = (selectedDevices || []).map((d) => d.value).sort().join(",");
+    return `${selectedPlatform}::${devs}`;
+  }, [selectedPlatform, selectedDevices]);
+
+  useEffect(() => {
+    setAllowAutoPick(true);
+    setSelectedKPIs([]);
+  }, [filterKey]);
+
+  // WS cập nhật realtime theo filter hiện tại
+  useCausecodeWebSocket({
+    selectedPlatform,
+    selectedDevices, // [{label,value}]
+    selectedKPIs,    // [{label,value}]
+  });
 
   useEffect(() => {
     if (selectedPlatform) {
@@ -65,35 +83,28 @@ const KPISelectorPageContent = () => {
   useEffect(() => {
     if (selectedPlatform && selectedDevices.length > 0) {
       const selectedDeviceNames = selectedDevices.map((d) => d.value);
-      dispatch(
-        fetchAvailableKPIs({
-          selectedPlatform,
-          selectedDevices: selectedDeviceNames,
-        })
-      );
+      dispatch(fetchAvailableKPIs({ selectedPlatform, selectedDevices: selectedDeviceNames }));
       setSelectedKPIs([]);
     }
   }, [dispatch, selectedPlatform, selectedDevices]);
 
   useEffect(() => {
+    if (!allowAutoPick) return;
     if (availableKPIs.kpis?.length > 0 && selectedKPIs.length === 0) {
-      setSelectedKPIs([
-        { label: availableKPIs.kpis[0], value: availableKPIs.kpis[0] },
-      ]);
+      setSelectedKPIs([{ label: availableKPIs.kpis[0], value: availableKPIs.kpis[0] }]);
     }
-  }, [availableKPIs.kpis]);
+  }, [availableKPIs.kpis, selectedKPIs.length, allowAutoPick]);
 
-  const deviceOptions = useMemo(() => {
-    return devices.map((d) => ({
-      label: `${d.name} (${d.ip || "no-ip"})`,
-      value: d.name,
-    }));
-  }, [devices]);
+  const deviceOptions = useMemo(
+    () =>
+      devices.map((d) => ({
+        label: `${d.name} (${d.ip || "no-ip"})`,
+        value: d.name,
+      })),
+    [devices]
+  );
 
-  const combinedOptions = [
-    { label: "-- Chọn tất cả thiết bị --", value: "__all__" },
-    ...deviceOptions,
-  ];
+  const combinedOptions = [{ label: "-- Chọn tất cả thiết bị --", value: "__all__" }, ...deviceOptions];
 
   const handleDeviceChange = (selected) => {
     if (!selected) return setSelectedDevices([]);
@@ -104,14 +115,12 @@ const KPISelectorPageContent = () => {
     }
   };
 
-  const kpiOptions = (availableKPIs?.kpis || []).map((kpi) => ({
-    label: kpi,
-    value: kpi,
-  }));
+  const kpiOptions = (availableKPIs?.kpis || []).map((kpi) => ({ label: kpi, value: kpi }));
 
   const handleCheckKPI = () => {
     const selectedNames = selectedDevices.map((d) => d.value);
     let startDateTime, endDateTime;
+
     if (!startDate || !endDate) {
       endDateTime = new Date();
       startDateTime = new Date(endDateTime.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -120,8 +129,8 @@ const KPISelectorPageContent = () => {
       endDateTime = new Date(endDate);
       const [startH, startM] = startTime.split(":").map(Number);
       const [endH, endM] = endTime.split(":").map(Number);
-      startDateTime.setHours(startH, startM);
-      endDateTime.setHours(endH, endM);
+      startDateTime.setHours(startH, startM, 0, 0);
+      endDateTime.setHours(endH, endM, 0, 0);
     }
 
     if (selectedPlatform && selectedKPIs.length > 0) {
@@ -129,8 +138,7 @@ const KPISelectorPageContent = () => {
         dispatch(
           fetchKPIChartData({
             selectedPlatform,
-            selectedDevice:
-              selectedNames.length > 0 ? selectedNames : undefined,
+            selectedDevice: selectedNames.length > 0 ? selectedNames : undefined,
             selectedKPI: kpiObj.value,
             startDate: startDateTime.toISOString(),
             endDate: endDateTime.toISOString(),
@@ -140,47 +148,84 @@ const KPISelectorPageContent = () => {
     }
   };
 
+  /**
+   * CHUẨN HOÁ DỮ LIỆU CHO CHART
+   * - ép value → Number
+   * - bỏ bản ghi lỗi timestamp
+   * - quy timestamp về “đầu phút” (floor 60s) để dedup DB + WS
+   * - giữ bản ghi **cuối cùng** trong phút (Map overwrite)
+   * - sort tăng dần theo ts
+   *
+   * Kết quả: groups[kpi][device] = Array<{ device, platform, kpi, value:Number, timestamp:String, ts:Number }>
+   */
   const groupedChartDataByKPIAndDevice = useMemo(() => {
     const groups = {};
     for (const kpi in kpiChartData) {
-      const kpiData = kpiChartData[kpi];
-      for (const row of kpiData) {
-        const { device } = row;
-        if (!groups[kpi]) groups[kpi] = {};
-        if (!groups[kpi][device]) groups[kpi][device] = [];
-        groups[kpi][device].push(row);
+      const rows = Array.isArray(kpiChartData[kpi]) ? kpiChartData[kpi] : [];
+      const byDeviceMinute = {}; // { [device]: Map<tsMin, point> }
+
+      for (const row of rows) {
+        const device = row?.device;
+        const ts = Date.parse(row?.timestamp);
+        if (!device || !Number.isFinite(ts)) continue;
+
+        const tsMin = Math.floor(ts / 60000) * 60000;
+        const val = Number(row?.value);
+        if (!Number.isFinite(val)) continue;
+
+        const mm = (byDeviceMinute[device] ||= new Map());
+        // giữ “bản ghi mới nhất” trong cùng phút
+        mm.set(tsMin, { ...row, value: val, ts: tsMin });
       }
+
+      const deviceObj = {};
+      for (const [dev, minuteMap] of Object.entries(byDeviceMinute)) {
+        const arr = Array.from(minuteMap.values()).sort((a, b) => a.ts - b.ts);
+        deviceObj[dev] = arr;
+      }
+
+      groups[kpi] = deviceObj;
     }
     return groups;
   }, [kpiChartData]);
 
+  /**
+   * TÍNH DELTA
+   * - delta = value(i) - value(i-1) nếu cùng device & ts tăng
+   * - nếu âm (counter reset) → clamp 0
+   */
   const getDeltaLineData = (deviceData) => {
-    const deltaByDevice = {};
-    Object.entries(deviceData).forEach(([device, arr]) => {
-      deltaByDevice[device] = arr.map((row, idx) => ({
-        ...row,
-        value: idx === 0 ? 0 : row.value - arr[idx - 1].value,
-      }));
+    const delta = {};
+    Object.entries(deviceData).forEach(([dev, arr]) => {
+      let prev = null;
+      delta[dev] = arr.map((p) => {
+        let d = 0;
+        if (prev && p.ts > prev.ts) {
+          const diff = p.value - prev.value;
+          d = diff >= 0 ? diff : 0; // tránh âm khi counter reset
+        }
+        prev = p;
+        return { ...p, value: d };
+      });
     });
-    return deltaByDevice;
+    return delta;
   };
 
+  // Build danh sách thiết bị ban đầu cho legend (hiện tất)
   useEffect(() => {
-    const allDevices = new Set();
+    const all = new Set();
     for (const kpi in groupedChartDataByKPIAndDevice) {
-      for (const device in groupedChartDataByKPIAndDevice[kpi]) {
-        allDevices.add(device);
+      for (const dev in groupedChartDataByKPIAndDevice[kpi]) {
+        all.add(dev);
       }
     }
-    setVisibleDevices(Array.from(allDevices));
+    setVisibleDevices(Array.from(all));
     setShowAll(true);
   }, [groupedChartDataByKPIAndDevice]);
 
   const toggleDeviceVisibility = (deviceName) => {
     setVisibleDevices((prev) =>
-      prev.includes(deviceName)
-        ? prev.filter((d) => d !== deviceName)
-        : [...prev, deviceName]
+      prev.includes(deviceName) ? prev.filter((d) => d !== deviceName) : [...prev, deviceName]
     );
   };
 
@@ -188,37 +233,28 @@ const KPISelectorPageContent = () => {
     if (showAll) {
       setVisibleDevices([]);
     } else {
-      const allDevices = new Set();
+      const all = new Set();
       for (const kpi in groupedChartDataByKPIAndDevice) {
-        for (const device in groupedChartDataByKPIAndDevice[kpi]) {
-          allDevices.add(device);
+        for (const dev in groupedChartDataByKPIAndDevice[kpi]) {
+          all.add(dev);
         }
       }
-      setVisibleDevices(Array.from(allDevices));
+      setVisibleDevices(Array.from(all));
     }
     setShowAll(!showAll);
   };
 
-  const colors = [
-    "#2ca02c",
-    "#1f77b4",
-    "#d62728",
-    "#ff7f0e",
-    "#9467bd",
-    "#8c564b",
-    "#e377c2",
-    "#7f7f7f",
-    "#bcbd22",
-    "#17becf",
-  ];
+  const colors = ["#2ca02c", "#1f77b4", "#d62728", "#ff7f0e", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"];
 
   const [kpiSearchInput, setKpiSearchInput] = useState("");
   const kpiInputRef = useRef("");
   const [kpiMenuOpen, setKpiMenuOpen] = useState(false);
+
   return (
     <>
       <TopNavbarHealth />
       <WebSocketStatusBanner />
+
       <Card className="mb-4">
         <Card.Body>
           <Row className="align-items-center mb-3">
@@ -233,17 +269,16 @@ const KPISelectorPageContent = () => {
                     -- Chọn platform ({system}/{subsystem}) --
                   </option>
                   {platformOptions.map((p, idx) => (
-                    <option key={idx} value={p}>
-                      {p}
-                    </option>
+                    <option key={idx} value={p}>{p}</option>
                   ))}
                 </FormControl>
               </InputGroup>
             </Col>
+
             <Col md={3}>
               <Select
                 isMulti
-                isSearchable={true} // 🔹 bật search
+                isSearchable
                 closeMenuOnSelect={false}
                 hideSelectedOptions={false}
                 options={combinedOptions}
@@ -251,108 +286,68 @@ const KPISelectorPageContent = () => {
                 onChange={handleDeviceChange}
                 placeholder="-- Chọn thiết bị --"
                 styles={{
-                  valueContainer: (base) => ({
-                    ...base,
-                    maxHeight: "38px",
-                    overflowX: "auto",
-                    flexWrap: "nowrap",
-                  }),
-                  multiValue: (base) => ({
-                    ...base,
-                    margin: "1px 2px",
-                  }),
+                  valueContainer: (base) => ({ ...base, maxHeight: "38px", overflowX: "auto", flexWrap: "nowrap" }),
+                  multiValue: (base) => ({ ...base, margin: "1px 2px" }),
                 }}
               />
             </Col>
+
             <Col md={3}>
               <Select
-  isMulti
-  isSearchable
-  closeMenuOnSelect={false}
-  blurInputOnSelect={false}
-  menuIsOpen={kpiMenuOpen}
-  onMenuOpen={() => setKpiMenuOpen(true)}
-  onMenuClose={() => {
-    setKpiMenuOpen(false);
-    // ⚠️ Ngăn react-select reset inputValue
-    setTimeout(() => {
-      setKpiSearchInput(kpiInputRef.current);
-    }, 0);
-  }}
-  inputValue={kpiSearchInput}
-  onInputChange={(value, { action }) => {
-    if (action === "input-change") {
-      kpiInputRef.current = value;
-      setKpiSearchInput(value);
-    }
-    if (action === "menu-close") {
-      setKpiMenuOpen(false);
-    }
-  }}
-  onChange={(selected, meta) => {
-    setSelectedKPIs(selected || []);
-    if (meta.action === "select-option") {
-      setTimeout(() => {
-        setKpiSearchInput(kpiInputRef.current);
-      }, 0);
-    }
-  }}
-  hideSelectedOptions={false}
-  options={kpiOptions}
-  value={selectedKPIs}
-  placeholder="-- Chọn KPI --"
-  styles={{
-    valueContainer: (base) => ({
-      ...base,
-      maxHeight: "38px",
-      overflowX: "auto",
-      flexWrap: "nowrap",
-    }),
-    multiValue: (base) => ({
-      ...base,
-      margin: "1px 2px",
-    }),
-  }}
-/>
-
+                isMulti
+                isClearable
+                isSearchable
+                closeMenuOnSelect={false}
+                blurInputOnSelect={false}
+                menuIsOpen={kpiMenuOpen}
+                onMenuOpen={() => setKpiMenuOpen(true)}
+                onMenuClose={() => {
+                  setKpiMenuOpen(false);
+                  setTimeout(() => setKpiSearchInput(kpiInputRef.current), 0);
+                }}
+                inputValue={kpiSearchInput}
+                onInputChange={(value, { action }) => {
+                  if (action === "input-change") {
+                    kpiInputRef.current = value;
+                    setKpiSearchInput(value);
+                  }
+                  if (action === "menu-close") setKpiMenuOpen(false);
+                }}
+                onChange={(selected, meta) => {
+                  setSelectedKPIs(selected || []);
+                  setAllowAutoPick(false);
+                  if (meta?.action === "select-option") {
+                    setTimeout(() => setKpiSearchInput(kpiInputRef.current), 0);
+                  }
+                }}
+                hideSelectedOptions={false}
+                options={kpiOptions}
+                value={selectedKPIs}
+                placeholder="-- Chọn KPI --"
+                styles={{
+                  valueContainer: (base) => ({ ...base, maxHeight: "38px", overflowX: "auto", flexWrap: "nowrap" }),
+                  multiValue: (base) => ({ ...base, margin: "1px 2px" }),
+                }}
+              />
             </Col>
+
             <Col md={3}>
-              <Button className="w-100" onClick={handleCheckKPI}>
-                Xem
-              </Button>
+              <Button className="w-100" onClick={handleCheckKPI}>Xem</Button>
             </Col>
           </Row>
 
           <Row className="align-items-end mb-3">
             <Col md={3}>
-              <DatePicker
-                selected={startDate}
-                onChange={(date) => setStartDate(date)}
-                className="form-control"
-                placeholderText="Chọn ngày bắt đầu"
-              />
+              <DatePicker selected={startDate} onChange={setStartDate} className="form-control" placeholderText="Chọn ngày bắt đầu" />
             </Col>
             <Col md={3}>
-              <FormControl
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-              />
+              <FormControl type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
             </Col>
             <Col md={3}>
-              <DatePicker
-                selected={endDate}
-                onChange={(date) => setEndDate(date)}
-                className="form-control"
-                placeholderText="Chọn ngày kết thúc"
-              />
+              <DatePicker selected={endDate} onChange={setEndDate} className="form-control" placeholderText="Chọn ngày kết thúc" />
             </Col>
             <Col md={3}>
-              <FormControl
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-              />
+              <FormControl type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
             </Col>
           </Row>
 
@@ -360,9 +355,7 @@ const KPISelectorPageContent = () => {
             <Col>
               <Button
                 size="sm"
-                variant={
-                  chartMode === "absolute" ? "primary" : "outline-primary"
-                }
+                variant={chartMode === "absolute" ? "primary" : "outline-primary"}
                 onClick={() => setChartMode("absolute")}
               >
                 Absolute
@@ -383,71 +376,55 @@ const KPISelectorPageContent = () => {
         {selectedKPIs.map((kpiObj) => {
           const kpi = kpiObj.value;
           const deviceData = groupedChartDataByKPIAndDevice[kpi] || {};
-          const displayData =
-            chartMode === "delta" ? getDeltaLineData(deviceData) : deviceData;
+          const displayData = chartMode === "delta" ? getDeltaLineData(deviceData) : deviceData;
 
           return (
             <Col md={4} key={kpi} className="mb-4">
               <Card>
                 <Card.Body>
-                  <h6 className="mb-2">
-                    KPI: <i>{kpi}</i>
-                  </h6>
+                  <h6 className="mb-2">KPI: <i>{kpi}</i></h6>
                   <ResponsiveContainer width="100%" height={300}>
                     <LineChart margin={{ top: 20, right: 20, bottom: 50 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis
-                        dataKey="timestamp"
-                        tickFormatter={(value) => {
-                          const date = new Date(value);
-                          return `${date.getHours()}:${String(
-                            date.getMinutes()
-                          ).padStart(2, "0")}`;
-                        }}
+                        type="number"
+                        dataKey="ts"
+                        scale="time"
+                        domain={["dataMin", "dataMax"]}  // để Recharts tự lấy min/max ở tất cả series
+                        tickFormatter={(ts) => formatTimeLocal(ts)}
                         angle={-45}
                         textAnchor="end"
-                        interval={Math.floor(
-                          (kpiChartData[kpi]?.length || 1) / 10
-                        )}
                       />
                       <YAxis />
-                      <Tooltip />
-                      {Object.entries(displayData).map(
-                        ([device, data], index) =>
-                          visibleDevices.includes(device) ? (
-                            <Line
-                              key={device}
-                              type="monotone"
-                              data={data}
-                              dataKey="value"
-                              name={device}
-                              stroke={colors[index % colors.length]}
-                              dot={{ r: 2 }}
-                              strokeWidth={2}
-                              isAnimationActive={false}
-                            />
-                          ) : null
+                      <Tooltip
+                        labelFormatter={(ts) => `⏱ ${formatTimeLocal(ts, true)} (ICT)`}
+                        formatter={(value, name) => [value, name]}
+                      />
+                      {Object.entries(displayData).map(([device, data], index) =>
+                        visibleDevices.includes(device) ? (
+                          <Line
+                            key={device}
+                            type="monotone"
+                            data={data}
+                            dataKey="value"
+                            name={device}
+                            stroke={colors[index % colors.length]}
+                            dot={{ r: 2 }}
+                            strokeWidth={2}
+                            isAnimationActive={false}
+                          />
+                        ) : null
                       )}
                     </LineChart>
                   </ResponsiveContainer>
-                  <div
-                    className="d-flex flex-column gap-1 mt-2"
-                    style={{
-                      maxHeight: "120px",
-                      overflowY: "auto",
-                      fontSize: "11px",
-                    }}
-                  >
+
+                  <div className="d-flex flex-column gap-1 mt-2" style={{ maxHeight: "120px", overflowY: "auto", fontSize: "11px" }}>
                     <Button
                       size="sm"
                       variant="outline-secondary"
                       onClick={toggleAllDevices}
                       title={showAll ? "Ẩn tất cả" : "Hiện tất cả"}
-                      style={{
-                        width: "32px",
-                        padding: "2px 6px",
-                        cursor: "pointer",
-                      }}
+                      style={{ width: "32px", padding: "2px 6px", cursor: "pointer" }}
                     >
                       👁️
                     </Button>

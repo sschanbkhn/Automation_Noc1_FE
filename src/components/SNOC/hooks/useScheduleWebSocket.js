@@ -1,13 +1,13 @@
 // src/hooks/useScheduleWebSocket.js
 import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
+import { showTemporaryAlert } from "../redux/Alert/alertSlice";
 import {
-  updateLastRunAt,
   setWebSocketStatus,
+  updateLastRunAt,
   updateSystemStatusPatch,
   wsMergeHourlyItems, // 👈 NHẬN GÓI CHART REALTIME
 } from "../redux/Healthcheck/healthcheckSlice";
-import { showTemporaryAlert } from "../redux/Alert/alertSlice";
 
 const WS_URL = "ws://10.155.43.201:8000/ws/healthcheck/";
 const RECONNECT_INTERVAL = 5000;
@@ -67,7 +67,9 @@ const useScheduleWebSocket = () => {
         // 3) 🔥 Dữ liệu biểu đồ NOK theo giờ (realtime) từ schedule/manual
         if (data.type === "hourly_items" && Array.isArray(data.items)) {
           // Merge theo platform; reducer sẽ dedup host|hour|platform + prune > 24h
-          dispatch(wsMergeHourlyItems({ items: data.items, platform: data.platform }));
+          dispatch(
+            wsMergeHourlyItems({ items: data.items, platform: data.platform })
+          );
           return;
         }
 

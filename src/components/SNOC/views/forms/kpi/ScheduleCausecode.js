@@ -1,25 +1,41 @@
+// src/pages/scheduler/ScheduleGeneric.jsx
 import dayjs from "dayjs";
 import React, { useEffect, useMemo, useState } from "react";
 import { Button, Card, Col, FormControl, Row, Table } from "react-bootstrap";
 import { Provider, useDispatch, useSelector } from "react-redux";
 import Select from "react-select";
 import WebSocketStatusBanner from "../../../components/WebSocketStatusBanner";
-import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
+import useScheduleKpiWebSocket from "../../../hooks/useScheduleKpiWebSocket";
+
 import {
+  // ✅ lấy từ slice mới
   createGenericSchedule,
   deleteGenericSchedule,
   fetchGenericSchedule,
   toggleGenericSchedule,
   updateGenericSchedule,
-} from "../../../redux/Healthcheck/healthcheckSlice";
+  // ✅ selectors theo usecase_type
+  selectGenericSchedulesByType,
+  selectGenericLoadingByType,
+} from "../../../redux/KPI/genericScheduleSlice";
+
 import {
   fetchDevicesByPlatform,
   fetchPlatforms,
 } from "../../../redux/Healthcheck/platformDeviceSlice";
+
 import snocStore from "../../../store/snocStore";
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
 
-const USECASE_TYPE = "causecode";
+const USECASE_OPTIONS = [
+  { value: "causecode", label: "CauseCode" },
+  { value: "kpi", label: "KPI" },
+];
+
+const USECASE_LABEL = {
+  causecode: "CauseCode",
+  kpi: "KPI",
+};
 
 const StatusBadge = ({ status }) => {
   const map = {
@@ -37,14 +53,29 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const ScheduleCausecodeContent = () => {
-  useScheduleWebSocket("causecode_updates");
+const ScheduleGenericContent = () => {
   const dispatch = useDispatch();
-  const { platforms, devices } = useSelector((state) => state.platformDevice);
-  const { genericSchedules, scheduleCreating } = useSelector(
-    (state) => state.pscore
+
+  // Mặc định mở với CauseCode
+  const [usecaseType, setUsecaseType] = useState(USECASE_OPTIONS[0].value);
+
+  // 🔌 WS dành riêng cho SCHEDULE (cập nhật last_run_at/status)
+  useScheduleKpiWebSocket({ endpoint: "schedule", silent: true });
+
+  // Store: platform/device giữ nguyên
+  const { platforms = [], devices = [] } = useSelector(
+    (state) => state.platformDevice || {}
   );
 
+  // ✅ lấy rows & loading theo usecase từ slice mới
+  const rows = useSelector((state) =>
+    selectGenericSchedulesByType(state, usecaseType)
+  );
+  const genericLoading = useSelector((state) =>
+    selectGenericLoadingByType(state, usecaseType)
+  );
+
+  // Form state
   const [name, setName] = useState("");
   const [selectedPlatform, setSelectedPlatform] = useState("");
   const [selectedDevices, setSelectedDevices] = useState([]);
@@ -52,24 +83,38 @@ const ScheduleCausecodeContent = () => {
   const [startTime, setStartTime] = useState("");
   const [editingTask, setEditingTask] = useState(null);
 
+  // Init platforms
   useEffect(() => {
     dispatch(fetchPlatforms());
-    dispatch(fetchGenericSchedule({ usecase_type: USECASE_TYPE })); // ✅ truyền object
   }, [dispatch]);
 
+  // Mỗi lần đổi usecase → load danh sách + reset form
+  useEffect(() => {
+    dispatch(fetchGenericSchedule({ usecase_type: usecaseType }));
+    setEditingTask(null);
+    setName("");
+    setSelectedPlatform("");
+    setSelectedDevices([]);
+    setCronExpression("");
+    setStartTime("");
+  }, [dispatch, usecaseType]);
+
+  // Load devices theo platform
   useEffect(() => {
     if (selectedPlatform) {
       dispatch(fetchDevicesByPlatform(selectedPlatform));
     }
   }, [dispatch, selectedPlatform]);
 
-  const deviceOptions = useMemo(() => {
-    return devices.map((d) => ({
-      label: `${d.name} (${d.ip || "no-ip"})`,
-      value: d.name,
-    }));
-  }, [devices]);
-
+  // Options thiết bị
+  const deviceOptions = useMemo(
+    () =>
+      (devices || []).map((d) => ({
+        label: `${d.name} (${d.ip || "no-ip"})`,
+        value: d.name,
+      })),
+    [devices]
+  );
   const allOption = { label: "-- Chọn tất cả thiết bị --", value: "__all__" };
   const combinedOptions = [allOption, ...deviceOptions];
 
@@ -82,6 +127,7 @@ const ScheduleCausecodeContent = () => {
     }
   };
 
+  // Cron validator rất cơ bản
   const validateCron = (expression) =>
     expression.trim().split(/\s+/).length === 5;
 
@@ -109,22 +155,23 @@ const ScheduleCausecodeContent = () => {
       node_names: selectedNames,
       cron: cronExpression,
       start_time: startTime,
-      usecase_type: USECASE_TYPE,
+      usecase_type: usecaseType, // 'causecode' | 'kpi'
     };
 
     if (editingTask) {
       dispatch(updateGenericSchedule({ id: editingTask.id, ...payload })).then(
         () => {
-          dispatch(fetchGenericSchedule({ usecase_type: USECASE_TYPE }));
+          dispatch(fetchGenericSchedule({ usecase_type: usecaseType }));
           setEditingTask(null);
         }
       );
     } else {
       dispatch(createGenericSchedule(payload)).then(() =>
-        dispatch(fetchGenericSchedule({ usecase_type: USECASE_TYPE }))
+        dispatch(fetchGenericSchedule({ usecase_type: usecaseType }))
       );
     }
 
+    // Reset form
     setName("");
     setSelectedPlatform("");
     setSelectedDevices([]);
@@ -143,8 +190,8 @@ const ScheduleCausecodeContent = () => {
 
   const handleDelete = (id) => {
     if (window.confirm("Bạn có chắc muốn xoá lịch này không?")) {
-      dispatch(deleteGenericSchedule({ id, usecase_type: USECASE_TYPE })).then(
-        () => dispatch(fetchGenericSchedule({ usecase_type: USECASE_TYPE }))
+      dispatch(deleteGenericSchedule({ id, usecase_type: usecaseType })).then(
+        () => dispatch(fetchGenericSchedule({ usecase_type: usecaseType }))
       );
     }
   };
@@ -154,33 +201,44 @@ const ScheduleCausecodeContent = () => {
       toggleGenericSchedule({
         id: task.id,
         enabled: !task.enabled,
-        usecase_type: USECASE_TYPE,
+        usecase_type: usecaseType, // ✅ để slice tự refresh list
       })
     ).then(() =>
-      dispatch(fetchGenericSchedule({ usecase_type: USECASE_TYPE }))
+      dispatch(fetchGenericSchedule({ usecase_type: usecaseType }))
     );
   };
-
-  // Lấy list từ genericSchedules theo usecase_type
-  const causecodeTasks = genericSchedules[USECASE_TYPE] || [];
 
   return (
     <>
       <TopNavbarHealth />
       <WebSocketStatusBanner />
+
+      <Row className="mb-3">
+        <Col md={3}>
+          <label className="form-label fw-semibold">Use case</label>
+          <Select
+            options={USECASE_OPTIONS}
+            value={USECASE_OPTIONS.find((o) => o.value === usecaseType)}
+            onChange={(opt) => setUsecaseType(opt?.value || "causecode")}
+          />
+        </Col>
+      </Row>
+
       <Row>
         <Col sm={12}>
           <Card>
             <Card.Body>
               <Row className="mb-3">
                 <Col md={3}>
+                  <label className="form-label">Tên lịch</label>
                   <FormControl
-                    placeholder="Tên lịch"
+                    placeholder="VD: pgw_cc_native"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                   />
                 </Col>
                 <Col md={3}>
+                  <label className="form-label">Start time</label>
                   <FormControl
                     type="datetime-local"
                     value={startTime}
@@ -188,6 +246,7 @@ const ScheduleCausecodeContent = () => {
                   />
                 </Col>
                 <Col md={3}>
+                  <label className="form-label">Platform</label>
                   <FormControl
                     as="select"
                     value={selectedPlatform}
@@ -202,6 +261,7 @@ const ScheduleCausecodeContent = () => {
                   </FormControl>
                 </Col>
                 <Col md={3}>
+                  <label className="form-label">Thiết bị</label>
                   <Select
                     isMulti
                     options={combinedOptions}
@@ -212,26 +272,28 @@ const ScheduleCausecodeContent = () => {
                   />
                 </Col>
               </Row>
+
               <Row className="mb-3">
                 <Col md={4}>
+                  <label className="form-label">Cron</label>
                   <FormControl
-                    placeholder="cron (vd: */5 * * * *)"
+                    placeholder="*/5 * * * *"
                     value={cronExpression}
                     onChange={(e) => setCronExpression(e.target.value)}
                   />
                 </Col>
-                <Col md={2}>
+                <Col md={3} className="d-flex align-items-end gap-2">
                   <Button
                     variant="primary"
                     onClick={handleSubmitSchedule}
-                    disabled={scheduleCreating}
+                    // ✅ disable theo loading của usecase hiện tại
+                    disabled={genericLoading}
                   >
                     {editingTask ? "Lưu thay đổi" : "Đặt lịch"}
                   </Button>
                   {editingTask && (
                     <Button
                       variant="secondary"
-                      className="ms-2"
                       onClick={() => setEditingTask(null)}
                     >
                       Huỷ
@@ -239,12 +301,15 @@ const ScheduleCausecodeContent = () => {
                   )}
                 </Col>
               </Row>
+
               <hr />
-              <h5>📋 Lịch CauseCode:</h5>
+              <h5>📋 Lịch {USECASE_LABEL[usecaseType] || usecaseType}:</h5>
+
               <Table striped bordered hover>
                 <thead>
                   <tr>
                     <th>Tên</th>
+                    <th>Use case</th>
                     <th>Platform</th>
                     <th>Cron</th>
                     <th>Thiết bị</th>
@@ -255,19 +320,20 @@ const ScheduleCausecodeContent = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {causecodeTasks.length === 0 ? (
+                  {rows.length === 0 ? (
                     <tr>
-                      <td colSpan="8" className="text-center">
+                      <td colSpan="9" className="text-center">
                         Không có lịch nào
                       </td>
                     </tr>
                   ) : (
-                    causecodeTasks.map((s) => (
+                    rows.map((s) => (
                       <tr key={s.id}>
                         <td>{s.name}</td>
+                        <td>{USECASE_LABEL[s.usecase] || s.usecase}</td>
                         <td>{s.platform}</td>
                         <td>{s.cron}</td>
-                        <td>{s.node_names.join(", ")}</td>
+                        <td>{(s.node_names || []).join(", ")}</td>
                         <td>
                           <Button
                             variant={s.enabled ? "success" : "secondary"}
@@ -317,10 +383,10 @@ const ScheduleCausecodeContent = () => {
   );
 };
 
-const ScheduleCausecode = () => (
+const ScheduleGeneric = () => (
   <Provider store={snocStore}>
-    <ScheduleCausecodeContent />
+    <ScheduleGenericContent />
   </Provider>
 );
 
-export default ScheduleCausecode;
+export default ScheduleGeneric;
