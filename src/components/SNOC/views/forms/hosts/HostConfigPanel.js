@@ -426,8 +426,6 @@
 
 // export default HostManager;
 
-
-
 import React, { useEffect, useState } from "react";
 import {
   Button,
@@ -440,7 +438,7 @@ import {
   Spinner,
   Table,
 } from "react-bootstrap";
-import { Provider, useDispatch, useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import CreatableSelect from "react-select/creatable";
 import Alert from "../../../components/Alert/Alert";
 import WebSocketStatusBanner from "../../../components/WebSocketStatusBanner";
@@ -451,10 +449,9 @@ import {
   fetchHosts,
   updateHost,
 } from "../../../redux/Hosts/hostsSlice";
-import snocStore from "../../../store/snocStore";
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
 
-const HostManagerContent = () => {
+const HostManager = () => {
   const dispatch = useDispatch();
   const { devices = [], loading = false } = useSelector(
     (state) => state.hosts || {}
@@ -471,8 +468,8 @@ const HostManagerContent = () => {
   const [newHost, setNewHost] = useState({
     name: "",
     hostname: "",
-    platform: "",      // ID platform nếu chọn từ dropdown
-    platformName: "",  // Tên platform nếu tạo mới
+    platform: "", // ID platform nếu chọn từ dropdown
+    platformName: "", // Tên platform nếu tạo mới
     groups: "",
     username: "",
     password: "",
@@ -504,8 +501,8 @@ const HostManagerContent = () => {
       item.name?.toLowerCase().includes(q) ||
       item.hostname?.toLowerCase().includes(q) ||
       item.platform?.toLowerCase().includes(q) ||
-      item.vendor?.toLowerCase().includes(q) ||            // 🔹 cho phép search theo vendor
-      item.site_code?.toLowerCase().includes(q) ||         // 🔹 cho phép search theo site_code
+      item.vendor?.toLowerCase().includes(q) || // 🔹 cho phép search theo vendor
+      item.site_code?.toLowerCase().includes(q) || // 🔹 cho phép search theo site_code
       item.groups?.some((g) => g.toLowerCase().includes(q))
     );
   });
@@ -591,8 +588,7 @@ const HostManagerContent = () => {
       port: host.port ?? "",
       site_code: host.site_code ?? "",
       vendor: host.vendor ?? "",
-      license_throughput:
-        host.license_throughput ?? "",
+      license_throughput: host.license_throughput ?? "",
     });
     setShowModal(true);
   };
@@ -997,11 +993,5 @@ const HostManagerContent = () => {
     </>
   );
 };
-
-const HostManager = () => (
-  <Provider store={snocStore}>
-    <HostManagerContent />
-  </Provider>
-);
 
 export default HostManager;

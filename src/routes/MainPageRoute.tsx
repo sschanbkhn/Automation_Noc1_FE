@@ -24,22 +24,14 @@ import {
 } from "components/Network";
 import DashboardR001 from "components/RNOC1/R001";
 import ScheduleTriggerForm from "components/RNOC1/R009";
+import RequireSnocAuthInline from "components/SNOC/auth/RequireSnocAuthInline";
+import SnocLoginInline from "components/SNOC/auth/SnocLoginInline";
 import NornirPlatformView from "components/SNOC/components/NornirPlatformView";
-import DashOrigin from "components/SNOC/views/dashboard/DashOrigin/SystemHealthDashboard";
-import { Config } from "components/System";
-import { Account, Organ, Permission, Role } from "components/User";
-import { Cookie } from "helpers/cookie";
-import { IUserInfo } from "models/Apps";
-import React from "react";
-import { connect } from "react-redux";
-import { Route, Routes } from "react-router-dom";
-import CenterDashboard from "../DashboardAutomation/CenterDashboard";
-import DashboardRnocRoom from "../DashboardAutomation/DashboardRnoc/DashboardRnocRoom";
-import DashboardRnocSummary from "../DashboardAutomation/DashboardRnoc/DashboardRnocSummary";
-import RoomDashboard from "../DashboardAutomation/RoomDashboard";
-
+import SnocSubApp from "components/SNOC/SnocSubApp";
 import DnsConfigDashboard from "components/SNOC/views/dashboard/DashOrigin/DnsConfigDashboard";
 import SbcDashboardWithNavbar from "components/SNOC/views/dashboard/DashOrigin/SbcDashboardWithNavbar";
+import DashOrigin from "components/SNOC/views/dashboard/DashOrigin/SystemHealthDashboard";
+
 import APNConfigPanel from "components/SNOC/views/forms/dns/APNConfigPanel";
 import DnsLacracrnc from "components/SNOC/views/forms/dns/Dnslacracrnc";
 import TACConfigPanel from "components/SNOC/views/forms/dns/TACConfigPanel";
@@ -55,9 +47,27 @@ import RequestHistoryTable from "components/SNOC/views/forms/sbc/RequestHistoryT
 import RoutingDeclarationForm from "components/SNOC/views/forms/sbc/RoutingDeclarationForm";
 import HealthcheckPage from "components/SNOC/views/tables/health/HealthcheckPage";
 import HistoricalReporting from "components/SNOC/views/tables/health/HistoricalReporting";
+import { Config } from "components/System";
+import { Account, Organ, Permission, Role } from "components/User";
+import { Cookie } from "helpers/cookie";
+import { IUserInfo } from "models/Apps";
+import React from "react";
+import { connect } from "react-redux";
+import { Route, Routes } from "react-router-dom";
+import CenterDashboard from "../DashboardAutomation/CenterDashboard";
+import DashboardRnocRoom from "../DashboardAutomation/DashboardRnoc/DashboardRnocRoom";
+import DashboardRnocSummary from "../DashboardAutomation/DashboardRnoc/DashboardRnocSummary";
+import RoomDashboard from "../DashboardAutomation/RoomDashboard";
 interface Props {
   Apps: any;
 }
+
+/** Các code menu thuộc SNOC cần login → KHÔNG đăng ký ở RouteRender động */
+const SNOC_CODES = new Set<string>([
+  "hc-dashboard",
+  "hc-dashboard-dns",
+  "hc-dashboard-sbc",
+]);
 
 const MainPageRoute = (props: Props) => {
   const GetPage = (code: String) => {
@@ -120,20 +130,12 @@ const MainPageRoute = (props: Props) => {
         return <Ucppoe />;
       case "hc-dashboard":
         return <DashOrigin />;
-      case "hc-schedule":
-        return <Schedule />;
-      case "hc-checks":
-        return <Healthcheck />;
-      case "hc-history":
-        return <HistoricalReporting />;
       case "hc-dashboard-dns":
         return <DnsConfigDashboard />;
-      case "hc-tacs":
-        return <TACConfigPanel />;
-      case "hc-lacracrnc":
-        return <DnsLacracrnc />;
       case "hc-dashboard-sbc":
         return <SbcDashboardWithNavbar />;
+      // case "hc-snoc-dashboard-admin":
+      //   return <TabsTableAdminUser />;
       default:
         return <Page404 />;
     }
@@ -144,14 +146,21 @@ const MainPageRoute = (props: Props) => {
     for (let i = 0; i < rootMenu.length; i++) {
       let menu = rootMenu[i];
       if (IsMenuOfUser(menu)) {
-        html.push(
-          <Route key={menu.code} path={menu.url} element={GetPage(menu.code)} />
-        );
+        // BỎ QUA các route SNOC (để tránh trùng với nhóm RequireSnocAuthInline phía dưới)
+        if (!SNOC_CODES.has(menu.code)) {
+          html.push(
+            <Route
+              key={menu.code}
+              path={menu.url}
+              element={GetPage(menu.code)}
+            />
+          );
+        }
       }
       if (menu.subMenu && menu.subMenu.length > 0) {
         for (let j = 0; j < menu.subMenu.length; j++) {
           let subMenu = menu.subMenu[j];
-          if (IsMenuOfUser(subMenu)) {
+          if (!SNOC_CODES.has(subMenu.code)) {
             html.push(
               <Route
                 key={subMenu.code}
@@ -189,42 +198,56 @@ const MainPageRoute = (props: Props) => {
       <Route key="401" path="/page401" element={<Page401 />} />
       <Route key="404" path="/page404" element={<Page404 />} />
       <Route path="/schedule-trigger-form" element={<ScheduleTriggerForm />} />
-      <Route path="/app/dashboard/origin" element={<DashOrigin />} />
-      <Route path="/healthcheck/devices" element={<HostConfigPanel />} />
-      <Route path="/healthcheck/schedule" element={<Schedule />} />
-      <Route path="/healthcheck/checks" element={<Healthcheck />} />
-      <Route path="/healthcheck/history" element={<HistoricalReporting />} />
-      <Route path="/healthcheck/kpi" element={<KPIChartDashboard />} />
-      <Route path="/healthcheck/kpischedule" element={<ScheduleKpi />} />
-      <Route path="/kpi/:system/:subsystem" element={<KPISelectorPage />} />
-      {/* <Route path="/healthcheck/ps-core" element={<PSCoreTable />} />
-      <Route path="/healthcheck/cs-core" element={<CsTable />} />
-      <Route path="/healthcheck/signal" element={<SignalTable />} />
 
-      <Route path="/healthcheck/ocs" element={<OcsTable />} /> */}
-      <Route path="/healthcheck/:group" element={<HealthcheckPage />} />
-      <Route
-        path="/healthcheck/:group/:subsystem"
-        element={<HealthcheckPage />}
-      />
-      <Route path="/app/dashboard/dns" element={<DnsConfigDashboard />} />
-      <Route path="/dns/tacs" element={<TACConfigPanel />} />
-      <Route path="/dns/lacracrnc" element={<DnsLacracrnc />} />
-      <Route path="/dns/apns" element={<APNConfigPanel />} />
-      <Route path="/sbc/dashboard" element={<SbcDashboardWithNavbar />} />
-      <Route
-        path="/sbc/CreateConnectionForm"
-        element={<CreateConnectionForm />}
-      />
-      <Route path="/sbc/DeclareNumberForm" element={<DeclareNumberForm />} />
-      <Route
-        path="/sbc/RoutingDeclarationForm"
-        element={<RoutingDeclarationForm />}
-      />
-      <Route
-        path="/sbc/RequestHistoryTable"
-        element={<RequestHistoryTable />}
-      />
+      <Route element={<SnocSubApp />}>
+        <Route path="/snoc/login" element={<SnocLoginInline />} />
+        <Route element={<RequireSnocAuthInline />}>
+          {/* các route SNOC cần login */}
+
+          <Route path="/app/dashboard/origin" element={<DashOrigin />} />
+          <Route path="/healthcheck/devices" element={<HostConfigPanel />} />
+          <Route path="/healthcheck/schedule" element={<Schedule />} />
+          <Route path="/healthcheck/checks" element={<Healthcheck />} />
+          <Route
+            path="/healthcheck/history"
+            element={<HistoricalReporting />}
+          />
+          <Route path="/healthcheck/kpi" element={<KPIChartDashboard />} />
+          <Route path="/healthcheck/kpischedule" element={<ScheduleKpi />} />
+          <Route path="/kpi/:system/:subsystem" element={<KPISelectorPage />} />
+          <Route path="/healthcheck/:group" element={<HealthcheckPage />} />
+          <Route
+            path="/healthcheck/:group/:subsystem"
+            element={<HealthcheckPage />}
+          />
+          <Route path="/app/dashboard/dns" element={<DnsConfigDashboard />} />
+          <Route path="/dns/tacs" element={<TACConfigPanel />} />
+          <Route path="/dns/lacracrnc" element={<DnsLacracrnc />} />
+          <Route path="/dns/apns" element={<APNConfigPanel />} />
+          <Route
+            path="/app/dashboard/sbc"
+            element={<SbcDashboardWithNavbar />}
+          />
+
+          <Route path="/sbc/dashboard" element={<SbcDashboardWithNavbar />} />
+          <Route
+            path="/sbc/CreateConnectionForm"
+            element={<CreateConnectionForm />}
+          />
+          <Route
+            path="/sbc/DeclareNumberForm"
+            element={<DeclareNumberForm />}
+          />
+          <Route
+            path="/sbc/RoutingDeclarationForm"
+            element={<RoutingDeclarationForm />}
+          />
+          <Route
+            path="/sbc/RequestHistoryTable"
+            element={<RequestHistoryTable />}
+          />
+        </Route>
+      </Route>
     </Routes>
   );
 };

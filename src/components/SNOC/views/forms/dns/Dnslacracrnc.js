@@ -1,14 +1,13 @@
 import React, { useState } from "react";
 import { Button, Col, Form, Row, Spinner } from "react-bootstrap";
-import { Provider, useDispatch, useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import {
   clearDnsResult,
   fetchDnsCheckResult3G,
 } from "../../../redux/Dns/dnsSlice";
-import snocStore from "../../../store/snocStore";
 import TopNavbarDns from "../../dashboard/DashOrigin/TopNavbarDns";
 
-const DnslacracrncContent = () => {
+const Dnslacracrnc = () => {
   const dispatch = useDispatch();
   const [selectedNode, setSelectedNode] = useState("dnsgn");
   const [selectedMme, setSelectedMme] = useState("mmee1d");
@@ -214,11 +213,5 @@ const DnslacracrncContent = () => {
     </>
   );
 };
-
-const Dnslacracrnc = () => (
-  <Provider store={snocStore}>
-    <DnslacracrncContent />
-  </Provider>
-);
 
 export default Dnslacracrnc;

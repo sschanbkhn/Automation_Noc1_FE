@@ -1,32 +1,43 @@
-import React from 'react';
-import { Row, Col } from 'react-bootstrap';
-import UserTable from './UserTable';
-import { NavLink } from 'react-router-dom';
+import React from "react";
+import { Col, Row } from "react-bootstrap";
+import { NavLink } from "react-router-dom";
+import Alert from "../../components/Alert/Alert";
+import UserTable from "./UserTable";
 const TabsTableAdminUser = () => {
-    return (
-        <React.Fragment>
-            <Row>
-                <Col>
-                    <div className="btn-group" size="sm" role="group" aria-label="Basic example">
-                        <NavLink to="/tables/tabstableadminuser" className="btn btn-sm btn-light py-0" activeClassName="active">
-                            User
-                        </NavLink>
-                        {/* <NavLink to="/tables/tabstableadmingroup" className="btn btn-sm btn-light py-0" activeClassName="active">
-                            Group
-                        </NavLink>
-                        <NavLink to="/tables/tabstableadmindepartment" className="btn btn-sm btn-light py-0" activeClassName="active">
-                            Department
-                        </NavLink> */}
-                    </div>
+  const navBtn = ({ isActive }) =>
+    `btn btn-sm btn-light py-0 ${isActive ? "active" : ""}`;
 
-                    <UserTable />
+  return (
+    // <React.Fragment>
+    <>
+      {/* <TopNavbarHealth /> */}
+      {/* <WebSocketStatusBanner /> */}
+      <Alert />
+      <Row>
+        <Col>
+          <div
+            className="btn-group btn-group-sm"
+            role="group"
+            aria-label="Basic example"
+          >
+            <NavLink to="/tables/tabstableadminuser" className={navBtn} end>
+              User
+            </NavLink>
+            {/* <NavLink to="/tables/tabstableadmingroup" className={navBtn}>
+              Group
+            </NavLink>
+            <NavLink to="/tables/tabstableadmindepartment" className={navBtn}>
+              Department
+            </NavLink> */}
+          </div>
 
+          <UserTable />
+        </Col>
+      </Row>
+    </>
 
-
-                </Col>
-            </Row>
-        </React.Fragment>
-    );
+    // </React.Fragment>
+  );
 };
 
 export default TabsTableAdminUser;

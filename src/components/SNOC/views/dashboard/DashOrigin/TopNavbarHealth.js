@@ -1,13 +1,47 @@
+// src/components/SNOC/views/dashboard/DashOrigin/TopNavbar.jsx
 import React from "react";
 import { Container, Nav, Navbar } from "react-bootstrap";
-import { NavLink } from "react-router-dom";
-import Clock from "../../../components/Clock"; // ✅ import clock
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import Clock from "../../../components/Clock";
+
+// 🔐 helper SNOC auth
+import {
+  getSnocToken,
+  setSnocToken,
+  snocApiNoAuth,
+} from "../../../api/snocApiWithAutoToken";
 
 const TopNavbar = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const getLinkClass = (navData) =>
     `nav-link fw-semibold px-3 py-2 rounded ${
       navData.isActive ? "bg-white text-primary" : "text-white"
     }`;
+
+  const handleLogout = async () => {
+    // Gọi API logout (nếu BE hỗ trợ) — best-effort, không chặn UI
+    try {
+      const token = getSnocToken();
+      if (token) {
+        await snocApiNoAuth.post(
+          "/users/logout",
+          {},
+          {
+            // BE cũ đang đọc raw token ở Authorization (không Bearer)
+            headers: { Authorization: token },
+          }
+        );
+      }
+    } catch (e) {
+      // ignore: nếu thất bại vẫn xóa token phía FE
+    } finally {
+      // Xoá token SNOC (RAM + sessionStorage) và quay về trang login
+      setSnocToken(null, { persist: true });
+      navigate("/snoc/login", { replace: true, state: { from: location } });
+    }
+  };
 
   return (
     <Navbar bg="primary" variant="dark" expand="lg" className="px-3">
@@ -46,14 +80,22 @@ const TopNavbar = () => {
             </NavLink>
           </Nav>
 
-          {/* === Phải: Đồng hồ / user / trạng thái (đẩy sát phải) === */}
-          <Nav className="ms-auto align-items-center">
+          {/* === Phải: Đồng hồ + Logout === */}
+          <Nav className="ms-auto align-items-center" style={{ gap: 12 }}>
             <span
               className="text-white fw-semibold"
               style={{ fontSize: "0.9rem" }}
             >
               <Clock />
             </span>
+            <button
+              className="btn btn-outline-light btn-sm"
+              onClick={handleLogout}
+              title="Logout SNOC"
+            >
+              <i className="bi bi-box-arrow-right me-1" />
+              Logout
+            </button>
           </Nav>
         </Navbar.Collapse>
       </Container>

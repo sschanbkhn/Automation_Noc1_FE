@@ -1,24 +1,22 @@
 // File: Schedule.js
-import React, { useState, useEffect, useMemo } from "react";
-import { Provider, useDispatch, useSelector } from "react-redux";
-import { Row, Col, Card, Button, FormControl, Table } from "react-bootstrap";
+import React, { useEffect, useMemo, useState } from "react";
+import { Button, Card, Col, FormControl, Row, Table } from "react-bootstrap";
+import { useDispatch, useSelector } from "react-redux";
 import Select from "react-select";
-import {
-  fetchPlatforms,
-  fetchDevicesByPlatform,
-} from "../../../redux/Healthcheck/platformDeviceSlice";
+import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
 import {
   createHealthcheckSchedule,
-  fetchHealthcheckSchedules,
   deleteHealthcheckSchedule,
-  updateHealthcheckSchedule,
+  fetchHealthcheckSchedules,
   toggleScheduleEnabled,
+  updateHealthcheckSchedule,
 } from "../../../redux/Healthcheck/healthcheckSlice";
-import snocStore from "../../../store/snocStore";
-import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
+import {
+  fetchDevicesByPlatform,
+  fetchPlatforms,
+} from "../../../redux/Healthcheck/platformDeviceSlice";
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
 import WebSocketStatusBanner from "./../../../components/WebSocketStatusBanner"; // cập nhật path cho đúng
-import dayjs from "dayjs";
 const StatusBadge = ({ status }) => {
   const map = {
     success: { label: "Thành công", color: "success", icon: "✅" },
@@ -35,7 +33,7 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const SchedulekContent = () => {
+const Schedule = () => {
   useScheduleWebSocket(); // ✅ Gọi ở đây
   const dispatch = useDispatch();
   const { platforms, devices } = useSelector((state) => state.platformDevice);
@@ -415,11 +413,5 @@ const SchedulekContent = () => {
     </>
   );
 };
-
-const Schedule = () => (
-  <Provider store={snocStore}>
-    <SchedulekContent />
-  </Provider>
-);
 
 export default Schedule;

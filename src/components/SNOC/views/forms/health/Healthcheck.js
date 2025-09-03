@@ -1,29 +1,28 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { Provider, useDispatch, useSelector } from "react-redux";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  Row,
-  Col,
-  Card,
-  Spinner,
   Button,
-  InputGroup,
+  Card,
+  Col,
   FormControl,
+  InputGroup,
+  Row,
+  Spinner,
   Table,
 } from "react-bootstrap";
+import { useDispatch, useSelector } from "react-redux";
 import Select from "react-select";
 
-import {
-  fetchPlatforms,
-  fetchDevicesByPlatform,
-} from "../../../redux/Healthcheck/platformDeviceSlice";
-import { GenericHealthCheckView } from "../../../redux/Healthcheck/healthcheckSlice";
 import { SERVER_MEDIA } from "../../../config/constant";
-import snocStore, { RootState, AppDispatch } from "../../../store/snocStore";
+import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
+import { GenericHealthCheckView } from "../../../redux/Healthcheck/healthcheckSlice";
+import {
+  fetchDevicesByPlatform,
+  fetchPlatforms,
+} from "../../../redux/Healthcheck/platformDeviceSlice";
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
 import WebSocketStatusBanner from "./../../../components/WebSocketStatusBanner"; // cập nhật path cho đúng
-import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
 
-const HealthcheckContent = () => {
+const Healthcheck = () => {
   useScheduleWebSocket(); // ✅ Gọi ở đây
 
   const dispatch = useDispatch();
@@ -207,11 +206,5 @@ const HealthcheckContent = () => {
     </>
   );
 };
-
-const Healthcheck = () => (
-  <Provider store={snocStore}>
-    <HealthcheckContent />
-  </Provider>
-);
 
 export default Healthcheck;

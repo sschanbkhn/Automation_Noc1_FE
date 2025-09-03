@@ -10,12 +10,11 @@ import {
   Spinner,
   Table,
 } from "react-bootstrap";
-import { Provider, useDispatch, useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import * as XLSX from "xlsx";
 import { SERVER_MEDIA } from "../../../config/constant";
 import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
 import { fetchPSCoreStatus } from "../../../redux/Healthcheck/healthcheckSlice";
-import snocStore from "../../../store/snocStore";
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
 import WebSocketStatusBanner from "./../../../components/WebSocketStatusBanner";
 
@@ -27,7 +26,7 @@ const statusRowClass = {
   Unknown: "table-secondary",
 };
 
-const HistoricalReportingContent = () => {
+const HistoricalReporting = () => {
   useScheduleWebSocket(); // ✅ Gọi ở đây
 
   const dispatch = useDispatch();
@@ -292,11 +291,5 @@ const HistoricalReportingContent = () => {
     </>
   );
 };
-
-const HistoricalReporting = () => (
-  <Provider store={snocStore}>
-    <HistoricalReportingContent />
-  </Provider>
-);
 
 export default HistoricalReporting;

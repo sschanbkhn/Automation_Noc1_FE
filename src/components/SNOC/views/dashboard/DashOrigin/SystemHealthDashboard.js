@@ -1,9 +1,8 @@
 // src/components/SNOC/views/dashboard/DashOrigin/SystemHealthDashboard.js
 import React, { useEffect, useMemo, useState } from "react";
 import { Button, Card, Col, Modal, Row, Spinner } from "react-bootstrap";
-import { Provider, useDispatch, useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import Alert from "../../../components/Alert/Alert";
-import Clock from "../../../components/Clock";
 import WebSocketStatusBanner from "../../../components/WebSocketStatusBanner";
 import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
 import {
@@ -11,11 +10,9 @@ import {
   fetchPSCoreStatus,
   fetchSystemStatus,
 } from "../../../redux/Healthcheck/healthcheckSlice";
-import snocStore from "../../../store/snocStore";
 import HealthcheckTable from "../../tables/health/HealthcheckTable";
 import styles from "./../../../styles/SystemHealth.module.scss";
 import TopNavbarHealth from "./TopNavbarHealth";
-
 // ✅ Recharts giống modal
 import {
   Bar,
@@ -89,12 +86,19 @@ const buildHourlySeries = (items) => {
 };
 
 // ====== Chart ngoài dashboard (theo group) ======
-const GroupNokChart = ({ platformList = [], storeKey, height = 160, title }) => {
+const GroupNokChart = ({
+  platformList = [],
+  storeKey,
+  height = 160,
+  title,
+}) => {
   const dispatch = useDispatch();
 
   // Backfill (nếu còn dùng fetch theo storeKey)
   const byKeyItems = useSelector((s) => s.pscore?.hourlyByKey?.[storeKey]);
-  const byKeyLoading = useSelector((s) => s.pscore?.hourlyLoadingByKey?.[storeKey]);
+  const byKeyLoading = useSelector(
+    (s) => s.pscore?.hourlyLoadingByKey?.[storeKey]
+  );
 
   // 🔥 Realtime từ WS: gộp theo platform
   const byPlatform = useSelector((s) => s.pscore?.hourlyByPlatform || {});
@@ -177,10 +181,14 @@ const GroupNokChart = ({ platformList = [], storeKey, height = 160, title }) => 
 
     return (
       <div className="p-2 bg-white border rounded shadow-sm">
-        <div><strong>{label}</strong></div>
+        <div>
+          <strong>{label}</strong>
+        </div>
         <div>NOK: {payload[0]?.value ?? 0}</div>
         {top.map((h) => (
-          <div key={h} style={{ fontSize: "0.85rem" }}>• {h}</div>
+          <div key={h} style={{ fontSize: "0.85rem" }}>
+            • {h}
+          </div>
         ))}
         {more > 0 && (
           <div style={{ fontSize: "0.85rem" }}>+{more} node nữa…</div>
@@ -192,7 +200,9 @@ const GroupNokChart = ({ platformList = [], storeKey, height = 160, title }) => 
   return (
     <div className="mb-2">
       <div className="d-flex justify-content-between align-items-center mb-1">
-        <small className="text-muted">{title || "NOK theo giờ (24h gần nhất)"}</small>
+        <small className="text-muted">
+          {title || "NOK theo giờ (24h gần nhất)"}
+        </small>
         {loading && <Spinner animation="border" size="sm" />}
       </div>
       <div style={{ width: "100%", height }}>
@@ -205,7 +215,12 @@ const GroupNokChart = ({ platformList = [], storeKey, height = 160, title }) => 
             <XAxis dataKey="hour" />
             <YAxis allowDecimals={false} />
             <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey="nok" name="NOK" fill={NOK_BAR_COLOR} stroke={NOK_BAR_COLOR} />
+            <Bar
+              dataKey="nok"
+              name="NOK"
+              fill={NOK_BAR_COLOR}
+              stroke={NOK_BAR_COLOR}
+            />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -266,7 +281,7 @@ const renderLastUpdatedTwoLines = (dateStr, small = false) => {
   );
 };
 
-const SystemHealthContent = () => {
+const SystemHealth = () => {
   useScheduleWebSocket();
   const dispatch = useDispatch();
 
@@ -317,7 +332,7 @@ const SystemHealthContent = () => {
       <div className={styles.container}>
         <Row>
           <Col md={12}>
-            <h3 className={styles.pageTitle}>
+            {/* <h3 className={styles.pageTitle}>
               System Health Dashboard
               <Clock
                 style={{
@@ -326,7 +341,7 @@ const SystemHealthContent = () => {
                   fontWeight: "normal",
                 }}
               />
-            </h3>
+            </h3> */}
 
             {/* ✅ Tổng thể 1 dòng */}
             {systemLastUpdated && (
@@ -554,11 +569,5 @@ const SystemHealthContent = () => {
     </>
   );
 };
-
-const SystemHealth = () => (
-  <Provider store={snocStore}>
-    <SystemHealthContent />
-  </Provider>
-);
 
 export default SystemHealth;

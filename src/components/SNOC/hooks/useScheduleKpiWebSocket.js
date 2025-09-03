@@ -1,29 +1,10 @@
-// src/hooks/useScheduleKpiWebSocket.js
 import { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
-// Banner WS (tuỳ chọn dùng khi silent=false) vẫn dùng từ Healthcheck slice:
 import { setWebSocketStatus } from "../redux/Healthcheck/healthcheckSlice";
-// Cập nhật trạng thái schedule (last_run_at/status) vào GenericSchedule slice:
-import { wsUpsertScheduleStatus } from "../redux/KPI/genericScheduleSlice";
+import { wsUpsertScheduleStatus } from "../redux/KPI/genericScheduleSlice"; // chỉnh path nếu khác
 
 const BASE_WS = "ws://10.155.43.201:8000/ws/";
 
-/**
- * WS chỉ nghe trạng thái schedule:
- *  - endpoint: "schedule"  -> khớp với re_path(r"^ws/schedule/$", ...)
- *  - silent: true          -> không động vào banner toàn cục
- *
- * Server message chấp nhận (ví dụ):
- *  {
- *    "type": "schedule_status",
- *    "usecase": "kpi" | "causecode",
- *    "schedule_name": "pgw_cc_native",
- *    "platform": "pgw",
- *    "last_run_at": "2025-08-23T10:22:00+07:00",
- *    "status": "success",
- *    "result_summary": "..."
- *  }
- */
 export default function useScheduleKpiWebSocket({
   endpoint = "schedule",
   silent = true,
@@ -37,13 +18,11 @@ export default function useScheduleKpiWebSocket({
   const hbRef = useRef(null);
   const isMountedRef = useRef(true);
 
-  // exponential backoff
   const attemptRef = useRef(0);
   const baseDelay = 1500;
   const maxDelay = 15000;
 
   const log = (...args) => {
-    // BỎ điều kiện nếu muốn log cả ở production
     if (process.env.NODE_ENV !== "production") {
       // eslint-disable-next-line no-console
       console.log(...args);
@@ -93,13 +72,10 @@ export default function useScheduleKpiWebSocket({
     ws.onmessage = (event) => {
       if (!isMountedRef.current) return;
 
-      // Log raw message trước khi parse
       log("📥 WS(schedule) raw:", event.data);
 
       try {
         const data = JSON.parse(event.data);
-
-        // Log payload đã parse để kiểm tra backend gửi gì (đặc biệt 'usecase')
         log("📦 WS(schedule) parsed:", data);
 
         const isScheduleMsg = data?.type === "schedule_status";
@@ -108,13 +84,14 @@ export default function useScheduleKpiWebSocket({
         const lastRunAt =
           data?.last_run_at || data?.finished_at || data?.timestamp || null;
         const status = data?.status || data?.last_run_status || null;
-        const usecase = data?.usecase || null;
+        const usecase = data?.usecase || null; // "kpi"
+        const action = data?.action || null;   // "causecode" | ...
         const result_summary = data?.result_summary;
         const platform = data?.platform;
 
-        // Log các field đã trích xuất
         log("🔎 extracted:", {
           usecase,
+          action,
           scheduleName,
           lastRunAt,
           status,
@@ -122,11 +99,11 @@ export default function useScheduleKpiWebSocket({
           has_summary: !!result_summary,
         });
 
-        // Chỉ cần có tên + (type=schedule_status hoặc có lastRunAt) là cập nhật
         if ((isScheduleMsg || (scheduleName && lastRunAt)) && scheduleName) {
           dispatch(
             wsUpsertScheduleStatus({
               usecase,
+              action,
               name: scheduleName,
               last_run_at: lastRunAt,
               status,
@@ -153,7 +130,6 @@ export default function useScheduleKpiWebSocket({
     };
 
     ws.onerror = () => {
-      // Cho onclose xử lý retry
       try {
         ws.close();
       } catch (_) {}
@@ -164,7 +140,6 @@ export default function useScheduleKpiWebSocket({
     isMountedRef.current = true;
     connect();
 
-    // Reconnect ngay khi mạng trở lại
     const onOnline = () => {
       if (!isMountedRef.current) return;
       if (socketRef.current?.readyState !== WebSocket.OPEN) {

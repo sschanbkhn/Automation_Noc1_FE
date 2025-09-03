@@ -178,6 +178,7 @@
         }
       ]
     },
+
     {
       "code": "hc-dashboard",
       "name": "Healthcheck Automation",

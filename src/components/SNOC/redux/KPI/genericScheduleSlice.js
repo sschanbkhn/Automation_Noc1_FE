@@ -1,15 +1,14 @@
-// src/redux/GenericSchedule/genericScheduleSlice.js
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import snocApi from "../../api/snocApiWithAutoToken";
 import { showTemporaryAlert } from "../Alert/alertSlice";
 
 /**
- * State tổ chức theo usecase_type:
+ * State theo usecase_type (nhóm):
  * genericSchedules: { [usecase_type]: Array<ScheduleItem> }
  * loadingGenericSchedules: { [usecase_type]: boolean }
  *
  * ScheduleItem (tối thiểu):
- * { id, name, platform, cron, node_names, enabled, usecase, last_run_at?, last_run_status?, result_summary? }
+ * { id, name, platform, cron, node_names, enabled, usecase, action, params?, last_run_at?, last_run_status?, result_summary? }
  */
 
 const initialState = {
@@ -22,7 +21,7 @@ const initialState = {
  * ========================= */
 export const fetchGenericSchedule = createAsyncThunk(
   "genericSchedule/fetchGenericSchedules",
-  async ({ usecase_type = "causecode" }, { dispatch, rejectWithValue }) => {
+  async ({ usecase_type = "kpi" }, { dispatch, rejectWithValue }) => {
     try {
       const response = await snocApi.get(
         `/nornirps/scheduler/generic/list/?usecase=${usecase_type}`
@@ -40,7 +39,16 @@ export const fetchGenericSchedule = createAsyncThunk(
 export const createGenericSchedule = createAsyncThunk(
   "genericSchedule/createGenericSchedule",
   async (
-    { name, platform, node_names, cron, start_time, usecase_type },
+    {
+      name,
+      platform,
+      node_names,
+      cron,
+      start_time,
+      usecase_type,
+      action = "causecode",
+      params,
+    },
     { dispatch, rejectWithValue }
   ) => {
     try {
@@ -50,7 +58,9 @@ export const createGenericSchedule = createAsyncThunk(
         node_names,
         cron,
         start_time,
-        usecase_type,
+        usecase_type, // "kpi"
+        action,       // "causecode" | ...
+        params,       // optional
       });
       dispatch(
         showTemporaryAlert({
@@ -72,7 +82,17 @@ export const createGenericSchedule = createAsyncThunk(
 export const updateGenericSchedule = createAsyncThunk(
   "genericSchedule/updateGenericSchedule",
   async (
-    { id, name, platform, node_names, cron, start_time, usecase_type },
+    {
+      id,
+      name,
+      platform,
+      node_names,
+      cron,
+      start_time,
+      usecase_type,
+      action = "causecode",
+      params,
+    },
     { dispatch, rejectWithValue }
   ) => {
     try {
@@ -82,7 +102,9 @@ export const updateGenericSchedule = createAsyncThunk(
         node_names,
         cron,
         start_time,
-        usecase_type,
+        usecase_type, // "kpi"
+        action,
+        params,
       });
       dispatch(fetchGenericSchedule({ usecase_type }));
       dispatch(
@@ -155,20 +177,19 @@ const genericScheduleSlice = createSlice({
     /**
      * Upsert trạng thái schedule từ WebSocket.
      * payload: {
-     *   usecase?: string,            // "kpi" | "causecode" | ...
-     *   name: string,                // schedule_name
-     *   last_run_at?: string,        // ISO
-     *   status?: string,             // success|failed|warning|...
+     *   usecase?: "kpi",
+     *   action?: "causecode"|...,
+     *   name: string,
+     *   last_run_at?: string,
+     *   status?: string,
      *   result_summary?: string|null,
-     *   platform?: string            // optional
+     *   platform?: string
      * }
-     *
-     * - Nếu có usecase: chỉ cập nhật list của usecase đó.
-     * - Nếu KHÔNG có usecase: thử dò theo name trong tất cả lists, thấy match thì cập nhật.
      */
     wsUpsertScheduleStatus: (state, action) => {
       const {
         usecase = null,
+        action: actionName,
         name,
         last_run_at,
         status,
@@ -183,12 +204,12 @@ const genericScheduleSlice = createSlice({
           const item = list[idx] || {};
           list[idx] = {
             ...item,
-            // giữ nguyên các field khác do API list trả về
             last_run_at: last_run_at ?? item.last_run_at,
             last_run_status: status ?? item.last_run_status,
             result_summary:
               result_summary !== undefined ? result_summary : item.result_summary,
             platform: platform ?? item.platform,
+            action: actionName ?? item.action,
           };
           return true;
         }
@@ -200,13 +221,12 @@ const genericScheduleSlice = createSlice({
         applyUpdate(lst);
         state.genericSchedules[usecase] = lst;
       } else {
-        // Không biết usecase: dò tất cả
         for (const uc of Object.keys(state.genericSchedules || {})) {
           const lst = state.genericSchedules[uc] || [];
           const updated = applyUpdate(lst);
           if (updated) {
             state.genericSchedules[uc] = lst;
-            break; // dừng ở list đầu tiên tìm thấy
+            break;
           }
         }
       }
@@ -352,22 +372,15 @@ const genericScheduleSlice = createSlice({
 
 export default genericScheduleSlice.reducer;
 
-/* =========================
- * Actions (export)
- * ========================= */
+/* Actions */
 export const { wsUpsertScheduleStatus } = genericScheduleSlice.actions;
 
-/* =========================
- * Selectors
- * ========================= */
-
-// “raw maps”
+/* Selectors */
 export const selectGenericSchedules = (state) =>
   state.genericSchedule.genericSchedules;
 export const selectGenericLoading = (state) =>
   state.genericSchedule.loadingGenericSchedules;
 
-// theo usecase_type
 export const selectGenericSchedulesByType = (state, usecase_type) =>
   (state.genericSchedule.genericSchedules || {})[usecase_type] || [];
 
