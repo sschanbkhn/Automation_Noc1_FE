@@ -1,31 +1,33 @@
-import React from 'react';
-import { Row, Col } from 'react-bootstrap';
-import GroupTable from './GroupTable';
-import { NavLink } from 'react-router-dom';
+import React from "react";
+import { Row, Col } from "react-bootstrap";
+import GroupTable from "./GroupTable";
+import { NavLink } from "react-router-dom";
+
 const TabsTableAdminUser = () => {
-    return (
-        <React.Fragment>
-            <Row>
-                <Col>
-                    <div className="btn-group" size="sm" role="group" aria-label="Basic example">
-                        <NavLink to="/tables/tabstableadminuser" className="btn btn-sm btn-light py-0" activeClassName="active">
-                            User
-                        </NavLink>
-                        <NavLink to="/tables/tabstableadmingroup" className="btn btn-sm btn-light py-0" activeClassName="active">
-                            Group
-                        </NavLink>
-                        <NavLink to="/tables/tabstableadmindepartment" className="btn btn-sm btn-light py-0" activeClassName="active">
-                            Department
-                        </NavLink>
-                    </div>
+  const navBtn = ({ isActive }) =>
+    `btn btn-sm btn-light py-0 ${isActive ? "active" : ""}`;
 
-                    <GroupTable />
+  return (
+    <React.Fragment>
+      <Row>
+        <Col>
+          <div className="btn-group btn-group-sm" role="group" aria-label="Basic example">
+            <NavLink to="/tables/tabstableadminuser" className={navBtn}>
+              User
+            </NavLink>
+            <NavLink to="/tables/tabstableadmingroup" className={navBtn} end>
+              Group
+            </NavLink>
+            <NavLink to="/tables/tabstableadmindepartment" className={navBtn}>
+              Department
+            </NavLink>
+          </div>
 
-
-                </Col>
-            </Row>
-        </React.Fragment>
-    );
+          <GroupTable />
+        </Col>
+      </Row>
+    </React.Fragment>
+  );
 };
 
 export default TabsTableAdminUser;

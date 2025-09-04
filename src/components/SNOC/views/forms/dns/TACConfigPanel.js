@@ -1,17 +1,15 @@
 import React, { useState } from "react";
+import { Button, Col, Form, Row, Spinner } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
-import { Row, Col, Form, Button, Spinner } from "react-bootstrap";
 import Select from "react-select";
-import TopNavbarDns from "../../dashboard/DashOrigin/TopNavbarDns";
 import {
+  clearDnsResult,
   fetchDnsCheckResultTAC,
   fetchGenerateTmpCommandTAC,
-  clearDnsResult,
 } from "../../../redux/Dns/dnsSlice";
-import { Provider } from "react-redux";
-import snocStore from "../../../store/snocStore";
+import TopNavbarDns from "../../dashboard/DashOrigin/TopNavbarDns";
 
-const TACConfigPanelContent = () => {
+const TACConfigPanel = () => {
   const dispatch = useDispatch();
 
   const [node, setNode] = useState("dnsgn");
@@ -281,11 +279,5 @@ const TACConfigPanelContent = () => {
     </>
   );
 };
-
-const TACConfigPanel = () => (
-  <Provider store={snocStore}>
-    <TACConfigPanelContent />
-  </Provider>
-);
 
 export default TACConfigPanel;

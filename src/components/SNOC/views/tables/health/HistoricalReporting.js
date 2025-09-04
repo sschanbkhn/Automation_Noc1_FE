@@ -10,12 +10,11 @@ import {
   Spinner,
   Table,
 } from "react-bootstrap";
-import { Provider, useDispatch, useSelector } from "react-redux";
-import * as ExcelJS from "exceljs";
+import { useDispatch, useSelector } from "react-redux";
+import * as XLSX from "xlsx";
 import { SERVER_MEDIA } from "../../../config/constant";
 import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
 import { fetchPSCoreStatus } from "../../../redux/Healthcheck/healthcheckSlice";
-import snocStore from "../../../store/snocStore";
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
 import WebSocketStatusBanner from "./../../../components/WebSocketStatusBanner";
 
@@ -27,7 +26,7 @@ const statusRowClass = {
   Unknown: "table-secondary",
 };
 
-const HistoricalReportingContent = () => {
+const HistoricalReporting = () => {
   useScheduleWebSocket(); // ✅ Gọi ở đây
 
   const dispatch = useDispatch();
@@ -79,7 +78,7 @@ const HistoricalReportingContent = () => {
     return 0;
   });
 
-  const exportToExcel = async () => {
+  const exportToExcel = () => {
     const data = sortedItems.map((item, index) => ({
       STT: (currentPage - 1) * pageSize + index + 1,
       Host: item.host,
@@ -92,25 +91,14 @@ const HistoricalReportingContent = () => {
       "File kết quả": item.result_file || "",
     }));
 
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("HistoricalReport");
-
-    // Định nghĩa columns
-    const columns = Object.keys(data[0] || {}).map(key => ({
-      header: key,
-      key: key,
-      width: 20
-    }));
-    worksheet.columns = columns;
-
-    // Thêm data
-    data.forEach(row => {
-      worksheet.addRow(row);
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "HistoricalReport");
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
     });
-
-    // Generate Excel file
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], {
+    const blob = new Blob([excelBuffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
     });
     saveAs(blob, `historical_healthcheck_export.xlsx`);
@@ -303,11 +291,5 @@ const HistoricalReportingContent = () => {
     </>
   );
 };
-
-const HistoricalReporting = () => (
-  <Provider store={snocStore}>
-    <HistoricalReportingContent />
-  </Provider>
-);
 
 export default HistoricalReporting;

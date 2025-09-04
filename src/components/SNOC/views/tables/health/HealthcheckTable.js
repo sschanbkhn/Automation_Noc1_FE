@@ -12,7 +12,7 @@ import {
   Table,
 } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
-import * as ExcelJS from "exceljs";
+import * as XLSX from "xlsx";
 import { SERVER_MEDIA } from "../../../config/constant";
 import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
 import {
@@ -174,7 +174,7 @@ const HealthcheckTable = ({
     setCurrentPage(pageNum);
   };
 
-  const exportToExcel = async () => {
+  const exportToExcel = () => {
     const data = sortedItems.map((item, index) => ({
       STT: (currentPage - 1) * pageSize + index + 1,
       Host: item.host,
@@ -188,25 +188,11 @@ const HealthcheckTable = ({
       Excluded: item.excluded ? "Yes" : "No",
     }));
 
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Healthcheck");
-
-    // Định nghĩa columns
-    const columns = Object.keys(data[0] || {}).map(key => ({
-      header: key,
-      key: key,
-      width: 20
-    }));
-    worksheet.columns = columns;
-
-    // Thêm data
-    data.forEach(row => {
-      worksheet.addRow(row);
-    });
-
-    // Generate Excel file
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], {
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Healthcheck");
+    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([excelBuffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
     });
     saveAs(blob, `${group || "healthcheck"}_export.xlsx`);

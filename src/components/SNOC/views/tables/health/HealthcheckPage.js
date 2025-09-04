@@ -1,26 +1,25 @@
-import React, { useEffect, useState, useRef, useMemo } from "react";
-import { Provider, useDispatch, useSelector } from "react-redux";
+import { saveAs } from "file-saver";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  Row,
-  Col,
+  Button,
   Card,
-  Table,
-  Spinner,
+  Col,
   Form,
   Pagination,
-  Button,
+  Row,
+  Spinner,
+  Table,
 } from "react-bootstrap";
-import { useParams, useLocation } from "react-router-dom";
-import { fetchLatestHealthcheckView } from "../../../redux/Healthcheck/healthcheckSlice";
-import { SERVER_MEDIA } from "../../../config/constant";
-import Alert from "../../../components/Alert/Alert";
-import snocStore from "../../../store/snocStore";
-import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
-import * as ExcelJS from "exceljs";
-import { saveAs } from "file-saver";
-import WebSocketStatusBanner from "../../../components/WebSocketStatusBanner";
-import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
+import { useDispatch, useSelector } from "react-redux";
+import { useLocation, useParams } from "react-router-dom";
+import * as XLSX from "xlsx";
 import snocApi from "../../../api/snocApiWithAutoToken";
+import Alert from "../../../components/Alert/Alert";
+import WebSocketStatusBanner from "../../../components/WebSocketStatusBanner";
+import { SERVER_MEDIA } from "../../../config/constant";
+import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
+import { fetchLatestHealthcheckView } from "../../../redux/Healthcheck/healthcheckSlice";
+import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
 
 const statusRowClass = {
   OK: "",
@@ -30,7 +29,7 @@ const statusRowClass = {
   Unknown: "table-secondary",
 };
 
-const HealthcheckTable = () => {
+const HealthcheckPage = () => {
   useScheduleWebSocket();
   const dispatch = useDispatch();
   const { group, subsystem } = useParams();
@@ -147,7 +146,7 @@ const HealthcheckTable = () => {
     currentPage * pageSize
   );
 
-  const exportToExcel = async () => {
+  const exportToExcel = () => {
     const data = filteredItems.map((item, index) => ({
       STT: index + 1,
       Host: item.host,
@@ -159,32 +158,22 @@ const HealthcheckTable = () => {
       "File kết quả": item.result_file || "",
     }));
 
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Healthcheck");
-
-    // Định nghĩa columns
-    const columns = Object.keys(data[0] || {}).map(key => ({
-      header: key,
-      key: key,
-      width: 20
-    }));
-    worksheet.columns = columns;
-
-    // Thêm data
-    data.forEach(row => {
-      worksheet.addRow(row);
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Healthcheck");
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
     });
-
-    // Generate Excel file
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], {
+    const blob = new Blob([excelBuffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
     });
     saveAs(blob, `${group || "healthcheck"}_export.xlsx`);
   };
 
   const totalPages = Math.ceil(countlastest / pageSize);
-  const title = subsystem && group ? `${group} / ${subsystem}` : group || "Healthcheck";
+  const title =
+    subsystem && group ? `${group} / ${subsystem}` : group || "Healthcheck";
 
   return (
     <>
@@ -351,12 +340,5 @@ const HealthcheckTable = () => {
     </>
   );
 };
-
-const HealthcheckPage = () => (
-  <Provider store={snocStore}>
-    <Alert />
-    <HealthcheckTable />
-  </Provider>
-);
 
 export default HealthcheckPage;

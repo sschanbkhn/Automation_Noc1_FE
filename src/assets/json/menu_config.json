@@ -140,39 +140,38 @@
         },
         {
           "code": "DashboardR007",
-          "name": "Công cụ tự động báo cáo cấu hình",
+          "name": "Quản lý cấu hình vô tuyến",
           "url": "/dashboardrnoc7",
           "icon": "bi bi-grid"
         }
       ]
     },
-    {
+     {
       "code": "NetworkSnoc",
       "name": "AU Chuyển mạch",
       "url": "/user",
       "icon": "bi bi-cpu",
       "subMenu": [
         {
-            "code": "hc-dashboard",
-            "name": "Healthcheck Automation",
-            "url": "/app/dashboard/origin",
-            "icon": "bi bi-cpu"
-          },
-          {
-            "code": "hc-dashboard-dns",
-            "name": "DNS Automation",
-            "url": "/app/dashboard/dns",
-            "icon": "bi bi-cpu"
-          },
-          {
-            "code": "hc-dashboard-sbc",
-            "name": "SBC Automation",
-            "url": "/app/dashboard/sbc",
-            "icon": "bi bi-cpu"
-          }
+      "code": "hc-dashboard",
+      "name": "Healthcheck Automation",
+      "url": "/app/dashboard/origin",
+      "icon": "bi bi-cpu"
+    },
+    {
+      "code": "hc-dashboard-dns",
+      "name": "DNS Automation",
+      "url": "/app/dashboard/dns",
+      "icon": "bi bi-cpu"
+    },
+    {
+      "code": "hc-dashboard-sbc",
+      "name": "SBC Automation",
+      "url": "/app/dashboard/sbc",
+      "icon": "bi bi-cpu"
+    }
       ]
     },
-    
     {
       "code": "NetworkInoc",
       "name": "AU IP",

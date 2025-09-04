@@ -1,17 +1,15 @@
 import React, { useState } from "react";
+import { Button, Col, Form, Row, Spinner } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
-import { Row, Col, Form, Button, Spinner } from "react-bootstrap";
 import Select from "react-select";
 import {
-  fetchGenerateTmpCommandAPN,
-  fetchDnsCheckResultTAC,
   clearDnsResult,
+  fetchDnsCheckResultTAC,
+  fetchGenerateTmpCommandAPN,
 } from "../../../redux/Dns/dnsSlice";
 import TopNavbarDns from "../../dashboard/DashOrigin/TopNavbarDns";
-import snocStore from "../../../store/snocStore";
-import { Provider } from "react-redux";
 
-const APNConfigPanelContent = () => {
+const APNConfigPanel = () => {
   const dispatch = useDispatch();
 
   const [apns, setApns] = useState("");
@@ -192,11 +190,5 @@ const APNConfigPanelContent = () => {
     </>
   );
 };
-
-const APNConfigPanel = () => (
-  <Provider store={snocStore}>
-    <APNConfigPanelContent />
-  </Provider>
-);
 
 export default APNConfigPanel;
