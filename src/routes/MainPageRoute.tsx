@@ -40,7 +40,7 @@ import Anm_uc1 from "components/ANM/UC1";
 import Ucppoe from "components/INOC1/I003";
 import I004_1List from "components/I004_1";
 import NornirPlatformView from "components/SNOC/components/NornirPlatformView";
-import DashOrigin from "components/SNOC/views/dashboard/DashOrigin/SystemHealthDashboard";
+import DashOrigin from "components/SNOC/components/DashOriginWithStore";
 
 import PSCoreTable from "components/SNOC/views/tables/health/PSCoreTable";
 import CsTable from "components/SNOC/views/tables/health/CsTable";

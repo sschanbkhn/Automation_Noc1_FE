@@ -6,7 +6,14 @@ import styles from "./../../styles/SystemHealth.module.scss"; // ✅ import scss
 
 const Alert = () => {
   const dispatch = useDispatch();
-  const alerts = useSelector((state) => state.alert.alerts);
+  const alerts = useSelector((state) => {
+    // Kiểm tra xem store có SNOC structure không
+    if (!state || !state.alert) {
+      console.warn('SNOC Redux store not found, Alert component disabled');
+      return [];
+    }
+    return state.alert.alerts || [];
+  });
 
   if (!alerts.length) return null;
 
