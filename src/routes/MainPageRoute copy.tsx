@@ -11,7 +11,6 @@ import Page404 from "components/common/Page404";
 import Profile from "components/common/Profile";
 import Setting from "components/common/Setting";
 import Support from "components/common/Support";
-import I004_1List from "components/I004_1";
 import Ucppoe from "components/INOC1/I003";
 import {
   CableManagement,
@@ -23,9 +22,32 @@ import {
   HistoryCurenAlarm,
   Manufacturers,
 } from "components/Network";
+import DashboardR001 from "components/RNOC1/R001";
 import ScheduleTriggerForm from "components/RNOC1/R009";
+import RequireSnocAuthInline from "components/SNOC/auth/RequireSnocAuthInline";
+import SnocLoginInline from "components/SNOC/auth/SnocLoginInline";
 import NornirPlatformView from "components/SNOC/components/NornirPlatformView";
+import SnocSubApp from "components/SNOC/SnocSubApp";
+import DnsConfigDashboard from "components/SNOC/views/dashboard/DashOrigin/DnsConfigDashboard";
+import SbcDashboardWithNavbar from "components/SNOC/views/dashboard/DashOrigin/SbcDashboardWithNavbar";
 import DashOrigin from "components/SNOC/views/dashboard/DashOrigin/SystemHealthDashboard";
+
+import UserGroupDeptManager from "components/SNOC/Admin/UserGroupDeptManager";
+import APNConfigPanel from "components/SNOC/views/forms/dns/APNConfigPanel";
+import DnsLacracrnc from "components/SNOC/views/forms/dns/Dnslacracrnc";
+import TACConfigPanel from "components/SNOC/views/forms/dns/TACConfigPanel";
+import Healthcheck from "components/SNOC/views/forms/health/Healthcheck";
+import Schedule from "components/SNOC/views/forms/health/Schedule";
+import HostConfigPanel from "components/SNOC/views/forms/hosts/HostConfigPanel";
+import KPIChartDashboard from "components/SNOC/views/forms/kpi/KPIChartDashboard";
+import KPISelectorPage from "components/SNOC/views/forms/kpi/KPISelectorPage";
+import ScheduleKpi from "components/SNOC/views/forms/kpi/ScheduleCausecode";
+import CreateConnectionForm from "components/SNOC/views/forms/sbc/CreateConnectionForm";
+import DeclareNumberForm from "components/SNOC/views/forms/sbc/DeclareNumberForm";
+import RequestHistoryTable from "components/SNOC/views/forms/sbc/RequestHistoryTable";
+import RoutingDeclarationForm from "components/SNOC/views/forms/sbc/RoutingDeclarationForm";
+import HealthcheckPage from "components/SNOC/views/tables/health/HealthcheckPage";
+import HistoricalReporting from "components/SNOC/views/tables/health/HistoricalReporting";
 import { Config } from "components/System";
 import { Account, Organ, Permission, Role } from "components/User";
 import { Cookie } from "helpers/cookie";
@@ -34,39 +56,14 @@ import React from "react";
 import { connect } from "react-redux";
 import { Route, Routes } from "react-router-dom";
 import CenterDashboard from "../DashboardAutomation/CenterDashboard";
+import DashboardRnocRoom from "../DashboardAutomation/DashboardRnoc/DashboardRnocRoom";
+import DashboardRnocSummary from "../DashboardAutomation/DashboardRnoc/DashboardRnocSummary";
 import RoomDashboard from "../DashboardAutomation/RoomDashboard";
-
-import ClearThuebaoDaphien from "components/INOC1/I003";
-import LspQuocte from "components/INOC1/I004";
-import DataLspQuocte from "components/INOC1/I004_1";
-import DashboardR001 from "components/RNOC1/R001";
-import Sleeping from "components/RNOC1/R005-SleepingCell/R005HomeSleepingCell";
-import {
-  default as ConfigReport,
-  default as DashboardR007,
-} from "components/RNOC1/R009";
-import DnsConfigDashboard from "components/SNOC/views/dashboard/DashOrigin/DnsConfigDashboard";
-import SbcDashboardWithNavbar from "components/SNOC/views/dashboard/DashOrigin/SbcDashboardWithNavbar";
-import DnsLacracrnc from "components/SNOC/views/forms/dns/Dnslacracrnc";
-import TACConfigPanel from "components/SNOC/views/forms/dns/TACConfigPanel";
-import Healthcheck from "components/SNOC/views/forms/health/Healthcheck";
-import Schedule from "components/SNOC/views/forms/health/Schedule";
-import CreateConnectionForm from "components/SNOC/views/forms/sbc/CreateConnectionForm";
-import DeclareNumberForm from "components/SNOC/views/forms/sbc/DeclareNumberForm";
-import RequestHistoryTable from "components/SNOC/views/forms/sbc/RequestHistoryTable";
-import RoutingDeclarationForm from "components/SNOC/views/forms/sbc/RoutingDeclarationForm";
-import HistoricalReporting from "components/SNOC/views/tables/health/HistoricalReporting";
-/// SNOC
-import RequireSnocAuthInline from "components/SNOC/auth/RequireSnocAuthInline";
-import SnocLoginInline from "components/SNOC/auth/SnocLoginInline";
-import SnocSubApp from "components/SNOC/SnocSubApp";
-import HostConfigPanel from "components/SNOC/views/forms/hosts/HostConfigPanel";
-import KPIChartDashboard from "components/SNOC/views/forms/kpi/KPIChartDashboard";
-import KPISelectorPage from "components/SNOC/views/forms/kpi/KPISelectorPage";
-///
 interface Props {
   Apps: any;
 }
+
+/** Các code menu thuộc SNOC cần login → KHÔNG đăng ký ở RouteRender động */
 const SNOC_CODES = new Set<string>([
   "hc-dashboard",
   "hc-dashboard-dns",
@@ -98,8 +95,7 @@ const MainPageRoute = (props: Props) => {
         return <CategoryAlarmLevel />;
       case "CategoryAlarmType":
         return <CategoryAlarmType />;
-      case "ConfigReport":
-        return <ConfigReport />;
+
       case "DashboardR001":
         return <DashboardR001 />;
       case "CableManagement":
@@ -124,43 +120,24 @@ const MainPageRoute = (props: Props) => {
         return <CenterDashboard />;
       case "RoomDashboard":
         return <RoomDashboard />;
-      case "DashboardR001":
-        return <DashboardR001 />;
-      case "DashboardR002":
-        return <DashboardR001 />; // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
-      case "DashboardR003":
-        return <DashboardR001 />; // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
-      case "DashboardR004":
-        return <DashboardR001 />; // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
-      case "DashboardR005":
-        return <DashboardR001 />; // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
-      case "DashboardR006":
-        return <DashboardR001 />; // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
-      case "DashboardR007":
-        return <DashboardR007 />;
-      case "SleepingCellManagement":
-        return <Sleeping />;
-      // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
+      case "DashboardRnoc":
+        return <DashboardRnocSummary />;
+      case "DashboardRnocRoom":
+        return <DashboardRnocRoom />;
       case "ScheduleTriggerForm":
         return <ScheduleTriggerForm />;
       case "anm_uc1":
         return <Anm_uc1 />;
       case "ucppoe":
         return <Ucppoe />;
-      case "i004_1":
-        return <I004_1List />;
       case "hc-dashboard":
         return <DashOrigin />;
       case "hc-dashboard-dns":
         return <DnsConfigDashboard />;
       case "hc-dashboard-sbc":
         return <SbcDashboardWithNavbar />;
-      case "ClearThuebaoDaphien":
-        return <ClearThuebaoDaphien />;
-      case "LspQuocte":
-        return <LspQuocte />;
-      case "DataLspQuocte":
-        return <DataLspQuocte />;
+      case "hc-snoc-admin-dashboard":
+        return <UserGroupDeptManager />;
       default:
         return <Page404 />;
     }
@@ -181,14 +158,11 @@ const MainPageRoute = (props: Props) => {
             />
           );
         }
-        html.push(
-          <Route key={menu.code} path={menu.url} element={GetPage(menu.code)} />
-        );
       }
       if (menu.subMenu && menu.subMenu.length > 0) {
         for (let j = 0; j < menu.subMenu.length; j++) {
           let subMenu = menu.subMenu[j];
-          if (IsMenuOfUser(subMenu)) {
+          if (!SNOC_CODES.has(subMenu.code)) {
             html.push(
               <Route
                 key={subMenu.code}
@@ -226,11 +200,15 @@ const MainPageRoute = (props: Props) => {
       <Route key="401" path="/page401" element={<Page401 />} />
       <Route key="404" path="/page404" element={<Page404 />} />
       <Route path="/schedule-trigger-form" element={<ScheduleTriggerForm />} />
-      {/* Phần riêng cho SNOC */}
+
       <Route element={<SnocSubApp />}>
         <Route path="/snoc/login" element={<SnocLoginInline />} />
         <Route element={<RequireSnocAuthInline />}>
           {/* các route SNOC cần login */}
+          <Route
+            path="/snoc/admin/dashboard"
+            element={<UserGroupDeptManager />}
+          />
 
           <Route path="/app/dashboard/origin" element={<DashOrigin />} />
           <Route path="/healthcheck/devices" element={<HostConfigPanel />} />
@@ -241,17 +219,17 @@ const MainPageRoute = (props: Props) => {
             element={<HistoricalReporting />}
           />
           <Route path="/healthcheck/kpi" element={<KPIChartDashboard />} />
-          <Route path="/healthcheck/kpischedule" element={<Schedule />} />
+          <Route path="/healthcheck/kpischedule" element={<ScheduleKpi />} />
           <Route path="/kpi/:system/:subsystem" element={<KPISelectorPage />} />
-          <Route path="/healthcheck/:group" element={<Healthcheck />} />
+          <Route path="/healthcheck/:group" element={<HealthcheckPage />} />
           <Route
             path="/healthcheck/:group/:subsystem"
-            element={<Healthcheck />}
+            element={<HealthcheckPage />}
           />
           <Route path="/app/dashboard/dns" element={<DnsConfigDashboard />} />
           <Route path="/dns/tacs" element={<TACConfigPanel />} />
           <Route path="/dns/lacracrnc" element={<DnsLacracrnc />} />
-          <Route path="/dns/apns" element={<TACConfigPanel />} />
+          <Route path="/dns/apns" element={<APNConfigPanel />} />
           <Route
             path="/app/dashboard/sbc"
             element={<SbcDashboardWithNavbar />}
@@ -276,7 +254,6 @@ const MainPageRoute = (props: Props) => {
           />
         </Route>
       </Route>
-      {/* Kết thúc phần SNOC */}
     </Routes>
   );
 };
