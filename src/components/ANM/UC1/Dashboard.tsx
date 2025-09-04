@@ -49,7 +49,7 @@ const Dashboard = () => {
       <Table bordered hover responsive>
         <thead>
           <tr>
-            <th>Mã tỉnh</th>
+            <th>Mã tỉnh.</th>
             <th>Tên tỉnh</th>
             <th>Thiết bị</th>
             <th>Số thuê bao đa phiên</th>
