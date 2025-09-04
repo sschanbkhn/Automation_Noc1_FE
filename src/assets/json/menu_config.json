@@ -178,7 +178,12 @@
         }
       ]
     },
-
+    {
+      "code": "hc-snoc-admin-dashboard",
+      "name": "Admin SNOC",
+      "url": "/snoc/admin/dashboard",
+      "icon": "bi bi-cpu"
+    },
     {
       "code": "hc-dashboard",
       "name": "Healthcheck Automation",

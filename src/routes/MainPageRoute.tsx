@@ -32,6 +32,7 @@ import DnsConfigDashboard from "components/SNOC/views/dashboard/DashOrigin/DnsCo
 import SbcDashboardWithNavbar from "components/SNOC/views/dashboard/DashOrigin/SbcDashboardWithNavbar";
 import DashOrigin from "components/SNOC/views/dashboard/DashOrigin/SystemHealthDashboard";
 
+import UserGroupDeptManager from "components/SNOC/Admin/UserGroupDeptManager";
 import APNConfigPanel from "components/SNOC/views/forms/dns/APNConfigPanel";
 import DnsLacracrnc from "components/SNOC/views/forms/dns/Dnslacracrnc";
 import TACConfigPanel from "components/SNOC/views/forms/dns/TACConfigPanel";
@@ -67,6 +68,7 @@ const SNOC_CODES = new Set<string>([
   "hc-dashboard",
   "hc-dashboard-dns",
   "hc-dashboard-sbc",
+  "hc-snoc-admin-dashboard",
 ]);
 
 const MainPageRoute = (props: Props) => {
@@ -134,8 +136,8 @@ const MainPageRoute = (props: Props) => {
         return <DnsConfigDashboard />;
       case "hc-dashboard-sbc":
         return <SbcDashboardWithNavbar />;
-      // case "hc-snoc-dashboard-admin":
-      //   return <TabsTableAdminUser />;
+      case "hc-snoc-admin-dashboard":
+        return <UserGroupDeptManager />;
       default:
         return <Page404 />;
     }
@@ -203,6 +205,10 @@ const MainPageRoute = (props: Props) => {
         <Route path="/snoc/login" element={<SnocLoginInline />} />
         <Route element={<RequireSnocAuthInline />}>
           {/* các route SNOC cần login */}
+          <Route
+            path="/snoc/admin/dashboard"
+            element={<UserGroupDeptManager />}
+          />
 
           <Route path="/app/dashboard/origin" element={<DashOrigin />} />
           <Route path="/healthcheck/devices" element={<HostConfigPanel />} />
