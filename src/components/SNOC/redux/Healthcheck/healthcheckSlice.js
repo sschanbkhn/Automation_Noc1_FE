@@ -29,14 +29,17 @@ export const toggleDeviceExcluded = createAsyncThunk(
       });
       dispatch(
         showTemporaryAlert({
-          message: `Thiết bị ${host} ${excluded ? "đã loại trừ" : "bỏ loại trừ"} khỏi cảnh báo`,
+          message: `Thiết bị ${host} ${
+            excluded ? "đã loại trừ" : "bỏ loại trừ"
+          } khỏi cảnh báo`,
           type: "success",
         })
       );
       return { host, excluded };
     } catch (error) {
       const msg =
-        error?.response?.data?.detail || "Không thể cập nhật trạng thái excluded";
+        error?.response?.data?.detail ||
+        "Không thể cập nhật trạng thái excluded";
       dispatch(showTemporaryAlert({ message: msg, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
@@ -66,7 +69,8 @@ export const fetchHealthcheckSchedules = createAsyncThunk(
       return response.data;
     } catch (error) {
       const message =
-        error?.response?.data?.detail || "Lỗi khi tải danh sách lịch healthcheck";
+        error?.response?.data?.detail ||
+        "Lỗi khi tải danh sách lịch healthcheck";
       dispatch(showTemporaryAlert({ message, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
@@ -75,7 +79,10 @@ export const fetchHealthcheckSchedules = createAsyncThunk(
 
 export const createHealthcheckSchedule = createAsyncThunk(
   "pscore/createHealthcheckSchedule",
-  async ({ name, platform, node_names, cron, start_time }, { dispatch, rejectWithValue }) => {
+  async (
+    { name, platform, node_names, cron, start_time },
+    { dispatch, rejectWithValue }
+  ) => {
     try {
       const response = await snocApi.post("/nornirps/schedulerhealth/", {
         name,
@@ -84,7 +91,9 @@ export const createHealthcheckSchedule = createAsyncThunk(
         cron,
         start_time,
       });
-      dispatch(showTemporaryAlert({ message: "Đặt lịch thành công!", type: "success" }));
+      dispatch(
+        showTemporaryAlert({ message: "Đặt lịch thành công!", type: "success" })
+      );
       return response.data;
     } catch (error) {
       const message = error?.response?.data?.detail || "Lỗi khi đặt lịch";
@@ -98,7 +107,9 @@ export const toggleScheduleEnabled = createAsyncThunk(
   "pscore/toggleScheduleEnabled",
   async ({ id, enabled }, { dispatch, rejectWithValue }) => {
     try {
-      await snocApi.patch(`/nornirps/schedulerhealth/${id}/toggle/`, { enabled });
+      await snocApi.patch(`/nornirps/schedulerhealth/${id}/toggle/`, {
+        enabled,
+      });
       dispatch(fetchHealthcheckSchedules());
       dispatch(
         showTemporaryAlert({
@@ -121,7 +132,12 @@ export const deleteHealthcheckSchedule = createAsyncThunk(
     try {
       await snocApi.delete(`/nornirps/schedulerhealth/${id}/delete/`);
       dispatch(fetchHealthcheckSchedules());
-      dispatch(showTemporaryAlert({ message: "Đã xóa lịch thành công", type: "success" }));
+      dispatch(
+        showTemporaryAlert({
+          message: "Đã xóa lịch thành công",
+          type: "success",
+        })
+      );
       return id;
     } catch (error) {
       const message = error?.response?.data?.detail || "Lỗi khi xóa lịch";
@@ -133,7 +149,10 @@ export const deleteHealthcheckSchedule = createAsyncThunk(
 
 export const updateHealthcheckSchedule = createAsyncThunk(
   "pscore/updateHealthcheckSchedule",
-  async ({ id, name, platform, node_names, cron, start_time }, { dispatch, rejectWithValue }) => {
+  async (
+    { id, name, platform, node_names, cron, start_time },
+    { dispatch, rejectWithValue }
+  ) => {
     try {
       await snocApi.put(`/nornirps/schedulerhealth/${id}/update/`, {
         name,
@@ -171,17 +190,21 @@ export const fetchPSCoreStatus = createAsyncThunk(
       params.append("page", String(page));
       platform.forEach((p) => params.append("platform", p));
 
-      const hasHours = hours !== undefined && hours !== null && `${hours}` !== "";
+      const hasHours =
+        hours !== undefined && hours !== null && `${hours}` !== "";
       if (hasHours) params.append("hours", String(hours));
       if (page_size) params.append("page_size", String(page_size));
 
       // có hours -> KHÔNG gửi notes; không có hours -> gửi notes
       if (!hasHours) params.append("include_notes", "1");
 
-      const response = await snocApi.get(`/nornirps/healthcheck/history/?${params.toString()}`);
+      const response = await snocApi.get(
+        `/nornirps/healthcheck/history/?${params.toString()}`
+      );
       return response.data;
     } catch (error) {
-      const msg = error?.response?.data?.detail || "Không thể tải dữ liệu PS Core";
+      const msg =
+        error?.response?.data?.detail || "Không thể tải dữ liệu PS Core";
       dispatch(showTemporaryAlert({ message: msg, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
@@ -190,7 +213,10 @@ export const fetchPSCoreStatus = createAsyncThunk(
 
 export const fetchLatestHealthcheckView = createAsyncThunk(
   "pscore/fetchLatestHealthcheckView",
-  async ({ host, page = 1, platform = [], option = "" }, { rejectWithValue, dispatch }) => {
+  async (
+    { host, page = 1, platform = [], option = "" },
+    { rejectWithValue, dispatch }
+  ) => {
     try {
       const params = new URLSearchParams();
       if (host) params.append("host", host);
@@ -198,10 +224,13 @@ export const fetchLatestHealthcheckView = createAsyncThunk(
       params.append("page", page);
       platform.forEach((p) => params.append("platform", p));
 
-      const response = await snocApi.get(`/nornirps/healthcheck/latest/?${params.toString()}`);
+      const response = await snocApi.get(
+        `/nornirps/healthcheck/latest/?${params.toString()}`
+      );
       return response.data;
     } catch (error) {
-      const msg = error?.response?.data?.detail || "Không thể tải dữ liệu PS Core";
+      const msg =
+        error?.response?.data?.detail || "Không thể tải dữ liệu PS Core";
       dispatch(showTemporaryAlert({ message: msg, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
@@ -248,20 +277,30 @@ export const fetchSystemStatusBySubsystem = createAsyncThunk(
   "pscore/fetchSystemStatusBySubsystem",
   async ({ group, subsystem }, { rejectWithValue, dispatch }) => {
     try {
-      const response = await snocApi.get(`/nornirps/systemhealth/${group}/${subsystem}/`);
+      const response = await snocApi.get(
+        `/nornirps/systemhealth/${group}/${subsystem}/`
+      );
       return { group, subsystem, data: response.data };
     } catch (error) {
       const msg =
-        error?.response?.data?.detail || `Không thể tải dữ liệu subsystem ${subsystem}`;
+        error?.response?.data?.detail ||
+        `Không thể tải dữ liệu subsystem ${subsystem}`;
       dispatch(showTemporaryAlert({ message: msg, type: "error" }));
-      return rejectWithValue({ group, subsystem, error: error?.response?.data });
+      return rejectWithValue({
+        group,
+        subsystem,
+        error: error?.response?.data,
+      });
     }
   }
 );
 
 export const GenericHealthCheckView = createAsyncThunk(
   "healthcheck/GenericHealthCheckView",
-  async ({ selectedPlatform, selectedDevice }, { rejectWithValue, dispatch }) => {
+  async (
+    { selectedPlatform, selectedDevice },
+    { rejectWithValue, dispatch }
+  ) => {
     try {
       const response = await snocApi.post("/nornirps/GenericHealthCheckView/", {
         selectedPlatform,
@@ -427,6 +466,39 @@ const psCoreSlice = createSlice({
       // mark recently updated
       if (!state.recentlyUpdated[group]) state.recentlyUpdated[group] = {};
       state.recentlyUpdated[group][subsystem] = Date.now();
+    },
+    upsertLatestFromClient: (state, { payload }) => {
+      const host = payload?.host;
+      if (!host) return;
+
+      // latest view: mỗi host 1 dòng → match theo host là đủ
+      const idx = state.lastestitems.findIndex((x) => x.host === host);
+
+      const merged = {
+        ...(idx >= 0 ? state.lastestitems[idx] : {}),
+        ...payload, // host, ip, platform, status, notes, result_file, starttime, endtime, ...
+      };
+
+      if (idx >= 0) {
+        state.lastestitems[idx] = merged;
+      } else {
+        state.lastestitems.unshift(merged);
+        state.countlastest = (state.countlastest || 0) + 1;
+      }
+
+      // (tuỳ chọn) để chart 24h nhảy ngay khi NOK/Error
+      if (payload.status === "NOK" || payload.status === "Error") {
+        state.hourlyItems = [
+          {
+            host: payload.host,
+            platform: payload.platform,
+            status: payload.status,
+            starttime: payload.starttime || new Date().toISOString(),
+            notes: payload.notes || "",
+          },
+          ...(state.hourlyItems || []),
+        ];
+      }
     },
   },
   extraReducers: (builder) => {
@@ -622,6 +694,7 @@ export const {
   setWebSocketStatus,
   updateSystemStatusPatch,
   wsMergeHourlyItems,
+  upsertLatestFromClient,
 } = psCoreSlice.actions;
 
 export default psCoreSlice.reducer;

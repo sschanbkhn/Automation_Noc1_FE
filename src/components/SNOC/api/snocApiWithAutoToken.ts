@@ -5,38 +5,87 @@ import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
    YÊU CẦU: REACT_APP_SNOC_API_URL = http://10.155.43.201:8000/api
    ======================= */
 const RAW_BASE = process.env.REACT_APP_SNOC_API_URL || "";
-export const AUTH_EVENT = "snoc-auth-changed"; // 👈 thêm dòng này
-const BASE = RAW_BASE.replace(/\/+$/, ""); // bỏ "/" cuối nếu có
+export const AUTH_EVENT = "snoc-auth-changed";
+const BASE = RAW_BASE.replace(/\/+$/, "");
 
 // Login tuyệt đối: http://host:port/api/users/login
 const LOGIN_URL = `${BASE}/users/login`;
 
-/* ===== Token (RAM + sessionStorage) ===== */
+/* ===== Token (RAM + sessionStorage + localStorage) ===== */
 let accessToken: string | null = null;
 const SESSION_KEY = "snoc_jwt_token";
+const LOCAL_KEY = "snoc_jwt_token_persist";
+
+// helper phát sự kiện auth
+function fireAuthEvent(isLoggedIn: boolean) {
+  try {
+    window.dispatchEvent(new CustomEvent(AUTH_EVENT, { detail: { isLoggedIn } }));
+  } catch {}
+}
+
+// Bootstrap token khi module được import
+(function bootstrapToken() {
+  if (typeof window === "undefined") return;
+  try {
+    const s = sessionStorage.getItem(SESSION_KEY);
+    const l = localStorage.getItem(LOCAL_KEY);
+    accessToken = s || l || null;
+    // Nếu chỉ có local mà chưa có session => copy sang session cho tab hiện tại
+    if (!s && l) sessionStorage.setItem(SESSION_KEY, l);
+    fireAuthEvent(!!accessToken);
+  } catch {}
+})();
 
 export function setSnocToken(
   token: string | null,
   opts?: { persist?: boolean }
 ) {
   accessToken = token;
-  if (opts?.persist) {
-    if (token) sessionStorage.setItem(SESSION_KEY, token);
-    else sessionStorage.removeItem(SESSION_KEY);
-  }
-  // 🔔 PHÁT SỰ KIỆN cho gate/guard biết để re-render
+
   try {
-    window.dispatchEvent(
-      new CustomEvent(AUTH_EVENT, { detail: { isLoggedIn: !!token } })
-    );
+    if (token) {
+      // luôn set vào session cho tab hiện tại
+      sessionStorage.setItem(SESSION_KEY, token);
+      // nếu persist => lưu thêm local để tab khác đọc được
+      if (opts?.persist) localStorage.setItem(LOCAL_KEY, token);
+      else localStorage.removeItem(LOCAL_KEY);
+    } else {
+      sessionStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem(LOCAL_KEY);
+    }
   } catch {}
+
+  fireAuthEvent(!!token);
 }
 
 export function getSnocToken(): string | null {
   if (accessToken) return accessToken;
-  const cached = sessionStorage.getItem(SESSION_KEY);
-  if (cached) accessToken = cached;
+  try {
+    const s = sessionStorage.getItem(SESSION_KEY);
+    const l = localStorage.getItem(LOCAL_KEY);
+    accessToken = s || l || null;
+    if (!s && l) sessionStorage.setItem(SESSION_KEY, l);
+  } catch {}
   return accessToken;
+}
+
+// Đồng bộ cross-tab qua sự kiện storage
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (e) => {
+    if (e.key !== LOCAL_KEY) return;
+    try {
+      const newVal = e.newValue;
+      if (newVal) {
+        accessToken = newVal;
+        sessionStorage.setItem(SESSION_KEY, newVal);
+        fireAuthEvent(true);
+      } else {
+        accessToken = null;
+        sessionStorage.removeItem(SESSION_KEY);
+        fireAuthEvent(false);
+      }
+    } catch {}
+  });
 }
 
 /* ===== Unauthorized hook (401) ===== */
@@ -50,7 +99,7 @@ export function onSnocUnauthorized(cb: UnauthorizedHandler) {
 
 /* ===== Axios instances ===== */
 export const snocApi: AxiosInstance = axios.create({
-  baseURL: BASE, // <-- slice gọi '/nornirps/...' cũng sẽ về `${BASE}/nornirps/...` nhờ normalize bên dưới
+  baseURL: BASE,
   headers: { Accept: "application/json", "Content-Type": "application/json" },
 });
 
@@ -62,8 +111,8 @@ export const snocApiNoAuth: AxiosInstance = axios.create({
 /* ===== Login API (KHÔNG tự lưu token) ===== */
 export interface SnocLoginResponse {
   success?: boolean;
-  token?: string; // BE cũ
-  access?: string; // nếu BE trả field access
+  token?: string;
+  access?: string;
   user?: any;
   message?: string;
   msg?: string;
@@ -73,7 +122,6 @@ export const snocLogin = async (
   email: string,
   password: string
 ): Promise<SnocLoginResponse> => {
-  // gọi tuyệt đối để chắc chắn đúng /api/users/login
   const res = await snocApiNoAuth.post<SnocLoginResponse>(LOGIN_URL, {
     email,
     password,
@@ -85,29 +133,28 @@ export const snocLogin = async (
 // Gắn Authorization + (tuỳ chọn) X-CSRFTOKEN trước mỗi request
 snocApi.interceptors.request.use(
   (config: any) => {
-    // 🔧 Normalize URL:
-    // Nếu url bắt đầu bằng "/" (và KHÔNG phải http/https), bỏ "/" đầu
-    // để axios không đè mất path "/api" của baseURL.
+    // Normalize URL: nếu url bắt đầu "/" (không phải http/https) thì bỏ "/" đầu
     if (
       config?.url &&
       /^\/(?!\/)/.test(config.url) &&
       !/^https?:\/\//i.test(config.url)
     ) {
-      config.url = config.url.replace(/^\/+/, ""); // "/nornirps/..." => "nornirps/..."
+      config.url = config.url.replace(/^\/+/, "");
     }
 
     const token = getSnocToken();
     if (token) {
       config.headers = config.headers || {};
-      config.headers.Authorization = `${token}`; // chuẩn
-      config.headers["X-CSRFTOKEN"] = token; // nếu BE cũ đang đọc header này
+      // GIỮ NGUYÊN CÁCH GỬI TOKEN THEO BE HIỆN TẠI
+      config.headers.Authorization = `${token}`;
+      config.headers["X-CSRFTOKEN"] = token;
     }
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// 401 -> gọi handler (ví dụ dispatch LOGOUT)
+// 401 -> gọi handler (ví dụ dispatch LOGOUT) + xoá token cả 2 nơi
 snocApi.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
@@ -134,7 +181,7 @@ export default snocApi;
    - Login:
        const data = await snocLogin(email, password);
        const token = data.token || data.access;
-       setSnocToken(token, { persist: true });
+       setSnocToken(token, { persist: true }); // ⭐ nhớ bật persist để mở tab mới không bị login lại
    - Slice/API khác (giữ nguyên dấu "/" đầu cũng OK):
        await snocApi.post('/nornirps/systemhealth/toggle-exclude/', { host, excluded });
        // -> http://10.155.43.201:8000/api/nornirps/systemhealth/toggle-exclude/

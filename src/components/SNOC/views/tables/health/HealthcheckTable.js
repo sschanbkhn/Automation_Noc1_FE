@@ -19,6 +19,8 @@ import {
   fetchLatestHealthcheckView,
   fetchPSCoreStatus,
   toggleDeviceExcluded,
+  GenericHealthCheckView,
+  upsertLatestFromClient, // ✅ upsert ngay vào latest
 } from "../../../redux/Healthcheck/healthcheckSlice";
 import styles from "./../../../styles/SystemHealth.module.scss";
 
@@ -47,7 +49,7 @@ const HealthcheckTable = ({
   group,
   subsystem,
   platformList = [],
-  hideChart = false, // 👈 thêm prop
+  hideChart = false,
 }) => {
   useScheduleWebSocket();
   const dispatch = useDispatch();
@@ -86,10 +88,17 @@ const HealthcheckTable = ({
   const [selectedHour, setSelectedHour] = useState(null);
   const [selectedHourItems, setSelectedHourItems] = useState([]);
 
+  // ✅ trạng thái đang chạy healthcheck theo từng host (chỉ row đó quay)
+  const [runningByHost, setRunningByHost] = useState({});
+  const anyRowRunning = useMemo(
+    () => Object.values(runningByHost).some(Boolean),
+    [runningByHost]
+  );
+
   const pageSize = 10;
   const totalPages = Math.ceil(countlastest / pageSize);
 
-  // Fetch list latest theo bảng
+  // ===== Fetch list latest theo bảng =====
   useEffect(() => {
     dispatch(
       fetchLatestHealthcheckView({
@@ -100,7 +109,7 @@ const HealthcheckTable = ({
     );
   }, [dispatch, currentPage, group, subsystem, platformList]);
 
-  // Fetch history theo host khi mở modal lịch sử
+  // ===== Fetch history theo host khi mở modal lịch sử =====
   useEffect(() => {
     if (showHostHistory && selectedHost) {
       dispatch(
@@ -123,8 +132,8 @@ const HealthcheckTable = ({
       fetchPSCoreStatus({
         platform: platformList,
         page: 1,
-        page_size: 1000, // gom đủ dữ liệu
-        hours: 24, // 24h gần nhất
+        page_size: 1000,
+        hours: 24,
         option: "",
         storeKey: "hourly",
       })
@@ -141,6 +150,83 @@ const HealthcheckTable = ({
     dispatch(toggleDeviceExcluded({ host, excluded: checked }));
   };
 
+  // ====== Xác định platform cho từng dòng ======
+  const hostPlatformIndex = useMemo(() => {
+    const m = new Map();
+    (hourlyItems || []).forEach((it) => {
+      if (it?.host && it?.platform) m.set(it.host, String(it.platform));
+    });
+    (hostHistoryItems || []).forEach((it) => {
+      if (it?.host && it?.platform) m.set(it.host, String(it.platform));
+    });
+    (lastestitems || []).forEach((it) => {
+      if (it?.host && it?.platform) m.set(it.host, String(it.platform));
+    });
+    return m;
+  }, [hourlyItems, hostHistoryItems, lastestitems]);
+
+  const normalizePlatform = (p) => (typeof p === "string" ? p.trim() : "");
+
+  const resolvePlatformForRow = (item) => {
+    const fromItem =
+      normalizePlatform(item?.platform) ||
+      normalizePlatform(item?.platform_name) ||
+      (Array.isArray(item?.platforms) ? normalizePlatform(item.platforms[0]) : "");
+    if (fromItem) return fromItem;
+
+    const byIndex = hostPlatformIndex.get(item?.host);
+    if (byIndex) return byIndex;
+
+    if (Array.isArray(platformList) && platformList.length === 1) {
+      return platformList[0];
+    }
+    return null;
+  };
+
+  // ====== Chạy healthcheck 1 thiết bị + upsert ngay vào latest ======
+  const runHealthcheck = async (platform, host, rowFallback = {}) => {
+    if (!platform || !host) return;
+    setRunningByHost((prev) => ({ ...prev, [host]: true }));
+    try {
+      const res = await dispatch(
+        GenericHealthCheckView({
+          selectedPlatform: platform,
+          selectedDevice: [host],
+        })
+      ).unwrap();
+
+      const arr = Array.isArray(res) ? res : res ? [res] : [];
+      for (const r of arr) {
+        const normalized = {
+          id:
+            (r?.id && String(r.id)) ||
+            `${r?.host || host}-${r?.endtime || r?.starttime || Date.now()}`,
+          host: r?.host || host,
+          ip: r?.ip ?? rowFallback.ip ?? "",
+          platform: r?.platform || platform,
+          status: r?.status || "OK",
+          notes: Array.isArray(r?.notes)
+            ? r.notes.map((n) => n?.note ?? "").join(" | ")
+            : r?.notes ?? "",
+          result_file: r?.result_file || "",
+          usecase: r?.usecase || "manual",
+          starttime: r?.starttime || new Date().toISOString(),
+          endtime: r?.endtime || null,
+          excluded:
+            typeof rowFallback.excluded === "boolean" ? rowFallback.excluded : false,
+          group,
+          subsystem,
+        };
+        dispatch(upsertLatestFromClient(normalized));
+      }
+    } catch (err) {
+      console.error("Healthcheck error:", err);
+    } finally {
+      setRunningByHost((prev) => ({ ...prev, [host]: false }));
+    }
+  };
+
+  // ====== Lọc / sắp xếp / export ======
   const filteredItems = lastestitems.filter((item) => {
     const lowerSearch = searchTerm.toLowerCase();
     const matchesText =
@@ -170,9 +256,7 @@ const HealthcheckTable = ({
     return 0;
   });
 
-  const handlePageChange = (pageNum) => {
-    setCurrentPage(pageNum);
-  };
+  const handlePageChange = (pageNum) => setCurrentPage(pageNum);
 
   const exportToExcel = () => {
     const data = sortedItems.map((item, index) => ({
@@ -253,7 +337,6 @@ const HealthcheckTable = ({
     return m;
   }, [hourlyItems, hideChart]);
 
-  // ✅ Tooltip tùy biến: hiện top một số host NOK
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload || !payload.length) return null;
     const arr = hourIndex.get(label) || [];
@@ -281,8 +364,7 @@ const HealthcheckTable = ({
     );
   };
 
-  // ✅ Click cột để mở modal liệt kê node NOK giờ đó
-  const handleBarClick = (data /* entry */, index) => {
+  const handleBarClick = (data) => {
     const label = data?.payload?.hour;
     const arr = hourIndex.get(label) || [];
     setSelectedHour(label);
@@ -300,7 +382,11 @@ const HealthcheckTable = ({
                 {group} / {subsystem} - Bản ghi healthcheck
               </Card.Title>
             </div>
-            <Form className="d-flex flex-wrap align-items-end gap-2">
+            {/* 🔒 CHẶN SUBMIT FORM để tránh /to/ajaxRequestNotify */}
+            <Form
+              className="d-flex flex-wrap align-items-end gap-2"
+              onSubmit={(e) => e.preventDefault()}
+            >
               <Form.Group>
                 <Form.Label className="mb-1">Tìm kiếm</Form.Label>
                 <Form.Control
@@ -339,7 +425,7 @@ const HealthcheckTable = ({
                   onChange={(e) => setEndDate(e.target.value)}
                 />
               </Form.Group>
-              <Button variant="outline-success" onClick={exportToExcel}>
+              <Button type="button" variant="outline-success" onClick={exportToExcel}>
                 Xuất Excel
               </Button>
             </Form>
@@ -373,7 +459,7 @@ const HealthcheckTable = ({
               </div>
             )}
 
-            {loading ? (
+            {loading && !anyRowRunning ? (
               <div className="text-center my-4">
                 <Spinner animation="border" variant="primary" />
               </div>
@@ -389,6 +475,7 @@ const HealthcheckTable = ({
                       <th>Trạng thái</th>
                       <th>Ghi chú</th>
                       <th>File kết quả</th>
+                      <th style={{ width: 140 }}>Healthcheck</th>
                       <th>Exclude</th>
                     </tr>
                   </thead>
@@ -398,6 +485,17 @@ const HealthcheckTable = ({
                       const diffHours =
                         (new Date() - startTimeDate) / (1000 * 60 * 60);
 
+                      const host = item.host;
+                      const platform = resolvePlatformForRow(item);
+                      const running = !!runningByHost[host];
+                      const disableBtn = !host || !platform || running;
+
+                      const rowFallback = {
+                        id: item.id,
+                        ip: item.ip,
+                        excluded: item.excluded,
+                      };
+
                       return (
                         <tr
                           key={item.id || index}
@@ -406,6 +504,7 @@ const HealthcheckTable = ({
                           <td>{(currentPage - 1) * pageSize + index + 1}</td>
                           <td>
                             <Button
+                              type="button" // 🔒 không để submit
                               variant="link"
                               className="p-0 text-decoration-underline"
                               onClick={() => {
@@ -413,6 +512,7 @@ const HealthcheckTable = ({
                                 setHostHistoryPage(1);
                                 setShowHostHistory(true);
                               }}
+                              disabled={running}
                             >
                               {item.host}
                             </Button>
@@ -450,10 +550,35 @@ const HealthcheckTable = ({
                               "Không có file"
                             )}
                           </td>
+
+                          {/* ✅ Nút healthcheck từng thiết bị */}
+                          <td>
+                            <Button
+                              type="button" // 🔒 không để submit
+                              size="sm"
+                              variant="outline-primary"
+                              className="d-inline-flex align-items-center gap-2"
+                              disabled={disableBtn}
+                              title={
+                                !platform
+                                  ? "Chưa xác định platform (hãy đảm bảo subsystem/platform đúng)"
+                                  : "Chạy healthcheck thiết bị này"
+                              }
+                              onClick={(e) => {
+                                e.preventDefault(); // 🔒 chặn submit mặc định (phòng hờ)
+                                runHealthcheck(platform, host, rowFallback);
+                              }}
+                            >
+                              {running && <Spinner size="sm" animation="border" />}
+                              <span>{running ? "Đang chạy..." : "Healthcheck"}</span>
+                            </Button>
+                          </td>
+
                           <td className="text-center">
                             <Form.Check
                               type="checkbox"
                               checked={!!item.excluded}
+                              disabled={running}
                               onChange={(e) =>
                                 handleToggleExclude(item.host, e.target.checked)
                               }
@@ -566,10 +691,7 @@ const HealthcheckTable = ({
                     )}
                   </Modal.Body>
                   <Modal.Footer>
-                    <Button
-                      variant="secondary"
-                      onClick={() => setShowHostHistory(false)}
-                    >
+                    <Button type="button" variant="secondary" onClick={() => setShowHostHistory(false)}>
                       Đóng
                     </Button>
                   </Modal.Footer>
@@ -633,7 +755,7 @@ const HealthcheckTable = ({
                     )}
                   </Modal.Body>
                   <Modal.Footer>
-                    <Button variant="secondary" onClick={() => setShowHourModal(false)}>
+                    <Button type="button" variant="secondary" onClick={() => setShowHourModal(false)}>
                       Đóng
                     </Button>
                   </Modal.Footer>

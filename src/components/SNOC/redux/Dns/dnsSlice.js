@@ -1,50 +1,26 @@
-// src/redux/Healthcheck/dnsSlice.js
+// src/redux/Dns/dnsSlice.js
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import snocApi from "../../api/snocApiWithAutoToken";
 import { showTemporaryAlert } from "../Alert/alertSlice";
 
-// Gọi API tạo command tạm thời từ TAC/MME/SGW/PGW5G
+// (giữ nguyên) TMP TAC
 export const fetchGenerateTmpCommandTAC = createAsyncThunk(
   "dns/fetchGenerateTmpCommandTAC",
   async (
-    { tacList, mmeList, sgwList, pgw5gList }, // ✅ thêm pgw5gList
+    { tacList, mmeList, sgwList, pgw5gList },
     { rejectWithValue, dispatch }
   ) => {
     try {
-      console.log("📥 [Generate TMP] Input:", {
-        tacList,
-        mmeList,
-        sgwList,
-        pgw5gList,
-      });
-
       const params = new URLSearchParams();
-
-      if (Array.isArray(tacList)) {
-        tacList.forEach((t) => params.append("tac", t));
-      }
-
-      if (Array.isArray(mmeList)) {
-        mmeList.forEach((m) => params.append("mme", m));
-      }
-
-      if (Array.isArray(sgwList)) {
-        sgwList.forEach((s) => params.append("sgw", s));
-      }
-
-      if (Array.isArray(pgw5gList)) {
-        pgw5gList.forEach((p) => params.append("pgw5g", p)); // ✅ thêm pgw5g
-      }
+      (tacList || []).forEach((t) => params.append("tac", t));
+      (mmeList || []).forEach((m) => params.append("mme", m));
+      (sgwList || []).forEach((s) => params.append("sgw", s));
+      (pgw5gList || []).forEach((p) => params.append("pgw5g", p));
 
       const fullUrl = `/nornirps/generate-tmp-tac/?${params.toString()}`;
-      console.log("🌐 [Generate TMP] URL:", fullUrl);
-
       const response = await snocApi.get(fullUrl);
-      console.log("✅ [Generate TMP] Result:", response.data);
-
       return response.data;
     } catch (error) {
-      console.error("❌ [Generate TMP] Error:", error);
       const msg = error?.response?.data?.detail || "Lỗi khi tạo dòng lệnh TMP";
       dispatch(showTemporaryAlert({ message: msg, type: "error" }));
       return rejectWithValue(error?.response?.data);
@@ -52,7 +28,7 @@ export const fetchGenerateTmpCommandTAC = createAsyncThunk(
   }
 );
 
-// Gọi API kiểm tra DNS theo TAC (4G)
+// (giữ nguyên) DNS TAC check
 export const fetchDnsCheckResultTAC = createAsyncThunk(
   "dns/fetchDnsCheckResultTAC",
   async (
@@ -60,30 +36,16 @@ export const fetchDnsCheckResultTAC = createAsyncThunk(
     { rejectWithValue, dispatch }
   ) => {
     try {
-      console.log("📥 [DNS TAC] Input params:", {
-        platform,
-        tacList,
-        filename,
-        domain,
-      });
-
       const params = new URLSearchParams();
       if (platform) params.append("platform", platform);
-      if (tacList && tacList.length > 0) {
-        params.append("tac", tacList.join(","));
-      }
+      if (tacList?.length) params.append("tac", tacList.join(","));
       if (filename) params.append("filename", filename);
       if (domain) params.append("domain", domain);
 
       const fullUrl = `/nornirps/dns-check-tac/?${params.toString()}`;
-      console.log("🌐 [DNS TAC] Full API URL:", fullUrl);
-
       const response = await snocApi.get(fullUrl);
-      console.log("✅ [DNS TAC] API Response:", response.data);
-
       return response.data;
     } catch (error) {
-      console.error("❌ [DNS TAC] Error during API call:", error);
       const msg =
         error?.response?.data?.detail || "Lỗi khi thực hiện DNS TAC Check";
       dispatch(showTemporaryAlert({ message: msg, type: "error" }));
@@ -92,35 +54,72 @@ export const fetchDnsCheckResultTAC = createAsyncThunk(
   }
 );
 
-// Gọi API kiểm tra DNS theo LAC, RAC, RNCID
+// (giữ nguyên) DNS 3G check
+
 export const fetchDnsCheckResult3G = createAsyncThunk(
   "dns/fetchDnsCheckResult3G",
-  async ({ platform, lac, rac, rncid }, { rejectWithValue, dispatch }) => {
+  async (
+    {
+      platform,
+      lac,
+      rac,
+      rncid,
+      sets,          // ✅ NEW: list-of-list [[rncid,lac,rac], ...]
+      filename,
+      domain,
+      filename4g,    // ✅ optional passthrough
+      domain4g,      // ✅ optional passthrough
+    },
+    { rejectWithValue, dispatch }
+  ) => {
     try {
-      console.log("📥 [DNS Check] Input params:", {
-        platform,
-        lac,
-        rac,
-        rncid,
-      });
-
       const params = new URLSearchParams();
       if (platform) params.append("platform", platform);
-      if (lac) params.append("lac", lac);
-      if (rac) params.append("rac", rac);
-      if (rncid) params.append("rncid", rncid);
+
+      if (Array.isArray(sets) && sets.length > 0) {
+        params.append("sets", JSON.stringify(sets));      // ✅ ưu tiên dùng sets
+      } else {
+        if (lac != null && lac !== "") params.append("lac", lac);
+        if (rac != null && rac !== "") params.append("rac", rac);
+        if (rncid != null && rncid !== "") params.append("rncid", rncid);
+      }
+
+      if (filename)  params.append("filename",  filename);
+      if (domain)    params.append("domain",    domain);
+      if (filename4g) params.append("filename4g", filename4g); // ✅ optional
+      if (domain4g)   params.append("domain4g",   domain4g);   // ✅ optional
 
       const fullUrl = `/nornirps/dns-check-3g/?${params.toString()}`;
-      console.log("🌐 [DNS Check] Full API URL:", fullUrl);
-
       const response = await snocApi.get(fullUrl);
-      console.log("✅ [DNS Check] API Response:", response.data);
-
       return response.data;
     } catch (error) {
-      console.error("❌ [DNS Check] Error during API call:", error);
+      const msg = error?.response?.data?.detail || "Lỗi khi thực hiện DNS Check";
+      dispatch(showTemporaryAlert({ message: msg, type: "error" }));
+      return rejectWithValue(error?.response?.data);
+    }
+  }
+);
+
+
+// ✅ NEW: Generate TMP RNC (nhận thêm msspoolList)
+export const fetchGenerateTmpRNC = createAsyncThunk(
+  "dns/fetchGenerateTmpRNC",
+  async ({ mmeList, sets, msspoolList }, { rejectWithValue, dispatch }) => {
+    try {
+      const params = new URLSearchParams();
+      (mmeList || []).forEach((m) => params.append("mme", m));
+      params.append("sets", JSON.stringify(sets || []));
+      // truyền nhiều msspool: ?msspool=a&msspool=b...
+      (msspoolList || []).forEach((p) => params.append("msspool", p));
+
+      const fullUrl = `/nornirps/generate-tmp-rnc/?${params.toString()}`;
+      const response = await snocApi.get(fullUrl);
+      return response.data; // { dns1b: [...], dns2b: [...] }
+    } catch (error) {
       const msg =
-        error?.response?.data?.detail || "Lỗi khi thực hiện DNS Check";
+        error?.response?.data?.detail ||
+        error?.response?.data?.error ||
+        "Lỗi khi sinh TMP RNC";
       dispatch(showTemporaryAlert({ message: msg, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
@@ -136,7 +135,7 @@ const dnsSlice = createSlice({
     dns2b: [],
     error: null,
     tacResult: {},
-    tmpCommands: {}, // ✅ kết quả từ API generate TMP
+    tmpCommands: {}, // TMP TAC nếu dùng
   },
   reducers: {
     clearDnsResult: (state) => {
@@ -144,17 +143,17 @@ const dnsSlice = createSlice({
       state.dns2b = [];
       state.tacResult = {};
       state.error = null;
-      state.tmpCommands = {}; // ✅ reset TMP
+      state.tmpCommands = {};
     },
   },
   extraReducers: (builder) => {
     builder
+      // 3G Check
       .addCase(fetchDnsCheckResult3G.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
       .addCase(fetchDnsCheckResult3G.fulfilled, (state, action) => {
-        console.log("🎯 dnsSlice.reducer received:", action.payload); // 👈 thêm dòng này
         state.loading = false;
         state.dns1b = action.payload?.dns1b || [];
         state.dns2b = action.payload?.dns2b || [];
@@ -165,7 +164,8 @@ const dnsSlice = createSlice({
         state.dns1b = [];
         state.dns2b = [];
       })
-      // 4G TAC check
+
+      // TAC Check
       .addCase(fetchDnsCheckResultTAC.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -179,7 +179,8 @@ const dnsSlice = createSlice({
         state.error = action.payload?.error || "Lỗi không xác định (TAC)";
         state.tacResult = {};
       })
-      // Generate TMP commands
+
+      // TMP TAC
       .addCase(fetchGenerateTmpCommandTAC.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -193,6 +194,22 @@ const dnsSlice = createSlice({
         state.error =
           action.payload?.error || "Lỗi không xác định (generate TMP)";
         state.tmpCommands = {};
+      })
+
+      // ✅ TMP RNC (ghi vào 2 textbox)
+      .addCase(fetchGenerateTmpRNC.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchGenerateTmpRNC.fulfilled, (state, action) => {
+        state.loading = false;
+        state.dns1b = action.payload?.dns1b || [];
+        state.dns2b = action.payload?.dns2b || [];
+      })
+      .addCase(fetchGenerateTmpRNC.rejected, (state, action) => {
+        state.loading = false;
+        state.error =
+          action.payload?.error || "Lỗi không xác định (Generate TMP RNC)";
       });
   },
 });
