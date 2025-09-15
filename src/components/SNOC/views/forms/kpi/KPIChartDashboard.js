@@ -294,7 +294,7 @@ const KPIChartDashboard = () => {
 
     if (!startDate || !endDate) {
       endDateTime = new Date();
-      startDateTime = new Date(endDateTime.getTime() - 7 * 24 * 60 * 60 * 1000);
+      startDateTime = new Date(endDateTime.getTime() - 3 * 24 * 60 * 60 * 1000);
     } else {
       startDateTime = new Date(startDate);
       endDateTime = new Date(endDate);
@@ -979,3 +979,5 @@ const KPIChartDashboard = () => {
 };
 
 export default KPIChartDashboard;
+
+

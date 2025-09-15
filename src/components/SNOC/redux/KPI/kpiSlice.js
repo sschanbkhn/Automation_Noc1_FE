@@ -11,7 +11,8 @@ export const fetchAvailableKPIs = createAsyncThunk(
       const params = new URLSearchParams();
       params.append("platform", selectedPlatform);
       selectedDevices.forEach((d) => params.append("device", d));
-      const url = `/nornirps/kpi/list/?${params.toString()}`;
+      // const url = `/nornirps/kpi/list/?${params.toString()}`;
+      const url = `/fastapi/pgw/kpi-list?${params.toString()}`;
       const response = await snocApi.get(url);
       return response.data; // { kpis: [...] }
     } catch (error) {
@@ -35,7 +36,8 @@ export const fetchKPIChartData = createAsyncThunk(
       if (selectedDevice && selectedDevice.length > 0) {
         for (const d of selectedDevice) params.append("device", d);
       }
-      const url = `/nornirps/kpi/query/?${params.toString()}`;
+      // const url = `/nornirps/kpi/query/?${params.toString()}`;
+      const url = `/fastapi/pgw/kpi-data?${params.toString()}`;
       const response = await snocApi.get(url);
       return { kpi: selectedKPI, data: response.data };
     } catch (error) {
@@ -51,7 +53,7 @@ const initialState = {
   kpiChartData: {}, // { [kpi]: Array<{ device, platform, kpi, value, timestamp }> }
   loading: false,
   error: null,
-  pruneHours: 48,
+  pruneHours: 72,
 };
 
 function _cutoffMs(hours) {
@@ -159,10 +161,7 @@ export const kpiSlice = createSlice({
                 // chuẩn hoá luôn khi load từ DB
                 timestamp: new Date(r.timestamp).toISOString(),
               }))
-              .sort(
-                (a, b) =>
-                  Date.parse(a.timestamp) - Date.parse(b.timestamp)
-              )
+              .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp))
           : [];
       })
       .addCase(fetchKPIChartData.rejected, (state, action) => {

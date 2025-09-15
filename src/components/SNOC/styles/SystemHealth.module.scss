@@ -30,23 +30,23 @@
 
 // === Card màu riêng cho hệ thống ===
 .cardCsCore {
-  border-left: 6px solid #0b5ed7; // xanh dương đậm
-}
+  border-left: 6px solid #0b5ed7;
+} // xanh dương đậm
 .cardPsCore {
-  border-left: 6px solid #0dcaf0; // xanh cyan
-}
+  border-left: 6px solid #0dcaf0;
+} // xanh cyan
 .cardSignal {
-  border-left: 6px solid #ffc107; // vàng nhạt
-}
+  border-left: 6px solid #ffc107;
+} // vàng nhạt
 .cardOcs {
-  border-left: 6px solid #198754; // xanh lá
-}
+  border-left: 6px solid #198754;
+} // xanh lá
 .cardIms {
-  border-left: 6px solid #6610f2; // tím
-}
+  border-left: 6px solid #6610f2;
+} // tím
 .cardUdc {
-  border-left: 6px solid #fd7e14; // cam đậm
-}
+  border-left: 6px solid #fd7e14;
+} // cam đậm
 
 // === Badge trạng thái ===
 .statusBadge {
@@ -62,16 +62,13 @@
   &.success {
     background-color: #28a745;
   }
-
   &.warning {
     background-color: #ffc107;
     color: #212529;
   }
-
   &.danger {
     background-color: #dc3545;
   }
-
   &.secondary {
     background-color: #6c757d;
   }
@@ -93,7 +90,6 @@
   }
 }
 
-// === Dòng thống kê ===
 // === Dòng thống kê (chung cho phần dưới card lớn) ===
 .statRow {
   display: flex;
@@ -107,14 +103,13 @@
 .ok {
   color: #28a745;
 }
-
 .nok {
   color: #dc3545;
 }
-
 .total {
   color: #6c757d;
 }
+
 // === Chấm tròn nhỏ đại diện trạng thái ===
 .dot {
   display: inline-block;
@@ -123,19 +118,15 @@
   border-radius: 50%;
   margin-right: 6px;
 }
-
 .successDot {
   background-color: #28a745;
 }
-
 .warningDot {
   background-color: #ffc107;
 }
-
 .dangerDot {
   background-color: #dc3545;
 }
-
 .secondaryDot {
   background-color: #6c757d;
 }
@@ -165,17 +156,14 @@
   background-color: #28a745;
   color: white;
 }
-
 .toast-warning {
   background-color: #ffc107;
   color: #212529;
 }
-
 .toast-danger {
   background-color: #dc3545;
   color: white;
 }
-
 .toast-info {
   background-color: #17a2b8;
   color: white;
@@ -190,17 +178,14 @@
   background-color: #28a745;
   color: white;
 }
-
 .toastWarning {
   background-color: #ffc107;
   color: #212529;
 }
-
 .toastDanger {
   background-color: #dc3545;
   color: white;
 }
-
 .toastInfo {
   background-color: #17a2b8;
   color: white;
@@ -210,8 +195,94 @@
   max-width: 95vw !important;
   width: 95vw !important;
 }
-
 .modalWide {
-  max-width: 1800px !important; // ~gấp đôi modal xl mặc định
-  width: 95% !important; // gần full màn hình nhưng vẫn có khoảng cách
+  max-width: 1800px !important;
+  width: 95% !important;
 }
+
+// === ICONS (màu ghi đơn sắc cho mọi nút SVG) ===
+.iconBtn {
+  color: #6c757d !important; /* ghi */
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0.25rem !important; /* ~ p-1 */
+  line-height: 1;
+  min-width: auto;
+  box-shadow: none !important;
+  text-decoration: none !important; /* tránh underline kiểu btn-link */
+
+  &:hover {
+    color: #495057 !important; /* ghi đậm */
+    background: rgba(0, 0, 0, 0.05) !important;
+    border-radius: 6px;
+  }
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(108, 117, 125, 0.3) !important;
+  }
+
+  svg {
+    display: block;
+    fill: currentColor;
+  }
+}
+
+// === Footer của subItem: ngày (2 dòng) + grip + counters ===
+.subFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end; /* counters bên phải bám đáy */
+  margin-top: 0.25rem;
+}
+
+/* Khung trái: ngày 2 dòng + grip bên phải — bám đáy */
+.timeAndDrag {
+  display: grid;
+  grid-template-columns: 1fr auto; /* trái: ngày, phải: grip */
+  column-gap: 8px;
+  align-items: end;
+  min-height: 2.3rem; /* ~ 2 x line-height 1.1rem + buffer */
+}
+
+/* Ngày 2 dòng khớp với renderLastUpdatedTwoLines */
+.twoLineTime {
+  line-height: 1.1rem;
+}
+
+/* Nếu vẫn dùng ở nơi khác */
+.timeCol {
+  line-height: 1.1rem;
+}
+
+/* Nút kéo (grip) — hộp cố định, không lệ thuộc baseline font */
+.dragBtn {
+  @extend .iconBtn;
+  width: 24px;
+  height: 24px;
+  padding: 0 !important;
+
+  display: inline-flex;
+  align-items: flex-end; /* SVG chạm đáy nút */
+  justify-content: center;
+  border-radius: 6px;
+  cursor: grab;
+  user-select: none;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05) !important;
+  }
+  &:active {
+    cursor: grabbing;
+  }
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.3);
+  }
+
+  svg {
+    display: block;
+    fill: currentColor;
+  }
+}
+
+

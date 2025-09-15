@@ -63,6 +63,7 @@ import SnocSubApp from "components/SNOC/SnocSubApp";
 import HostConfigPanel from "components/SNOC/views/forms/hosts/HostConfigPanel";
 import KPIChartDashboard from "components/SNOC/views/forms/kpi/KPIChartDashboard";
 import KPISelectorPage from "components/SNOC/views/forms/kpi/KPISelectorPage";
+import ScheduleGeneric from "components/SNOC/views/forms/kpi/ScheduleCausecode";
 ///
 interface Props {
   Apps: any;
@@ -273,12 +274,15 @@ const MainPageRoute = (props: Props) => {
             element={<HistoricalReporting />}
           />
           <Route path="/healthcheck/kpi" element={<KPIChartDashboard />} />
-          <Route path="/healthcheck/kpischedule" element={<Schedule />} />
+          <Route
+            path="/healthcheck/kpischedule"
+            element={<ScheduleGeneric />}
+          />
           <Route path="/kpi/:system/:subsystem" element={<KPISelectorPage />} />
-          <Route path="/healthcheck/:group" element={<Healthcheck />} />
+          <Route path="/healthcheck/:group" element={<DashOrigin />} />
           <Route
             path="/healthcheck/:group/:subsystem"
-            element={<Healthcheck />}
+            element={<DashOrigin />}
           />
           <Route path="/app/dashboard/dns" element={<DnsConfigDashboard />} />
           <Route path="/dns/tacs" element={<TACConfigPanel />} />
