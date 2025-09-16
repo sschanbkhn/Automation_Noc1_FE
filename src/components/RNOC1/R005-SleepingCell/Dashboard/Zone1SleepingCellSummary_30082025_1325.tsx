@@ -2,9 +2,6 @@ import React, { useState, useEffect } from "react";
 import { Card, Row, Col, Modal, Table, Badge } from "react-bootstrap";
 import API_CONFIG from "../Designer/ApiR005SleepingCellConfig";
 
-import * as ExcelJS from "exceljs";
-import { saveAs } from "file-saver";
-
 interface Zone1SleepingCellSummaryProps {
   selectedDate?: string;
   loading?: boolean;
@@ -30,7 +27,7 @@ const Zone1SleepingCellSummary: React.FC<Zone1SleepingCellSummaryProps> = ({ sel
   // Modern Table States
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [entriesPerPage, setEntriesPerPage] = useState(5);
+  const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<{ column: string; direction: "asc" | "desc" } | null>(null);
 
   const isLoading = parentLoading || false;
@@ -162,11 +159,6 @@ const Zone1SleepingCellSummary: React.FC<Zone1SleepingCellSummaryProps> = ({ sel
         Tiếp ›
       </button>
     );
-    buttons.push(
-      <button className="btn btn-secondary ms-5" key="close" onClick={() => setShowModal(false)}>
-        Close
-      </button>
-    );
 
     return buttons;
   };
@@ -184,215 +176,16 @@ const Zone1SleepingCellSummary: React.FC<Zone1SleepingCellSummaryProps> = ({ sel
   const getModalTitle = () => {
     switch (modalType) {
       case "sleeping":
-        return "😴 Sleeping Cells Details";
+        return "Sleeping Cells Details";
       case "process":
-        return "⚡ Process Cells Details";
-
+        return "Process Cells Details";
       case "execution":
-        return "🔧 Execution Cells Details";
-
+        return "Execution Cells Details";
       case "recheck":
-        return "🔍 Recheck Cells Details";
+        return "Recheck Cells Details";
       default:
         return "Cell Details";
     }
-  };
-
-  /*
-
-  const exportToExcel = () => {
-    const exportData = getSortedData().map((item, index) => ({
-      STT: index + 1,
-      "Cell Name": item.lncel_name || "N/A",
-      "Site Name": item.lnbts_name || "N/A",
-      Province: item.province || "N/A",
-      District: item.district || "N/A",
-      Status: item.execution_status || "Active",
-      "IP Address": item.ssh_host || "N/A",
-    }));
-
-    // Tạo CSV content
-    const csvContent = [Object.keys(exportData[0]).join(","), ...exportData.map((row) => Object.values(row).join(","))].join("\n");
-
-    // Download file
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${modalType}_cells_${selectedDate}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
-  */
-
-  /*
-
-  const exportToExcel = async () => {
-    const exportData = getSortedData().map((item, index) => ({
-      STT: index + 1,
-      "Cell Name": item.lncel_name || "N/A",
-      "Site Name": item.lnbts_name || "N/A",
-      Province: item.province || "N/A",
-      District: item.district || "N/A",
-      Status: item.execution_status || "N/A",
-      "IP Address": item.ssh_host || "N/A",
-    }));
-
-    // Tạo workbook
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet(modalType.toUpperCase());
-
-    // Thêm data
-    worksheet.addRows([
-      Object.keys(exportData[0]), // Headers
-      ...exportData.map((row) => Object.values(row)),
-    ]);
-
-    // Style header row (row 1)
-    const headerRow = worksheet.getRow(1);
-    headerRow.eachCell((cell) => {
-      cell.fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FF2196F3" }, // Màu xanh như header
-      };
-      cell.font = {
-        color: { argb: "FFFFFFFF" }, // Text trắng
-        bold: true,
-      };
-      cell.alignment = {
-        horizontal: "center",
-        vertical: "middle",
-      };
-    });
-
-    // Set column widths
-    worksheet.columns = [
-      { width: 10 }, // #
-      { width: 25 }, // Cell Name
-      { width: 25 }, // Site Name
-      { width: 12 }, // Province
-      { width: 12 }, // District
-      { width: 12 }, // Status
-      { width: 18 }, // IP Address
-    ];
-
-    // Export file
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    saveAs(blob, `${modalType}_cells_${selectedDate}.xlsx`);
-  };
-
-
-  */
-
-  const exportToExcel = async () => {
-    const headers = getTableHeaders();
-    const exportData = getSortedData().map((item, index) => {
-      // const row = { "#": index + 1 };
-      const row: { [key: string]: any } = { STT: index + 1 };
-      headers.forEach((header) => {
-        if (header.field === "index") return;
-        row[header.key] = item[header.field] || "N/A";
-      });
-      return row;
-    });
-
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet(modalType.toUpperCase());
-
-    worksheet.addRows([Object.keys(exportData[0]), ...exportData.map((row) => Object.values(row))]);
-
-    // Border style
-    // const borderStyle: ExcelJS.Borders = {
-    // const borderStyle = {
-    const borderStyle: Partial<ExcelJS.Borders> = {
-      top: { style: "thin", color: { argb: "FF000000" } },
-      left: { style: "thin", color: { argb: "FF000000" } },
-      bottom: { style: "thin", color: { argb: "FF000000" } },
-      right: { style: "thin", color: { argb: "FF000000" } },
-    };
-
-    // Style header row
-    const headerRow = worksheet.getRow(1);
-    headerRow.height = 20;
-    headerRow.eachCell((cell) => {
-      cell.fill = {
-        type: "pattern",
-        pattern: "solid",
-        fgColor: { argb: "FF2196F3" },
-      };
-      cell.font = {
-        color: { argb: "FFFFFFFF" },
-        bold: true,
-      };
-      cell.alignment = {
-        horizontal: "center",
-        vertical: "middle",
-      };
-      cell.border = borderStyle; // Thêm border
-    });
-
-    // Style data rows với border
-    for (let i = 2; i <= worksheet.rowCount; i++) {
-      const row = worksheet.getRow(i);
-      row.height = 20;
-
-      const isEvenRow = (i - 2) % 2 === 0;
-      row.eachCell((cell) => {
-        cell.fill = {
-          type: "pattern",
-          pattern: "solid",
-          fgColor: { argb: isEvenRow ? "e8f5e8" : "FFFFFFFF" },
-          // fgColor: { argb: isEvenRow ? "FFFAFBFC" : "FFFBF0" },
-        };
-        cell.alignment = {
-          horizontal: "left",
-          vertical: "middle",
-        };
-        cell.border = borderStyle; // Thêm border cho data cells
-      });
-    }
-
-    const columnWidths = headers.map((header) => {
-      switch (header.key) {
-        case "STT":
-          return { width: 5 };
-        case "Cell Name":
-        case "Site Name":
-          return { width: 25 };
-        case "IP Address":
-          return { width: 18 };
-        default:
-          return { width: 15 };
-      }
-    });
-    worksheet.columns = columnWidths;
-
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    saveAs(blob, `${modalType}_cells_${selectedDate}.xlsx`);
-  };
-
-  const getTableHeaders = () => {
-    const baseHeaders = [
-      { key: "STT", field: "index" },
-      { key: "Cell Name", field: "lncel_name" },
-      { key: "Site Name", field: "lnbts_name" },
-      { key: "Province", field: "province" },
-      { key: "District", field: "district" },
-      { key: "Period StartTime", field: "period_start_time" },
-      // { key: "Status", field: "execution_status" },
-      // { key: "IP Address", field: "ssh_host" },
-    ];
-
-    if (modalType === "sleeping") {
-      return baseHeaders; // Chỉ trả về base headers, bỏ Status và IP
-    }
-    // Các modal khác vẫn có đủ cột
-    return [...baseHeaders, { key: "Status", field: "execution_status" }, { key: "IP Address", field: "ssh_host" }];
-    // return baseHeaders;
   };
 
   // Modern table component
@@ -474,10 +267,10 @@ const Zone1SleepingCellSummary: React.FC<Zone1SleepingCellSummaryProps> = ({ sel
                   fontSize: "14px",
                 }}
               >
-                <option value={5}>5</option>
                 <option value={10}>10</option>
                 <option value={25}>25</option>
                 <option value={50}>50</option>
+                <option value={100}>100</option>
               </select>
               <span>bản ghi</span>
             </div>
@@ -485,9 +278,6 @@ const Zone1SleepingCellSummary: React.FC<Zone1SleepingCellSummaryProps> = ({ sel
             <div style={{ fontSize: "14px", color: "#666" }}>
               Tổng: <strong>{modalData.length}</strong> bản ghi
             </div>
-            <button className="btn btn-success btn-sm" onClick={() => exportToExcel()} style={{ marginLeft: "15px" }}>
-              📊 Export Excel
-            </button>
           </div>
         </div>
 
@@ -496,18 +286,15 @@ const Zone1SleepingCellSummary: React.FC<Zone1SleepingCellSummaryProps> = ({ sel
           <table style={{ width: "100%", borderCollapse: "collapse", background: "white" }}>
             <thead>
               <tr>
-                {getTableHeaders().map((header) => (
-                  // {[
-                  // { key: "STT", field: "index" },
-                  // { key: "Cell Name", field: "lncel_name" },
-                  // { key: "Site Name", field: "lnbts_name" },
-                  // { key: "Province", field: "province" },
-                  // { key: "District", field: "district" },
-                  // { key: "Period StartTime", field: "period_start_time" },
-                  // { key: "Status", field: "execution_status" },
-                  // { key: "Last Update", field: "created_at" },
-                  // { key: "IP Address", field: "ssh_host" },
-                  // ].map((header) => (
+                {[
+                  { key: "#", field: "index" },
+                  { key: "Cell Name", field: "lncel_name" },
+                  { key: "Site Name", field: "lnbts_name" },
+                  { key: "Province", field: "province" },
+                  { key: "District", field: "district" },
+                  { key: "Status", field: "period_start_time" },
+                  { key: "Last Update", field: "created_at" },
+                ].map((header) => (
                   <th
                     key={header.key}
                     onClick={header.field !== "index" ? () => handleSort(header.field) : undefined}
@@ -545,50 +332,6 @@ const Zone1SleepingCellSummary: React.FC<Zone1SleepingCellSummaryProps> = ({ sel
                         e.currentTarget.style.backgroundColor = index % 2 === 0 ? "#fafbfc" : "white";
                       }}
                     >
-                      {getTableHeaders().map((header, colIndex) => {
-                        let cellContent;
-
-                        if (header.field === "index") {
-                          cellContent = globalIndex;
-                        } else if (header.field === "lncel_name") {
-                          cellContent = <span style={{ fontWeight: 600, color: "#1976D2", fontFamily: "monospace" }}>{item.lncel_name || "N/A"}</span>;
-                        } else if (header.field === "province") {
-                          cellContent = <span style={{ display: "inline-block", padding: "4px 10px", borderRadius: "12px", fontSize: "12px", fontWeight: 600, color: "#9a3412", background: "#fff3cd" }}>{item.province || "N/A"}</span>;
-                        } else if (header.field === "district") {
-                          cellContent = <span style={{ display: "inline-block", padding: "4px 10px", borderRadius: "12px", fontSize: "12px", fontWeight: 600, color: "#721c24", background: "#f8d7da" }}>{item.district || "N/A"}</span>;
-                        } else if (header.field === "period_start_time") {
-                          cellContent = item.period_start_time || "N/A";
-                        } else if (header.field === "execution_status") {
-                          cellContent = (
-                            <span
-                              style={{
-                                display: "inline-block",
-                                padding: "5px 12px",
-                                borderRadius: "15px",
-                                fontSize: "12px",
-                                fontWeight: 600,
-                                background: "#e8f5e8",
-                                color: "#2e7d32",
-                              }}
-                            >
-                              {item.execution_status || "N/A"}
-                            </span>
-                          );
-                        } else if (header.field === "ssh_host") {
-                          cellContent = item.ssh_host || "N/A";
-                        } else {
-                          cellContent = item[header.field] || "N/A";
-                        }
-
-                        return (
-                          <td key={colIndex} style={{ padding: "12px", borderBottom: "1px solid #f0f0f0", fontSize: "14px" }}>
-                            {cellContent}
-                          </td>
-                        );
-                      })}
-
-                      {/*}
-
                       <td style={{ padding: "12px", borderBottom: "1px solid #f0f0f0", fontSize: "14px", fontWeight: "bold" }}>{globalIndex}</td>
                       <td style={{ padding: "12px", borderBottom: "1px solid #f0f0f0", fontSize: "14px" }}>
                         <span style={{ fontWeight: 600, color: "#1976D2", fontFamily: "monospace" }}>{item.lncel_name || "N/A"}</span>
@@ -602,33 +345,14 @@ const Zone1SleepingCellSummary: React.FC<Zone1SleepingCellSummaryProps> = ({ sel
                             borderRadius: "12px",
                             fontSize: "12px",
                             fontWeight: 600,
-                            // color: "white",
-                            color: "#9a3412",
-                            // background: "#2196F3",
-                            background: "#fff3cd",
+                            color: "white",
+                            background: "#2196F3",
                           }}
                         >
                           {item.province || "N/A"}
                         </span>
                       </td>
-                       <td style={{ padding: "12px", borderBottom: "1px solid #f0f0f0", fontSize: "14px" }}>{item.district || "N/A"}</td> 
-
-                      <td style={{ padding: "12px", borderBottom: "1px solid #f0f0f0", fontSize: "14px" }}>
-                        <span
-                          style={{
-                            display: "inline-block",
-                            padding: "4px 10px",
-                            borderRadius: "12px",
-                            fontSize: "12px",
-                            fontWeight: 600,
-                            color: "#721c24",
-                            background: "#f8d7da",
-                          }}
-                        >
-                          {item.district || "N/A"}
-                        </span>
-                      </td>
-
+                      <td style={{ padding: "12px", borderBottom: "1px solid #f0f0f0", fontSize: "14px" }}>{item.district || "N/A"}</td>
                       <td style={{ padding: "12px", borderBottom: "1px solid #f0f0f0", fontSize: "14px" }}>
                         <span
                           style={{
@@ -641,13 +365,10 @@ const Zone1SleepingCellSummary: React.FC<Zone1SleepingCellSummaryProps> = ({ sel
                             color: "#2e7d32",
                           }}
                         >
-                          {item.execution_status || "Active"}
+                          {item.period_start_time || "Active"}
                         </span>
                       </td>
-                      {/* <td style={{ padding: "12px", borderBottom: "1px solid #f0f0f0", fontSize: "14px", color: "#666" }}>{item.created_at || "N/A"}</td> 
-                      <td style={{ padding: "12px", borderBottom: "1px solid #f0f0f0", fontSize: "14px", color: "#666" }}>{item.ssh_host || "N/A"}</td>
-                    
-                    */}
+                      <td style={{ padding: "12px", borderBottom: "1px solid #f0f0f0", fontSize: "14px", color: "#666" }}>{item.created_at || "N/A"}</td>
                     </tr>
                   );
                 })
@@ -685,7 +406,7 @@ const Zone1SleepingCellSummary: React.FC<Zone1SleepingCellSummaryProps> = ({ sel
             <div style={{ fontSize: "14px", color: "#666" }}>
               Hiển thị <strong>{sortedData.length > 0 ? startIndex : 0}</strong> - <strong>{endIndex}</strong> trong số <strong>{sortedData.length}</strong> bản ghi
             </div>
-            <div style={{ display: "flex", gap: "5px", marginRight: "40px" }}>{renderPaginationButtons()}</div>
+            <div style={{ display: "flex", gap: "5px" }}>{renderPaginationButtons()}</div>
           </div>
         )}
       </div>

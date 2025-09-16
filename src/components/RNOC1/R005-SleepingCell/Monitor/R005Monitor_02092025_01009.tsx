@@ -501,81 +501,62 @@ const KpiMonitorTab: React.FC = () => {
     try {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("KPI Detail");
-
-      console.log(" handleExportDetailExcel All keys:", Object.keys(selectedRecord));
-
-      // Tạo header row từ keys
-      const headers = Object.keys(selectedRecord);
-      const headerRow = worksheet.addRow(headers);
-
-      // Tạo data row từ values
-      const values = Object.values(selectedRecord).map((value) => (value !== null && value !== undefined ? String(value) : "N/A"));
-      const dataRow = worksheet.addRow(values);
-
-      // Style header row
+      worksheet.columns = [
+        { header: "Field", key: "field", width: 30 },
+        { header: "Value", key: "value", width: 50 },
+      ];
+      const recordEntries = Object.entries(selectedRecord);
+      recordEntries.forEach(([key, value]) => {
+        worksheet.addRow({
+          field: key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+          value: value !== null && value !== undefined ? String(value) : "N/A",
+        });
+      });
+      worksheet.addRow({
+        field: "Reset Permission",
+        value: selectedRecord.reset_permission ? "Denied" : "Allowed",
+      });
+      worksheet.addRow({
+        field: "Blacklist",
+        value: selectedRecord.action_blacklist ? "Yes" : "No",
+      });
+      const headerRow = worksheet.getRow(1);
       headerRow.font = { bold: true, color: { argb: "FFFFFF" }, size: 12 };
-      headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "10b981" } };
+      headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "366092" } };
       headerRow.alignment = { horizontal: "center", vertical: "middle" };
       headerRow.height = 25;
-
-      // Style data row với màu theo field
-      dataRow.height = 20;
-      dataRow.eachCell((cell, colNumber) => {
-        const key = headers[colNumber - 1];
-        let bgColor = "FFFFFF"; // default
-
-        // Áp dụng màu theo key như trong modal
-        if (key === "pdcp_volume_dl") bgColor = "e8f5e9";
-        else if (key === "pdcp_volume_ul") bgColor = "e0f2f1";
-        else if (key === "cell_avail") bgColor = "c8e6c9";
-        else if (key === "max_ues") bgColor = "a5d6a7";
-        else if (key === "period_start_time") bgColor = "fff8e1";
-        else if (key === "data_date") bgColor = "fff3e0";
-        else if (key === "execution_status") bgColor = "e8eaf6";
-        else if (key === "ssh_host") bgColor = "f3e5f5";
-        else if (key === "province") bgColor = "cce5ff";
-        else if (key === "district") bgColor = "ffe6cc";
-        else if (key.includes("archived_by")) bgColor = "e8f5e9";
-        else if (key === "action_blacklist") bgColor = "ffe0b2";
-        else if (key === "user_notes") bgColor = "cce5ff";
-        else if (key === "reset_permission") bgColor = "ffcc02";
-        else if (key === "last_reset_by") bgColor = "e3f2fd";
-        else if (key === "ping_test_before") bgColor = "ede7f6";
-        else if (key === "max_pdcp_dl") bgColor = "ffcc02";
-        else if (key === "max_pdcp_ul") bgColor = "f1f8e9";
-        else if (key === "execution_status") bgColor = "d4edda";
-        else if (key === "ssh_connection_status") bgColor = "d4edda";
-
-        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bgColor } };
-        cell.border = {
-          top: { style: "thin", color: { argb: "D1D5DB" } },
-          left: { style: "thin", color: { argb: "D1D5DB" } },
-          bottom: { style: "thin", color: { argb: "D1D5DB" } },
-          right: { style: "thin", color: { argb: "D1D5DB" } },
-        };
-        cell.alignment = { vertical: "middle", horizontal: "left" };
-      });
-
-      // Border cho header
       headerRow.eachCell((cell) => {
         cell.border = {
-          top: { style: "medium", color: { argb: "2e5082" } },
-          left: { style: "medium", color: { argb: "2e5082" } },
-          bottom: { style: "medium", color: { argb: "2e5082" } },
-          right: { style: "medium", color: { argb: "2e5082" } },
+          top: { style: "medium", color: { argb: "111827" } },
+          left: { style: "medium", color: { argb: "111827" } },
+          bottom: { style: "medium", color: { argb: "111827" } },
+          right: { style: "medium", color: { argb: "111827" } },
         };
       });
-
-      // Set column widths
-      worksheet.columns = headers.map((header) => ({ width: 20 }));
-
-      // Export file
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber > 1) {
+          row.height = 20;
+          row.eachCell((cell) => {
+            cell.border = {
+              top: { style: "thin", color: { argb: "D1D5DB" } },
+              left: { style: "thin", color: { argb: "D1D5DB" } },
+              bottom: { style: "thin", color: { argb: "D1D5DB" } },
+              right: { style: "thin", color: { argb: "D1D5DB" } },
+            };
+            cell.alignment = { vertical: "middle" };
+            if (cell.col === "2") {
+              cell.alignment = { horizontal: "left" };
+            } else {
+              cell.alignment = { horizontal: "center" };
+            }
+          });
+        }
+      });
+      worksheet.views = [{ state: "frozen", ySplit: 1 }];
       const buffer = await workbook.xlsx.writeBuffer();
       const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
       const filename = `KPI_Detail_${selectedRecord.lncel_name || "Unknown"}_${timestamp}.xlsx`;
-
       saveAs(new Blob([buffer]), filename);
-
       alert(`✅ Exported detail for ${selectedRecord.lncel_name || "record"} successfully!`);
     } catch (error) {
       console.error("Export failed:", error);
@@ -902,28 +883,9 @@ const KpiMonitorTab: React.FC = () => {
           ) : (
             <div className="table-responsive">
               <table className="table table-hover mb-0">
-                <thead
-                  style={{
-                    // background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
-                    background: "#10b981",
-                    // borderBottom: "3px solid #047857",
-                    borderBottom: "1px solid #047857", // ← Giảm từ 3px xuống 1px
-                    boxShadow: "0 2px 8px rgba(5, 150, 105, 0.2)",
-                  }}
-                >
+                <thead style={{ backgroundColor: "#f8fafc", borderBottom: "2px solid #e5e7eb" }}>
                   <tr>
-                    <th
-                      className="py-3 px-2"
-                      style={{
-                        color: "white", // Hoặc dùng color: "#ffffff"
-                        fontSize: "0.875rem",
-                        minWidth: "60px",
-                        whiteSpace: "nowrap",
-                        fontWeight: "700",
-                        backgroundColor: "transparent",
-                        borderColor: "rgba(255,255,255,0.2)",
-                      }}
-                    >
+                    <th className="fw-semibold text-muted py-3 px-2" style={{ fontSize: "0.875rem", minWidth: "60px", whiteSpace: "nowrap" }}>
                       STT
                     </th>
                     {[
@@ -941,37 +903,12 @@ const KpiMonitorTab: React.FC = () => {
                       { field: "max_pdcp_ul", label: "Max PDCP UL", width: "130px" },
                       { field: "execution_status", label: "Execution Status", width: "130px" },
                     ].map(({ field, label, width }) => (
-                      <th
-                        key={field}
-                        className="py-3 px-2"
-                        style={{
-                          cursor: "pointer",
-                          userSelect: "none",
-                          fontSize: "0.875rem",
-                          minWidth: width,
-                          whiteSpace: "nowrap",
-                          color: "#ffffff", // ← Thêm màu trắng cho tất cả
-                          fontWeight: "700",
-                          backgroundColor: "transparent",
-                        }}
-                        onClick={() => handleSort(field)}
-                      >
+                      <th key={field} className="fw-semibold text-muted py-3 px-2" style={{ cursor: "pointer", userSelect: "none", fontSize: "0.875rem", minWidth: width, whiteSpace: "nowrap" }} onClick={() => handleSort(field)}>
                         {label}
                         <span className="ms-1">{sortField === field ? (sortDirection === "asc" ? "↑" : "↓") : "⇅"}</span>
                       </th>
                     ))}
-                    <th
-                      className="py-3 px-2"
-                      style={{
-                        color: "white", // Hoặc dùng color: "#ffffff"
-                        fontSize: "0.875rem",
-                        minWidth: "60px",
-                        whiteSpace: "nowrap",
-                        fontWeight: "700",
-                        backgroundColor: "transparent",
-                        borderColor: "rgba(255,255,255,0.2)",
-                      }}
-                    >
+                    <th className="fw-semibold text-muted py-3 px-2" style={{ fontSize: "0.875rem", minWidth: "100px" }}>
                       Actions
                     </th>
                   </tr>
@@ -1086,7 +1023,6 @@ const KpiMonitorTab: React.FC = () => {
             <div className="modal-content" style={{ borderRadius: "16px" }}>
               <div className="modal-header">
                 <h5 className="modal-title">📊 Record Detail - LNCEL Name: {selectedRecord?.lncel_name || "Loading..."}</h5>
-                {selectedRecord && console.log("All keys Record Detail:", Object.keys(selectedRecord))}
                 <button type="button" className="btn-close" onClick={() => setShowDetailModal(false)}></button>
               </div>
               <div className="modal-body" style={{ padding: "0" }}>
@@ -1159,10 +1095,6 @@ const KpiMonitorTab: React.FC = () => {
                             if (key === "id" || key.includes("count")) maxWidth = "80px";
                             let badgeColor = "#f8f9fa";
                             let textColor = "#333";
-
-                            // console.log("All keys:", Object.keys(selectedRecord));
-                            // 'commandSentAt', 'commandResponseReceivedAt'
-
                             if (key === "execution_status") {
                               if (value === "completed") {
                                 badgeColor = "#d4edda";
@@ -1187,61 +1119,14 @@ const KpiMonitorTab: React.FC = () => {
                               badgeColor = "#ffe6cc";
                               textColor = "#cc5500";
                             }
-
-                            // Nhóm KPI - màu xanh lá
-                            if (key.includes("pdcp_volume_dl")) {
-                              badgeColor = "#e8f5e9";
-                              textColor = "#2e7d32";
-                            } else if (key.includes("pdcp_volume_ul")) {
-                              badgeColor = "#cce5ff";
-                              textColor = "#0056b3";
-                            } else if (key.includes("cell_avail")) {
-                              badgeColor = "#c8e6c9";
-                              textColor = "#388e3c";
-                            } else if (key.includes("max_ues")) {
-                              badgeColor = "#f3e5f5";
-                              textColor = "#7b1fa2";
-                            } else if (key.includes("max_pdcp_dl")) {
-                              badgeColor = "#ffcc02";
-                              textColor = "#ff6f00";
-                            } else if (key.includes("max_pdcp_ul")) {
-                              badgeColor = "#f1f8e9";
-                              textColor = "#558b2f";
+                            if (key.includes("blacklist")) {
+                              badgeColor = "#d4edda";
+                              textColor = "#f8d7da";
                             }
-
-                            // Nhóm Time/Info - màu vàng cam
-                            else if (key.includes("period_start_time")) {
-                              badgeColor = "#fff8e1";
-                              textColor = "#f57f17";
-                            } else if (key.includes("data_date")) {
-                              badgeColor = "#fff3e0";
-                              textColor = "#ef6c00";
-                            } else if (key.includes("archived_by")) {
-                              badgeColor = "#e8f5e9";
-                              textColor = "#2e7d32";
-                            } else if (key.includes("action_blacklist")) {
-                              badgeColor = "#ffe0b2";
-                              textColor = "#f57c00";
-                            } else if (key.includes("user_notes")) {
-                              badgeColor = "#cce5ff";
-                              textColor = "#0056b3";
-                            } else if (key.includes("reset_permission")) {
-                              badgeColor = "#ffcc02";
-                              textColor = "#ff6f00";
+                            if (key.includes("permission")) {
+                              badgeColor = "#f8d7da";
+                              textColor = "#cc5500";
                             }
-
-                            // Nhóm Execution/SSH - màu xanh dương tím
-                            else if (key.includes("last_reset_by")) {
-                              badgeColor = "#e3f2fd";
-                              textColor = "#1976d2";
-                            } else if (key.includes("ssh_host")) {
-                              badgeColor = "#f3e5f5";
-                              textColor = "#7b1fa2";
-                            } else if (key.includes("ping_test_before")) {
-                              badgeColor = "#ede7f6";
-                              textColor = "#673ab7";
-                            }
-
                             return (
                               <td
                                 key={index}

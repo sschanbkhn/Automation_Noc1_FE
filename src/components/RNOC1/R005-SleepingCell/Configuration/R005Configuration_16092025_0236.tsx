@@ -376,7 +376,7 @@ const Configuration: React.FC = () => {
 
       {/* Archive Modal - search term riêng */}
       <ArchiveModal show={showArchiveModal} onClose={closeAllModals} onEdit={handleEditItem} onAdd={handleAddNew} />
-      {/* check  */}
+
       {/* Empty State check */}
       <AddEditModal show={showAddEditModal} selectedConfig={selectedConfig} editingItem={editingItem} formData={formData} setFormData={setFormData} onSave={handleSaveForm} onClose={() => setShowAddEditModal(false)} />
     </div>

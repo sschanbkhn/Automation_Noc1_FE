@@ -115,39 +115,39 @@
           "icon": "bi bi-bar-chart"
         },
         {
-          "code": "DashboardR002",
+          "code": "CableManagement",
           "name": "Tối ưu cell di động",
-          "url": "/dashboardrnoc2",
+          "url": "/cable-management",
           "icon": "bi bi-grid"
         },
         {
-  "code": "R005SleepingCell",
-  "name": "R005-Sleeping Cell Management",
-  "url": "/R005-Sleeping-Cell",
-  "icon": "bi bi-activity"
-}, 
+          "code": "R005SleepingCellManagement",
+          "name": "R005-Sleeping Cell Management",
+          "url": "/R005-Sleeping-Cell",
+          "icon": "bi bi-grid"
+        },
         {
-          "code": "DashboardR004",
+          "code": "CurenAlarm",
           "name": "Phát hiện bất thường site 0",
-          "url": "/dashboardrnoc4",
+          "url": "/curen-alarm",
           "icon": "bi bi-grid"
         },
         {
-          "code": "DashboardR005",
+          "code": "HistoryCurenAlarm",
           "name": "Tự động khai báo trạm 5G",
-          "url": "/dashboardrnoc5",
+          "url": "/history-curen-alarm",
           "icon": "bi bi-grid"
         },
         {
-          "code": "DashboardR006",
+          "code": "DevicePorts",
           "name": "Công cụ tiết kiệm điện",
-          "url": "/dashboardrnoc6",
+          "url": "/device-ports",
           "icon": "bi bi-grid"
         },
         {
-          "code": "DashboardR007",
+          "code": "ConfigReport",
           "name": "Công cụ tự động báo cáo cấu hình",
-          "url": "/dashboardrnoc7",
+          "url": "/config-report",
           "icon": "bi bi-grid"
         }
       ]
@@ -159,26 +159,26 @@
       "icon": "bi bi-cpu",
       "subMenu": [
         {
-            "code": "hc-dashboard",
-            "name": "Healthcheck Automation",
-            "url": "/app/dashboard/origin",
-            "icon": "bi bi-cpu"
-          },
-          {
-            "code": "hc-dashboard-dns",
-            "name": "DNS Automation",
-            "url": "/app/dashboard/dns",
-            "icon": "bi bi-cpu"
-          },
-          {
-            "code": "hc-dashboard-sbc",
-            "name": "SBC Automation",
-            "url": "/app/dashboard/sbc",
-            "icon": "bi bi-cpu"
-          }
+          "code": "hc-dashboard",
+          "name": "Healthcheck Automation",
+          "url": "/app/dashboard/origin",
+          "icon": "bi bi-cpu"
+        },
+        {
+          "code": "hc-dashboard-dns",
+          "name": "DNS Automation",
+          "url": "/app/dashboard/dns",
+          "icon": "bi bi-cpu"
+        },
+        {
+          "code": "hc-dashboard-sbc",
+          "name": "SBC Automation",
+          "url": "/app/dashboard/sbc",
+          "icon": "bi bi-cpu"
+        }
       ]
     },
-    
+
     {
       "code": "NetworkInoc",
       "name": "AU IP",
@@ -186,9 +186,9 @@
       "icon": "bi bi-globe",
       "subMenu": [
         {
-          "code": "ClearThuebaoDaphien",
-          "name": "Clear thuê bao đa phiên ",
-          "url": "/ClearThuebaoDaphien",
+          "code": "LinksMaps",
+          "name": "Cân chỉnh internet quốc tế ",
+          "url": "/link-cabman",
           "icon": "bi bi-grid"
         },
         {
@@ -198,19 +198,11 @@
           "icon": "bi bi-grid"
         },
         {
-            "code": "LspQuocte",
-          "name": "Kiểm soát LSP quốc tế",
-          "url": "/LspQuocte",
+          "code": "ucppoe",
+          "name": "Kiểm soát số phiên pppoe",
+          "url": "/ucppoe",
           "icon": "bi bi-grid"
-
-            },
-        {
-            "code": "DataLspQuocte",
-          "name": "Dữ liệu LSP quốc tế",
-          "url": "/DataLspQuocte",
-          "icon": "bi bi-grid"
-
-            },
+        },
         {
           "code": "ConfigurationLogs",
           "name": "Xử lý cảnh báo phần cứng",
@@ -244,6 +236,26 @@
           "code": "anm_uc1",
           "name": "Demo Uc1",
           "url": "/link-uc1",
+          "icon": "bi bi-grid"
+        }
+      ]
+    },
+    {
+      "code": "SOC1",
+      "name": "AU SOC1",
+      "url": "/user",
+      "icon": "bi bi-cpu",
+      "subMenu": [
+        {
+          "code": "s001-vpn3G4G",
+          "name": "S001 VPN3G4G",
+          "url": "/S001-VPN3G4G",
+          "icon": "bi bi-grid"
+        },
+        {
+          "code": "s002-siptrunk",
+          "name": "S002 SipTrunk",
+          "url": "/s002-Siptrunk",
           "icon": "bi bi-grid"
         }
       ]
