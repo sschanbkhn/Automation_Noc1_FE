@@ -78,6 +78,58 @@ const RnocR009Service = {
         });
         return res;
     },
+    
+    // ZTE APIs
+    GetZteBtsDataByDate: async (date: string) => {        
+        let res: any = await request({
+            url: `Rnoc_R009/zte_GetBtsDataByDate?date=${date}`,
+            method: 'get'
+        });
+        return res;
+    },
+    
+    GetZteBtsDataByDateRange: async (startDate: string, endDate: string) => {        
+        let res: any = await request({
+            url: `Rnoc_R009/zte_GetBtsDataByDateRange?startDate=${startDate}&endDate=${endDate}`,
+            method: 'get'
+        });
+        return res;
+    },
+
+    ExportZteBtsDataToExcel: async (data: any) => {        
+        let res: any = await request({
+            url: `Rnoc_R009/zte_ExportBtsDataToExcel`,
+            method: 'post',
+            data: data
+        });
+        return res;
+    },
+
+    // Ericsson APIs
+    GetEricssonBtsDataByDate: async (date: string) => {        
+        let res: any = await request({
+            url: `Rnoc_R009/ericsson_GetBtsDataByDate?date=${date}`,
+            method: 'get'
+        });
+        return res;
+    },
+    
+    GetEricssonBtsDataByDateRange: async (startDate: string, endDate: string) => {        
+        let res: any = await request({
+            url: `Rnoc_R009/ericsson_GetBtsDataByDateRange?startDate=${startDate}&endDate=${endDate}`,
+            method: 'get'
+        });
+        return res;
+    },
+
+    ExportEricssonBtsDataToExcel: async (data: any) => {        
+        let res: any = await request({
+            url: `Rnoc_R009/ericsson_ExportBtsDataToExcel`,
+            method: 'post',
+            data: data
+        });
+        return res;
+    },
 
     // Dashboard APIs
     GetDashboard4GData: async (date: string) => {        

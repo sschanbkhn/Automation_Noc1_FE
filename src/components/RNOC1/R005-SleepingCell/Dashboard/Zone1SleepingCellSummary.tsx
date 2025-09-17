@@ -1,18 +1,14 @@
-// import React, { useState, useEffect } from "react";
-// import { Card, Row, Col } from "react-bootstrap";
-// check code
-
-// ✅ ĐÚNG - thêm import:
 import React, { useState, useEffect } from "react";
 import { Card, Row, Col, Modal, Table, Badge } from "react-bootstrap";
-// import API_CONFIG from "./Designer/ApiR005SleepingCellConfig"; // Điều chỉnh đường dẫn cho đúng
 import API_CONFIG from "../Designer/ApiR005SleepingCellConfig";
-// import R005Tabs from "./Designer/R005Tabs";
+
+import * as ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 
 interface Zone1SleepingCellSummaryProps {
   selectedDate?: string;
   loading?: boolean;
-  dashboardData?: DashboardData | null; // ← THÊM DÒNG NÀY
+  dashboardData?: DashboardData | null;
 }
 
 interface DashboardData {
@@ -23,114 +19,159 @@ interface DashboardData {
   recheckCells: number;
 }
 
-// const Zone1SleepingCellSummary: React.FC<Zone1SleepingCellSummaryProps> = ({ selectedDate, loading: parentLoading }) => {
-const Zone1SleepingCellSummary: React.FC<Zone1SleepingCellSummaryProps> = ({
-  selectedDate,
-  loading: parentLoading,
-  dashboardData, // ← THÊM PROP NÀY
-}) => {
-  // const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
-  // const [loading, setLoading] = useState(true);
-  // const [error, setError] = useState<string | null>(null);
-
-  // ✅ THÊM STATES:
+const Zone1SleepingCellSummary: React.FC<Zone1SleepingCellSummaryProps> = ({ selectedDate, loading: parentLoading, dashboardData }) => {
+  // States
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState<string>("");
   const [modalData, setModalData] = useState<any[]>([]);
+  const [modalLoading, setModalLoading] = useState(false);
 
-  const [modalLoading, setModalLoading] = useState(false); // ← THÊM DÒNG NÀY
+  // Modern Table States
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [entriesPerPage, setEntriesPerPage] = useState(5);
+  const [sortConfig, setSortConfig] = useState<{ column: string; direction: "asc" | "desc" } | null>(null);
 
   const isLoading = parentLoading || false;
 
+  // Handle card click
   const handleCardClick = async (cardType: string) => {
-    console.log("🔥 Zone1 card clicked:", cardType, selectedDate);
+    console.log("Zone1 card clicked:", cardType, selectedDate);
     setModalType(cardType);
     setShowModal(true);
     setModalLoading(true);
-    // const response = await fetch(`${API_CONFIG.BASE_URL}/dashboard/province-summary/${selectedDate}`);
-    // const response = await fetch(`${API_CONFIG.BASE_URL}/dashboard/trend?endDate=${endDate}`);
-    // const response = await fetch(`${API_CONFIG.BASE_URL}/dashboard/province-summary/${date}`);
 
-    // ? "https://localhost:7232/api" // Local development
-    // : "http://10.155.43.202:8081/api", // Production server
+    setSearchTerm("");
+    setCurrentPage(1);
+    setSortConfig(null);
 
     try {
       let endpoint = "";
       switch (cardType) {
         case "sleeping":
-          // endpoint = `http://10.155.43.202:8081/api/dashboard/sleeping-cells/${selectedDate}`;
           endpoint = `${API_CONFIG.BASE_URL}/dashboard/sleeping-cells/${selectedDate}`;
-
-          break; // ✅ FIX: Bỏ "https:" trước break
+          break;
         case "process":
-          // endpoint = `http://10.155.43.202:8081/api/dashboard/process-cells/${selectedDate}`;
           endpoint = `${API_CONFIG.BASE_URL}/dashboard/process-cells/${selectedDate}`;
           break;
         case "execution":
-          // endpoint = `http://10.155.43.202:8081/api/dashboard/execution-cells/${selectedDate}`;
           endpoint = `${API_CONFIG.BASE_URL}/dashboard/execution-cells/${selectedDate}`;
           break;
         case "recheck":
-          // endpoint = `http://10.155.43.202:8081/api/dashboard/recheck-cells/${selectedDate}`;
           endpoint = `${API_CONFIG.BASE_URL}/dashboard/recheck-cells/${selectedDate}`;
           break;
       }
 
-      console.log("📡 Calling API:", endpoint);
+      console.log("Calling API:", endpoint);
       const response = await fetch(endpoint);
       const result = await response.json();
-      console.log("📊 Modal API response:", result);
+      console.log("Modal API response:", result);
 
-      // ✅ FIX: Dùng snake_case từ API response
-      setModalData(result.data || []);
-    } catch (error) {
-      console.error("❌ Error fetching detail data:", error);
-      setModalData([]);
-    } finally {
-      // ✅ CRITICAL: Set loading to false
-      setModalLoading(false);
-    }
-  };
-
-  /*
-  // ✅ THÊM CLICK HANDLERS:
-  const handleCardClick = async (cardType: string) => {
-    setModalType(cardType);
-    setShowModal(true);
-    setModalLoading(true); // ← THÊM
-
-    // Fetch detailed data based on card type
-    try {
-      let endpoint = "";
-      switch (cardType) {
-        case "sleeping":
-          endpoint = `http://10.155.43.202:8081/api/dashboard/sleeping-cells/${selectedDate}`;
-
-          break;
-        case "process":
-          endpoint = `http://10.155.43.202:8081/api/dashboard/process-cells/${selectedDate}`;
-          break;
-        case "execution":
-          endpoint = `http://10.155.43.202:8081/api/dashboard/execution-cells/${selectedDate}`;
-          break;
-        case "recheck":
-          endpoint = `http://10.155.43.202:8081/api/dashboard/recheck-cells/${selectedDate}`;
-          break;
-      }
-
-      const response = await fetch(endpoint);
-      const result = await response.json();
       setModalData(result.data || []);
     } catch (error) {
       console.error("Error fetching detail data:", error);
       setModalData([]);
+    } finally {
+      setModalLoading(false);
     }
   };
 
-*/
+  // Table functions
+  const getFilteredData = () => {
+    if (!searchTerm) return modalData;
+    return modalData.filter((item) => (item.lncel_name || "").toLowerCase().includes(searchTerm.toLowerCase()) || (item.lnbts_name || "").toLowerCase().includes(searchTerm.toLowerCase()) || (item.province || "").toLowerCase().includes(searchTerm.toLowerCase()) || (item.district || "").toLowerCase().includes(searchTerm.toLowerCase()));
+  };
 
-  // ✅ CARD STYLE FUNCTION:
+  const getSortedData = () => {
+    const filteredData = getFilteredData();
+    if (!sortConfig) return filteredData;
+
+    return [...filteredData].sort((a, b) => {
+      let aVal = a[sortConfig.column] || "";
+      let bVal = b[sortConfig.column] || "";
+
+      aVal = aVal.toString().toLowerCase();
+      bVal = bVal.toString().toLowerCase();
+
+      if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
+      return 0;
+    });
+  };
+
+  const getPaginatedData = () => {
+    const sortedData = getSortedData();
+    const startIndex = (currentPage - 1) * entriesPerPage;
+    const endIndex = Math.min(startIndex + entriesPerPage, sortedData.length);
+    return sortedData.slice(startIndex, endIndex);
+  };
+
+  const getTotalPages = () => {
+    return Math.ceil(getSortedData().length / entriesPerPage);
+  };
+
+  const handleSort = (column: string) => {
+    let direction: "asc" | "desc" = "asc";
+    if (sortConfig && sortConfig.column === column && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ column, direction });
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= getTotalPages()) {
+      setCurrentPage(page);
+    }
+  };
+
+  const handleEntriesPerPageChange = (newEntries: number) => {
+    setEntriesPerPage(newEntries);
+    setCurrentPage(1);
+  };
+
+  const renderPaginationButtons = () => {
+    const totalPages = getTotalPages();
+    const buttons = [];
+    const maxVisible = 5;
+
+    buttons.push(
+      <button key="prev" className="btn btn-outline-primary btn-sm me-1" disabled={currentPage === 1} onClick={() => handlePageChange(currentPage - 1)}>
+        ‹ Trước
+      </button>
+    );
+
+    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPages, start + maxVisible - 1);
+
+    if (end - start + 1 < maxVisible) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+
+    for (let i = start; i <= end; i++) {
+      buttons.push(
+        <button key={i} className={`btn btn-sm me-1 ${i === currentPage ? "btn-primary" : "btn-outline-primary"}`} onClick={() => handlePageChange(i)}>
+          {i}
+        </button>
+      );
+    }
+
+    buttons.push(
+      <button key="next" className="btn btn-outline-primary btn-sm" disabled={currentPage === totalPages || totalPages === 0} onClick={() => handlePageChange(currentPage + 1)}>
+        Tiếp ›
+      </button>
+    );
+    buttons.push(
+      <button className="btn btn-secondary ms-5" key="close" onClick={() => setShowModal(false)}>
+        Close
+      </button>
+    );
+
+    return buttons;
+  };
+
+  // Card style function
   const getCardStyle = (cardType: string, baseStyle: any) => ({
     ...baseStyle,
     cursor: "pointer",
@@ -139,15 +180,17 @@ const Zone1SleepingCellSummary: React.FC<Zone1SleepingCellSummaryProps> = ({
     transition: "all 0.3s ease",
   });
 
-  // ✅ MODAL TITLES:
+  // Modal titles
   const getModalTitle = () => {
     switch (modalType) {
       case "sleeping":
         return "😴 Sleeping Cells Details";
       case "process":
         return "⚡ Process Cells Details";
+
       case "execution":
         return "🔧 Execution Cells Details";
+
       case "recheck":
         return "🔍 Recheck Cells Details";
       default:
@@ -155,10 +198,504 @@ const Zone1SleepingCellSummary: React.FC<Zone1SleepingCellSummaryProps> = ({
     }
   };
 
+  /*
+
+  const exportToExcel = () => {
+    const exportData = getSortedData().map((item, index) => ({
+      STT: index + 1,
+      "Cell Name": item.lncel_name || "N/A",
+      "Site Name": item.lnbts_name || "N/A",
+      Province: item.province || "N/A",
+      District: item.district || "N/A",
+      Status: item.execution_status || "Active",
+      "IP Address": item.ssh_host || "N/A",
+    }));
+
+    // Tạo CSV content
+    const csvContent = [Object.keys(exportData[0]).join(","), ...exportData.map((row) => Object.values(row).join(","))].join("\n");
+
+    // Download file
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${modalType}_cells_${selectedDate}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  */
+
+  /*
+
+  const exportToExcel = async () => {
+    const exportData = getSortedData().map((item, index) => ({
+      STT: index + 1,
+      "Cell Name": item.lncel_name || "N/A",
+      "Site Name": item.lnbts_name || "N/A",
+      Province: item.province || "N/A",
+      District: item.district || "N/A",
+      Status: item.execution_status || "N/A",
+      "IP Address": item.ssh_host || "N/A",
+    }));
+
+    // Tạo workbook
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(modalType.toUpperCase());
+
+    // Thêm data
+    worksheet.addRows([
+      Object.keys(exportData[0]), // Headers
+      ...exportData.map((row) => Object.values(row)),
+    ]);
+
+    // Style header row (row 1)
+    const headerRow = worksheet.getRow(1);
+    headerRow.eachCell((cell) => {
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF2196F3" }, // Màu xanh như header
+      };
+      cell.font = {
+        color: { argb: "FFFFFFFF" }, // Text trắng
+        bold: true,
+      };
+      cell.alignment = {
+        horizontal: "center",
+        vertical: "middle",
+      };
+    });
+
+    // Set column widths
+    worksheet.columns = [
+      { width: 10 }, // #
+      { width: 25 }, // Cell Name
+      { width: 25 }, // Site Name
+      { width: 12 }, // Province
+      { width: 12 }, // District
+      { width: 12 }, // Status
+      { width: 18 }, // IP Address
+    ];
+
+    // Export file
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    saveAs(blob, `${modalType}_cells_${selectedDate}.xlsx`);
+  };
+
+
+  */
+
+  const exportToExcel = async () => {
+    const headers = getTableHeaders();
+    const exportData = getSortedData().map((item, index) => {
+      // const row = { "#": index + 1 };
+      const row: { [key: string]: any } = { STT: index + 1 };
+      headers.forEach((header) => {
+        if (header.field === "index") return;
+        row[header.key] = item[header.field] || "N/A";
+      });
+      return row;
+    });
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(modalType.toUpperCase());
+
+    worksheet.addRows([Object.keys(exportData[0]), ...exportData.map((row) => Object.values(row))]);
+
+    // Border style
+    // const borderStyle: ExcelJS.Borders = {
+    // const borderStyle = {
+    const borderStyle: Partial<ExcelJS.Borders> = {
+      top: { style: "thin", color: { argb: "FF000000" } },
+      left: { style: "thin", color: { argb: "FF000000" } },
+      bottom: { style: "thin", color: { argb: "FF000000" } },
+      right: { style: "thin", color: { argb: "FF000000" } },
+    };
+
+    // Style header row
+    const headerRow = worksheet.getRow(1);
+    headerRow.height = 20;
+    headerRow.eachCell((cell) => {
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF2196F3" },
+      };
+      cell.font = {
+        color: { argb: "FFFFFFFF" },
+        bold: true,
+      };
+      cell.alignment = {
+        horizontal: "center",
+        vertical: "middle",
+      };
+      cell.border = borderStyle; // Thêm border
+    });
+
+    // Style data rows với border
+    for (let i = 2; i <= worksheet.rowCount; i++) {
+      const row = worksheet.getRow(i);
+      row.height = 20;
+
+      const isEvenRow = (i - 2) % 2 === 0;
+      row.eachCell((cell) => {
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: isEvenRow ? "e8f5e8" : "FFFFFFFF" },
+          // fgColor: { argb: isEvenRow ? "FFFAFBFC" : "FFFBF0" },
+        };
+        cell.alignment = {
+          horizontal: "left",
+          vertical: "middle",
+        };
+        cell.border = borderStyle; // Thêm border cho data cells
+      });
+    }
+
+    const columnWidths = headers.map((header) => {
+      switch (header.key) {
+        case "STT":
+          return { width: 5 };
+        case "Cell Name":
+        case "Site Name":
+          return { width: 25 };
+        case "IP Address":
+          return { width: 18 };
+        default:
+          return { width: 15 };
+      }
+    });
+    worksheet.columns = columnWidths;
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    saveAs(blob, `${modalType}_cells_${selectedDate}.xlsx`);
+  };
+
+  const getTableHeaders = () => {
+    const baseHeaders = [
+      { key: "STT", field: "index" },
+      { key: "Cell Name", field: "lncel_name" },
+      { key: "Site Name", field: "lnbts_name" },
+      { key: "Province", field: "province" },
+      { key: "District", field: "district" },
+      { key: "Period StartTime", field: "period_start_time" },
+      // { key: "Status", field: "execution_status" },
+      // { key: "IP Address", field: "ssh_host" },
+    ];
+
+    if (modalType === "sleeping") {
+      return baseHeaders; // Chỉ trả về base headers, bỏ Status và IP
+    }
+    // Các modal khác vẫn có đủ cột
+    return [...baseHeaders, { key: "Status", field: "execution_status" }, { key: "IP Address", field: "ssh_host" }];
+    // return baseHeaders;
+  };
+
+  // Modern table component
+  const renderModernTable = () => {
+    const paginatedData = getPaginatedData();
+    const sortedData = getSortedData();
+    const startIndex = (currentPage - 1) * entriesPerPage + 1;
+    const endIndex = Math.min(currentPage * entriesPerPage, sortedData.length);
+
+    return (
+      <div style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>
+        {/* Modern Header */}
+        <div
+          style={{
+            background: "#2196F3",
+            color: "white",
+            padding: "20px 25px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <h4 style={{ margin: 0, fontWeight: 600, fontSize: "1.1rem" }}>{getModalTitle()}</h4>
+          <div style={{ fontSize: "14px", opacity: 0.9 }}>{selectedDate}</div>
+        </div>
+
+        {/* Modern Controls */}
+        <div
+          style={{
+            padding: "20px 25px",
+            background: "#fafbfc",
+            borderBottom: "1px solid #e1e8ed",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "15px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              background: "white",
+              border: "1px solid #ddd",
+              borderRadius: "6px",
+              padding: "8px 12px",
+              minWidth: "300px",
+            }}
+          >
+            <span style={{ color: "#666", marginRight: "8px" }}>🔍</span>
+            <input
+              type="text"
+              placeholder="Tìm kiếm theo Cell Name, Site Name, Province..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              style={{
+                border: "none",
+                outline: "none",
+                flex: 1,
+                fontSize: "14px",
+              }}
+            />
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px" }}>
+              <span>Hiển thị:</span>
+              <select
+                value={entriesPerPage}
+                onChange={(e) => handleEntriesPerPageChange(parseInt(e.target.value))}
+                style={{
+                  border: "1px solid #ddd",
+                  borderRadius: "4px",
+                  padding: "6px 10px",
+                  fontSize: "14px",
+                }}
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+              </select>
+              <span>bản ghi</span>
+            </div>
+
+            <div style={{ fontSize: "14px", color: "#666" }}>
+              Tổng: <strong>{modalData.length}</strong> bản ghi
+            </div>
+            <button className="btn btn-success btn-sm" onClick={() => exportToExcel()} style={{ marginLeft: "15px" }}>
+              📊 Export Excel
+            </button>
+          </div>
+        </div>
+
+        {/* Modern Table */}
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", background: "white" }}>
+            <thead>
+              <tr>
+                {getTableHeaders().map((header) => (
+                  // {[
+                  // { key: "STT", field: "index" },
+                  // { key: "Cell Name", field: "lncel_name" },
+                  // { key: "Site Name", field: "lnbts_name" },
+                  // { key: "Province", field: "province" },
+                  // { key: "District", field: "district" },
+                  // { key: "Period StartTime", field: "period_start_time" },
+                  // { key: "Status", field: "execution_status" },
+                  // { key: "Last Update", field: "created_at" },
+                  // { key: "IP Address", field: "ssh_host" },
+                  // ].map((header) => (
+                  <th
+                    key={header.key}
+                    onClick={header.field !== "index" ? () => handleSort(header.field) : undefined}
+                    style={{
+                      background: "#2196F3",
+                      color: "white",
+                      padding: "15px 12px",
+                      textAlign: "left",
+                      fontWeight: 600,
+                      fontSize: "14px",
+                      cursor: header.field !== "index" ? "pointer" : "default",
+                      userSelect: "none",
+                    }}
+                  >
+                    {header.key}
+                    {header.field !== "index" && <span style={{ opacity: 0.6, fontSize: "12px", marginLeft: "4px" }}>{sortConfig?.column === header.field ? (sortConfig.direction === "asc" ? " ↑" : " ↓") : " ⇅"}</span>}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedData.length > 0 ? (
+                paginatedData.map((item, index) => {
+                  const globalIndex = startIndex + index;
+                  return (
+                    <tr
+                      key={index}
+                      style={{
+                        backgroundColor: index % 2 === 0 ? "#fafbfc" : "white",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = "#e3f2fd";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = index % 2 === 0 ? "#fafbfc" : "white";
+                      }}
+                    >
+                      {getTableHeaders().map((header, colIndex) => {
+                        let cellContent;
+
+                        if (header.field === "index") {
+                          cellContent = globalIndex;
+                        } else if (header.field === "lncel_name") {
+                          cellContent = <span style={{ fontWeight: 600, color: "#1976D2", fontFamily: "monospace" }}>{item.lncel_name || "N/A"}</span>;
+                        } else if (header.field === "province") {
+                          cellContent = <span style={{ display: "inline-block", padding: "4px 10px", borderRadius: "12px", fontSize: "12px", fontWeight: 600, color: "#9a3412", background: "#fff3cd" }}>{item.province || "N/A"}</span>;
+                        } else if (header.field === "district") {
+                          cellContent = <span style={{ display: "inline-block", padding: "4px 10px", borderRadius: "12px", fontSize: "12px", fontWeight: 600, color: "#721c24", background: "#f8d7da" }}>{item.district || "N/A"}</span>;
+                        } else if (header.field === "period_start_time") {
+                          cellContent = item.period_start_time || "N/A";
+                        } else if (header.field === "execution_status") {
+                          cellContent = (
+                            <span
+                              style={{
+                                display: "inline-block",
+                                padding: "5px 12px",
+                                borderRadius: "15px",
+                                fontSize: "12px",
+                                fontWeight: 600,
+                                background: "#e8f5e8",
+                                color: "#2e7d32",
+                              }}
+                            >
+                              {item.execution_status || "N/A"}
+                            </span>
+                          );
+                        } else if (header.field === "ssh_host") {
+                          cellContent = item.ssh_host || "N/A";
+                        } else {
+                          cellContent = item[header.field] || "N/A";
+                        }
+
+                        return (
+                          <td key={colIndex} style={{ padding: "12px", borderBottom: "1px solid #f0f0f0", fontSize: "14px" }}>
+                            {cellContent}
+                          </td>
+                        );
+                      })}
+
+                      {/*}
+
+                      <td style={{ padding: "12px", borderBottom: "1px solid #f0f0f0", fontSize: "14px", fontWeight: "bold" }}>{globalIndex}</td>
+                      <td style={{ padding: "12px", borderBottom: "1px solid #f0f0f0", fontSize: "14px" }}>
+                        <span style={{ fontWeight: 600, color: "#1976D2", fontFamily: "monospace" }}>{item.lncel_name || "N/A"}</span>
+                      </td>
+                      <td style={{ padding: "12px", borderBottom: "1px solid #f0f0f0", fontSize: "14px" }}>{item.lnbts_name || "N/A"}</td>
+                      <td style={{ padding: "12px", borderBottom: "1px solid #f0f0f0", fontSize: "14px" }}>
+                        <span
+                          style={{
+                            display: "inline-block",
+                            padding: "4px 10px",
+                            borderRadius: "12px",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            // color: "white",
+                            color: "#9a3412",
+                            // background: "#2196F3",
+                            background: "#fff3cd",
+                          }}
+                        >
+                          {item.province || "N/A"}
+                        </span>
+                      </td>
+                       <td style={{ padding: "12px", borderBottom: "1px solid #f0f0f0", fontSize: "14px" }}>{item.district || "N/A"}</td> 
+
+                      <td style={{ padding: "12px", borderBottom: "1px solid #f0f0f0", fontSize: "14px" }}>
+                        <span
+                          style={{
+                            display: "inline-block",
+                            padding: "4px 10px",
+                            borderRadius: "12px",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            color: "#721c24",
+                            background: "#f8d7da",
+                          }}
+                        >
+                          {item.district || "N/A"}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: "12px", borderBottom: "1px solid #f0f0f0", fontSize: "14px" }}>
+                        <span
+                          style={{
+                            display: "inline-block",
+                            padding: "5px 12px",
+                            borderRadius: "15px",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            background: "#e8f5e8",
+                            color: "#2e7d32",
+                          }}
+                        >
+                          {item.execution_status || "Active"}
+                        </span>
+                      </td>
+                      {/* <td style={{ padding: "12px", borderBottom: "1px solid #f0f0f0", fontSize: "14px", color: "#666" }}>{item.created_at || "N/A"}</td> 
+                      <td style={{ padding: "12px", borderBottom: "1px solid #f0f0f0", fontSize: "14px", color: "#666" }}>{item.ssh_host || "N/A"}</td>
+                    
+                    */}
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td
+                    colSpan={7}
+                    style={{
+                      textAlign: "center",
+                      padding: "40px",
+                      color: "#666",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    {searchTerm ? "Không tìm thấy dữ liệu phù hợp" : "Không có dữ liệu"}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Modern Pagination */}
+        {sortedData.length > 0 && (
+          <div
+            style={{
+              padding: "20px 25px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              background: "#fafbfc",
+              borderTop: "1px solid #e1e8ed",
+            }}
+          >
+            <div style={{ fontSize: "14px", color: "#666" }}>
+              Hiển thị <strong>{sortedData.length > 0 ? startIndex : 0}</strong> - <strong>{endIndex}</strong> trong số <strong>{sortedData.length}</strong> bản ghi
+            </div>
+            <div style={{ display: "flex", gap: "5px", marginRight: "40px" }}>{renderPaginationButtons()}</div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="mb-4">
       <Row className="g-3 mb-1" style={{ display: "flex", flexWrap: "nowrap", overflowX: "auto" }}>
-        {/* Card 1: Today's Analysis - NO CLICK */}
+        {/* Card 1: Today's Analysis */}
         <Col style={{ flex: "1 1 0", minWidth: "160px", maxWidth: "none" }}>
           <Card
             style={{
@@ -223,7 +760,7 @@ const Zone1SleepingCellSummary: React.FC<Zone1SleepingCellSummaryProps> = ({
           </Card>
         </Col>
 
-        {/* Card 2: Sleeping Cells - CLICKABLE */}
+        {/* Card 2: Sleeping Cells */}
         <Col style={{ flex: "1 1 0", minWidth: "160px", maxWidth: "none" }}>
           <Card
             style={getCardStyle("sleeping", {
@@ -304,7 +841,7 @@ const Zone1SleepingCellSummary: React.FC<Zone1SleepingCellSummaryProps> = ({
           </Card>
         </Col>
 
-        {/* Card 3: Process Cells - CLICKABLE */}
+        {/* Card 3: Process Cells */}
         <Col style={{ flex: "1 1 0", minWidth: "160px", maxWidth: "none" }}>
           <Card
             style={getCardStyle("process", {
@@ -385,7 +922,7 @@ const Zone1SleepingCellSummary: React.FC<Zone1SleepingCellSummaryProps> = ({
           </Card>
         </Col>
 
-        {/* Card 4: Execution Cells - CLICKABLE */}
+        {/* Card 4: Execution Cells */}
         <Col style={{ flex: "1 1 0", minWidth: "160px", maxWidth: "none" }}>
           <Card
             style={getCardStyle("execution", {
@@ -466,7 +1003,7 @@ const Zone1SleepingCellSummary: React.FC<Zone1SleepingCellSummaryProps> = ({
           </Card>
         </Col>
 
-        {/* Card 5: Recheck Cells - CLICKABLE */}
+        {/* Card 5: Recheck Cells */}
         <Col style={{ flex: "1 1 0", minWidth: "160px", maxWidth: "none" }}>
           <Card
             style={getCardStyle("recheck", {
@@ -548,65 +1085,18 @@ const Zone1SleepingCellSummary: React.FC<Zone1SleepingCellSummaryProps> = ({
         </Col>
       </Row>
 
-      {/* ✅ MODAL HIỂN THỊ DANH SÁCH: */}
+      {/* Modal với Modern Design */}
       <Modal show={showModal} onHide={() => setShowModal(false)} size="xl" scrollable>
-        <Modal.Header closeButton style={{ backgroundColor: "#f8f9fa", borderBottom: "2px solid #e9ecef" }}>
-          <Modal.Title className="d-flex align-items-center">
-            <span className="me-2" style={{ fontSize: "1.5rem" }}>
-              {modalType === "sleeping" && "😴"}
-              {modalType === "process" && "⚡"}
-              {modalType === "execution" && "🔧"}
-              {modalType === "recheck" && "🔍"}
-            </span>
-            {getModalTitle()}
-            <Badge bg="secondary" className="ms-2">
-              {selectedDate}
-            </Badge>
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body style={{ maxHeight: "500px", padding: "0" }}>
+        <Modal.Body style={{ padding: "0" }}>
           {modalLoading ? (
             <div className="text-center py-5">
-              <div className="spinner-border text-primary mb-3" role="status">
+              <div className="spinner-border text-primary mb-3" role="status" style={{ width: "3rem", height: "3rem" }}>
                 <span className="visually-hidden">Loading...</span>
               </div>
               <p className="text-muted">Loading detailed data...</p>
             </div>
           ) : modalData.length > 0 ? (
-            <Table striped hover className="mb-0">
-              <thead style={{ backgroundColor: "#f8f9fa", position: "sticky", top: 0, zIndex: 10 }}>
-                <tr>
-                  <th style={{ padding: "12px" }}>#</th>
-                  <th style={{ padding: "12px" }}>Cell Name</th>
-                  <th style={{ padding: "12px" }}>Site Name</th>
-                  <th style={{ padding: "12px" }}>Province</th>
-                  <th style={{ padding: "12px" }}>District</th>
-                  <th style={{ padding: "12px" }}>Status</th>
-                  <th style={{ padding: "12px" }}>Last Update</th>
-                </tr>
-              </thead>
-
-              {/* ✅ THAY THẾ PHẦN NÀY: */}
-              <tbody>
-                {modalData.map((item, index) => (
-                  <tr key={index} style={{ borderLeft: `4px solid ${modalType === "sleeping" ? "#f44336" : modalType === "process" ? "#ff9800" : modalType === "execution" ? "#2196f3" : "#4caf50"}` }}>
-                    <td style={{ padding: "12px", fontWeight: "bold" }}>{index + 1}</td>
-                    <td style={{ padding: "12px", fontFamily: "monospace" }}>{item.lncel_name || "N/A"}</td>
-                    <td style={{ padding: "12px" }}>{item.lnbts_name || "N/A"}</td>
-                    <td style={{ padding: "12px" }}>
-                      <Badge bg="primary" style={{ fontSize: "0.75rem" }}>
-                        {item.province || "N/A"}
-                      </Badge>
-                    </td>
-                    <td style={{ padding: "12px" }}>{item.district || "N/A"}</td>
-                    <td style={{ padding: "12px" }}>
-                      <Badge bg="secondary">{item.period_start_time || "Active"}</Badge>
-                    </td>
-                    <td style={{ padding: "12px", fontSize: "0.85rem", color: "#666" }}>{item.created_at || "N/A"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
+            renderModernTable()
           ) : (
             <div className="text-center py-5">
               <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>📭</div>
@@ -615,14 +1105,6 @@ const Zone1SleepingCellSummary: React.FC<Zone1SleepingCellSummaryProps> = ({
             </div>
           )}
         </Modal.Body>
-        <Modal.Footer style={{ backgroundColor: "#f8f9fa", borderTop: "2px solid #e9ecef" }}>
-          <div className="d-flex justify-content-between w-100 align-items-center">
-            <small className="text-muted">{modalData.length > 0 ? `Showing ${modalData.length} records` : "No records found"}</small>
-            <button className="btn btn-secondary" onClick={() => setShowModal(false)}>
-              Close
-            </button>
-          </div>
-        </Modal.Footer>
       </Modal>
     </div>
   );

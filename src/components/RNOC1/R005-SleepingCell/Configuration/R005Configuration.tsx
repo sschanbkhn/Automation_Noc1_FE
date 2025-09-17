@@ -1,235 +1,384 @@
 import React, { useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faSearch } from "@fortawesome/free-solid-svg-icons";
 
-const Configuration = () => {
+// Import types
+import { ConfigModule } from "./ConfigTypes";
+
+// Import constants
+import { configModules } from "./ConfigConstants";
+
+// Import utils
+import { getStatusBadge, createEmptyFormData } from "./ConfigUtilsR005";
+
+// Import hooks
+import { useConfigData } from "./useConfigData";
+
+// Import components
+import DataTableModal from "./DataTableModal";
+import AddEditModal from "./AddEditModal";
+import ArchiveModal from "./ArchiveModal";
+
+import MRBTSModal from "./MRBTSModal";
+
+const Configuration: React.FC = () => {
+  // States for search and modal management
   const [searchTerm, setSearchTerm] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [selectedConfig, setSelectedConfig] = useState<ConfigModule | null>(null);
 
-  // Dữ liệu mẫu cho các card cấu hình, với icon SVG và mô tả
-  const configCards = [
-    {
-      id: "mrbts_info",
-      title: "MRBTS Information",
-      description: "Cấu hình các thông tin liên quan đến trạm gốc (MRBTS).",
-      icon: (
-        <svg fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-        </svg>
-      ),
-    },
-    {
-      id: "email_config",
-      title: "Email",
-      description: "Quản lý các thiết lập cho thông báo và cảnh báo qua email.",
-      icon: (
-        <svg fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-        </svg>
-      ),
-    },
-    {
-      id: "file_path",
-      title: "File Path",
-      description: "Thiết lập đường dẫn lưu trữ cho các file log và báo cáo.",
-      icon: (
-        <svg fill="currentColor" viewBox="0 0 24 24">
-          <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z" />
-        </svg>
-      ),
-    },
-  ];
+  const [showAddEditModal, setShowAddEditModal] = useState(false);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [formData, setFormData] = useState<any>({});
 
-  // Lọc các card dựa trên search term
-  const filteredCards = configCards.filter((card) => card.title.toLowerCase().includes(searchTerm.toLowerCase()) || card.description.toLowerCase().includes(searchTerm.toLowerCase()));
+  // THÊM: Riêng search term cho từng modal
+  const [mrbtsSearchTerm, setMrbtsSearchTerm] = useState("");
+  const [archiveSearchTerm, setArchiveSearchTerm] = useState("");
+  const [schedulerSearchTerm, setSchedulerSearchTerm] = useState("");
+
+  // Custom hook for data management
+  const { modalData, modalLoading, modalSearchTerm, loadConfigData, handleModalSearch, handleDelete, handleSave } = useConfigData();
+
+  // Filter modules based on search
+  const filteredModules = configModules.filter((module) => module.title.toLowerCase().includes(searchTerm.toLowerCase()) || module.description.toLowerCase().includes(searchTerm.toLowerCase()));
+
+  // Thêm state:
+  const [showMRBTSModal, setShowMRBTSModal] = useState(false);
+
+  // Handle card click - route to appropriate modal
+  const handleCardClick = async (module: ConfigModule) => {
+    setSelectedConfig(module);
+
+    switch (module.id) {
+      case 8: // Detail Archive Reports - special modal
+        setShowArchiveModal(true);
+        break;
+
+      case 5: // Scheduler - needs special handling for date selection
+        // For now, treat as normal. Later can add date picker
+        setShowModal(true);
+        await loadConfigData(module.id);
+        break;
+
+      // Trong handleCardClick:
+      case 3: // MRBTS - special modal
+        setShowMRBTSModal(true);
+        await loadConfigData(module.id);
+        break;
+
+      default: // Normal modules (1,2,4,6,7)
+        setShowModal(true);
+        await loadConfigData(module.id);
+        break;
+    }
+  };
+
+  // Handle add new item
+  const handleAddNew = () => {
+    setEditingItem(null);
+
+    if (modalData && modalData.length > 0) {
+      const sampleItem = modalData[0];
+      const emptyForm = createEmptyFormData(sampleItem, selectedConfig!.id);
+      setFormData(emptyForm);
+    } else {
+      setFormData({});
+    }
+
+    setShowAddEditModal(true);
+  };
+
+  // Handle edit item
+  const handleEditItem = (item: any) => {
+    setEditingItem(item);
+    setFormData({ ...item });
+    setShowAddEditModal(true);
+  };
+
+  // Handle save form
+  const handleSaveForm = async () => {
+    if (!selectedConfig) return;
+
+    const success = await handleSave(formData, selectedConfig.id, editingItem);
+    if (success) {
+      setShowAddEditModal(false);
+      setEditingItem(null);
+      setFormData({});
+
+      // THÊM: Force refresh modal data
+      await loadConfigData(selectedConfig.id);
+    }
+  };
+
+  // Handle delete with confirmation
+  const handleDeleteItem = async (id: number) => {
+    if (!selectedConfig) return;
+    await handleDelete(id, selectedConfig.id);
+  };
+
+  // Close all modals
+  /*
+  const closeAllModals = () => {
+    setShowModal(false);
+    setShowAddEditModal(false);
+    setShowArchiveModal(false);
+    setSelectedConfig(null);
+    setEditingItem(null);
+    setFormData({});
+  };
+
+  */
+  const closeAllModals = () => {
+    setShowModal(false);
+    setShowMRBTSModal(false); // THÊM dòng này
+    setShowAddEditModal(false);
+    setShowArchiveModal(false);
+    setSelectedConfig(null);
+    setEditingItem(null);
+    setFormData({});
+
+    // Reset search terms
+    setMrbtsSearchTerm("");
+    setArchiveSearchTerm("");
+    setSchedulerSearchTerm("");
+  };
 
   return (
-    <div className="rnoc-app-container">
-      <style>
-        {`
-          * {
-            box-sizing: border-box;
-          }
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            color: #333;
-            margin: 0;
-            padding: 0;
-          }
-          .floating-elements {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: -1;
-          }
-          .floating-circle {
-            position: absolute;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.1);
-            animation: float 6s ease-in-out infinite;
-          }
-          .floating-circle:nth-child(1) { width: 80px; height: 80px; top: 20%; left: 10%; animation-delay: 0s; }
-          .floating-circle:nth-child(2) { width: 120px; height: 120px; top: 60%; right: 10%; animation-delay: 2s; }
-          .floating-circle:nth-child(3) { width: 60px; height: 60px; bottom: 20%; left: 20%; animation-delay: 4s; }
-          @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-20px) rotate(180deg); }
-          }
-          .rnoc-main-container {
-            max-width: 1200px;
-            margin: 4rem auto;
-            padding: 3rem;
-            background: rgba(255,255,255,0.95);
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.2);
-          }
-          .rnoc-search-bar {
-            margin-bottom: 2rem;
-          }
-          .rnoc-search-bar input {
-            width: 100%;
-            padding: 10px 15px;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-            font-size: 1rem;
-          }
-          .rnoc-card-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 2rem;
-            margin-top: 2rem;
-          }
-          .rnoc-card {
-            background: rgba(255,255,255,0.95);
-            border-radius: 20px;
-            padding: 2rem;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.2);
-          }
-          .rnoc-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #667eea, #764ba2);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-          }
-          .rnoc-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-            cursor: pointer;
-          }
-          .rnoc-card:hover::before {
-            opacity: 1;
-          }
-          .rnoc-card-icon {
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border-radius: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-          }
-          .rnoc-card-icon svg {
-            width: 28px;
-            height: 28px;
-            color: white;
-          }
-          .rnoc-card-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #2d3748;
-            margin-bottom: 0.5rem;
-          }
-          .rnoc-card-description {
-            color: #718096;
-            font-size: 0.9rem;
-            line-height: 1.5;
-          }
-          .rnoc-no-results {
-            grid-column: 1 / -1;
-            text-align: center;
-            color: #6c757d;
-            font-style: italic;
-            margin-top: 40px;
-          }
-          .rnoc-breadcrumb {
-            margin-bottom: 2rem;
-            color: #2d3748;
-            font-size: 1.25rem;
-            font-weight: 600;
-            text-align: left;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid rgba(102, 126, 234, 0.3);
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-          }
-          .rnoc-breadcrumb-icon {
-            width: 24px;
-            height: 24px;
-            color: #667eea;
-          }
-          @media (max-width: 768px) {
-            .rnoc-main-container {
-              margin: 2rem auto;
-              padding: 2rem;
-            }
-            .rnoc-card-grid {
-              grid-template-columns: 1fr;
-              gap: 1.5rem;
-            }
-            .rnoc-card {
-              padding: 1.5rem;
-            }
-          }
-        `}
-      </style>
-      <div className="floating-elements">
-        <div className="floating-circle"></div>
-        <div className="floating-circle"></div>
-        <div className="floating-circle"></div>
+    <div
+      style={{
+        padding: "20px",
+        backgroundColor: "white",
+        minHeight: "500px",
+        maxWidth: "1200px",
+        margin: "0 auto",
+      }}
+    >
+      {/* Search Bar */}
+      <div style={{ marginBottom: "30px" }}>
+        <div style={{ position: "relative", maxWidth: "400px" }}>
+          <input
+            type="text"
+            placeholder="Search configurations..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "12px 20px 12px 45px",
+              border: "2px solid #e2e8f0",
+              borderRadius: "8px",
+              fontSize: "14px",
+              outline: "none",
+              transition: "border-color 0.2s ease",
+            }}
+            onFocus={(e) => (e.currentTarget.style.borderColor = "#7c3aed")}
+            onBlur={(e) => (e.currentTarget.style.borderColor = "#e2e8f0")}
+          />
+          <FontAwesomeIcon
+            icon={faSearch}
+            style={{
+              position: "absolute",
+              left: "15px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: "#9ca3af",
+              fontSize: "14px",
+            }}
+          />
+        </div>
       </div>
-      <div className="rnoc-main-container">
-        <div className="rnoc-breadcrumb">
-          <svg className="rnoc-breadcrumb-icon" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-          </svg>
-          Cấu hình
-        </div>
-        <div className="rnoc-search-bar">
-          <input type="text" placeholder="🔍 Tìm kiếm thẻ cấu hình..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-        </div>
-        <div className="rnoc-card-grid">
-          {filteredCards.length > 0 ? (
-            filteredCards.map((card) => (
-              <div key={card.id} className="rnoc-card">
-                <div className="rnoc-card-icon">{card.icon}</div>
-                <h3 className="rnoc-card-title">{card.title}</h3>
-                <p className="rnoc-card-description">{card.description}</p>
+      {/* Cards Grid */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: "20px",
+          maxWidth: "100%",
+          width: "100%",
+        }}
+      >
+        {filteredModules.map((module: ConfigModule) => (
+          <div
+            key={module.id}
+            style={{
+              position: "relative",
+              background: "white",
+              border: "2px solid #f1f5f9",
+              borderRadius: "16px",
+              padding: "20px 16px 16px 16px",
+              textAlign: "center",
+              cursor: "pointer",
+              transition: "all 0.3s ease",
+              minHeight: "160px",
+              maxWidth: "280px",
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              alignItems: "center",
+              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+            }}
+            onClick={() => handleCardClick(module)}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-8px)";
+              e.currentTarget.style.boxShadow = "0 20px 25px -5px rgba(0, 0, 0, 0.1)";
+              e.currentTarget.style.borderColor = module.iconColor;
+              e.currentTarget.style.background = `linear-gradient(135deg, ${module.iconColor}15, ${module.iconColor}10)`;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(0, 0, 0, 0.1)";
+              e.currentTarget.style.borderColor = "#f1f5f9";
+              e.currentTarget.style.background = "white";
+            }}
+          >
+            {/* Status Dot */}
+            <div
+              style={{
+                position: "absolute",
+                top: "12px",
+                right: "12px",
+                width: "8px",
+                height: "8px",
+                background: module.status === "active" ? "#10b981" : "#f59e0b",
+                borderRadius: "50%",
+                border: "2px solid white",
+              }}
+            />
+
+            {/* Content */}
+            <div
+              style={{
+                flex: "1",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              {/* Icon */}
+              <div
+                style={{
+                  width: "56px",
+                  height: "56px",
+                  margin: "0 0 12px 0",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: module.iconColor,
+                  borderRadius: "16px",
+                  boxShadow: `0 8px 25px ${module.iconColor}40`,
+                }}
+              >
+                <FontAwesomeIcon icon={module.icon} style={{ fontSize: "24px", color: "white" }} />
               </div>
-            ))
-          ) : (
-            <div className="rnoc-no-results">
-              <p>Không tìm thấy thẻ cấu hình nào cho "{searchTerm}"</p>
+
+              <h3
+                style={{
+                  fontSize: "15px",
+                  fontWeight: "600",
+                  color: "#111827",
+                  margin: "0 0 6px 0",
+                  lineHeight: "1.2",
+                  textAlign: "center",
+                }}
+              >
+                {module.title}
+              </h3>
+              <p
+                style={{
+                  fontSize: "12px",
+                  color: "#6b7280",
+                  margin: "0",
+                  lineHeight: "1.3",
+                  textAlign: "center",
+                }}
+              >
+                {module.description}
+              </p>
             </div>
-          )}
-        </div>
+
+            {/* Footer */}
+            <div
+              style={{
+                width: "100%",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                marginTop: "8px",
+              }}
+            >
+              {getStatusBadge(module.status)}
+            </div>
+          </div>
+        ))}
       </div>
+      {/* Empty State */}
+      {filteredModules.length === 0 && (
+        <div
+          style={{
+            textAlign: "center",
+            padding: "60px 20px",
+            backgroundColor: "white",
+            borderRadius: "16px",
+            border: "2px dashed #e2e8f0",
+          }}
+        >
+          <div style={{ fontSize: "48px", marginBottom: "16px" }}>🔍</div>
+          <h3 style={{ color: "#64748b", fontSize: "18px", margin: "0 0 8px 0" }}>No configurations found</h3>
+          <p style={{ color: "#94a3b8", fontSize: "14px", margin: "0 0 20px 0" }}>Try adjusting your search terms</p>
+          <button
+            onClick={() => setSearchTerm("")}
+            style={{
+              backgroundColor: "#7c3aed",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              padding: "10px 20px",
+              fontSize: "14px",
+              fontWeight: "600",
+              cursor: "pointer",
+            }}
+          >
+            Clear Search
+          </button>
+        </div>
+      )}
+
+      {/* Normal Modal */}
+      <DataTableModal
+        show={showModal}
+        selectedConfig={selectedConfig}
+        modalData={modalData}
+        modalLoading={modalLoading}
+        modalSearchTerm={modalSearchTerm} // Dùng chung
+        onSearch={handleModalSearch}
+        onClose={closeAllModals}
+        onAdd={handleAddNew}
+        onEdit={handleEditItem}
+        onDelete={handleDeleteItem}
+      />
+
+      {/* MRBTS Modal - search term riêng */}
+      <MRBTSModal
+        show={showMRBTSModal}
+        selectedConfig={selectedConfig}
+        modalData={modalData}
+        modalLoading={modalLoading}
+        modalSearchTerm={mrbtsSearchTerm} // Search term riêng
+        onSearch={setMrbtsSearchTerm} // Set trực tiếp
+        onClose={closeAllModals}
+        onAdd={handleAddNew}
+        onEdit={handleEditItem}
+        onDelete={handleDeleteItem}
+        onRefresh={() => selectedConfig && loadConfigData(selectedConfig.id)}
+      />
+
+      {/* Archive Modal - search term riêng */}
+      <ArchiveModal show={showArchiveModal} onClose={closeAllModals} onEdit={handleEditItem} onAdd={handleAddNew} />
+      {/* check  */}
+      {/* Empty State check */}
+      <AddEditModal show={showAddEditModal} selectedConfig={selectedConfig} editingItem={editingItem} formData={formData} setFormData={setFormData} onSave={handleSaveForm} onClose={() => setShowAddEditModal(false)} />
     </div>
   );
 };

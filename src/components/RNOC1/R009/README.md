@@ -23,10 +23,11 @@ Component này được thiết kế với 2 tab chính:
   - Hiển thị bảng dữ liệu chi tiết
   - Phân trang
   - Xuất Excel
-  - Hỗ trợ 3 loại dữ liệu:
+  - Hỗ trợ 4 loại dữ liệu:
     - Huawei 4G
     - Nokia 4G
     - Nokia 5G
+    - ZTE 4G
 
 ## Cấu trúc Files
 
@@ -37,6 +38,7 @@ src/components/RNOC1/R009/
 ├── Nokia4GTable.tsx       # Bảng dữ liệu Nokia 4G
 ├── Nokia5GTable.tsx       # Bảng dữ liệu Nokia 5G
 ├── Huawei4GTable.tsx      # Bảng dữ liệu Huawei 4G
+├── Zte4GTable.tsx         # Bảng dữ liệu ZTE 4G
 └── README.md             # Tài liệu này
 ```
 
@@ -58,6 +60,7 @@ Sử dụng `RnocR009Service` với các methods:
 - `GetBtsDataByDate(date)` - Huawei 4G
 - `GetNokiaBtsDataByDate(date)` - Nokia 4G  
 - `GetNokiaBtsData5GByDate(date)` - Nokia 5G
+- `GetZteBtsDataByDate(date)` - ZTE 4G
 
 ## Dependencies
 

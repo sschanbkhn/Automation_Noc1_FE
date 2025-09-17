@@ -219,15 +219,15 @@ const Zone2_ChartProvinceDistribution: React.FC<Zone2_ChartProvinceDistributionP
               <span className="fw-semibold">{data.processed} cells</span>
             </div>
             <div className="d-flex justify-content-between">
-              <span className="text-success">Thành công:</span>
+              <span className="text-success">Thực hiện:</span>
               <span className="fw-semibold">{data.success} cells</span>
             </div>
             <div className="d-flex justify-content-between">
-              <span className="text-danger">Thất bại:</span>
+              <span className="text-danger">Không tác động:</span>
               <span className="fw-semibold">{data.failed} cells</span>
             </div>
             <div className="d-flex justify-content-between border-top pt-1">
-              <span className="text-info">Tỷ lệ thành công:</span>
+              <span className="text-info">Tỷ lệ Thực hiện:</span>
               <span className="fw-bold">{data.successRate}%</span>
             </div>
           </div>
@@ -497,10 +497,10 @@ const Zone2_ChartProvinceDistribution: React.FC<Zone2_ChartProvinceDistributionP
 
               <Bar yAxisId="left" dataKey="detected" fill="url(#detectedGradientCombined)" name="🔍 Phát hiện" />
               <Bar yAxisId="left" dataKey="processed" fill="#fd7e14" name="⚙️ Xử lý" />
-              <Bar yAxisId="left" dataKey="success" fill="url(#successGradientCombined)" name="✅ Thành công" />
-              <Bar yAxisId="left" dataKey="failed" fill="url(#failedGradientCombined)" name="❌ Thất bại" />
+              <Bar yAxisId="left" dataKey="success" fill="url(#successGradientCombined)" name="✅ Thực hiện" />
+              <Bar yAxisId="left" dataKey="failed" fill="url(#failedGradientCombined)" name="❌ Không tác động" />
 
-              <Line yAxisId="right" type="monotone" dataKey="successRate" stroke="#6f42c1" strokeWidth={3} name="📈 Tỷ lệ thành công (%)" dot={{ fill: "#6f42c1", strokeWidth: 2, r: 4 }} />
+              <Line yAxisId="right" type="monotone" dataKey="successRate" stroke="#6f42c1" strokeWidth={3} name="📈 Tỷ lệ hành động (%)" dot={{ fill: "#6f42c1", strokeWidth: 2, r: 4 }} />
             </ComposedChart>
           </ResponsiveContainer>
         );

@@ -146,30 +146,36 @@
         }
       ]
     },
-     {
+      {
       "code": "NetworkSnoc",
       "name": "AU Chuyển mạch",
       "url": "/user",
       "icon": "bi bi-cpu",
       "subMenu": [
         {
-      "code": "hc-dashboard",
-      "name": "Healthcheck Automation",
-      "url": "/app/dashboard/origin",
-      "icon": "bi bi-cpu"
-    },
-    {
-      "code": "hc-dashboard-dns",
-      "name": "DNS Automation",
-      "url": "/app/dashboard/dns",
-      "icon": "bi bi-cpu"
-    },
-    {
-      "code": "hc-dashboard-sbc",
-      "name": "SBC Automation",
-      "url": "/app/dashboard/sbc",
-      "icon": "bi bi-cpu"
-    }
+          "code": "hc-snoc-admin-dashboard",
+          "name": "User Admin Snoc",
+          "url": "/app/snoc/admin",
+          "icon": "bi bi-cpu"
+        },
+        {
+          "code": "hc-dashboard",
+          "name": "Healthcheck Automation",
+          "url": "/app/dashboard/origin",
+          "icon": "bi bi-cpu"
+        },
+        {
+          "code": "hc-dashboard-dns",
+          "name": "DNS Automation",
+          "url": "/app/dashboard/dns",
+          "icon": "bi bi-cpu"
+        },
+        {
+          "code": "hc-dashboard-sbc",
+          "name": "SBC Automation",
+          "url": "/app/dashboard/sbc",
+          "icon": "bi bi-cpu"
+        }
       ]
     },
     {
@@ -197,12 +203,6 @@
           "icon": "bi bi-grid"
 
             },
-        {
-          "code": "i004_1",
-          "name": "Dữ liệu LSP quốc tế",
-          "url": "/i004_1",
-          "icon": "bi bi-diagram-3"
-        },
         {
           "code": "ConfigurationLogs",
           "name": "Xử lý cảnh báo phần cứng",
@@ -312,6 +312,26 @@
           "code": "anm3_uc1",
           "name": "Kết quả ONU",
           "url": "/onu",
+          "icon": "bi bi-grid"
+        }
+      ]
+    },
+    {
+      "code": "SOC1",
+      "name": "AU SOC1",
+      "url": "/user",
+      "icon": "bi bi-cpu",
+      "subMenu": [
+        {
+          "code": "s001-vpn3G4G",
+          "name": "S001 VPN3G4G",
+          "url": "/S001-VPN3G4G",
+          "icon": "bi bi-grid"
+        },
+        {
+          "code": "s002-siptrunk",
+          "name": "S002 SipTrunk",
+          "url": "/s002-Siptrunk",
           "icon": "bi bi-grid"
         }
       ]

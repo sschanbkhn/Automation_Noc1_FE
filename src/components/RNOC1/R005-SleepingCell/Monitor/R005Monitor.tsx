@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-// import ReactExport from "react-excel-export";
-// declare module "react-excel-export";
-// import * as XLSX from "xlsx";
 import * as ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
-
 import API_CONFIG from "../Designer/ApiR005SleepingCellConfig";
 
 interface KpiRecord {
@@ -34,8 +30,32 @@ interface KpiRecord {
   vendor: string;
   archived_at: string;
   archived_by: string;
-  // execution_status?: "success" | "failed" | "pending"; // Thêm execution status
-  execution_status?: string; // ← SỬA: từ "success" | "failed" | "pending" thành string
+  execution_status?: string;
+  action_blacklist: boolean;
+  user_notes?: number;
+  reset_permission: boolean;
+  mrbts_infor_id?: number;
+  last_synced_at?: string;
+  reset_count: number;
+  last_reset_at?: string;
+  last_reset_by?: string;
+  last_reset_success?: string;
+  total_success_rate?: number;
+  reset_enabled: boolean;
+  reset_history?: number;
+  execution_notes?: string;
+  execution_started_at?: string;
+  execution_completed_at?: string;
+  execution_duration?: number;
+  ssh_host?: string;
+  ssh_connection_status?: string;
+  execution_log?: string;
+  ping_test_before?: string;
+  ping_test_after?: number;
+  ssh_connect_started_at?: string;
+  ssh_connect_completed_at?: string;
+  command_sent_at?: string;
+  command_response_received_at?: string;
 }
 
 const KpiMonitorTab: React.FC = () => {
@@ -43,6 +63,27 @@ const KpiMonitorTab: React.FC = () => {
   const [filteredRecords, setFilteredRecords] = useState<KpiRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [executionStatus, setExecutionStatus] = useState<"idle" | "loading" | "success" | "failed">("idle");
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<KpiRecord | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
+  const [selectedProvinces, setSelectedProvinces] = useState<string[]>([]);
+  const [selectedDistricts, setSelectedDistricts] = useState<string[]>([]);
+  const [selectedVendors, setSelectedVendors] = useState<string[]>([]);
+  const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
+  const [searchText, setSearchText] = useState("");
+  const [startDate, setStartDate] = useState(() => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return yesterday.toLocaleDateString("en-CA");
+  });
+  const [endDate, setEndDate] = useState(() => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return yesterday.toLocaleDateString("en-CA");
+  });
+  const [sortField, setSortField] = useState<string>("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   interface MultiSelectDropdownProps {
     label: string;
@@ -77,7 +118,6 @@ const KpiMonitorTab: React.FC = () => {
 
     const handleCheckboxChange = (option: string) => {
       const newSelectedValues = selectedValues.includes(option) ? selectedValues.filter((v) => v !== option) : [...selectedValues, option];
-
       onChange(newSelectedValues);
     };
 
@@ -123,7 +163,6 @@ const KpiMonitorTab: React.FC = () => {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Search Box */}
             <div className="p-2 border-bottom">
               <input
                 type="text"
@@ -137,8 +176,6 @@ const KpiMonitorTab: React.FC = () => {
                 onClick={(e) => e.stopPropagation()}
               />
             </div>
-
-            {/* Select All / Clear All */}
             <div className="p-2 border-bottom bg-light">
               <div className="d-flex justify-content-between">
                 <button
@@ -167,13 +204,10 @@ const KpiMonitorTab: React.FC = () => {
                 </button>
               </div>
             </div>
-
-            {/* Options List */}
             <div className="p-1">
               {filteredOptions.length > 0 ? (
                 filteredOptions.map((option) => {
                   const isSelected = selectedValues.includes(option);
-
                   return (
                     <div
                       key={option}
@@ -201,7 +235,6 @@ const KpiMonitorTab: React.FC = () => {
                         }
                       }}
                     >
-                      {/* Custom Checkbox */}
                       <div
                         className="form-check-input me-3"
                         style={{
@@ -229,7 +262,6 @@ const KpiMonitorTab: React.FC = () => {
                           </span>
                         )}
                       </div>
-
                       <label
                         className="form-check-label flex-grow-1"
                         style={{
@@ -251,8 +283,6 @@ const KpiMonitorTab: React.FC = () => {
                 </div>
               )}
             </div>
-
-            {/* Done Button */}
             <div className="p-2 border-top text-center">
               <button
                 type="button"
@@ -267,8 +297,6 @@ const KpiMonitorTab: React.FC = () => {
                 ✅ Done ({selectedValues.length} selected)
               </button>
             </div>
-
-            {/* Selection Count */}
             {selectedValues.length > 0 && (
               <div className="p-2 border-top bg-light text-center">
                 <small className="text-muted">
@@ -282,56 +310,18 @@ const KpiMonitorTab: React.FC = () => {
     );
   };
 
-  // Pagination
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-
-  // Filters
-  const [selectedProvinces, setSelectedProvinces] = useState<string[]>([]);
-  const [selectedDistricts, setSelectedDistricts] = useState<string[]>([]);
-  const [selectedVendors, setSelectedVendors] = useState<string[]>([]);
-  const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
-
-  const [searchText, setSearchText] = useState("");
-
-  const [startDate, setStartDate] = useState(() => {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    return yesterday.toLocaleDateString("en-CA");
-  });
-
-  const [endDate, setEndDate] = useState(() => {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    return yesterday.toLocaleDateString("en-CA");
-  });
-
-  // Modals
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [selectedRecord, setSelectedRecord] = useState<KpiRecord | null>(null);
-
-  // Sort
-  const [sortField, setSortField] = useState<string>("");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-
-  // Load initial data
   useEffect(() => {
     const fetchInitialData = async () => {
       setLoading(true);
       setExecutionStatus("loading");
-
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayString = yesterday.toLocaleDateString("en-CA");
-
       setStartDate(yesterdayString);
       setEndDate(yesterdayString);
-
       try {
-        // const response = await fetch(`https://localhost:7232/api/monitoring/kpi-monitor/${yesterdayString}`);
         const response = await fetch(`${API_CONFIG.BASE_URL}/monitoring/kpi-monitor/${yesterdayString}`);
         const result = await response.json();
-
         if (result.success) {
           setRecords(result.data.records);
           setFilteredRecords(result.data.records);
@@ -351,15 +341,12 @@ const KpiMonitorTab: React.FC = () => {
         setLoading(false);
       }
     };
-
     fetchInitialData();
   }, []);
 
-  // Display data with date range
   const handleDisplayClick = async () => {
     setLoading(true);
     setExecutionStatus("loading");
-
     try {
       if (startDate > endDate) {
         alert("Start Date cannot be greater than End Date");
@@ -367,18 +354,14 @@ const KpiMonitorTab: React.FC = () => {
         setExecutionStatus("failed");
         return;
       }
-
       if (!startDate || !endDate) {
         alert("Please select both Start Date and End Date");
         setLoading(false);
         setExecutionStatus("failed");
         return;
       }
-
-      // const response = await fetch(`https://localhost:7232/api/monitoring/kpi-monitor-range?startDate=${startDate}&endDate=${endDate}`);
       const response = await fetch(`${API_CONFIG.BASE_URL}/monitoring/kpi-monitor-range?startDate=${startDate}&endDate=${endDate}`);
       const result = await response.json();
-
       if (result.success) {
         setRecords(result.data.records);
         setFilteredRecords(result.data.records);
@@ -401,7 +384,6 @@ const KpiMonitorTab: React.FC = () => {
     }
   };
 
-  // Get unique values for filters - IMPROVED: Dynamic filtering
   const uniqueProvinces = useMemo(
     () =>
       Array.from(new Set(records.map((r) => r.province)))
@@ -410,16 +392,13 @@ const KpiMonitorTab: React.FC = () => {
     [records]
   );
 
-  // Districts based on selected provinces (nếu có tỉnh được chọn thì chỉ hiện huyện của tỉnh đó)
   const uniqueDistricts = useMemo(() => {
     const filteredRecords = selectedProvinces.length > 0 ? records.filter((r) => selectedProvinces.includes(r.province)) : records;
-
     return Array.from(new Set(filteredRecords.map((r) => r.district)))
       .filter(Boolean)
       .sort();
   }, [records, selectedProvinces]);
 
-  // Provinces based on selected districts (nếu có huyện được chọn thì chỉ hiện tỉnh của huyện đó)
   const availableProvinces = useMemo(() => {
     if (selectedDistricts.length > 0) {
       const filteredRecords = records.filter((r) => selectedDistricts.includes(r.district));
@@ -446,57 +425,44 @@ const KpiMonitorTab: React.FC = () => {
     [records]
   );
 
-  // Filter data
   useEffect(() => {
     let filtered = [...records];
-
     if (searchText) {
       filtered = filtered.filter((record) => Object.values(record).some((value) => value?.toString().toLowerCase().includes(searchText.toLowerCase())));
     }
-
     if (selectedProvinces.length > 0) {
       filtered = filtered.filter((record) => selectedProvinces.includes(record.province));
     }
-
     if (selectedDistricts.length > 0) {
       filtered = filtered.filter((record) => selectedDistricts.includes(record.district));
     }
-
     if (selectedVendors.length > 0) {
       filtered = filtered.filter((record) => selectedVendors.includes(record.vendor));
     }
-
     if (selectedRegions.length > 0) {
       filtered = filtered.filter((record) => selectedRegions.includes(record.region));
     }
-
-    // Sort
     if (sortField) {
       filtered.sort((a, b) => {
         const aVal = a[sortField as keyof KpiRecord];
         const bVal = b[sortField as keyof KpiRecord];
-
         if (typeof aVal === "number" && typeof bVal === "number") {
           return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
         }
-
         const aStr = String(aVal).toLowerCase();
         const bStr = String(bVal).toLowerCase();
         return sortDirection === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
       });
     }
-
     setFilteredRecords(filtered);
     setCurrentPage(1);
   }, [records, searchText, selectedProvinces, selectedDistricts, selectedVendors, selectedRegions, sortField, sortDirection]);
 
-  // Pagination
   const totalPages = Math.ceil(filteredRecords.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   const currentRecords = filteredRecords.slice(startIndex, endIndex);
 
-  // Sort handler
   const handleSort = (field: string) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -506,32 +472,131 @@ const KpiMonitorTab: React.FC = () => {
     }
   };
 
-  // Action handlers
-  const handleDetail = (record: KpiRecord) => {
-    setSelectedRecord(record);
+  const handleDetail = async (record: KpiRecord) => {
+    setSelectedRecord(null);
     setShowDetailModal(true);
+    try {
+      const params = new URLSearchParams();
+      params.append("date", record.data_date);
+      const response = await fetch(`${API_CONFIG.BASE_URL}/monitoring/kpi-monitor/cell-detail/${encodeURIComponent(record.lncel_name)}?${params}`);
+      const result = await response.json();
+      console.log("API Response for cell detail:", result); // Ghi log để kiểm tra dữ liệu API
+      if (result.success && result.data && result.data[0]) {
+        setSelectedRecord(result.data[0]);
+      } else {
+        console.error("API Error:", result.error || "No data returned");
+        alert("Failed to load cell details");
+      }
+    } catch (error) {
+      console.error("Fetch Error:", error);
+      alert("Network error while loading details");
+    }
   };
 
-  // Export to Excel
-  // const handleExportExcel = () => {
-  // console.log("Exporting to Excel...");
-  // Excel export logic would go here
-  // };
+  const handleExportDetailExcel = async () => {
+    if (!selectedRecord) {
+      alert("No record selected for export");
+      return;
+    }
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("KPI Detail");
+
+      console.log(" handleExportDetailExcel All keys:", Object.keys(selectedRecord));
+
+      // Tạo header row từ keys
+      const headers = Object.keys(selectedRecord);
+      const headerRow = worksheet.addRow(headers);
+
+      // Tạo data row từ values
+      const values = Object.values(selectedRecord).map((value) => (value !== null && value !== undefined ? String(value) : "N/A"));
+      const dataRow = worksheet.addRow(values);
+
+      // Style header row
+      headerRow.font = { bold: true, color: { argb: "FFFFFF" }, size: 12 };
+      headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "10b981" } };
+      headerRow.alignment = { horizontal: "center", vertical: "middle" };
+      headerRow.height = 25;
+
+      // Style data row với màu theo field
+      dataRow.height = 20;
+      dataRow.eachCell((cell, colNumber) => {
+        const key = headers[colNumber - 1];
+        let bgColor = "FFFFFF"; // default
+
+        // Áp dụng màu theo key như trong modal
+        if (key === "pdcp_volume_dl") bgColor = "e8f5e9";
+        else if (key === "pdcp_volume_ul") bgColor = "e0f2f1";
+        else if (key === "cell_avail") bgColor = "c8e6c9";
+        else if (key === "max_ues") bgColor = "a5d6a7";
+        else if (key === "period_start_time") bgColor = "fff8e1";
+        else if (key === "data_date") bgColor = "fff3e0";
+        else if (key === "execution_status") bgColor = "e8eaf6";
+        else if (key === "ssh_host") bgColor = "f3e5f5";
+        else if (key === "province") bgColor = "cce5ff";
+        else if (key === "district") bgColor = "ffe6cc";
+        else if (key.includes("archived_by")) bgColor = "e8f5e9";
+        else if (key === "action_blacklist") bgColor = "ffe0b2";
+        else if (key === "user_notes") bgColor = "cce5ff";
+        else if (key === "reset_permission") bgColor = "ffcc02";
+        else if (key === "last_reset_by") bgColor = "e3f2fd";
+        else if (key === "ping_test_before") bgColor = "ede7f6";
+        else if (key === "max_pdcp_dl") bgColor = "ffcc02";
+        else if (key === "max_pdcp_ul") bgColor = "f1f8e9";
+        else if (key === "execution_status") bgColor = "d4edda";
+        else if (key === "ssh_connection_status") bgColor = "d4edda";
+
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bgColor } };
+        cell.border = {
+          top: { style: "thin", color: { argb: "D1D5DB" } },
+          left: { style: "thin", color: { argb: "D1D5DB" } },
+          bottom: { style: "thin", color: { argb: "D1D5DB" } },
+          right: { style: "thin", color: { argb: "D1D5DB" } },
+        };
+        cell.alignment = { vertical: "middle", horizontal: "left" };
+      });
+
+      // Border cho header
+      headerRow.eachCell((cell) => {
+        cell.border = {
+          top: { style: "medium", color: { argb: "2e5082" } },
+          left: { style: "medium", color: { argb: "2e5082" } },
+          bottom: { style: "medium", color: { argb: "2e5082" } },
+          right: { style: "medium", color: { argb: "2e5082" } },
+        };
+      });
+
+      // Set column widths
+      worksheet.columns = headers.map((header) => ({ width: 20 }));
+
+      // Export file
+      const buffer = await workbook.xlsx.writeBuffer();
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
+      const filename = `KPI_Detail_${selectedRecord.lncel_name || "Unknown"}_${timestamp}.xlsx`;
+
+      saveAs(new Blob([buffer]), filename);
+
+      alert(`✅ Exported detail for ${selectedRecord.lncel_name || "record"} successfully!`);
+    } catch (error) {
+      console.error("Export failed:", error);
+      alert("Export failed. Please try again.");
+    }
+  };
 
   const getExecutionStatusColor = (status?: string) => {
     switch (status?.toLowerCase()) {
       case "completed":
-        return "#10b981"; // Green
+        return "#10b981";
       case "failed":
       case null:
       case undefined:
       case "":
       case "unknown":
-        return "#ef4444"; // Red - tất cả null/empty/unknown đều là failed
+        return "#ef4444";
       case "starting_reset":
-        return "#f59e0b"; // Yellow
+        return "#f59e0b";
       default:
-        return "#ef4444"; // Red - default cũng là failed
+        return "#ef4444";
     }
   };
 
@@ -544,46 +609,13 @@ const KpiMonitorTab: React.FC = () => {
       case undefined:
       case "":
       case "unknown":
-        return "Failed"; // ← SỬA: tất cả null/empty/unknown đều hiển thị "Failed"
+        return "Failed";
       case "starting_reset":
         return "Starting Reset";
       default:
-        return "Failed"; // ← SỬA: default cũng là "Failed"
-    }
-  };
-
-  /*
-
-  // Thêm vào phần helper functions
-  const getExecutionStatusColor = (status?: string) => {
-    switch (status) {
-      // case " completed":
-      case "completed":
-        return "#10b981"; // Green
-      case "failed":
-        return "#ef4444"; // Red
-      case "pending":
-        return "#f59e0b"; // Yellow
-      default:
-        return "#6b7280"; // Gray
-    }
-  };
-
-  const getExecutionStatusText = (status?: string) => {
-    switch (status) {
-      case "completed":
-        return "Success";
-      case "failed":
         return "Failed";
-      case "pending":
-        return "Pending";
-      default:
-        return "Unknown";
     }
   };
-
-
-*/
 
   const TruncatedCell: React.FC<{ value: string; maxWidth?: string }> = ({ value, maxWidth = "140px" }) => (
     <td
@@ -602,16 +634,10 @@ const KpiMonitorTab: React.FC = () => {
     </td>
   );
 
-  // Sử dụng:
-  // <TruncatedCell value={record.lncel_name} />
-  // <TruncatedCell value={record.dn_mrbts_site} maxWidth="200px" />
-
   const handleExportExcel = async () => {
     try {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("KPI Monitor Data");
-
-      // Định nghĩa columns
       worksheet.columns = [
         { header: "STT", key: "stt", width: 10 },
         { header: "Province", key: "province", width: 15 },
@@ -632,8 +658,6 @@ const KpiMonitorTab: React.FC = () => {
         { header: "Vendor", key: "vendor", width: 15 },
         { header: "Data Date", key: "data_date", width: 15 },
       ];
-
-      // Thêm data và style
       filteredRecords.forEach((record, index) => {
         const row = worksheet.addRow({
           stt: index + 1,
@@ -655,83 +679,51 @@ const KpiMonitorTab: React.FC = () => {
           vendor: record.vendor,
           data_date: record.data_date,
         });
-
-        // ✅ Thêm dòng này để đảm bảo chiều cao cho từng dòng data
         row.height = 20;
-
-        // 🎨 Alternate row colors (zebra striping)
         const isEvenRow = (index + 1) % 2 === 0;
-        const rowFillColor = isEvenRow ? "F8F9FA" : "FFFFFF"; // Light gray cho even rows
-
-        // Apply background color to all cells in row
+        const rowFillColor = isEvenRow ? "F8F9FA" : "FFFFFF";
         row.eachCell((cell, colNumber) => {
           cell.fill = {
             type: "pattern",
             pattern: "solid",
             fgColor: { argb: rowFillColor },
           };
-
-          // 🔲 Add borders to all cells
           cell.border = {
             top: { style: "thin", color: { argb: "D1D5DB" } },
             left: { style: "thin", color: { argb: "D1D5DB" } },
             bottom: { style: "thin", color: { argb: "D1D5DB" } },
             right: { style: "thin", color: { argb: "D1D5DB" } },
           };
-
-          // 📊 Style Cell Availability column based on value
           if (colNumber === 10) {
-            // Cell Avail column
             const cellAvail = record.cell_avail || 0;
             if (cellAvail >= 95) {
-              cell.font = { color: { argb: "10B981" }, bold: true }; // Green
+              cell.font = { color: { argb: "10B981" }, bold: true };
             } else if (cellAvail >= 90) {
-              cell.font = { color: { argb: "F59E0B" }, bold: true }; // Yellow
+              cell.font = { color: { argb: "F59E0B" }, bold: true };
             } else {
-              cell.font = { color: { argb: "EF4444" }, bold: true }; // Red
+              cell.font = { color: { argb: "EF4444" }, bold: true };
             }
           }
-
-          // 🏷️ Style Execution Status column
           if (colNumber === 14) {
-            // Execution Status column
             const status = record.execution_status?.toLowerCase();
             switch (status) {
               case "completed":
-                cell.fill = {
-                  type: "pattern",
-                  pattern: "solid",
-                  fgColor: { argb: "D1FAE5" }, // Light green background
-                };
+                cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "D1FAE5" } };
                 cell.font = { color: { argb: "10B981" }, bold: true };
                 break;
               case "failed":
-                cell.fill = {
-                  type: "pattern",
-                  pattern: "solid",
-                  fgColor: { argb: "FEE2E2" }, // Light red background
-                };
+                cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FEE2E2" } };
                 cell.font = { color: { argb: "EF4444" }, bold: true };
                 break;
               case "starting_reset":
-                cell.fill = {
-                  type: "pattern",
-                  pattern: "solid",
-                  fgColor: { argb: "FEF3C7" }, // Light yellow background
-                };
+                cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FEF3C7" } };
                 cell.font = { color: { argb: "F59E0B" }, bold: true };
                 break;
               default:
-                cell.fill = {
-                  type: "pattern",
-                  pattern: "solid",
-                  fgColor: { argb: "F3F4F6" }, // Light gray background
-                };
+                cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "F3F4F6" } };
                 cell.font = { color: { argb: "6B7280" }, bold: true };
             }
           }
-
-          // 📝 Center align number columns
           if ([1, 8, 9, 10, 11, 12, 13].includes(colNumber)) {
             cell.alignment = { horizontal: "center", vertical: "middle" };
           } else {
@@ -739,28 +731,11 @@ const KpiMonitorTab: React.FC = () => {
           }
         });
       });
-
-      // 🏆 Style header row
       const headerRow = worksheet.getRow(1);
-      headerRow.font = {
-        bold: true,
-        color: { argb: "FFFFFF" },
-        // color: { argb: "366092" },
-        size: 12,
-      };
-      headerRow.fill = {
-        type: "pattern",
-        pattern: "solid",
-        // fgColor: { argb: "1F2937" }, // Dark gray header
-        fgColor: { argb: "366092" }, // Dark gray header
-      };
-      headerRow.alignment = {
-        horizontal: "center",
-        vertical: "middle",
-      };
-      headerRow.height = 25; // Taller header
-
-      // Add borders to header
+      headerRow.font = { bold: true, color: { argb: "FFFFFF" }, size: 12 };
+      headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "366092" } };
+      headerRow.alignment = { horizontal: "center", vertical: "middle" };
+      headerRow.height = 25;
       headerRow.eachCell((cell) => {
         cell.border = {
           top: { style: "medium", color: { argb: "111827" } },
@@ -769,21 +744,12 @@ const KpiMonitorTab: React.FC = () => {
           right: { style: "medium", color: { argb: "111827" } },
         };
       });
-
-      // 📐 Set default row height
       worksheet.properties.defaultRowHeight = 20;
-
-      // 🔒 Freeze header row
       worksheet.views = [{ state: "frozen", ySplit: 1 }];
-
-      // Generate Excel file
       const buffer = await workbook.xlsx.writeBuffer();
       const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
       const filename = `KPI_Monitor_${startDate}_to_${endDate}_${timestamp}.xlsx`;
-
-      // Download file
       saveAs(new Blob([buffer]), filename);
-
       alert(`✅ Exported ${filteredRecords.length} records to Excel successfully!`);
     } catch (error) {
       console.error("❌ Export failed:", error);
@@ -791,38 +757,29 @@ const KpiMonitorTab: React.FC = () => {
     }
   };
 
-  // Clear all filters and data
   const handleClearAll = () => {
     setSearchText("");
     setSelectedProvinces([]);
     setSelectedDistricts([]);
     setSelectedVendors([]);
     setSelectedRegions([]);
-
-    // Reset dates
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayString = yesterday.toISOString().split("T")[0];
     setStartDate(yesterdayString);
     setEndDate(yesterdayString);
-
-    // Clear data and reset status
     setRecords([]);
     setFilteredRecords([]);
     setExecutionStatus("idle");
-
-    // Stop loading
     setLoading(false);
   };
 
-  // Get cell availability color
   const getCellAvailColor = (availability: number) => {
-    if (availability >= 95) return "#10b981"; // Green
-    if (availability >= 90) return "#f59e0b"; // Yellow
-    return "#ef4444"; // Red
+    if (availability >= 95) return "#10b981";
+    if (availability >= 90) return "#f59e0b";
+    return "#ef4444";
   };
 
-  // Get execution status display
   const getExecutionStatusDisplay = () => {
     switch (executionStatus) {
       case "loading":
@@ -860,7 +817,6 @@ const KpiMonitorTab: React.FC = () => {
 
   return (
     <div className="container-fluid p-4">
-      {/* Search and Filters */}
       <div className="card mb-4" style={{ borderRadius: "12px", border: "none", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
         <div className="card-body p-3">
           <div className="row g-3">
@@ -880,9 +836,7 @@ const KpiMonitorTab: React.FC = () => {
               <MultiSelectDropdown label="Vendor" options={uniqueVendors} selectedValues={selectedVendors} onChange={setSelectedVendors} placeholder="All Vendors" />
             </div>
           </div>
-
           <div className="mt-2">
-            {/* Row 1: Labels and Status */}
             <div className="d-flex align-items-center gap-4 mb-2">
               <span className="text-muted" style={{ fontSize: "14px", fontWeight: "500", width: "150px" }}>
                 Start Date:
@@ -895,85 +849,25 @@ const KpiMonitorTab: React.FC = () => {
                 <span className="text-muted" style={{ fontSize: "14px", whiteSpace: "nowrap" }}>
                   📅 Last Updated: {startDate && endDate ? (startDate === endDate ? new Date(startDate).toLocaleDateString("en-US") : `${new Date(startDate).toLocaleDateString("en-US")} - ${new Date(endDate).toLocaleDateString("en-US")}`) : "Not selected"}
                 </span>
-                {/*}
-                <div style={{ fontSize: "14px", whiteSpace: "nowrap" }}>
-                  <strong>Status: </strong>
-                  {getExecutionStatusDisplay()}
-                </div>
-                */}
               </div>
             </div>
-
-            {/* Row 2: Inputs and Buttons */}
             <div className="d-flex align-items-center gap-3">
-              <input
-                type="date"
-                className="form-control"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                style={{
-                  borderRadius: "8px",
-                  fontSize: "14px",
-                  width: "150px",
-                }}
-              />
-
-              <input
-                type="date"
-                className="form-control"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                style={{
-                  borderRadius: "8px",
-                  fontSize: "14px",
-                  width: "150px",
-                }}
-              />
-
-              <button
-                className="btn btn-success d-flex align-items-center gap-2"
-                onClick={handleDisplayClick}
-                disabled={loading}
-                style={{
-                  borderRadius: "8px",
-                  padding: "6px 12px",
-                  fontWeight: "600",
-                  fontSize: "14px",
-                }}
-              >
+              <input type="date" className="form-control" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ borderRadius: "8px", fontSize: "14px", width: "150px" }} />
+              <input type="date" className="form-control" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={{ borderRadius: "8px", fontSize: "14px", width: "150px" }} />
+              <button className="btn btn-success d-flex align-items-center gap-2" onClick={handleDisplayClick} disabled={loading} style={{ borderRadius: "8px", padding: "6px 12px", fontWeight: "600", fontSize: "14px" }}>
                 <span>👁️</span>
                 Display
               </button>
-
-              <button
-                className="btn btn-outline-secondary"
-                onClick={handleClearAll}
-                style={{
-                  borderRadius: "8px",
-                  padding: "6px 12px",
-                  fontSize: "14px",
-                }}
-              >
+              <button className="btn btn-outline-secondary" onClick={handleClearAll} style={{ borderRadius: "8px", padding: "6px 12px", fontSize: "14px" }}>
                 🗑️ Clear All
               </button>
-
-              <button
-                className="btn btn-primary"
-                onClick={handleExportExcel}
-                style={{
-                  borderRadius: "8px",
-                  padding: "6px 12px",
-                  fontSize: "14px",
-                }}
-              >
+              <button className="btn btn-primary" onClick={handleExportExcel} style={{ borderRadius: "8px", padding: "6px 12px", fontSize: "14px" }}>
                 📊 Export Excel
               </button>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Records count and pagination controls */}
       <div className="d-flex align-items-center justify-content-between mb-3">
         <div className="d-flex align-items-center gap-3">
           <span className="text-muted">
@@ -988,6 +882,7 @@ const KpiMonitorTab: React.FC = () => {
             }}
             style={{ width: "80px", borderRadius: "6px" }}
           >
+            <option value={5}>5</option>
             <option value={10}>10</option>
             <option value={20}>20</option>
             <option value={50}>50</option>
@@ -995,8 +890,6 @@ const KpiMonitorTab: React.FC = () => {
           <span className="text-muted">per page</span>
         </div>
       </div>
-
-      {/* Table */}
       <div className="card" style={{ borderRadius: "12px", border: "none", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
         <div className="card-body p-0">
           {loading ? (
@@ -1009,9 +902,28 @@ const KpiMonitorTab: React.FC = () => {
           ) : (
             <div className="table-responsive">
               <table className="table table-hover mb-0">
-                <thead style={{ backgroundColor: "#f8fafc", borderBottom: "2px solid #e5e7eb" }}>
+                <thead
+                  style={{
+                    // background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
+                    background: "#10b981",
+                    // borderBottom: "3px solid #047857",
+                    borderBottom: "1px solid #047857", // ← Giảm từ 3px xuống 1px
+                    boxShadow: "0 2px 8px rgba(5, 150, 105, 0.2)",
+                  }}
+                >
                   <tr>
-                    <th className="fw-semibold text-muted py-3 px-2" style={{ fontSize: "0.875rem", minWidth: "60px", whiteSpace: "nowrap" }}>
+                    <th
+                      className="py-3 px-2"
+                      style={{
+                        color: "white", // Hoặc dùng color: "#ffffff"
+                        fontSize: "0.875rem",
+                        minWidth: "60px",
+                        whiteSpace: "nowrap",
+                        fontWeight: "700",
+                        backgroundColor: "transparent",
+                        borderColor: "rgba(255,255,255,0.2)",
+                      }}
+                    >
                       STT
                     </th>
                     {[
@@ -1031,21 +943,35 @@ const KpiMonitorTab: React.FC = () => {
                     ].map(({ field, label, width }) => (
                       <th
                         key={field}
-                        className="fw-semibold text-muted py-3 px-2"
+                        className="py-3 px-2"
                         style={{
                           cursor: "pointer",
                           userSelect: "none",
                           fontSize: "0.875rem",
                           minWidth: width,
                           whiteSpace: "nowrap",
+                          color: "#ffffff", // ← Thêm màu trắng cho tất cả
+                          fontWeight: "700",
+                          backgroundColor: "transparent",
                         }}
                         onClick={() => handleSort(field)}
                       >
                         {label}
-                        {sortField === field && <span className="ms-1">{sortDirection === "asc" ? "↑" : "↓"}</span>}
+                        <span className="ms-1">{sortField === field ? (sortDirection === "asc" ? "↑" : "↓") : "⇅"}</span>
                       </th>
                     ))}
-                    <th className="fw-semibold text-muted py-3 px-2" style={{ fontSize: "0.875rem", minWidth: "100px" }}>
+                    <th
+                      className="py-3 px-2"
+                      style={{
+                        color: "white", // Hoặc dùng color: "#ffffff"
+                        fontSize: "0.875rem",
+                        minWidth: "60px",
+                        whiteSpace: "nowrap",
+                        fontWeight: "700",
+                        backgroundColor: "transparent",
+                        borderColor: "rgba(255,255,255,0.2)",
+                      }}
+                    >
                       Actions
                     </th>
                   </tr>
@@ -1068,17 +994,7 @@ const KpiMonitorTab: React.FC = () => {
                       <td className="py-3 px-2" style={{ fontSize: "0.875rem" }}>
                         {record.lnbts_name}
                       </td>
-                      {/*}
-                      <td className="py-3 px-2" style={{ fontSize: "0.875rem" }}>
-                        {record.lncel_name}
-                      </td>
-                      */}
                       <TruncatedCell value={record.lncel_name} maxWidth="180px" />
-                      {/*}
-                      <td className="py-3 px-2" style={{ fontSize: "0.875rem" }}>
-                        {record.dn_mrbts_site}
-                      </td>
-                      */}
                       <TruncatedCell value={record.dn_mrbts_site} maxWidth="200px" />
                       <td className="py-3 px-2" style={{ fontSize: "0.875rem" }}>
                         {(record.pdcp_volume_dl || 0).toLocaleString()}
@@ -1086,15 +1002,8 @@ const KpiMonitorTab: React.FC = () => {
                       <td className="py-3 px-2" style={{ fontSize: "0.875rem" }}>
                         {(record.pdcp_volume_ul || 0).toLocaleString()}
                       </td>
-
                       <td className="py-3 px-2">
-                        <span
-                          className="fw-semibold"
-                          style={{
-                            color: getCellAvailColor(record.cell_avail || 0),
-                            fontSize: "0.875rem",
-                          }}
-                        >
+                        <span className="fw-semibold" style={{ color: getCellAvailColor(record.cell_avail || 0), fontSize: "0.875rem" }}>
                           {record.cell_avail !== null && record.cell_avail !== undefined ? record.cell_avail.toFixed(2) + "%" : "0%"}
                         </span>
                       </td>
@@ -1107,7 +1016,6 @@ const KpiMonitorTab: React.FC = () => {
                       <td className="py-3 px-2" style={{ fontSize: "0.875rem" }}>
                         {(record.max_pdcp_ul || 0).toLocaleString()}
                       </td>
-
                       <td className="py-3 px-2" style={{ fontSize: "0.875rem" }}>
                         <span
                           className="badge"
@@ -1122,7 +1030,6 @@ const KpiMonitorTab: React.FC = () => {
                           {getExecutionStatusText(record.execution_status)}
                         </span>
                       </td>
-
                       <td className="py-3 px-2">
                         <button className="btn btn-outline-primary btn-sm" onClick={() => handleDetail(record)} style={{ borderRadius: "6px", fontSize: "0.75rem" }}>
                           Detail
@@ -1136,8 +1043,6 @@ const KpiMonitorTab: React.FC = () => {
           )}
         </div>
       </div>
-
-      {/* Pagination */}
       {!loading && totalPages > 1 && (
         <div className="d-flex justify-content-center mt-4">
           <nav>
@@ -1147,7 +1052,6 @@ const KpiMonitorTab: React.FC = () => {
                   Previous
                 </button>
               </li>
-
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                 let pageNum: number;
                 if (totalPages <= 5) {
@@ -1159,7 +1063,6 @@ const KpiMonitorTab: React.FC = () => {
                 } else {
                   pageNum = currentPage - 2 + i;
                 }
-
                 return (
                   <li key={pageNum} className={`page-item ${currentPage === pageNum ? "active" : ""}`}>
                     <button className="page-link" onClick={() => setCurrentPage(pageNum)}>
@@ -1168,7 +1071,6 @@ const KpiMonitorTab: React.FC = () => {
                   </li>
                 );
               })}
-
               <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
                 <button className="page-link" onClick={() => setCurrentPage(currentPage + 1)} disabled={currentPage === totalPages}>
                   Next
@@ -1178,159 +1080,273 @@ const KpiMonitorTab: React.FC = () => {
           </nav>
         </div>
       )}
-
-      {/* Detail Modal */}
-      {showDetailModal && selectedRecord && (
+      {showDetailModal && (
         <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
           <div className="modal-dialog modal-xl modal-dialog-centered">
             <div className="modal-content" style={{ borderRadius: "16px" }}>
               <div className="modal-header">
-                <h5 className="modal-title">📊 Record Detail - ID: {selectedRecord.id}</h5>
+                <h5 className="modal-title">📊 Record Detail - LNCEL Name: {selectedRecord?.lncel_name || "Loading..."}</h5>
+                {selectedRecord && console.log("All keys Record Detail:", Object.keys(selectedRecord))}
                 <button type="button" className="btn-close" onClick={() => setShowDetailModal(false)}></button>
               </div>
-              <div className="modal-body">
-                <div className="row g-4">
-                  {/* Basic Information */}
-                  <div className="col-md-6">
-                    <div className="card" style={{ backgroundColor: "#f8fafc", borderRadius: "12px", border: "none" }}>
-                      <div className="card-body">
-                        <h6 className="fw-bold mb-3 text-primary">📍 Basic Information</h6>
-                        <div className="row g-2">
-                          <div className="col-6">
-                            <strong>Original ID:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.original_id}</div>
-                          <div className="col-6">
-                            <strong>Province:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.province}</div>
-                          <div className="col-6">
-                            <strong>District:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.district}</div>
-                          <div className="col-6">
-                            <strong>Region:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.region}</div>
-                          <div className="col-6">
-                            <strong>Vendor:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.vendor}</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+              <div className="modal-body" style={{ padding: "0" }}>
+                {selectedRecord ? (
+                  <div style={{ overflowX: "auto", fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", background: "white" }}>
+                      <thead>
+                        <tr style={{ background: "#10b981", color: "white" }}>
+                          {Object.keys(selectedRecord).map((key, index) => (
+                            <th
+                              key={index}
+                              style={{
+                                padding: "10px 8px",
+                                fontSize: "14px",
+                                fontWeight: "600",
+                                minWidth: "150px",
+                                whiteSpace: "nowrap",
+                                border: "1px solid #2e5082",
+                                textAlign: "center",
+                              }}
+                            >
+                              {key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                            </th>
+                          ))}
+                          {/*}
+                          <th
+                            style={{
+                              padding: "10px 8px",
+                              fontSize: "14px",
+                              fontWeight: "600",
+                              minWidth: "150px",
+                              border: "1px solid #2e5082",
+                              textAlign: "center",
+                            }}
+                          >
+                            Reset Permission
+                          </th>
+                          <th
+                            style={{
+                              padding: "10px 8px",
+                              fontSize: "14px",
+                              fontWeight: "600",
+                              minWidth: "120px",
+                              border: "1px solid #2e5082",
+                              textAlign: "center",
+                            }}
+                          >
+                            Blacklist
+                          </th>
+                          */}
+                          <th
+                            style={{
+                              padding: "10px 8px",
+                              fontSize: "14px",
+                              fontWeight: "600",
+                              minWidth: "120px",
+                              border: "1px solid #2e5082",
+                              textAlign: "center",
+                            }}
+                          >
+                            Action
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr style={{ backgroundColor: "#fafbfc" }}>
+                          {Object.entries(selectedRecord).map(([key, value], index) => {
+                            let maxWidth = "200px";
+                            if (key.includes("log") || key.includes("note") || key.includes("dn_")) maxWidth = "300px";
+                            if (key === "id" || key.includes("count")) maxWidth = "80px";
+                            let badgeColor = "#f8f9fa";
+                            let textColor = "#333";
 
-                  {/* Network Information */}
-                  <div className="col-md-6">
-                    <div className="card" style={{ backgroundColor: "#f0f9ff", borderRadius: "12px", border: "none" }}>
-                      <div className="card-body">
-                        <h6 className="fw-bold mb-3 text-info">🏗️ Network Information</h6>
-                        <div className="row g-2">
-                          <div className="col-6">
-                            <strong>MRBTS Name:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.mrbts_name}</div>
-                          <div className="col-6">
-                            <strong>LNBTS Name:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.lnbts_name}</div>
-                          <div className="col-6">
-                            <strong>Cell Name:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.lncel_name}</div>
-                          <div className="col-6">
-                            <strong>Site DN:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.dn_mrbts_site}</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                            // console.log("All keys:", Object.keys(selectedRecord));
+                            // 'commandSentAt', 'commandResponseReceivedAt'
 
-                  {/* Performance Metrics */}
-                  <div className="col-md-6">
-                    <div className="card" style={{ backgroundColor: "#f0fdf4", borderRadius: "12px", border: "none" }}>
-                      <div className="card-body">
-                        <h6 className="fw-bold mb-3 text-success">📊 Performance Metrics</h6>
-                        <div className="row g-2">
-                          <div className="col-6">
-                            <strong>PDCP Volume DL:</strong>
-                          </div>
-                          <div className="col-6">{(selectedRecord.pdcp_volume_dl || 0).toLocaleString()}</div>
-                          <div className="col-6">
-                            <strong>PDCP Volume UL:</strong>
-                          </div>
-                          <div className="col-6">{(selectedRecord.pdcp_volume_ul || 0).toLocaleString()}</div>
-                          <div className="col-6">
-                            <strong>Cell Availability:</strong>
-                          </div>
-                          <div className="col-6">
-                            <span style={{ color: getCellAvailColor(selectedRecord.cell_avail || 0), fontWeight: "bold" }}>{(selectedRecord.cell_avail || 0).toFixed(2)}%</span>
-                          </div>
-                          <div className="col-6">
-                            <strong>Max UEs:</strong>
-                          </div>
-                          <div className="col-6">{(selectedRecord.max_ues || 0).toLocaleString()}</div>
-                          <div className="col-6">
-                            <strong>Max PDCP DL:</strong>
-                          </div>
-                          <div className="col-6">{(selectedRecord.max_pdcp_dl || 0).toLocaleString()}</div>
-                          <div className="col-6">
-                            <strong>Max PDCP UL:</strong>
-                          </div>
-                          <div className="col-6">{(selectedRecord.max_pdcp_ul || 0).toLocaleString()}</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                            if (key === "execution_status") {
+                              if (value === "completed") {
+                                badgeColor = "#d4edda";
+                                textColor = "#155724";
+                              } else if (value === "failed") {
+                                badgeColor = "#f8d7da";
+                                textColor = "#721c24";
+                              } else {
+                                badgeColor = "#fff3cd";
+                                textColor = "#856404";
+                              }
+                            }
+                            if (key === "ssh_connection_status") {
+                              badgeColor = value === "connected" ? "#d4edda" : "#f8d7da";
+                              textColor = value === "connected" ? "#155724" : "#721c24";
+                            }
+                            if (key.includes("province")) {
+                              badgeColor = "#cce5ff";
+                              textColor = "#0056b3";
+                            }
+                            if (key.includes("district")) {
+                              badgeColor = "#ffe6cc";
+                              textColor = "#cc5500";
+                            }
 
-                  {/* Time Information */}
-                  <div className="col-md-6">
-                    <div className="card" style={{ backgroundColor: "#fef3c7", borderRadius: "12px", border: "none" }}>
-                      <div className="card-body">
-                        <h6 className="fw-bold mb-3 text-warning">📅 Time Information</h6>
-                        <div className="row g-2">
-                          <div className="col-6">
-                            <strong>Period Start:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.period_start_time}</div>
-                          <div className="col-6">
-                            <strong>Data Date:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.data_date}</div>
-                          <div className="col-6">
-                            <strong>Year:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.data_year}</div>
-                          <div className="col-6">
-                            <strong>Month:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.data_month}</div>
-                          <div className="col-6">
-                            <strong>Quarter:</strong>
-                          </div>
-                          <div className="col-6">Q{selectedRecord.data_quarter}</div>
-                          <div className="col-6">
-                            <strong>Week:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.data_week}</div>
-                          <div className="col-6">
-                            <strong>Archived At:</strong>
-                          </div>
-                          <div className="col-6">{new Date(selectedRecord.archived_at).toLocaleString()}</div>
-                          <div className="col-6">
-                            <strong>Archived By:</strong>
-                          </div>
-                          <div className="col-6">{selectedRecord.archived_by}</div>
-                        </div>
-                      </div>
-                    </div>
+                            // Nhóm KPI - màu xanh lá
+                            if (key.includes("pdcp_volume_dl")) {
+                              badgeColor = "#e8f5e9";
+                              textColor = "#2e7d32";
+                            } else if (key.includes("pdcp_volume_ul")) {
+                              badgeColor = "#cce5ff";
+                              textColor = "#0056b3";
+                            } else if (key.includes("cell_avail")) {
+                              badgeColor = "#c8e6c9";
+                              textColor = "#388e3c";
+                            } else if (key.includes("max_ues")) {
+                              badgeColor = "#f3e5f5";
+                              textColor = "#7b1fa2";
+                            } else if (key.includes("max_pdcp_dl")) {
+                              badgeColor = "#ffcc02";
+                              textColor = "#ff6f00";
+                            } else if (key.includes("max_pdcp_ul")) {
+                              badgeColor = "#f1f8e9";
+                              textColor = "#558b2f";
+                            }
+
+                            // Nhóm Time/Info - màu vàng cam
+                            else if (key.includes("period_start_time")) {
+                              badgeColor = "#fff8e1";
+                              textColor = "#f57f17";
+                            } else if (key.includes("data_date")) {
+                              badgeColor = "#fff3e0";
+                              textColor = "#ef6c00";
+                            } else if (key.includes("archived_by")) {
+                              badgeColor = "#e8f5e9";
+                              textColor = "#2e7d32";
+                            } else if (key.includes("action_blacklist")) {
+                              badgeColor = "#ffe0b2";
+                              textColor = "#f57c00";
+                            } else if (key.includes("user_notes")) {
+                              badgeColor = "#cce5ff";
+                              textColor = "#0056b3";
+                            } else if (key.includes("reset_permission")) {
+                              badgeColor = "#ffcc02";
+                              textColor = "#ff6f00";
+                            }
+
+                            // Nhóm Execution/SSH - màu xanh dương tím
+                            else if (key.includes("last_reset_by")) {
+                              badgeColor = "#e3f2fd";
+                              textColor = "#1976d2";
+                            } else if (key.includes("ssh_host")) {
+                              badgeColor = "#f3e5f5";
+                              textColor = "#7b1fa2";
+                            } else if (key.includes("ping_test_before")) {
+                              badgeColor = "#ede7f6";
+                              textColor = "#673ab7";
+                            }
+
+                            return (
+                              <td
+                                key={index}
+                                style={{
+                                  padding: "12px 8px",
+                                  fontSize: "14px",
+                                  border: "1px solid #e9ecef",
+                                  maxWidth,
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                  cursor: "help",
+                                  position: "relative",
+                                }}
+                                title={value ? String(value) : "N/A"}
+                              >
+                                <span
+                                  style={{
+                                    display: "inline-block",
+                                    padding: "4px 8px",
+                                    borderRadius: "4px",
+                                    backgroundColor: badgeColor,
+                                    color: textColor,
+                                    fontSize: "14px",
+                                    fontWeight: "500",
+                                    maxWidth: "100%",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                  }}
+                                >
+                                  {value !== null && value !== undefined ? (typeof value === "number" && value > 1000 ? value.toLocaleString() : String(value)) : "N/A"}
+                                </span>
+                              </td>
+                            );
+                          })}
+                          {/*}
+                          <td style={{ padding: "12px 8px", fontSize: "14px", border: "1px solid #e9ecef", textAlign: "center" }}>
+                            <span
+                              style={{
+                                padding: "4px 8px",
+                                borderRadius: "4px",
+                                backgroundColor: selectedRecord.reset_permission ? "#d4edda" : "#f8d7da",
+                                color: selectedRecord.reset_permission ? "#155724" : "#721c24",
+                                fontSize: "14px",
+                                fontWeight: "500",
+                              }}
+                            >
+                              {selectedRecord.reset_permission ? "Denied" : "Allowed"}
+                            </span>
+                          </td>
+                          <td style={{ padding: "12px 8px", fontSize: "14px", border: "1px solid #e9ecef", textAlign: "center" }}>
+                            <span
+                              style={{
+                                padding: "4px 8px",
+                                borderRadius: "4px",
+                                backgroundColor: selectedRecord.action_blacklist ? "#f8d7da" : "#d4edda",
+                                color: selectedRecord.action_blacklist ? "#721c24" : "#155724",
+                                fontSize: "14px",
+                                fontWeight: "500",
+                              }}
+                            >
+                              {selectedRecord.action_blacklist ? "Yes" : "No"}
+                            </span>
+                          </td>
+
+                          */}
+                          <td style={{ padding: "12px 8px", fontSize: "14px", border: "1px solid #e9ecef", textAlign: "center" }}>
+                            <button
+                              className="btn btn-sm"
+                              style={{
+                                backgroundColor: "#dc3545",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "4px",
+                                padding: "4px 8px",
+                                fontSize: "14px",
+                                fontWeight: "600",
+                              }}
+                              onClick={() => {
+                                if (confirm(`Reset cell ${selectedRecord.lncel_name}?`)) {
+                                  alert("Manual reset initiated");
+                                }
+                              }}
+                            >
+                              Reset Manual
+                            </button>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
-                </div>
+                ) : (
+                  <div className="text-center py-5">
+                    <div className="spinner-border text-primary mb-3">
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
+                    <p>Loading cell details...</p>
+                  </div>
+                )}
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowDetailModal(false)}>
+                <button type="button" className="btn btn-primary" onClick={handleExportDetailExcel} disabled={!selectedRecord} style={{ borderRadius: "8px", padding: "6px 12px", fontSize: "14px" }}>
+                  📊 Export Excel
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowDetailModal(false)} style={{ borderRadius: "8px", padding: "6px 12px", fontSize: "14px" }}>
                   Close
                 </button>
               </div>

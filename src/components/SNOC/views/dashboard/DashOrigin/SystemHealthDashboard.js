@@ -110,15 +110,14 @@ const buildHourlySeries = (items) => {
 
 // ====== Chart ngoài dashboard (theo group) ======
 import {
-  Bar,
-  BarChart,
   CartesianGrid,
+  Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
-
 const GroupNokChart = ({
   platformList = [],
   storeKey,
@@ -233,21 +232,25 @@ const GroupNokChart = ({
       </div>
       <div style={{ width: "100%", height }}>
         <ResponsiveContainer>
-          <BarChart
+          <LineChart
             data={hourlySeries}
             margin={{ top: 4, right: 8, bottom: 12, left: 12 }}
           >
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="hour" />
-            <YAxis allowDecimals={false} />
+            <YAxis allowDecimals={false} domain={[0, "dataMax + 1"]} />
             <Tooltip content={<CustomTooltip />} />
-            <Bar
+            <Line
               dataKey="nok"
               name="NOK"
-              fill={NOK_BAR_COLOR}
-              stroke={NOK_BAR_COLOR}
+              stroke={NOK_BAR_COLOR} // tận dụng màu sẵn có
+              strokeWidth={2}
+              dot={{ r: 3 }} // chấm tại mỗi điểm
+              activeDot={{ r: 5 }} // chấm to hơn khi hover
+              // type="linear"           // (tuỳ chọn) giữ đường thẳng; bỏ thì mặc định cũng linear
+              // connectNulls            // (tuỳ chọn) nối qua điểm null
             />
-          </BarChart>
+          </LineChart>
         </ResponsiveContainer>
       </div>
     </div>
@@ -620,7 +623,7 @@ const SystemHealth = () => {
   }, [soloGroup, soloSubsystem, location.search]);
 
   const detailPlatforms = useMemo(() => {
-    return (platformSchema?.[soloGroup]?.[soloSubsystem]) || [];
+    return platformSchema?.[soloGroup]?.[soloSubsystem] || [];
   }, [platformSchema, soloGroup, soloSubsystem]);
 
   if (isSubDetail) {
@@ -644,7 +647,9 @@ const SystemHealth = () => {
           {detailPlatforms.length > 0 && (
             <GroupNokChart
               platformList={detailPlatforms}
-              storeKey={`hourly_${slug(soloGroup)}_${slug(soloSubsystem)}_detail`}
+              storeKey={`hourly_${slug(soloGroup)}_${slug(
+                soloSubsystem
+              )}_detail`}
               height={220}
               title={`NOK theo giờ (24h): ${soloGroup} / ${soloSubsystem}`}
             />
@@ -773,7 +778,12 @@ const SystemHealth = () => {
                               }}
                               title="Làm mới group này"
                             >
-                              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                              <svg
+                                viewBox="0 0 24 24"
+                                width="18"
+                                height="18"
+                                aria-hidden="true"
+                              >
                                 <path d="M21 12a9 9 0 1 1-2.64-6.36l.71-.7a1 1 0 0 1 1.41 1.41l-2.83 2.83a1 1 0 0 1-1.7-.71V5.5a1 1 0 0 1 2 0v1.1A7 7 0 1 0 19 12h2Z" />
                               </svg>
                             </Button>
@@ -787,7 +797,12 @@ const SystemHealth = () => {
                               }}
                               title="Mở group trong tab mới"
                             >
-                              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                              <svg
+                                viewBox="0 0 24 24"
+                                width="18"
+                                height="18"
+                                aria-hidden="true"
+                              >
                                 <path d="M7 17a1 1 0 0 1 0-2h8.59L6.29 5.71A1 1 0 0 1 7.71 4.29L17 13.59V5a1 1 0 0 1 2 0v12a1 1 0 0 1-1 1H7Z" />
                               </svg>
                             </Button>
@@ -801,7 +816,12 @@ const SystemHealth = () => {
                               }}
                               title="Ẩn group này"
                             >
-                              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                              <svg
+                                viewBox="0 0 24 24"
+                                width="18"
+                                height="18"
+                                aria-hidden="true"
+                              >
                                 <path d="M6.7 5.3a1 1 0 0 1 1.4 0L12 9.17l3.9-3.88a1 1 0 1 1 1.41 1.41L13.41 10.6l3.9 3.9a1 1 0 0 1-1.41 1.41L12 12l-3.9 3.9a1 1 0 1 1-1.41-1.41l3.88-3.9-3.88-3.9a1 1 0 0 1 0-1.39Z" />
                               </svg>
                             </Button>
@@ -924,7 +944,12 @@ const SystemHealth = () => {
                                               }}
                                               title="Mở subsystem trong tab mới"
                                             >
-                                              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                                              <svg
+                                                viewBox="0 0 24 24"
+                                                width="18"
+                                                height="18"
+                                                aria-hidden="true"
+                                              >
                                                 <path d="M7 17a1 1 0 0 1 0-2h8.59L6.29 5.71A1 1 0 0 1 7.71 4.29L17 13.59V5a1 1 0 0 1 2 0v12a1 1 0 0 1-1 1H7Z" />
                                               </svg>
                                             </Button>
@@ -942,7 +967,12 @@ const SystemHealth = () => {
                                               }}
                                               title="Ẩn subsystem này"
                                             >
-                                              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                                              <svg
+                                                viewBox="0 0 24 24"
+                                                width="18"
+                                                height="18"
+                                                aria-hidden="true"
+                                              >
                                                 <path d="M6.7 5.3a1 1 0 0 1 1.4 0L12 9.17l3.9-3.88a1 1 0 1 1 1.41 1.41L13.41 10.6l3.9 3.9a1 1 0 0 1-1.41 1.41L12 12l-3.9 3.9a1 1 0 1 1-1.41-1.41l3.88-3.9-3.88-3.9a1 1 0 0 1 0-1.39Z" />
                                               </svg>
                                             </Button>
@@ -966,7 +996,9 @@ const SystemHealth = () => {
                                               aria-label="Kéo để đổi vị trí subsystem"
                                               className={styles.dragBtn}
                                               draggable
-                                              onClick={(e) => e.stopPropagation()}
+                                              onClick={(e) =>
+                                                e.stopPropagation()
+                                              }
                                               onDragStart={(e) =>
                                                 onSubDragStart(
                                                   groupName,
@@ -977,13 +1009,42 @@ const SystemHealth = () => {
                                               onDragEnd={onSubDragEnd}
                                               title="Kéo để đổi vị trí subsystem"
                                             >
-                                              <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true">
-                                                <circle cx="6"  cy="6"  r="1.6"></circle>
-                                                <circle cx="6"  cy="10" r="1.6"></circle>
-                                                <circle cx="6"  cy="14" r="1.6"></circle>
-                                                <circle cx="12" cy="6"  r="1.6"></circle>
-                                                <circle cx="12" cy="10" r="1.6"></circle>
-                                                <circle cx="12" cy="14" r="1.6"></circle>
+                                              <svg
+                                                viewBox="0 0 20 20"
+                                                width="20"
+                                                height="20"
+                                                aria-hidden="true"
+                                              >
+                                                <circle
+                                                  cx="6"
+                                                  cy="6"
+                                                  r="1.6"
+                                                ></circle>
+                                                <circle
+                                                  cx="6"
+                                                  cy="10"
+                                                  r="1.6"
+                                                ></circle>
+                                                <circle
+                                                  cx="6"
+                                                  cy="14"
+                                                  r="1.6"
+                                                ></circle>
+                                                <circle
+                                                  cx="12"
+                                                  cy="6"
+                                                  r="1.6"
+                                                ></circle>
+                                                <circle
+                                                  cx="12"
+                                                  cy="10"
+                                                  r="1.6"
+                                                ></circle>
+                                                <circle
+                                                  cx="12"
+                                                  cy="14"
+                                                  r="1.6"
+                                                ></circle>
                                               </svg>
                                             </button>
                                           </div>

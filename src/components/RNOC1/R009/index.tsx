@@ -11,6 +11,8 @@ import RnocR009Service from 'services/RnocR009Service';
 import Nokia4GTable from './Nokia4GTable';
 import Nokia5GTable from './Nokia5GTable';
 import Huawei4GTable from './Huawei4GTable';
+import ZteTable from './ZteTable';
+import EricssonTable from './EricssonTable';
 import Dashboard from './Dashboard';
 
 interface Props {
@@ -84,6 +86,7 @@ interface Nokia4GItem {
 const VendorOptions = [
     { value: "huawei", label: "Vendor Huawei" },
     { value: "nokia", label: "Vendor Nokia" },
+    { value: "zte", label: "Vendor ZTE" },
     { value: "ericsson", label: "Vendor Ericsson" }
 ];
 
@@ -598,6 +601,8 @@ const Index = (props: Props) => {
     const [huaweiData, setHuaweiData] = useState<IBtsDataItem[]>([]);
     const [nokia4GData, setNokia4GData] = useState<Nokia4GItem[]>([]);
     const [nokia5GData, setNokia5GData] = useState<Nokia5GItem[]>([]);
+    const [zteData, setZteData] = useState<any[]>([]);
+    const [ericssonData, setEricssonData] = useState<any[]>([]);
     // State phân trang, tìm kiếm riêng cho từng bảng
     const [huaweiPage, setHuaweiPage] = useState(1);
     const [huaweiPageSize, setHuaweiPageSize] = useState(50);
@@ -608,6 +613,12 @@ const Index = (props: Props) => {
     const [nokia5GPage, setNokia5GPage] = useState(1);
     const [nokia5GPageSize, setNokia5GPageSize] = useState(50);
     const [nokia5GSearch, setNokia5GSearch] = useState("");
+    const [ztePage, setZtePage] = useState(1);
+    const [ztePageSize, setZtePageSize] = useState(50);
+    const [zteSearch, setZteSearch] = useState("");
+    const [ericssonPage, setEricssonPage] = useState(1);
+    const [ericssonPageSize, setEricssonPageSize] = useState(50);
+    const [ericssonSearch, setEricssonSearch] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     
     const refNotification = useRef<any>();
@@ -674,23 +685,23 @@ const Index = (props: Props) => {
             } else if (formSearch.vendor === "nokia" && formSearch.technology === "4G") {
                 response = await RnocR009Service.GetNokiaBtsDataByDate(dateStr);
                 if (!isMountedRef.current) return;
-                // // console.log('Nokia 4G API Response:', response);
-                // // console.log('Nokia 4G Response Success:', response?.Success);
-                // // console.log('Nokia 4G Response Data:', response?.Data);
-                // // console.log('Nokia 4G Response data (lowercase):', response?.data);
-                // // console.log('Nokia 4G Response keys:', Object.keys(response || {}));
+                // // ////console.log('Nokia 4G API Response:', response);
+                // // ////console.log('Nokia 4G Response Success:', response?.Success);
+                // // ////console.log('Nokia 4G Response Data:', response?.Data);
+                // // ////console.log('Nokia 4G Response data (lowercase):', response?.data);
+                // // ////console.log('Nokia 4G Response keys:', Object.keys(response || {}));
                 
                 if (response && response.Success) {
                     const newData = response.Data || response.data || [];
-                    // // console.log('Nokia 4G Raw Data:', newData);
-                    // // console.log('Nokia 4G Data Length:', newData.length);
-                    // // console.log('Nokia 4G Data Type:', typeof newData);
-                    // // console.log('Nokia 4G Is Array:', Array.isArray(newData));
+                    // // ////console.log('Nokia 4G Raw Data:', newData);
+                    // // ////console.log('Nokia 4G Data Length:', newData.length);
+                    // // ////console.log('Nokia 4G Data Type:', typeof newData);
+                    // // ////console.log('Nokia 4G Is Array:', Array.isArray(newData));
                     
                     if (newData.length > 0) {
-                        // // console.log('Nokia 4G First Record:', newData[0]);
-                        // // console.log('Nokia 4G First Record Keys:', Object.keys(newData[0]));
-                        // // console.log('Nokia 4G First Record Values:', Object.values(newData[0]));
+                        // // ////console.log('Nokia 4G First Record:', newData[0]);
+                        // // ////console.log('Nokia 4G First Record Keys:', Object.keys(newData[0]));
+                        // // ////console.log('Nokia 4G First Record Values:', Object.values(newData[0]));
                     }
                     
                     const mappedData = newData.map((item: any, idx: number) => {
@@ -715,15 +726,15 @@ const Index = (props: Props) => {
                             direction: item.direction || item.Direction || '',
                             createdate: item.createdate || item.CreateDate || ''
                         };
-                        // console.log(`Nokia 4G Mapped Record ${idx + 1}:`, mapped);
+                        // ////console.log(`Nokia 4G Mapped Record ${idx + 1}:`, mapped);
                         return mapped;
                     });
-                    // console.log('Nokia 4G Final Mapped Data Length:', mappedData.length);
+                    // ////console.log('Nokia 4G Final Mapped Data Length:', mappedData.length);
                     setNokia4GData(mappedData);
                 } else {
-                    // // console.log('Nokia 4G API failed or no data');
-                    // // console.log('Nokia 4G Response Success:', response?.Success);
-                    // // console.log('Nokia 4G Response Message:', response?.Message);
+                    // // ////console.log('Nokia 4G API failed or no data');
+                    // // ////console.log('Nokia 4G Response Success:', response?.Success);
+                    // // ////console.log('Nokia 4G Response Message:', response?.Message);
                     setNokia4GData([]);
                 }
                 setHuaweiData([]);
@@ -731,23 +742,23 @@ const Index = (props: Props) => {
             } else if (formSearch.vendor === "nokia" && formSearch.technology === "5G") {
                 response = await RnocR009Service.GetNokiaBtsData5GByDate(dateStr);
                 if (!isMountedRef.current) return;
-                // console.log('Nokia 5G API Response:', response);
-                // console.log('Nokia 5G Response Success:', response?.Success);
-                // console.log('Nokia 5G Response Data:', response?.Data);
-                // console.log('Nokia 5G Response data (lowercase):', response?.data);
-                // console.log('Nokia 5G Response keys:', Object.keys(response || {}));
+                // ////console.log('Nokia 5G API Response:', response);
+                // ////console.log('Nokia 5G Response Success:', response?.Success);
+                // ////console.log('Nokia 5G Response Data:', response?.Data);
+                // ////console.log('Nokia 5G Response data (lowercase):', response?.data);
+                // ////console.log('Nokia 5G Response keys:', Object.keys(response || {}));
                 
                 if (response && response.Success) {
                     const newData = response.Data || response.data || [];
-                    // console.log('Nokia 5G Raw Data:', newData);
-                    // console.log('Nokia 5G Data Length:', newData.length);
-                    // console.log('Nokia 5G Data Type:', typeof newData);
-                    // console.log('Nokia 5G Is Array:', Array.isArray(newData));
+                    // ////console.log('Nokia 5G Raw Data:', newData);
+                    // ////console.log('Nokia 5G Data Length:', newData.length);
+                    // ////console.log('Nokia 5G Data Type:', typeof newData);
+                    // ////console.log('Nokia 5G Is Array:', Array.isArray(newData));
                     
                     if (newData.length > 0) {
-                        // console.log('Nokia 5G First Record:', newData[0]);
-                        // console.log('Nokia 5G First Record Keys:', Object.keys(newData[0]));
-                        // console.log('Nokia 5G First Record Values:', Object.values(newData[0]));
+                        // ////console.log('Nokia 5G First Record:', newData[0]);
+                        // ////console.log('Nokia 5G First Record Keys:', Object.keys(newData[0]));
+                        // ////console.log('Nokia 5G First Record Values:', Object.values(newData[0]));
                     }
                     
                     const mappedData = newData.map((item: any, idx: number) => {
@@ -773,24 +784,52 @@ const Index = (props: Props) => {
                             direction: item.direction || item.Direction || '',
                             createdate: item.createdate || item.CreateDate || ''
                         };
-                        // console.log(`Nokia 5G Mapped Record ${idx + 1}:`, mapped);
+                        // ////console.log(`Nokia 5G Mapped Record ${idx + 1}:`, mapped);
                         return mapped;
                     });
-                    // console.log('Nokia 5G Final Mapped Data Length:', mappedData.length);
+                    // ////console.log('Nokia 5G Final Mapped Data Length:', mappedData.length);
                     setNokia5GData(mappedData);
                 } else {
-                    // console.log('Nokia 5G API failed or no data');
-                    // console.log('Nokia 5G Response Success:', response?.Success);
-                    // console.log('Nokia 5G Response Message:', response?.Message);
+                    // ////console.log('Nokia 5G API failed or no data');
+                    // ////console.log('Nokia 5G Response Success:', response?.Success);
+                    // ////console.log('Nokia 5G Response Message:', response?.Message);
                     setNokia5GData([]);
                 }
                 setHuaweiData([]);
                 setNokia4GData([]);
-            } else {
-                refNotification.current?.showNotification("warning", "Chỉ hỗ trợ Huawei 4G, Nokia 4G, Nokia 5G!");
+            } else if (formSearch.vendor === "zte" && formSearch.technology === "4G") {
+                response = await RnocR009Service.GetZteBtsDataByDate(dateStr);
+                if (!isMountedRef.current) return;
+                if (response && response.Success) {
+                    const newData = response.Data || [];
+                    setZteData(newData.map((item: any, idx: number) => ({ ...item, TT: idx + 1 })));
+                } else {
+                    setZteData([]);
+                }
                 setHuaweiData([]);
                 setNokia4GData([]);
                 setNokia5GData([]);
+                setEricssonData([]);
+            } else if (formSearch.vendor === "ericsson" && formSearch.technology === "4G") {
+                response = await RnocR009Service.GetEricssonBtsDataByDate(dateStr);
+                if (!isMountedRef.current) return;
+                if (response && response.Success) {
+                    const newData = response.Data || [];
+                    setEricssonData(newData.map((item: any, idx: number) => ({ ...item, TT: idx + 1 })));
+                } else {
+                    setEricssonData([]);
+                }
+                setHuaweiData([]);
+                setNokia4GData([]);
+                setNokia5GData([]);
+                setZteData([]);
+            } else {
+                refNotification.current?.showNotification("warning", "Chỉ hỗ trợ Huawei 4G, Nokia 4G, Nokia 5G, ZTE 4G, Ericsson 4G!");
+                setHuaweiData([]);
+                setNokia4GData([]);
+                setNokia5GData([]);
+                setZteData([]);
+                setEricssonData([]);
                 setIsLoading(false);
                 return;
             }
@@ -800,6 +839,8 @@ const Index = (props: Props) => {
             setHuaweiData([]);
             setNokia4GData([]);
             setNokia5GData([]);
+            setZteData([]);
+            setEricssonData([]);
         } finally {
             if (isMountedRef.current) setIsLoading(false);
         }
@@ -810,6 +851,8 @@ const Index = (props: Props) => {
         setHuaweiPage(1); setHuaweiSearch("");
         setNokia4GPage(1); setNokia4GSearch("");
         setNokia5GPage(1); setNokia5GSearch("");
+        setZtePage(1); setZteSearch("");
+        setEricssonPage(1); setEricssonSearch("");
     }, [formSearch.vendor, formSearch.technology]);
 
     // Export Excel function with safe download
@@ -838,8 +881,12 @@ const Index = (props: Props) => {
             exportFunc = RnocR009Service.ExportNokiaBtsDataToExcel;
         } else if (formSearch.vendor === "nokia" && formSearch.technology === "5G") {
             exportFunc = RnocR009Service.ExportNokiaBtsData5GToExcel;
+        } else if (formSearch.vendor === "zte" && formSearch.technology === "4G") {
+            exportFunc = RnocR009Service.ExportZteBtsDataToExcel;
+        } else if (formSearch.vendor === "ericsson" && formSearch.technology === "4G") {
+            exportFunc = RnocR009Service.ExportEricssonBtsDataToExcel;
         } else {
-            refNotification.current?.showNotification("warning", "Chỉ hỗ trợ xuất Excel cho Huawei 4G, Nokia 4G, Nokia 5G!");
+            refNotification.current?.showNotification("warning", "Chỉ hỗ trợ xuất Excel cho Huawei 4G, Nokia 4G, Nokia 5G, ZTE 4G, Ericsson 4G!");
             return;
         }
         try {
@@ -923,7 +970,7 @@ const Index = (props: Props) => {
     // Reset pagination when search term changes
     useEffect(() => {
         // setCurrentPage(1); // This line is removed as per the new_code
-    }, [huaweiSearch, nokia4GSearch, nokia5GSearch]); // This line is changed as per the new_code
+    }, [huaweiSearch, nokia4GSearch, nokia5GSearch, zteSearch]); // This line is changed as per the new_code
 
     // Page size change handler
     const handlePageSizeChange = useCallback((newPageSize: number) => {
@@ -1023,13 +1070,15 @@ const Index = (props: Props) => {
                                                     <span className="badge bg-primary ms-2 fs-6">
                                                         {formSearch.vendor === 'huawei' && formSearch.technology === '4G' ? huaweiData.length :
                                                          formSearch.vendor === 'nokia' && formSearch.technology === '4G' ? nokia4GData.length :
-                                                         formSearch.vendor === 'nokia' && formSearch.technology === '5G' ? nokia5GData.length : 0}
+                                                         formSearch.vendor === 'nokia' && formSearch.technology === '5G' ? nokia5GData.length :
+                                                         formSearch.vendor === 'zte' && formSearch.technology === '4G' ? zteData.length :
+                                                         formSearch.vendor === 'ericsson' && formSearch.technology === '4G' ? ericssonData.length : 0}
                                                     </span>
                                                 </div>
                                                 {/* Debug info */}
                                                 <div className="mt-1">
                                                     <small className="text-muted">
-                                                        Debug: HW={huaweiData.length}, N4G={nokia4GData.length}, N5G={nokia5GData.length}
+                                                        Debug: HW={huaweiData.length}, N4G={nokia4GData.length}, N5G={nokia5GData.length}, ZTE={zteData.length}, ERI={ericssonData.length}
                                                     </small>
                                                 </div>
                                             </div>
@@ -1077,13 +1126,35 @@ const Index = (props: Props) => {
                                         onSearchChange={setHuaweiSearch}
                                         onPageSizeChange={setHuaweiPageSize}
                                     />
+                                ) : formSearch.vendor === 'zte' && formSearch.technology === '4G' ? (
+                                    <ZteTable
+                                        data={zteData}
+                                        isLoading={isLoading}
+                                        currentPage={ztePage}
+                                        pageSize={ztePageSize}
+                                        onPageChange={setZtePage}
+                                        searchTerm={zteSearch}
+                                        onSearchChange={setZteSearch}
+                                        onPageSizeChange={setZtePageSize}
+                                    />
+                                ) : formSearch.vendor === 'ericsson' && formSearch.technology === '4G' ? (
+                                    <EricssonTable
+                                        data={ericssonData}
+                                        isLoading={isLoading}
+                                        currentPage={ericssonPage}
+                                        pageSize={ericssonPageSize}
+                                        onPageChange={setEricssonPage}
+                                        searchTerm={ericssonSearch}
+                                        onSearchChange={setEricssonSearch}
+                                        onPageSizeChange={setEricssonPageSize}
+                                    />
                                 ) : null}
                             </Card>
                         )
                     }
                 ]}
                 onTabClick={(tab: any) => {
-                    console.log('Tab clicked:', tab);
+                    ////console.log('Tab clicked:', tab);
                 }}
             />
         </>

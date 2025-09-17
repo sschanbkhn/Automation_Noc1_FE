@@ -8,7 +8,7 @@ import RnocR009Service from 'services/RnocR009Service';
 import { downloadFile } from 'helpers/downloadHelper';
 import dailyBtsSummary from './daily_bts_summary.json';
 import provincialSummary from './provincial_summary.json';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, ComposedChart } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, ComposedChart, Legend } from 'recharts';
 
 interface DashboardData {
   totalSites: number;
@@ -16,6 +16,7 @@ interface DashboardData {
   vendorBreakdown: {
     Huawei: number;
     Nokia: number;
+    ZTE: number;
     Ericsson: number;
   };
   technologyBreakdown: {
@@ -32,6 +33,14 @@ interface DashboardData {
     date: string;
     sites: number;
     cells: number;
+    huaweiCells: number;
+    nokiaCells: number;
+    zteCells: number;
+    ericssonCells: number;
+    huaweiSites: number;
+    nokiaSites: number;
+    zteSites: number;
+    ericssonSites: number;
   }>;
   detailedData: {
     huawei4G: any[];
@@ -135,6 +144,8 @@ interface DashboardData {
     // 4G specific fields
     huawei_4g_cells?: number;
     nokia_4g_cells?: number;
+    zte_4g_cells?: number;
+    ericsson_4g_cells?: number;
   };
 }
 
@@ -158,17 +169,17 @@ const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState<DashboardData>({
     totalSites: 0,
     totalCells: 0,
-    vendorBreakdown: { Huawei: 0, Nokia: 0, Ericsson: 0 },
+    vendorBreakdown: { Huawei: 0, Nokia: 0, ZTE: 0, Ericsson: 0 },
     technologyBreakdown: { '4G': 0, '5G': 0 },
     bandBreakdown: { '900MHz': 0, '1800MHz': 0, '2100MHz': 0, '2600MHz': 0 },
     dailyTrend: [
-      { date: '2025-08-15', sites: 35678, cells: 127890 },
-      { date: '2025-08-16', sites: 35685, cells: 127923 },
-      { date: '2025-08-17', sites: 35690, cells: 127945 },
-      { date: '2025-08-18', sites: 35688, cells: 127938 },
-      { date: '2025-08-19', sites: 35695, cells: 127956 },
-      { date: '2025-08-20', sites: 35701, cells: 127974 },
-      { date: '2025-08-21', sites: 35704, cells: 127981 },
+      { date: '2025-08-15', sites: 35678, cells: 127890, huaweiCells: 45000, nokiaCells: 55000, zteCells: 18890, ericssonCells: 9000, huaweiSites: 12000, nokiaSites: 15000, zteSites: 5678, ericssonSites: 3000 },
+      { date: '2025-08-16', sites: 35685, cells: 127923, huaweiCells: 45010, nokiaCells: 55015, zteCells: 18898, ericssonCells: 9000, huaweiSites: 12002, nokiaSites: 15003, zteSites: 5680, ericssonSites: 3000 },
+      { date: '2025-08-17', sites: 35690, cells: 127945, huaweiCells: 45020, nokiaCells: 55020, zteCells: 18905, ericssonCells: 9000, huaweiSites: 12003, nokiaSites: 15004, zteSites: 5683, ericssonSites: 3000 },
+      { date: '2025-08-18', sites: 35688, cells: 127938, huaweiCells: 45015, nokiaCells: 55018, zteCells: 18905, ericssonCells: 9000, huaweiSites: 12002, nokiaSites: 15003, zteSites: 5683, ericssonSites: 3000 },
+      { date: '2025-08-19', sites: 35695, cells: 127956, huaweiCells: 45025, nokiaCells: 55025, zteCells: 18906, ericssonCells: 9000, huaweiSites: 12005, nokiaSites: 15005, zteSites: 5685, ericssonSites: 3000 },
+      { date: '2025-08-20', sites: 35701, cells: 127974, huaweiCells: 45030, nokiaCells: 55030, zteCells: 18914, ericssonCells: 9000, huaweiSites: 12007, nokiaSites: 15007, zteSites: 5687, ericssonSites: 3000 },
+      { date: '2025-08-21', sites: 35704, cells: 127981, huaweiCells: 45035, nokiaCells: 55035, zteCells: 18911, ericssonCells: 9000, huaweiSites: 12008, nokiaSites: 15008, zteSites: 5688, ericssonSites: 3000 },
     ],
     detailedData: {
       huawei4G: [],
@@ -220,7 +231,9 @@ const Dashboard = () => {
       txRx328: 0,
       // 4G specific fields
       huawei_4g_cells: 0,
-      nokia_4g_cells: 0
+      nokia_4g_cells: 0,
+      zte_4g_cells: 0,
+      ericsson_4g_cells: 0
     }
   });
 
@@ -317,7 +330,7 @@ const Dashboard = () => {
   };
 
   // Load 7 days trend data
-  const load7DaysTrendData = async (selectedDate: string, technology: string) => {
+  const load7DaysTrendData = useCallback(async (selectedDate: string, technology: string) => {
     const dates = generateLast7Days(selectedDate);
     const trendData = [];
     
@@ -339,40 +352,83 @@ const Dashboard = () => {
         // Extract total cells from response or use demo data
         let totalCells = 0;
         let totalSites = 0;
+        let huaweiCells = 0, nokiaCells = 0, zteCells = 0, ericssonCells = 0;
+        let huaweiSites = 0, nokiaSites = 0, zteSites = 0, ericssonSites = 0;
         
         if (dayResponse && dayResponse.provincialTotals) {
           totalCells = technology === '4G' 
             ? (dayResponse.provincialTotals.total_4g_cells || 0)
             : (dayResponse.provincialTotals.total5GCells || 0);
-          totalSites = (dayResponse.provincialTotals.nokia_sites || 0) + (dayResponse.provincialTotals.huawei_sites || 0);
+          totalSites = (dayResponse.provincialTotals.nokia_sites || 0) + (dayResponse.provincialTotals.huawei_sites || 0) + 
+                      (dayResponse.provincialTotals.zte_sites || 0) + (dayResponse.provincialTotals.ericsson_sites || 0);
+          
+          // Vendor breakdown from response
+          huaweiCells = dayResponse.provincialTotals.huawei_4g_cells || 0;
+          nokiaCells = dayResponse.provincialTotals.nokia_4g_cells || 0;
+          zteCells = dayResponse.provincialTotals.zte_4g_cells || 0;
+          ericssonCells = dayResponse.provincialTotals.ericsson_4g_cells || 0;
+          
+          huaweiSites = dayResponse.provincialTotals.huawei_sites || 0;
+          nokiaSites = dayResponse.provincialTotals.nokia_sites || 0;
+          zteSites = dayResponse.provincialTotals.zte_sites || 0;
+          ericssonSites = dayResponse.provincialTotals.ericsson_sites || 0;
         } else {
-          // Demo data với slight variations
+          // Demo data với slight variations và vendor breakdown
           const baseDate = new Date(date);
           const dayIndex = dates.indexOf(date);
           totalCells = technology === '4G' ? 127890 + (dayIndex * 15) + Math.floor(Math.random() * 10) : 48500 + (dayIndex * 8) + Math.floor(Math.random() * 5);
           totalSites = 35678 + (dayIndex * 3) + Math.floor(Math.random() * 3);
+          
+          // Demo vendor breakdown
+          if (technology === '4G') {
+            huaweiCells = 45000 + (dayIndex * 5);
+            nokiaCells = 55000 + (dayIndex * 8);
+            zteCells = 18890 + (dayIndex * 1);
+            ericssonCells = 9000 + (dayIndex * 1);
+            
+            huaweiSites = 12000 + (dayIndex * 2);
+            nokiaSites = 15000 + (dayIndex * 1);
+            zteSites = 5678 + (dayIndex * 1);
+            ericssonSites = 3000;
+          }
         }
         
         trendData.push({
           date: date,
           sites: totalSites,
-          cells: totalCells
+          cells: totalCells,
+          huaweiCells: huaweiCells,
+          nokiaCells: nokiaCells,
+          zteCells: zteCells,
+          ericssonCells: ericssonCells,
+          huaweiSites: huaweiSites,
+          nokiaSites: nokiaSites,
+          zteSites: zteSites,
+          ericssonSites: ericssonSites
         });
       }
     } catch (error) {
       console.error('Error loading 7 days trend data:', error);
-      // Fallback to demo data
+      // Fallback to demo data with vendor breakdown
       dates.forEach((date, index) => {
         trendData.push({
           date: date,
           sites: 35678 + (index * 3),
-          cells: selectedTechnology === '4G' ? 127890 + (index * 15) : 48500 + (index * 8)
+          cells: selectedTechnology === '4G' ? 127890 + (index * 15) : 48500 + (index * 8),
+          huaweiCells: selectedTechnology === '4G' ? 45000 + (index * 5) : 0,
+          nokiaCells: selectedTechnology === '4G' ? 55000 + (index * 8) : 48500 + (index * 8),
+          zteCells: selectedTechnology === '4G' ? 18890 + (index * 1) : 0,
+          ericssonCells: selectedTechnology === '4G' ? 9000 + (index * 1) : 0,
+          huaweiSites: selectedTechnology === '4G' ? 12000 + (index * 2) : 0,
+          nokiaSites: selectedTechnology === '4G' ? 15000 + (index * 1) : 35678 + (index * 3),
+          zteSites: selectedTechnology === '4G' ? 5678 + (index * 1) : 0,
+          ericssonSites: selectedTechnology === '4G' ? 3000 : 0
         });
       });
     }
     
     return trendData;
-  };
+  }, [selectedTechnology]); // Thêm selectedTechnology vào dependencies
 
   // Load dashboard data
   const loadDashboardData = useCallback(async () => {
@@ -386,9 +442,9 @@ const Dashboard = () => {
       // Use selected date
       const formattedDate = selectedDate;
       
-      console.log('=== DATE DEBUG ===');
-      console.log('Selected date:', formattedDate);
-      console.log('=== END DATE DEBUG ===');
+      //console.log('=== DATE DEBUG ===');
+      //console.log('Selected date:', formattedDate);
+      //console.log('=== END DATE DEBUG ===');
 
       // Load 7 days trend data
       const trendData = await load7DaysTrendData(selectedDate, selectedTechnology);
@@ -405,19 +461,19 @@ const Dashboard = () => {
       }
 
       // Debug logging
-      console.log('Dashboard Response:', dashboardResponse);
-      console.log('Response type:', typeof dashboardResponse);
-      console.log('Response keys:', dashboardResponse ? Object.keys(dashboardResponse) : 'null');
+      //console.log('Dashboard Response:', dashboardResponse);
+      //console.log('Response type:', typeof dashboardResponse);
+      //console.log('Response keys:', dashboardResponse ? Object.keys(dashboardResponse) : 'null');
 
       // Check if response has Data property (API response structure)
       if (dashboardResponse && dashboardResponse.Data) {
         dashboardResponse = dashboardResponse.Data;
-        console.log('Using dashboardResponse.Data');
+        //console.log('Using dashboardResponse.Data');
       }
 
       // If no data from API, create demo data for testing
       if (!dashboardResponse || Object.keys(dashboardResponse).length === 0) {
-        console.log('No data from API, creating demo data');
+        //console.log('No data from API, creating demo data');
         if (selectedTechnology === '4G') {
           dashboardResponse = {
             totalSites: 1500,
@@ -425,6 +481,7 @@ const Dashboard = () => {
             vendorBreakdown: {
               Huawei: 800,
               Nokia: 600,
+              ZTE: 300,
               Ericsson: 100
             },
             technologyBreakdown: {
@@ -513,8 +570,10 @@ const Dashboard = () => {
               txRx4812: 0,
               txRx328: 0,
               // 4G specific fields
-              huawei_4g_cells: 0,
-              nokia_4g_cells: 0
+              huawei_4g_cells: 1800,
+              nokia_4g_cells: 2200,
+              zte_4g_cells: 350,
+              ericsson_4g_cells: 150
             }
           };
         } else if (selectedTechnology === '5G') {
@@ -522,7 +581,8 @@ const Dashboard = () => {
             totalSites: 500,
             totalCells: 1500,
             vendorBreakdown: {
-              Nokia: 500
+              Nokia: 500,
+              ZTE: 100
             },
             technologyBreakdown: {
               G5: 1500
@@ -593,12 +653,27 @@ const Dashboard = () => {
 
       // Set dashboard data based on technology
       if (selectedTechnology === '4G') {
+        //console.log('Dashboard API Response:', dashboardResponse);
+        //console.log('ZTE4GCells:', dashboardResponse?.ProvincialTotals?.ZTE4GCells);
+        //console.log('Ericsson4GCells:', dashboardResponse?.ProvincialTotals?.Ericsson4GCells);
+        //console.log('Huawei4GCells:', dashboardResponse?.ProvincialTotals?.Huawei4GCells);
+        //console.log('Nokia4GCells:', dashboardResponse?.ProvincialTotals?.Nokia4GCells);
+        
+        const cellsData = {
+          huawei: dashboardResponse?.ProvincialTotals?.Huawei4GCells || 0,
+          nokia: dashboardResponse?.ProvincialTotals?.Nokia4GCells || 0,
+          zte: dashboardResponse?.ProvincialTotals?.ZTE4GCells || 0,
+          ericsson: dashboardResponse?.ProvincialTotals?.Ericsson4GCells || 0
+        };
+        //console.log('Cells Data for Chart:', cellsData);
+        
         setDashboardData({
           totalSites: dashboardResponse?.TotalSites || 0,
           totalCells: dashboardResponse?.TotalCells || 0,
           vendorBreakdown: {
             Huawei: dashboardResponse?.VendorBreakdown?.Huawei || 0,
             Nokia: dashboardResponse?.VendorBreakdown?.Nokia || 0,
+            ZTE: dashboardResponse?.VendorBreakdown?.ZTE || 0,
             Ericsson: dashboardResponse?.VendorBreakdown?.Ericsson || 0
           },
           technologyBreakdown: {
@@ -683,7 +758,9 @@ const Dashboard = () => {
             config_mimo_8x8: dashboardResponse?.ProvincialTotals?.ConfigMimo_8x8 || 0,
             // 4G specific fields
             huawei_4g_cells: dashboardResponse?.ProvincialTotals?.Huawei4GCells || 0,
-            nokia_4g_cells: dashboardResponse?.ProvincialTotals?.Nokia4GCells || 0
+            nokia_4g_cells: dashboardResponse?.ProvincialTotals?.Nokia4GCells || 0,
+            zte_4g_cells: dashboardResponse?.ProvincialTotals?.ZTE4GCells || 0,
+            ericsson_4g_cells: dashboardResponse?.ProvincialTotals?.Ericsson4GCells || 0
           }
         });
       } else if (selectedTechnology === '5G') {
@@ -693,6 +770,7 @@ const Dashboard = () => {
           vendorBreakdown: {
             Huawei: dashboardResponse?.VendorBreakdown?.Huawei || 0,
             Nokia: dashboardResponse?.VendorBreakdown?.Nokia || 0,
+            ZTE: dashboardResponse?.VendorBreakdown?.ZTE || 0,
             Ericsson: dashboardResponse?.VendorBreakdown?.Ericsson || 0
           },
           technologyBreakdown: {
@@ -796,8 +874,10 @@ const Dashboard = () => {
             txRx4812: dashboardResponse?.ProvincialTotals?.TxRx4812 || 0,
             txRx328: dashboardResponse?.ProvincialTotals?.TxRx328 || 0,
             // 4G specific fields
-            huawei_4g_cells: dashboardResponse?.ProvincialTotals?.Huawei4gCells || 0,
-            nokia_4g_cells: dashboardResponse?.ProvincialTotals?.Nokia4gCells || 0
+            huawei_4g_cells: dashboardResponse?.ProvincialTotals?.Huawei4GCells || 0,
+            nokia_4g_cells: dashboardResponse?.ProvincialTotals?.Nokia4GCells || 0,
+            zte_4g_cells: dashboardResponse?.ProvincialTotals?.ZTE4GCells || 0,
+            ericsson_4g_cells: dashboardResponse?.ProvincialTotals?.Ericsson4GCells || 0
           }
         });
       }
@@ -810,7 +890,7 @@ const Dashboard = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedDate, selectedTechnology]);
+  }, [selectedDate, selectedTechnology, load7DaysTrendData]);
 
 
 
@@ -903,6 +983,40 @@ const Dashboard = () => {
   return (
     <>
       <CtrlNotification ref={refNotification} />
+      
+      {/* Loading Overlay */}
+      {isLoading && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 9999,
+            backdropFilter: 'blur(3px)'
+          }}
+        >
+          <div className="text-center">
+            <div 
+              className="spinner-border text-primary mb-3" 
+              role="status" 
+              style={{ width: '4rem', height: '4rem' }}
+            >
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <div>
+              <h5 className="text-primary">Đang tải dữ liệu...</h5>
+              <p className="text-muted">Vui lòng chờ trong giây lát</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="container-fluid">
         {/* Header */}
         <div className="row mb-4">
@@ -942,8 +1056,8 @@ const Dashboard = () => {
                   />
                 </div>
                 <CtrlButton
-                  title="Thực hiện"
-                  icon="fas fa-search"
+                  title={isLoading ? "Đang tải..." : "Thực hiện"}
+                  icon={isLoading ? "fas fa-spinner fa-spin" : "fas fa-search"}
                   onClick={loadDashboardData}
                   isDisabled={isLoading}
                   type="primary"
@@ -1257,30 +1371,44 @@ const Dashboard = () => {
            {/* Right Side: Vendor Distribution - Full Height */}
            <div className="col-lg-6">
              <Card title="Phân Bố Vendor" icon="fas fa-chart-pie">
-               <div className="row h-100">
-                 {/* Sites Chart */}
-                 <div className="col-md-6">
-                   <h6 className="text-center mb-3">Sites theo Vendor</h6>
-                   <ResponsiveContainer width="100%" height={300}>
-                     <PieChart>
-                       <Pie
-                         data={Object.entries(dashboardData.vendorBreakdown).map(([vendor, count]) => ({
-                           name: vendor,
-                           value: count,
-                           fill: vendor === 'Huawei' ? '#ffc107' :
-                                 vendor === 'Nokia' ? '#dc3545' : '#007bff'
-                         }))}
-                         cx="50%"
-                         cy="50%"
-                         outerRadius={90}
-                         dataKey="value"
-                         label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                       >
-                         {Object.entries(dashboardData.vendorBreakdown).map(([vendor, count], index) => (
-                           <Cell 
-                             key={`cell-${index}`}
+               {isLoading ? (
+                 <div className="d-flex justify-content-center align-items-center" style={{ height: '300px' }}>
+                   <div className="text-center">
+                     <div className="spinner-border text-primary mb-3" role="status">
+                       <span className="visually-hidden">Loading...</span>
+                     </div>
+                     <div className="text-muted">Đang tải biểu đồ...</div>
+                   </div>
+                 </div>
+               ) : (
+                 <div className="row h-100">
+                   {/* Sites Chart */}
+                   <div className="col-md-6">
+                     <h6 className="text-center mb-3">Sites theo Vendor</h6>
+                     <ResponsiveContainer width="100%" height={300}>
+                       <PieChart>
+                         <Pie
+                           data={Object.entries(dashboardData.vendorBreakdown).map(([vendor, count]) => ({
+                             name: vendor,
+                             value: count,
+                             fill: vendor === 'Huawei' ? '#ffc107' :
+                                   vendor === 'Nokia' ? '#dc3545' : 
+                                   vendor === 'ZTE' ? '#28a745' :
+                                   vendor === 'Ericsson' ? '#6f42c1' : '#007bff'
+                           }))}
+                           cx="50%"
+                           cy="50%"
+                           outerRadius={90}
+                           dataKey="value"
+                           label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                         >
+                           {Object.entries(dashboardData.vendorBreakdown).map(([vendor, count], index) => (
+                             <Cell 
+                               key={`cell-${index}`}
                              fill={vendor === 'Huawei' ? '#ffc107' :
-                                   vendor === 'Nokia' ? '#dc3545' : '#007bff'}
+                                   vendor === 'Nokia' ? '#dc3545' : 
+                                   vendor === 'ZTE' ? '#28a745' :
+                                   vendor === 'Ericsson' ? '#6f42c1' : '#007bff'}
                            />
                          ))}
                        </Pie>
@@ -1294,50 +1422,65 @@ const Dashboard = () => {
                    <h6 className="text-center mb-3">
                      {selectedTechnology === '4G' ? '4G Cells theo Vendor' : '5G Cells theo Vendor'}
                    </h6>
-                   <ResponsiveContainer width="100%" height={300}>
-                     <PieChart>
-                       <Pie
-                         data={selectedTechnology === '4G' ? [
-                           {
-                             name: 'Nokia',
-                             value: dashboardData.provincialTotals.nokia_4g_cells || 0,
-                             fill: '#28a745'
-                           },
-                           {
-                             name: 'Huawei',
-                             value: dashboardData.provincialTotals.huawei_4g_cells || 0,
-                             fill: '#17a2b8'
-                           }
-                         ] : [
-                           {
-                             name: 'Nokia',
-                             value: (dashboardData.provincialTotals as any).total5GCells || 0,
-                             fill: '#28a745'
-                           }
-                         ]}
-                         cx="50%"
-                         cy="50%"
-                         outerRadius={90}
-                         dataKey="value"
-                         label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                       >
-                         {(selectedTechnology === '4G' ? [
-                           { name: 'Nokia', fill: '#28a745' },
-                           { name: 'Huawei', fill: '#17a2b8' }
-                         ] : [
-                           { name: 'Nokia', fill: '#28a745' }
-                         ]).map((item, index) => (
-                           <Cell key={`cell-${index}`} fill={item.fill} />
-                         ))}
-                       </Pie>
-                       <Tooltip formatter={(value) => [value.toLocaleString(), 'Cells']} />
-                     </PieChart>
-                   </ResponsiveContainer>
+                   {(() => {
+                     const chartData = selectedTechnology === '4G' ? [
+                       {
+                         name: 'Nokia',
+                         value: dashboardData.provincialTotals.nokia_4g_cells || 0,
+                         fill: '#dc3545'
+                       },
+                       {
+                         name: 'Huawei',
+                         value: dashboardData.provincialTotals.huawei_4g_cells || 0,
+                         fill: '#ffc107'
+                       },
+                       {
+                         name: 'ZTE',
+                         value: dashboardData.provincialTotals.zte_4g_cells || 0,
+                         fill: '#28a745'
+                       },
+                       {
+                         name: 'Ericsson',
+                         value: dashboardData.provincialTotals.ericsson_4g_cells || 0,
+                         fill: '#6f42c1'
+                       }
+                     ].filter(item => item.value > 0) : [
+                       {
+                         name: 'Nokia',
+                         value: (dashboardData.provincialTotals as any).total5GCells || 0,
+                         fill: '#28a745'
+                       }
+                     ];
+                     
+                     //console.log('PieChart Data for Cells:', chartData);
+                     
+                     return (
+                       <ResponsiveContainer width="100%" height={300}>
+                         <PieChart>
+                           <Pie
+                             data={chartData}
+                             cx="50%"
+                             cy="50%"
+                             outerRadius={90}
+                             dataKey="value"
+                             label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                           >
+                             {chartData.map((item, index) => (
+                               <Cell key={`cell-${index}`} fill={item.fill} />
+                             ))}
+                           </Pie>
+                           <Tooltip formatter={(value) => [value.toLocaleString(), 'Cells']} />
+                         </PieChart>
+                       </ResponsiveContainer>
+                     );
+                   })()}
                  </div>
                </div>
+               )}
                
                {/* Summary Stats - Bottom */}
-               <div className="row mt-3">
+               {!isLoading && (
+                 <div className="row mt-3">
                  <div className="col-md-6">
                    <h6 className="text-center mb-2">Tổng Sites</h6>
                    {Object.entries(dashboardData.vendorBreakdown).map(([vendor, count]) => (
@@ -1348,7 +1491,9 @@ const Dashboard = () => {
                            width: '14px',
                            height: '14px',
                            backgroundColor: vendor === 'Huawei' ? '#ffc107' :
-                                            vendor === 'Nokia' ? '#dc3545' : '#007bff'
+                                            vendor === 'Nokia' ? '#dc3545' : 
+                                            vendor === 'ZTE' ? '#28a745' :
+                                            vendor === 'Ericsson' ? '#6f42c1' : '#007bff'
                          }}
                        ></div>
                        <div className="flex-grow-1">
@@ -1364,15 +1509,27 @@ const Dashboard = () => {
                    {selectedTechnology === '4G' ? (
                      <>
                        <div className="d-flex align-items-center mb-2">
-                         <div className="rounded-circle me-2" style={{ width: '14px', height: '14px', backgroundColor: '#28a745' }}></div>
+                         <div className="rounded-circle me-2" style={{ width: '14px', height: '14px', backgroundColor: '#dc3545' }}></div>
                          <div className="flex-grow-1">
                            <small><strong>Nokia</strong> <span className="text-muted">{(dashboardData.provincialTotals.nokia_4g_cells || 0).toLocaleString()}</span></small>
                          </div>
                        </div>
                        <div className="d-flex align-items-center mb-2">
-                         <div className="rounded-circle me-2" style={{ width: '14px', height: '14px', backgroundColor: '#17a2b8' }}></div>
+                         <div className="rounded-circle me-2" style={{ width: '14px', height: '14px', backgroundColor: '#ffc107' }}></div>
                          <div className="flex-grow-1">
                            <small><strong>Huawei</strong> <span className="text-muted">{(dashboardData.provincialTotals.huawei_4g_cells || 0).toLocaleString()}</span></small>
+                         </div>
+                       </div>
+                       <div className="d-flex align-items-center mb-2">
+                         <div className="rounded-circle me-2" style={{ width: '14px', height: '14px', backgroundColor: '#28a745' }}></div>
+                         <div className="flex-grow-1">
+                           <small><strong>ZTE</strong> <span className="text-muted">{(dashboardData.provincialTotals.zte_4g_cells || 0).toLocaleString()}</span></small>
+                         </div>
+                       </div>
+                       <div className="d-flex align-items-center mb-2">
+                         <div className="rounded-circle me-2" style={{ width: '14px', height: '14px', backgroundColor: '#6f42c1' }}></div>
+                         <div className="flex-grow-1">
+                           <small><strong>Ericsson</strong> <span className="text-muted">{(dashboardData.provincialTotals.ericsson_4g_cells || 0).toLocaleString()}</span></small>
                          </div>
                        </div>
                      </>
@@ -1386,6 +1543,7 @@ const Dashboard = () => {
                    )}
                  </div>
                </div>
+               )}
              </Card>
            </div>
          </div>
@@ -1411,7 +1569,7 @@ const Dashboard = () => {
                         const change = item.cells - prevValue;
                         const changePercent = prevValue > 0 ? ((change / prevValue) * 100) : 0;
                         
-                        console.log(`Day ${index}: ${item.date}, Current: ${item.cells}, Previous: ${prevValue}, Change: ${change}`);
+                        //console.log(`Day ${index}: ${item.date}, Current: ${item.cells}, Previous: ${prevValue}, Change: ${change}`);
                         
                         return {
                           ...item,
@@ -1423,6 +1581,18 @@ const Dashboard = () => {
                       barCategoryGap="20%"
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                      <Legend 
+                        iconType="rect"
+                        formatter={(value: string) => {
+                          const vendorNames: { [key: string]: string } = {
+                            'huaweiCells': 'Huawei',
+                            'nokiaCells': 'Nokia',
+                            'zteCells': 'ZTE',
+                            'ericssonCells': 'Ericsson'
+                          };
+                          return vendorNames[value] || value;
+                        }}
+                      />
                       <XAxis 
                         dataKey="date" 
                         tick={{ fontSize: 12 }}
@@ -1451,6 +1621,10 @@ const Dashboard = () => {
                         }}
                         formatter={(value: any, name: string) => {
                           if (name === 'cells') return [value?.toLocaleString(), 'Tổng Cells'];
+                          if (name === 'huaweiCells') return [value?.toLocaleString(), 'Huawei Cells'];
+                          if (name === 'nokiaCells') return [value?.toLocaleString(), 'Nokia Cells'];
+                          if (name === 'zteCells') return [value?.toLocaleString(), 'ZTE Cells'];
+                          if (name === 'ericssonCells') return [value?.toLocaleString(), 'Ericsson Cells'];
                           if (name === 'change') return [
                             `${value > 0 ? '+' : ''}${value?.toLocaleString()}`, 
                             'Biến động'
@@ -1460,15 +1634,34 @@ const Dashboard = () => {
                         labelFormatter={(label) => `Ngày: ${label}`}
                       />
                       
-                      {/* Bar Chart for Total Cells */}
+                      {/* Stacked Bar Charts for Vendor Cells */}
                       <Bar 
                         yAxisId="cells"
-                        dataKey="cells" 
-                        fill="url(#colorGradient)"
-                        radius={[4, 4, 0, 0]}
-                        stroke="#007bff"
-                        strokeWidth={1}
-                        opacity={0.7}
+                        dataKey="huaweiCells" 
+                        stackId="a"
+                        fill="#ffc107"
+                        name="huaweiCells"
+                      />
+                      <Bar 
+                        yAxisId="cells"
+                        dataKey="nokiaCells" 
+                        stackId="a"
+                        fill="#dc3545"
+                        name="nokiaCells"
+                      />
+                      <Bar 
+                        yAxisId="cells"
+                        dataKey="zteCells" 
+                        stackId="a"
+                        fill="#28a745"
+                        name="zteCells"
+                      />
+                      <Bar 
+                        yAxisId="cells"
+                        dataKey="ericssonCells" 
+                        stackId="a"
+                        fill="#6f42c1"
+                        name="ericssonCells"
                       />
                       
                       {/* Line Chart for Daily Change */}
@@ -1643,614 +1836,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Bảng Theo Tỉnh/Thành Phố - Compact */}
-        <div className="row">
-          <div className="col-12">
-            <Card title="Báo Cáo Theo Tỉnh/Thành Phố" icon="fas fa-map-marker-alt" buttonGroups={
-              <div className="d-flex gap-2">
-                <CtrlButton
-                  title="Xuất Excel"
-                  icon="fas fa-download"
-                  onClick={handleExportToExcel}
-                  type="success"
-                />
-                <CtrlButton
-                  title="Làm mới"
-                  icon="fas fa-sync-alt"
-                  onClick={loadDashboardData}
-                  isDisabled={isLoading}
-                  type="primary"
-                />
-              </div>
-            }>
-              <div className="table-responsive">
-                <table className="table table-striped table-hover table-sm" style={{
-                  background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
-                  borderRadius: '10px',
-                  overflow: 'hidden',
-                  boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
-                }}>
-                  <thead style={{
-                    background: 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)',
-                    color: 'white',
-                    border: 'none'
-                  }}>
-                    <style>{`
-                      .sortable-header:hover {
-                        background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%) !important;
-                        transform: translateY(-1px);
-                        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-                        transition: all 0.3s ease;
-                      }
-                      .sortable-header {
-                        transition: all 0.3s ease;
-                      }
-                      .provincial-table {
-                        border-collapse: collapse;
-                        width: 100%;
-                        margin-top: 20px;
-                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                        border-radius: 8px;
-                        overflow: hidden;
-                      }
-                      .provincial-table th,
-                      .provincial-table td {
-                        border: 1px solid rgba(0, 0, 0, 0.1);
-                        padding: 12px 10px;
-                        text-align: center;
-                      }
-                      .provincial-table tbody tr:hover {
-                        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%) !important;
-                        transform: scale(1.01);
-                        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                      }
-                    `}</style>
-                    <tr>
-                      <th 
-                        className="sortable-header"
-                        style={{ 
-                          border: 'none', 
-                          padding: '15px 10px', 
-                          cursor: 'pointer',
-                          userSelect: 'none'
-                        }}
-                        onClick={() => handleSort('report_date')}
-                      >
-                        Ngày Báo Cáo <SortIcon columnKey="report_date" />
-                      </th>
-                      <th 
-                        className="sortable-header"
-                        style={{ 
-                          border: 'none', 
-                          padding: '15px 10px', 
-                          cursor: 'pointer',
-                          userSelect: 'none'
-                        }}
-                        onClick={() => handleSort('province')}
-                      >
-                        Tỉnh/Thành <SortIcon columnKey="province" />
-                      </th>
-                      <th 
-                        className="sortable-header"
-                        style={{ 
-                          border: 'none', 
-                          padding: '15px 10px', 
-                          cursor: 'pointer',
-                          userSelect: 'none'
-                        }}
-                        onClick={() => handleSort('nokia_sites')}
-                      >
-                        {selectedTechnology === '4G' ? 'Nokia Sites' : 'Nokia 5G Sites'} <SortIcon columnKey="nokia_sites" />
-                      </th>
-                      
-                      {/* 4G Technology Columns */}
-                      {selectedTechnology === '4G' && (
-                        <>
-                          <th 
-                            className="sortable-header"
-                            style={{ 
-                              border: 'none', 
-                              padding: '15px 10px', 
-                              cursor: 'pointer',
-                              userSelect: 'none'
-                            }}
-                            onClick={() => handleSort('huawei_sites')}
-                          >
-                            Huawei Sites <SortIcon columnKey="huawei_sites" />
-                          </th>
-                          <th 
-                            className="sortable-header"
-                            style={{ 
-                              border: 'none', 
-                              padding: '15px 10px', 
-                              cursor: 'pointer',
-                              userSelect: 'none'
-                            }}
-                            onClick={() => handleSort('total_4g_cells')}
-                          >
-                            Tổng 4G Cells <SortIcon columnKey="total_4g_cells" />
-                          </th>
-                          <th 
-                            className="sortable-header"
-                            style={{ 
-                              border: 'none', 
-                              padding: '15px 10px', 
-                              cursor: 'pointer',
-                              userSelect: 'none'
-                            }}
-                            onClick={() => handleSort('huawei_4g_cells')}
-                          >
-                            Huawei 4G Cells <SortIcon columnKey="huawei_4g_cells" />
-                          </th>
-                          <th 
-                            className="sortable-header"
-                            style={{ 
-                              border: 'none', 
-                              padding: '15px 10px', 
-                              cursor: 'pointer',
-                              userSelect: 'none'
-                            }}
-                            onClick={() => handleSort('nokia_4g_cells')}
-                          >
-                            Nokia 4G Cells <SortIcon columnKey="nokia_4g_cells" />
-                          </th>
-                          <th 
-                            className="sortable-header"
-                            style={{ 
-                              border: 'none', 
-                              padding: '15px 10px', 
-                              cursor: 'pointer',
-                              userSelect: 'none'
-                            }}
-                            onClick={() => handleSort('moran_cells')}
-                          >
-                            Moran Cells <SortIcon columnKey="moran_cells" />
-                          </th>
-                          <th 
-                            className="sortable-header"
-                            style={{ 
-                              border: 'none', 
-                              padding: '15px 10px', 
-                              cursor: 'pointer',
-                              userSelect: 'none'
-                            }}
-                            onClick={() => handleSort('iot_cells')}
-                          >
-                            IoT Cells <SortIcon columnKey="iot_cells" />
-                          </th>
-                          <th 
-                            className="sortable-header"
-                            style={{ 
-                              border: 'none', 
-                              padding: '15px 10px', 
-                              cursor: 'pointer',
-                              userSelect: 'none'
-                            }}
-                            onClick={() => handleSort('band_900')}
-                          >
-                            Band 900 <SortIcon columnKey="band_900" />
-                          </th>
-                          <th 
-                            className="sortable-header"
-                            style={{ 
-                              border: 'none', 
-                              padding: '15px 10px', 
-                              cursor: 'pointer',
-                              userSelect: 'none'
-                            }}
-                            onClick={() => handleSort('band_1800')}
-                          >
-                            Band 1800 <SortIcon columnKey="band_1800" />
-                          </th>
-                          <th 
-                            className="sortable-header"
-                            style={{ 
-                              border: 'none', 
-                              padding: '15px 10px', 
-                              cursor: 'pointer',
-                              userSelect: 'none'
-                            }}
-                            onClick={() => handleSort('band_2100')}
-                          >
-                            Band 2100 <SortIcon columnKey="band_2100" />
-                          </th>
-                          <th 
-                            className="sortable-header"
-                            style={{ 
-                              border: 'none', 
-                              padding: '15px 10px', 
-                              cursor: 'pointer',
-                              userSelect: 'none'
-                            }}
-                            onClick={() => handleSort('config_4t4r')}
-                          >
-                            4T4R <SortIcon columnKey="config_4t4r" />
-                          </th>
-                          <th 
-                            className="sortable-header"
-                            style={{ 
-                              border: 'none', 
-                              padding: '15px 10px', 
-                              cursor: 'pointer',
-                              userSelect: 'none'
-                            }}
-                            onClick={() => handleSort('config_2t4r')}
-                          >
-                            2T4R <SortIcon columnKey="config_2t4r" />
-                          </th>
-                          <th 
-                            className="sortable-header"
-                            style={{ 
-                              border: 'none', 
-                              padding: '15px 10px', 
-                              cursor: 'pointer',
-                              userSelect: 'none'
-                            }}
-                            onClick={() => handleSort('config_2t2r')}
-                          >
-                            2T2R <SortIcon columnKey="config_2t2r" />
-                          </th>
-                          <th 
-                            className="sortable-header"
-                            style={{ 
-                              border: 'none', 
-                              padding: '15px 10px', 
-                              cursor: 'pointer',
-                              userSelect: 'none'
-                            }}
-                            onClick={() => handleSort('config_1t2r')}
-                          >
-                            1T2R <SortIcon columnKey="config_1t2r" />
-                          </th>
-                          <th 
-                            className="sortable-header"
-                            style={{ 
-                              border: 'none', 
-                              padding: '15px 10px', 
-                              cursor: 'pointer',
-                              userSelect: 'none'
-                            }}
-                            onClick={() => handleSort('config_1t1r')}
-                          >
-                            1T1R <SortIcon columnKey="config_1t1r" />
-                          </th>
-                        </>
-                      )}
-                      
-                      {/* 5G Technology Columns */}
-                      {selectedTechnology === '5G' && (
-                        <>
-                          <th 
-                            className="sortable-header"
-                            style={{ 
-                              border: 'none', 
-                              padding: '15px 10px', 
-                              cursor: 'pointer',
-                              userSelect: 'none'
-                            }}
-                            onClick={() => handleSort('total5GCells')}
-                          >
-                            Tổng 5G Cells <SortIcon columnKey="total5GCells" />
-                          </th>
-                          <th 
-                            className="sortable-header"
-                            style={{ 
-                              border: 'none', 
-                              padding: '15px 10px', 
-                              cursor: 'pointer',
-                              userSelect: 'none'
-                            }}
-                            onClick={() => handleSort('chbw100Mhz')}
-                          >
-                            Chbw100Mhz <SortIcon columnKey="chbw100Mhz" />
-                          </th>
-                          <th 
-                            className="sortable-header"
-                            style={{ 
-                              border: 'none', 
-                              padding: '15px 10px', 
-                              cursor: 'pointer',
-                              userSelect: 'none'
-                            }}
-                            onClick={() => handleSort('chbw80Mhz')}
-                          >
-                            Chbw80Mhz <SortIcon columnKey="chbw80Mhz" />
-                          </th>
-                          <th 
-                            className="sortable-header"
-                            style={{ 
-                              border: 'none', 
-                              padding: '15px 10px', 
-                              cursor: 'pointer',
-                              userSelect: 'none'
-                            }}
-                            onClick={() => handleSort('chbw60Mhz')}
-                          >
-                            Chbw60Mhz <SortIcon columnKey="chbw60Mhz" />
-                          </th>
-                          <th 
-                            className="sortable-header"
-                            style={{ 
-                              border: 'none', 
-                              padding: '15px 10px', 
-                              cursor: 'pointer',
-                              userSelect: 'none'
-                            }}
-                            onClick={() => handleSort('chbw40Mhz')}
-                          >
-                            Chbw40Mhz <SortIcon columnKey="chbw40Mhz" />
-                          </th>
-                          <th 
-                            className="sortable-header"
-                            style={{ 
-                              border: 'none', 
-                              padding: '15px 10px', 
-                              cursor: 'pointer',
-                              userSelect: 'none'
-                            }}
-                            onClick={() => handleSort('chbw20Mhz')}
-                          >
-                            Chbw20Mhz <SortIcon columnKey="chbw20Mhz" />
-                          </th>
-                          <th 
-                            className="sortable-header"
-                            style={{ 
-                              border: 'none', 
-                              padding: '15px 10px', 
-                              cursor: 'pointer',
-                              userSelect: 'none'
-                            }}
-                            onClick={() => handleSort('txRx4812')}
-                          >
-                            TxRx4812 <SortIcon columnKey="txRx4812" />
-                          </th>
-                          <th 
-                            className="sortable-header"
-                            style={{ 
-                              border: 'none', 
-                              padding: '15px 10px', 
-                              cursor: 'pointer',
-                              userSelect: 'none'
-                            }}
-                            onClick={() => handleSort('txRx328')}
-                          >
-                            TxRx328 <SortIcon columnKey="txRx328" />
-                          </th>
-                        </>
-                      )}
-                      
-
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedProvincialData.map((item, index) => (
-                      <tr key={index} style={{
-                        background: index % 2 === 0 ? 'rgba(255, 255, 255, 0.8)' : 'rgba(248, 249, 250, 0.8)',
-                        transition: 'all 0.3s ease',
-                        borderBottom: '1px solid rgba(0,0,0,0.05)'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)';
-                        e.currentTarget.style.transform = 'scale(1.01)';
-                        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = index % 2 === 0 ? 'rgba(255, 255, 255, 0.8)' : 'rgba(248, 249, 250, 0.8)';
-                        e.currentTarget.style.transform = 'scale(1)';
-                        e.currentTarget.style.boxShadow = 'none';
-                      }}>
-                        <td style={{ padding: '12px 10px', fontWeight: '500' }}>{selectedDate}</td>
-                        <td style={{ padding: '12px 10px' }}>
-                          <strong style={{ 
-                            color: '#2c3e50',
-                            fontSize: '14px',
-                            fontWeight: '600'
-                          }}>{item.province}</strong>
-                        </td>
-                        <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                          {selectedTechnology === '4G' 
-                            ? (item.nokia_sites || 0).toLocaleString()
-                            : (item.nokia5GSites || 0).toLocaleString()
-                          }
-                        </td>
-                        
-                        {/* 4G Technology Data */}
-                        {selectedTechnology === '4G' && (
-                          <>
-                            <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                              {(item.huawei_sites || 0).toLocaleString()}
-                            </td>
-                            <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                              {(item.total_4g_cells || 0).toLocaleString()}
-                            </td>
-                            <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                              {(item.huawei_4g_cells || 0).toLocaleString()}
-                            </td>
-                            <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                              {(item.nokia_4g_cells || 0).toLocaleString()}
-                            </td>
-                            <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                              {(item.moran_cells || 0).toLocaleString()}
-                            </td>
-                            <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                              {(item.iot_cells || 0).toLocaleString()}
-                            </td>
-                            <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                              {(item.band_900 || 0).toLocaleString()}
-                            </td>
-                            <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                              {(item.band_1800 || 0).toLocaleString()}
-                            </td>
-                            <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                              {(item.band_2100 || 0).toLocaleString()}
-                            </td>
-                            <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                              {(item.config_4t4r || 0).toLocaleString()}
-                            </td>
-                            <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                              {(item.config_2t4r || 0).toLocaleString()}
-                            </td>
-                            <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                              {(item.config_2t2r || 0).toLocaleString()}
-                            </td>
-                            <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                              {(item.config_1t2r || 0).toLocaleString()}
-                            </td>
-                            <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                              {(item.config_1t1r || 0).toLocaleString()}
-                            </td>
-                          </>
-                        )}
-                        
-                        {/* 5G Technology Data */}
-                        {selectedTechnology === '5G' && (
-                          <>
-                            <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                              {(item.total5GCells || 0).toLocaleString()}
-                            </td>
-                            <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                              {(item.chbw100Mhz || 0).toLocaleString()}
-                            </td>
-                            <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                              {(item.chbw80Mhz || 0).toLocaleString()}
-                            </td>
-                            <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                              {(item.chbw60Mhz || 0).toLocaleString()}
-                            </td>
-                            <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                              {(item.chbw40Mhz || 0).toLocaleString()}
-                            </td>
-                            <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                              {(item.chbw20Mhz || 0).toLocaleString()}
-                            </td>
-                            <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                              {(item.txRx4812 || 0).toLocaleString()}
-                            </td>
-                            <td style={{ padding: '12px 10px', textAlign: 'center' }}>
-                              {(item.txRx328 || 0).toLocaleString()}
-                            </td>
-                          </>
-                        )}
-
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot style={{
-                    background: 'linear-gradient(135deg, #34495e 0%, #2c3e50 100%)',
-                    color: 'white',
-                    border: 'none'
-                  }}>
-                    <tr>
-                      <td colSpan={2} style={{ border: 'none', padding: '15px 10px' }}>
-                        <strong style={{ fontSize: '16px' }}>TỔNG CỘNG</strong>
-                      </td>
-                      <td style={{ border: 'none', padding: '15px 10px', textAlign: 'center' }}>
-                        <strong style={{ fontSize: '16px' }}>
-                          {selectedTechnology === '4G'
-                            ? (dashboardData.provincialTotals.nokia_sites || 0).toLocaleString()
-                            : (dashboardData.provincialTotals.nokia5GSites || 0).toLocaleString()
-                          }
-                        </strong>
-                      </td>
-                      {selectedTechnology === '4G' && (
-                        <>
-                          <td style={{ border: 'none', padding: '15px 10px', textAlign: 'center' }}>
-                            <strong style={{ fontSize: '16px' }}>{(dashboardData.provincialTotals.huawei_sites || 0).toLocaleString()}</strong>
-                          </td>
-                          <td style={{ border: 'none', padding: '15px 10px', textAlign: 'center' }}>
-                            <strong style={{ fontSize: '16px' }}>{(dashboardData.provincialTotals.total_4g_cells || 0).toLocaleString()}</strong>
-                          </td>
-                          <td style={{ border: 'none', padding: '15px 10px', textAlign: 'center' }}>
-                            <strong style={{ fontSize: '16px' }}>{(dashboardData.provincialTotals.huawei_4g_cells || 0).toLocaleString()}</strong>
-                          </td>
-                          <td style={{ border: 'none', padding: '15px 10px', textAlign: 'center' }}>
-                            <strong style={{ fontSize: '16px' }}>{(dashboardData.provincialTotals.nokia_4g_cells || 0).toLocaleString()}</strong>
-                          </td>
-                          <td style={{ border: 'none', padding: '15px 10px', textAlign: 'center' }}>
-                            <strong style={{ fontSize: '16px' }}>{(dashboardData.provincialTotals.moran_cells || 0).toLocaleString()}</strong>
-                          </td>
-                          <td style={{ border: 'none', padding: '15px 10px', textAlign: 'center' }}>
-                            <strong style={{ fontSize: '16px' }}>{(dashboardData.provincialTotals.iot_cells || 0).toLocaleString()}</strong>
-                          </td>
-                          <td style={{ border: 'none', padding: '15px 10px', textAlign: 'center' }}>
-                            <strong style={{ fontSize: '16px' }}>{(dashboardData.provincialTotals.band_900 || 0).toLocaleString()}</strong>
-                          </td>
-                          <td style={{ border: 'none', padding: '15px 10px', textAlign: 'center' }}>
-                            <strong style={{ fontSize: '16px' }}>{(dashboardData.provincialTotals.band_1800 || 0).toLocaleString()}</strong>
-                          </td>
-                          <td style={{ border: 'none', padding: '15px 10px', textAlign: 'center' }}>
-                            <strong style={{ fontSize: '16px' }}>{(dashboardData.provincialTotals.band_2100 || 0).toLocaleString()}</strong>
-                          </td>
-                          <td style={{ border: 'none', padding: '15px 10px', textAlign: 'center' }}>
-                            <strong style={{ fontSize: '16px' }}>{(dashboardData.provincialTotals.config_4t4r || 0).toLocaleString()}</strong>
-                          </td>
-                          <td style={{ border: 'none', padding: '15px 10px', textAlign: 'center' }}>
-                            <strong style={{ fontSize: '16px' }}>{(dashboardData.provincialTotals.config_2t4r || 0).toLocaleString()}</strong>
-                          </td>
-                          <td style={{ border: 'none', padding: '15px 10px', textAlign: 'center' }}>
-                            <strong style={{ fontSize: '16px' }}>{(dashboardData.provincialTotals.config_2t2r || 0).toLocaleString()}</strong>
-                          </td>
-                          <td style={{ border: 'none', padding: '15px 10px', textAlign: 'center' }}>
-                            <strong style={{ fontSize: '16px' }}>{(dashboardData.provincialTotals.config_1t2r || 0).toLocaleString()}</strong>
-                          </td>
-                          <td style={{ border: 'none', padding: '15px 10px', textAlign: 'center' }}>
-                            <strong style={{ fontSize: '16px' }}>{(dashboardData.provincialTotals.config_1t1r || 0).toLocaleString()}</strong>
-                          </td>
-                        </>
-                      )}
-                      {selectedTechnology === '5G' && (
-                        <>
-                          <td style={{ border: 'none', padding: '15px 10px', textAlign: 'center' }}>
-                            <strong style={{ fontSize: '16px' }}>
-                              {(dashboardData.provincialTotals.total5GCells || 0).toLocaleString()}
-                            </strong>
-                          </td>
-                          <td style={{ border: 'none', padding: '15px 10px', textAlign: 'center' }}>
-                            <strong style={{ fontSize: '16px' }}>
-                              {(dashboardData.provincialTotals.chbw100Mhz || 0).toLocaleString()}
-                            </strong>
-                          </td>
-                          <td style={{ border: 'none', padding: '15px 10px', textAlign: 'center' }}>
-                            <strong style={{ fontSize: '16px' }}>
-                              {(dashboardData.provincialTotals.chbw80Mhz || 0).toLocaleString()}
-                            </strong>
-                          </td>
-                          <td style={{ border: 'none', padding: '15px 10px', textAlign: 'center' }}>
-                            <strong style={{ fontSize: '16px' }}>
-                              {(dashboardData.provincialTotals.chbw60Mhz || 0).toLocaleString()}
-                            </strong>
-                          </td>
-                          <td style={{ border: 'none', padding: '15px 10px', textAlign: 'center' }}>
-                            <strong style={{ fontSize: '16px' }}>
-                              {(dashboardData.provincialTotals.chbw40Mhz || 0).toLocaleString()}
-                            </strong>
-                          </td>
-                          <td style={{ border: 'none', padding: '15px 10px', textAlign: 'center' }}>
-                            <strong style={{ fontSize: '16px' }}>
-                              {(dashboardData.provincialTotals.chbw20Mhz || 0).toLocaleString()}
-                            </strong>
-                          </td>
-                          <td style={{ border: 'none', padding: '15px 10px', textAlign: 'center' }}>
-                            <strong style={{ fontSize: '16px' }}>
-                              {(dashboardData.provincialTotals.txRx4812 || 0).toLocaleString()}
-                            </strong>
-                          </td>
-                          <td style={{ border: 'none', padding: '15px 10px', textAlign: 'center' }}>
-                            <strong style={{ fontSize: '16px' }}>
-                              {(dashboardData.provincialTotals.txRx328 || 0).toLocaleString()}
-                            </strong>
-                          </td>
-                        </>
-                      )}
-
-
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </Card>
-          </div>
-        </div>
+      
 
       </div>
     </>
