@@ -8,6 +8,8 @@ import * as ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import API_CONFIG from "../Designer/ApiR005SleepingCellConfig";
 
+import { exportMrbtsConfigs } from "./ExportExcelFileUtils";
+
 interface MRBTSModalProps {
   show: boolean;
   selectedConfig: ConfigModule | null;
@@ -147,6 +149,19 @@ const MRBTSModal: React.FC<MRBTSModalProps> = ({ show, selectedConfig, modalData
   };
 
   const exportToExcel = async () => {
+    try {
+      if (!modalData || modalData.length === 0) {
+        alert("No data to export");
+        return;
+      }
+
+      await exportMrbtsConfigs(modalData);
+    } catch (error) {
+      console.error("Export failed:", error);
+      alert("Export failed. Please try again.");
+    }
+
+    /*
     if (!modalData || modalData.length === 0) {
       alert("Không có dữ liệu để export");
       return;
@@ -171,6 +186,7 @@ const MRBTSModal: React.FC<MRBTSModalProps> = ({ show, selectedConfig, modalData
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
     saveAs(blob, `MRBTS_Information_export.xlsx`);
+    */
   };
 
   return (
