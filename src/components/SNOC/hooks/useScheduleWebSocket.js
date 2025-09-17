@@ -6,9 +6,9 @@ import {
   setWebSocketStatus,
   updateLastRunAt,
   updateSystemStatusPatch,
+  upsertLatestFromClient,
   wsMergeHourlyItems, // 👈 NHẬN GÓI CHART REALTIME
 } from "../redux/Healthcheck/healthcheckSlice";
-
 const WS_URL = "ws://10.155.43.201:8000/ws/healthcheck/";
 const RECONNECT_INTERVAL = 5000;
 
@@ -70,6 +70,35 @@ const useScheduleWebSocket = () => {
           dispatch(
             wsMergeHourlyItems({ items: data.items, platform: data.platform })
           );
+          return;
+        }
+
+        // 4) ✅ Last Test (delta): cập nhật bảng latest theo WS
+        //    BE có thể gửi ở top-level hoặc lồng trong { data: {...} } → unwrap nhẹ:
+        const d = data?.type ? data : data?.data || {};
+        if (d?.type === "lasttest_patch" && d?.mode === "delta") {
+          const items = Array.isArray(d.items) ? d.items : [];
+          for (const it of items) {
+            // Đảm bảo platform có giá trị (fallback từ frame ngoài)
+            const platform =
+              (typeof it.platform === "string" && it.platform) ||
+              (typeof d.platform === "string" && d.platform) ||
+              "";
+            dispatch(
+              upsertLatestFromClient({
+                host: it.host,
+                ip: it.ip ?? "",
+                platform,
+                status: it.status,
+                notes: it.notes,
+                result_file: it.result_file,
+                starttime: it.starttime,
+                endtime: it.endtime,
+                excluded:
+                  typeof it.excluded === "boolean" ? it.excluded : false,
+              })
+            );
+          }
           return;
         }
 

@@ -15,6 +15,11 @@ function _hourKeyISO(starttime) {
 function _pruneCutoff(hours = 24) {
   return Date.now() - (hours || 24) * 60 * 60 * 1000;
 }
+function _normPlatform(p) {
+  return (p ?? "").toString().trim();
+}
+
+
 
 /* =========================
  * Thunk: toggle excluded
@@ -214,14 +219,15 @@ export const fetchPSCoreStatus = createAsyncThunk(
 export const fetchLatestHealthcheckView = createAsyncThunk(
   "pscore/fetchLatestHealthcheckView",
   async (
-    { host, page = 1, platform = [], option = "" },
+    // { host, page = 1, platform = [], option = "" },
+    { host, platform = [], option = "" },
     { rejectWithValue, dispatch }
   ) => {
     try {
       const params = new URLSearchParams();
       if (host) params.append("host", host);
       if (option) params.append("option", option);
-      params.append("page", page);
+      // params.append("page", page);
       platform.forEach((p) => params.append("platform", p));
 
       const response = await snocApi.get(
@@ -467,34 +473,53 @@ const psCoreSlice = createSlice({
       if (!state.recentlyUpdated[group]) state.recentlyUpdated[group] = {};
       state.recentlyUpdated[group][subsystem] = Date.now();
     },
+    
     upsertLatestFromClient: (state, { payload }) => {
-      const host = payload?.host;
+      const host = payload?.host?.trim?.();
       if (!host) return;
 
-      // latest view: mỗi host 1 dòng → match theo host là đủ
-      const idx = state.lastestitems.findIndex((x) => x.host === host);
+      const plat = _normPlatform(payload?.platform || payload?.platform_name);
+
+      // tìm theo host + platform (không chỉ host)
+      const arr = state.lastestitems || (state.lastestitems = []);
+      const idx = arr.findIndex(
+        (x) => x.host === host && _normPlatform(x.platform) === plat
+      );
+
+      // notes: đảm bảo luôn là string để render ổn
+      const notesStr = Array.isArray(payload?.notes)
+        ? payload.notes.map((n) => n?.note ?? "").join(" | ")
+        : payload?.notes ?? "";
 
       const merged = {
-        ...(idx >= 0 ? state.lastestitems[idx] : {}),
-        ...payload, // host, ip, platform, status, notes, result_file, starttime, endtime, ...
+        ...(idx >= 0 ? arr[idx] : {}),
+        ...payload,
+        host,
+        platform: plat, // luôn set platform đã chuẩn hoá
+        notes: notesStr,
       };
 
       if (idx >= 0) {
-        state.lastestitems[idx] = merged;
+        arr[idx] = merged;
       } else {
-        state.lastestitems.unshift(merged);
+        arr.unshift(merged);
         state.countlastest = (state.countlastest || 0) + 1;
       }
 
-      // (tuỳ chọn) để chart 24h nhảy ngay khi NOK/Error
-      if (payload.status === "NOK" || payload.status === "Error") {
+      // sắp theo thời gian mới nhất (giảm dần) cho dễ nhìn
+      arr.sort((a, b) => new Date(b.starttime) - new Date(a.starttime));
+      state.lastestitems = arr;
+
+      // (tuỳ chọn) đẩy vào chart 24h nếu NOK/Error
+      const st = payload?.status;
+      if (st === "NOK" || st === "Error") {
         state.hourlyItems = [
           {
-            host: payload.host,
-            platform: payload.platform,
-            status: payload.status,
-            starttime: payload.starttime || new Date().toISOString(),
-            notes: payload.notes || "",
+            host,
+            platform: plat,
+            status: st,
+            starttime: payload?.starttime || new Date().toISOString(),
+            notes: notesStr,
           },
           ...(state.hourlyItems || []),
         ];
@@ -565,8 +590,11 @@ const psCoreSlice = createSlice({
       })
       .addCase(fetchLatestHealthcheckView.fulfilled, (state, action) => {
         state.loading = false;
-        state.lastestitems = action.payload.results || [];
-        state.countlastest = action.payload.count || 0;
+        // state.lastestitems = action.payload.results || [];
+        // state.countlastest = action.payload.count || 0;
+        const results = action.payload?.results || [];
+        state.lastestitems = results;
+        state.countlastest = results.length; // dùng length, vì không paginate nữa
         state.nextlastest = action.payload.next;
         state.previouslastest = action.payload.previous;
       })

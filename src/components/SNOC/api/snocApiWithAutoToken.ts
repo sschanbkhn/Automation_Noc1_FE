@@ -2,19 +2,22 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 
 /* ========= BASE =========
-   YÊU CẦU: REACT_APP_SNOC_API_URL = http://10.155.43.201:8000/api
+   REACT_APP_SNOC_API_URL = http://10.155.43.201:8000/api
    ======================= */
 const RAW_BASE = process.env.REACT_APP_SNOC_API_URL || "";
 export const AUTH_EVENT = "snoc-auth-changed";
 const BASE = RAW_BASE.replace(/\/+$/, "");
 
-// Login tuyệt đối: http://host:port/api/users/login
+// (Tuỳ BE) Nếu BE yêu cầu dấu "/" cuối, đổi thành `${BASE}/users/login/`
 const LOGIN_URL = `${BASE}/users/login`;
 
 /* ===== Token (RAM + sessionStorage + localStorage) ===== */
 let accessToken: string | null = null;
 const SESSION_KEY = "snoc_jwt_token";
 const LOCAL_KEY = "snoc_jwt_token_persist";
+
+// Cho phép cấu hình prefix, ví dụ: REACT_APP_SNOC_AUTH_PREFIX="Bearer "
+const AUTH_PREFIX = process.env.REACT_APP_SNOC_AUTH_PREFIX ?? "";
 
 // helper phát sự kiện auth
 function fireAuthEvent(isLoggedIn: boolean) {
@@ -30,23 +33,16 @@ function fireAuthEvent(isLoggedIn: boolean) {
     const s = sessionStorage.getItem(SESSION_KEY);
     const l = localStorage.getItem(LOCAL_KEY);
     accessToken = s || l || null;
-    // Nếu chỉ có local mà chưa có session => copy sang session cho tab hiện tại
     if (!s && l) sessionStorage.setItem(SESSION_KEY, l);
     fireAuthEvent(!!accessToken);
   } catch {}
 })();
 
-export function setSnocToken(
-  token: string | null,
-  opts?: { persist?: boolean }
-) {
+export function setSnocToken(token: string | null, opts?: { persist?: boolean }) {
   accessToken = token;
-
   try {
     if (token) {
-      // luôn set vào session cho tab hiện tại
       sessionStorage.setItem(SESSION_KEY, token);
-      // nếu persist => lưu thêm local để tab khác đọc được
       if (opts?.persist) localStorage.setItem(LOCAL_KEY, token);
       else localStorage.removeItem(LOCAL_KEY);
     } else {
@@ -54,8 +50,11 @@ export function setSnocToken(
       localStorage.removeItem(LOCAL_KEY);
     }
   } catch {}
-
   fireAuthEvent(!!token);
+}
+
+export function clearSnocToken() {
+  setSnocToken(null, { persist: true });
 }
 
 export function getSnocToken(): string | null {
@@ -67,6 +66,26 @@ export function getSnocToken(): string | null {
     if (!s && l) sessionStorage.setItem(SESSION_KEY, l);
   } catch {}
   return accessToken;
+}
+
+/** Helper: decode JWT payload để lấy claims (role, is_superuser, ...) */
+export function getJwtClaims(): any | null {
+  try {
+    const token = getSnocToken();
+    if (!token) return null;
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const pad = b64 + "===".slice((b64.length + 3) % 4);
+    const raw = atob(pad);
+    try {
+      return JSON.parse(decodeURIComponent(escape(raw)));
+    } catch {
+      return JSON.parse(raw);
+    }
+  } catch {
+    return null;
+  }
 }
 
 // Đồng bộ cross-tab qua sự kiện storage
@@ -88,7 +107,7 @@ if (typeof window !== "undefined") {
   });
 }
 
-/* ===== Unauthorized hook (401) ===== */
+/* ===== Unauthorized hook (401/403) ===== */
 type UnauthorizedHandler = () => void;
 let unauthorizedHandlers: UnauthorizedHandler[] = [];
 export function onSnocUnauthorized(cb: UnauthorizedHandler) {
@@ -97,16 +116,67 @@ export function onSnocUnauthorized(cb: UnauthorizedHandler) {
     (unauthorizedHandlers = unauthorizedHandlers.filter((f) => f !== cb));
 }
 
-/* ===== Axios instances ===== */
-export const snocApi: AxiosInstance = axios.create({
-  baseURL: BASE,
-  headers: { Accept: "application/json", "Content-Type": "application/json" },
-});
+/* ===== helper tạo instance + interceptors giống nhau ===== */
+function buildInstance(baseURL: string): AxiosInstance {
+  const ins = axios.create({
+    baseURL,
+    timeout: 30000,
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+  });
 
-export const snocApiNoAuth: AxiosInstance = axios.create({
-  baseURL: BASE,
-  headers: { Accept: "application/json", "Content-Type": "application/json" },
-});
+  ins.interceptors.request.use(
+    (config: any) => {
+      // nếu url bắt đầu "/" (không phải http/https) thì bỏ "/" đầu
+      if (
+        config?.url &&
+        /^\/(?!\/)/.test(config.url) &&
+        !/^https?:\/\//i.test(config.url)
+      ) {
+        config.url = config.url.replace(/^\/+/, "");
+      }
+      const token = getSnocToken();
+      if (token) {
+        config.headers = config.headers || {};
+        config.headers.Authorization = `${AUTH_PREFIX}${token}`;
+        config.headers["X-CSRFTOKEN"] = token;
+      }
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
+
+  ins.interceptors.response.use(
+    (response) => response,
+    async (error: AxiosError) => {
+      const originalRequest = (error.config || {}) as AxiosRequestConfig & {
+        _handled401?: boolean;
+      };
+      const status = error.response?.status;
+
+      if ((status === 401 || status === 403) && !originalRequest._handled401) {
+        originalRequest._handled401 = true;
+        clearSnocToken();
+        unauthorizedHandlers.forEach((fn) => {
+          try {
+            fn();
+          } catch {}
+        });
+      }
+      return Promise.reject(error);
+    }
+  );
+
+  return ins;
+}
+
+/* ===== Axios instances ===== */
+// MỌI API cũ dùng /api
+export const snocApi: AxiosInstance = buildInstance(BASE);
+export const snocApiNoAuth: AxiosInstance = buildInstance(BASE);
+
+// 🔹 Chỉ dành cho các route FastAPI (ví dụ /fastapi/me)
+const HOST_ROOT = BASE.replace(/\/api$/i, "");
+export const snocFastApi: AxiosInstance = buildInstance(`${HOST_ROOT}/fastapi`);
 
 /* ===== Login API (KHÔNG tự lưu token) ===== */
 export interface SnocLoginResponse {
@@ -129,60 +199,4 @@ export const snocLogin = async (
   return res.data;
 };
 
-/* ===== Interceptors ===== */
-// Gắn Authorization + (tuỳ chọn) X-CSRFTOKEN trước mỗi request
-snocApi.interceptors.request.use(
-  (config: any) => {
-    // Normalize URL: nếu url bắt đầu "/" (không phải http/https) thì bỏ "/" đầu
-    if (
-      config?.url &&
-      /^\/(?!\/)/.test(config.url) &&
-      !/^https?:\/\//i.test(config.url)
-    ) {
-      config.url = config.url.replace(/^\/+/, "");
-    }
-
-    const token = getSnocToken();
-    if (token) {
-      config.headers = config.headers || {};
-      // GIỮ NGUYÊN CÁCH GỬI TOKEN THEO BE HIỆN TẠI
-      config.headers.Authorization = `${token}`;
-      config.headers["X-CSRFTOKEN"] = token;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// 401 -> gọi handler (ví dụ dispatch LOGOUT) + xoá token cả 2 nơi
-snocApi.interceptors.response.use(
-  (response) => response,
-  async (error: AxiosError) => {
-    const originalRequest = (error.config || {}) as AxiosRequestConfig & {
-      _handled401?: boolean;
-    };
-    if (error.response?.status === 401 && !originalRequest._handled401) {
-      originalRequest._handled401 = true;
-      setSnocToken(null, { persist: true });
-      unauthorizedHandlers.forEach((fn) => {
-        try {
-          fn();
-        } catch {}
-      });
-    }
-    return Promise.reject(error);
-  }
-);
-
 export default snocApi;
-
-/* ==== Cách dùng nhanh:
-   - .env: REACT_APP_SNOC_API_URL=http://10.155.43.201:8000/api
-   - Login:
-       const data = await snocLogin(email, password);
-       const token = data.token || data.access;
-       setSnocToken(token, { persist: true }); // ⭐ nhớ bật persist để mở tab mới không bị login lại
-   - Slice/API khác (giữ nguyên dấu "/" đầu cũng OK):
-       await snocApi.post('/nornirps/systemhealth/toggle-exclude/', { host, excluded });
-       // -> http://10.155.43.201:8000/api/nornirps/systemhealth/toggle-exclude/
-   ======================================== */

@@ -146,30 +146,36 @@
         }
       ]
     },
-     {
+    {
       "code": "NetworkSnoc",
       "name": "AU Chuyển mạch",
       "url": "/user",
       "icon": "bi bi-cpu",
       "subMenu": [
         {
-      "code": "hc-dashboard",
-      "name": "Healthcheck Automation",
-      "url": "/app/dashboard/origin",
-      "icon": "bi bi-cpu"
-    },
-    {
-      "code": "hc-dashboard-dns",
-      "name": "DNS Automation",
-      "url": "/app/dashboard/dns",
-      "icon": "bi bi-cpu"
-    },
-    {
-      "code": "hc-dashboard-sbc",
-      "name": "SBC Automation",
-      "url": "/app/dashboard/sbc",
-      "icon": "bi bi-cpu"
-    }
+          "code": "hc-snoc-admin-dashboard",
+          "name": "User Admin Snoc",
+          "url": "/app/snoc/admin",
+          "icon": "bi bi-cpu"
+        },
+        {
+          "code": "hc-dashboard",
+          "name": "Healthcheck Automation",
+          "url": "/app/dashboard/origin",
+          "icon": "bi bi-cpu"
+        },
+        {
+          "code": "hc-dashboard-dns",
+          "name": "DNS Automation",
+          "url": "/app/dashboard/dns",
+          "icon": "bi bi-cpu"
+        },
+        {
+          "code": "hc-dashboard-sbc",
+          "name": "SBC Automation",
+          "url": "/app/dashboard/sbc",
+          "icon": "bi bi-cpu"
+        }
       ]
     },
     {
@@ -191,12 +197,11 @@
           "icon": "bi bi-grid"
         },
         {
-            "code": "LspQuocte",
+          "code": "LspQuocte",
           "name": "Kiểm soát LSP quốc tế",
           "url": "/LspQuocte",
           "icon": "bi bi-grid"
-
-            },
+        },
         {
           "code": "i004_1",
           "name": "Dữ liệu LSP quốc tế",

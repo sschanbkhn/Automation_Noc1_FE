@@ -1,5 +1,5 @@
 import { saveAs } from "file-saver";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Button,
   Card,
@@ -18,21 +18,21 @@ import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
 import {
   fetchLatestHealthcheckView,
   fetchPSCoreStatus,
-  toggleDeviceExcluded,
   GenericHealthCheckView,
+  toggleDeviceExcluded,
   upsertLatestFromClient, // ✅ upsert ngay vào latest
 } from "../../../redux/Healthcheck/healthcheckSlice";
 import styles from "./../../../styles/SystemHealth.module.scss";
 
 // ✅ Recharts cho đồ thị
 import {
-  ResponsiveContainer,
-  BarChart,
   Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
 } from "recharts";
 
 const NOK_BAR_COLOR = "#dc3545";
@@ -56,7 +56,7 @@ const HealthcheckTable = ({
 
   const {
     lastestitems = [],
-    countlastest = 0,
+    // countlastest = 0, // FE tự phân trang nên không cần
     loading = false,
   } = useSelector((state) => state.pscore || {});
 
@@ -73,11 +73,13 @@ const HealthcheckTable = ({
 
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortConfig, setSortConfig] = useState({ key: "", direction: "asc" });
+  const [sortConfig, setSortConfig] = useState({
+    key: "starttime",
+    direction: "desc",
+  });
   const [statusFilter, setStatusFilter] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const searchHostRef = useRef("");
 
   const [showHostHistory, setShowHostHistory] = useState(false);
   const [selectedHost, setSelectedHost] = useState(null);
@@ -96,18 +98,29 @@ const HealthcheckTable = ({
   );
 
   const pageSize = 10;
-  const totalPages = Math.ceil(countlastest / pageSize);
 
-  // ===== Fetch list latest theo bảng =====
+  // ===== Fetch full list latest theo bảng (BE KHÔNG paginate) =====
   useEffect(() => {
     dispatch(
       fetchLatestHealthcheckView({
-        host: searchHostRef.current,
-        page: currentPage,
+        host: searchTerm, // có thể filter host ở BE cho nhẹ; để "" nếu muốn lấy tất cả
         platform: platformList,
       })
     );
-  }, [dispatch, currentPage, group, subsystem, platformList]);
+  }, [dispatch, group, subsystem, platformList, searchTerm]);
+
+  // Reset về trang 1 khi đổi context / filter
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [
+    group,
+    subsystem,
+    JSON.stringify(platformList),
+    searchTerm,
+    statusFilter,
+    startDate,
+    endDate,
+  ]);
 
   // ===== Fetch history theo host khi mở modal lịch sử =====
   useEffect(() => {
@@ -171,7 +184,9 @@ const HealthcheckTable = ({
     const fromItem =
       normalizePlatform(item?.platform) ||
       normalizePlatform(item?.platform_name) ||
-      (Array.isArray(item?.platforms) ? normalizePlatform(item.platforms[0]) : "");
+      (Array.isArray(item?.platforms)
+        ? normalizePlatform(item.platforms[0])
+        : "");
     if (fromItem) return fromItem;
 
     const byIndex = hostPlatformIndex.get(item?.host);
@@ -180,7 +195,7 @@ const HealthcheckTable = ({
     if (Array.isArray(platformList) && platformList.length === 1) {
       return platformList[0];
     }
-    return null;
+    return "";
   };
 
   // ====== Chạy healthcheck 1 thiết bị + upsert ngay vào latest ======
@@ -213,7 +228,9 @@ const HealthcheckTable = ({
           starttime: r?.starttime || new Date().toISOString(),
           endtime: r?.endtime || null,
           excluded:
-            typeof rowFallback.excluded === "boolean" ? rowFallback.excluded : false,
+            typeof rowFallback.excluded === "boolean"
+              ? rowFallback.excluded
+              : false,
           group,
           subsystem,
         };
@@ -227,40 +244,97 @@ const HealthcheckTable = ({
   };
 
   // ====== Lọc / sắp xếp / export ======
-  const filteredItems = lastestitems.filter((item) => {
-    const lowerSearch = searchTerm.toLowerCase();
-    const matchesText =
-      item.host?.toLowerCase().includes(lowerSearch) ||
-      item.ip?.toLowerCase().includes(lowerSearch) ||
-      item.status?.toLowerCase().includes(lowerSearch) ||
-      (Array.isArray(item.notes)
-        ? item.notes.some((note) =>
-            note.note?.toLowerCase().includes(lowerSearch)
-          )
-        : String(item.notes || "").toLowerCase().includes(lowerSearch)) ||
-      new Date(item.starttime).toLocaleString().toLowerCase().includes(lowerSearch);
+  const filteredItems = useMemo(() => {
+    const lowerSearch = (searchTerm || "").toLowerCase();
 
-    const matchesStatus = statusFilter ? item.status === statusFilter : true;
-    const matchesDate =
-      (!startDate || new Date(item.starttime) >= new Date(startDate)) &&
-      (!endDate || new Date(item.starttime) <= new Date(endDate));
+    return (lastestitems || []).filter((item) => {
+      // Text search (client-side)
+      const matchesText =
+        !lowerSearch ||
+        item.host?.toLowerCase().includes(lowerSearch) ||
+        item.ip?.toLowerCase().includes(lowerSearch) ||
+        item.status?.toLowerCase().includes(lowerSearch) ||
+        (Array.isArray(item.notes)
+          ? item.notes.some((note) =>
+              note.note?.toLowerCase().includes(lowerSearch)
+            )
+          : String(item.notes || "")
+              .toLowerCase()
+              .includes(lowerSearch)) ||
+        new Date(item.starttime)
+          .toLocaleString()
+          .toLowerCase()
+          .includes(lowerSearch);
 
-    return matchesText && matchesStatus && matchesDate;
-  });
+      // Status filter
+      const matchesStatus = statusFilter ? item.status === statusFilter : true;
 
-  const sortedItems = [...filteredItems].sort((a, b) => {
-    const valA = a[sortConfig.key];
-    const valB = b[sortConfig.key];
-    if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
-    if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
-    return 0;
-  });
+      // Date range filter
+      const matchesDate =
+        (!startDate || new Date(item.starttime) >= new Date(startDate)) &&
+        (!endDate || new Date(item.starttime) <= new Date(endDate));
+
+      // Platform filter theo subsystem/platformList
+      const rowPlat = resolvePlatformForRow(item);
+      const matchesPlatform = !platformList?.length
+        ? true
+        : platformList.includes(rowPlat);
+
+      return matchesText && matchesStatus && matchesDate && matchesPlatform;
+    });
+  }, [
+    lastestitems,
+    searchTerm,
+    statusFilter,
+    startDate,
+    endDate,
+    platformList,
+  ]);
+
+  const sortedItems = useMemo(() => {
+    const arr = [...filteredItems];
+    const { key, direction } = sortConfig;
+
+    if (!key) {
+      // mặc định sort theo thời gian mới nhất
+      arr.sort((a, b) => new Date(b.starttime) - new Date(a.starttime));
+      return arr;
+    }
+
+    arr.sort((a, b) => {
+      const valA = a[key];
+      const valB = b[key];
+
+      if (valA === valB) return 0;
+
+      // nếu là thời gian
+      if (key.toLowerCase().includes("time")) {
+        const tA = new Date(valA).getTime();
+        const tB = new Date(valB).getTime();
+        return direction === "asc" ? tA - tB : tB - tA;
+      }
+
+      // so sánh string/number thường
+      if (valA < valB) return direction === "asc" ? -1 : 1;
+      if (valA > valB) return direction === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return arr;
+  }, [filteredItems, sortConfig]);
+
+  // Client-side pagination
+  const totalPages = Math.ceil(sortedItems.length / pageSize);
+  const pagedItems = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return sortedItems.slice(start, start + pageSize);
+  }, [sortedItems, currentPage]);
 
   const handlePageChange = (pageNum) => setCurrentPage(pageNum);
 
   const exportToExcel = () => {
     const data = sortedItems.map((item, index) => ({
-      STT: (currentPage - 1) * pageSize + index + 1,
+      STT: index + 1,
       Host: item.host,
       IP: item.ip || "-",
       "Thời gian": new Date(item.starttime).toLocaleString(),
@@ -275,7 +349,10 @@ const HealthcheckTable = ({
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Healthcheck");
-    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+    });
     const blob = new Blob([excelBuffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
     });
@@ -349,7 +426,7 @@ const HealthcheckTable = ({
         <div>
           <strong>{label}</strong>
         </div>
-        <div>NOK: {payload[0].value}</div>
+        <div>NOK: {payload?.[0]?.value ?? 0}</div>
         {top.map((h) => (
           <div key={h} style={{ fontSize: "0.85rem" }}>
             • {h}
@@ -425,7 +502,11 @@ const HealthcheckTable = ({
                   onChange={(e) => setEndDate(e.target.value)}
                 />
               </Form.Group>
-              <Button type="button" variant="outline-success" onClick={exportToExcel}>
+              <Button
+                type="button"
+                variant="outline-success"
+                onClick={exportToExcel}
+              >
                 Xuất Excel
               </Button>
             </Form>
@@ -468,11 +549,31 @@ const HealthcheckTable = ({
                 <Table responsive hover bordered className="table-sm">
                   <thead className="table-light">
                     <tr>
-                      <th>STT</th>
-                      <th>Host</th>
+                      <th
+                        style={{ cursor: "pointer" }}
+                        onClick={() => handleSort("index")}
+                      >
+                        STT
+                      </th>
+                      <th
+                        style={{ cursor: "pointer" }}
+                        onClick={() => handleSort("host")}
+                      >
+                        Host
+                      </th>
                       <th>IP</th>
-                      <th>Thời gian</th>
-                      <th>Trạng thái</th>
+                      <th
+                        style={{ cursor: "pointer" }}
+                        onClick={() => handleSort("starttime")}
+                      >
+                        Thời gian
+                      </th>
+                      <th
+                        style={{ cursor: "pointer" }}
+                        onClick={() => handleSort("status")}
+                      >
+                        Trạng thái
+                      </th>
                       <th>Ghi chú</th>
                       <th>File kết quả</th>
                       <th style={{ width: 140 }}>Healthcheck</th>
@@ -480,15 +581,17 @@ const HealthcheckTable = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedItems.map((item, index) => {
+                    {pagedItems.map((item, index) => {
                       const startTimeDate = new Date(item.starttime);
                       const diffHours =
                         (new Date() - startTimeDate) / (1000 * 60 * 60);
 
                       const host = item.host;
-                      const platform = resolvePlatformForRow(item);
+                      const rowPlatform = resolvePlatformForRow(item);
+                      const rowKey = `${host}|${rowPlatform}`; // ✅ key duy nhất theo host|platform
+
                       const running = !!runningByHost[host];
-                      const disableBtn = !host || !platform || running;
+                      const disableBtn = !host || !rowPlatform || running;
 
                       const rowFallback = {
                         id: item.id,
@@ -498,7 +601,7 @@ const HealthcheckTable = ({
 
                       return (
                         <tr
-                          key={item.id || index}
+                          key={rowKey}
                           className={statusRowClass[item.status] || ""}
                         >
                           <td>{(currentPage - 1) * pageSize + index + 1}</td>
@@ -556,21 +659,23 @@ const HealthcheckTable = ({
                             <Button
                               type="button" // 🔒 không để submit
                               size="sm"
-                              variant="outline-primary"
+                              variant="primary"
                               className="d-inline-flex align-items-center gap-2"
                               disabled={disableBtn}
                               title={
-                                !platform
+                                !rowPlatform
                                   ? "Chưa xác định platform (hãy đảm bảo subsystem/platform đúng)"
                                   : "Chạy healthcheck thiết bị này"
                               }
                               onClick={(e) => {
-                                e.preventDefault(); // 🔒 chặn submit mặc định (phòng hờ)
-                                runHealthcheck(platform, host, rowFallback);
+                                e.preventDefault();
+                                runHealthcheck(rowPlatform, host, rowFallback);
                               }}
                             >
-                              {running && <Spinner size="sm" animation="border" />}
-                              <span>{running ? "Đang chạy..." : "Healthcheck"}</span>
+                              {running && (
+                                <Spinner size="sm" animation="border" />
+                              )}
+                              <span>{running ? "Running..." : "Run"}</span>
                             </Button>
                           </td>
 
@@ -628,7 +733,9 @@ const HealthcheckTable = ({
                   dialogClassName={styles.modalWide}
                 >
                   <Modal.Header closeButton>
-                    <Modal.Title>Lịch sử healthcheck: {selectedHost}</Modal.Title>
+                    <Modal.Title>
+                      Lịch sử healthcheck: {selectedHost}
+                    </Modal.Title>
                   </Modal.Header>
                   <Modal.Body>
                     {hostHistoryLoading ? (
@@ -647,14 +754,17 @@ const HealthcheckTable = ({
                           </tr>
                         </thead>
                         <tbody>
-                          {hostHistoryItems.map((it, idx) => {
+                          {hostHistoryItems.map((it) => {
                             const t = new Date(it.starttime);
                             const notes = Array.isArray(it.notes)
                               ? it.notes.map((n) => n.note).join(" | ")
                               : it.notes || "";
+                            const histKey = `${it.host}|${
+                              it.platform
+                            }|${t.getTime()}`;
                             return (
                               <tr
-                                key={it.id || `${idx}-${t.getTime()}`}
+                                key={histKey}
                                 className={statusRowClass[it.status] || ""}
                               >
                                 <td title={t.toLocaleString()}>
@@ -668,7 +778,9 @@ const HealthcheckTable = ({
                                 </td>
                                 <td>{it.platform}</td>
                                 <td>{it.status}</td>
-                                <td style={{ whiteSpace: "pre-line" }}>{notes}</td>
+                                <td style={{ whiteSpace: "pre-line" }}>
+                                  {notes}
+                                </td>
                                 <td>
                                   {it.result_file ? (
                                     <a
@@ -691,7 +803,11 @@ const HealthcheckTable = ({
                     )}
                   </Modal.Body>
                   <Modal.Footer>
-                    <Button type="button" variant="secondary" onClick={() => setShowHostHistory(false)}>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => setShowHostHistory(false)}
+                    >
                       Đóng
                     </Button>
                   </Modal.Footer>
@@ -720,14 +836,17 @@ const HealthcheckTable = ({
                         </tr>
                       </thead>
                       <tbody>
-                        {selectedHourItems.map((it, idx) => {
+                        {selectedHourItems.map((it) => {
                           const t = new Date(it.starttime);
                           const notes = Array.isArray(it.notes)
                             ? it.notes.map((n) => n.note).join(" | ")
                             : it.notes || "";
+                          const hrKey = `${it.host}|${
+                            it.platform
+                          }|${t.getTime()}`;
                           return (
                             <tr
-                              key={it.id || `${idx}-${t.getTime()}`}
+                              key={hrKey}
                               className={statusRowClass[it.status] || ""}
                             >
                               <td title={t.toLocaleString()}>
@@ -742,7 +861,9 @@ const HealthcheckTable = ({
                               <td>{it.host}</td>
                               <td>{it.platform}</td>
                               <td>{it.status}</td>
-                              <td style={{ whiteSpace: "pre-line" }}>{notes}</td>
+                              <td style={{ whiteSpace: "pre-line" }}>
+                                {notes}
+                              </td>
                             </tr>
                           );
                         })}
@@ -755,7 +876,11 @@ const HealthcheckTable = ({
                     )}
                   </Modal.Body>
                   <Modal.Footer>
-                    <Button type="button" variant="secondary" onClick={() => setShowHourModal(false)}>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => setShowHourModal(false)}
+                    >
                       Đóng
                     </Button>
                   </Modal.Footer>

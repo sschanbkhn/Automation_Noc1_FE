@@ -24,8 +24,7 @@ import {
   Manufacturers,
 } from "components/Network";
 import ScheduleTriggerForm from "components/RNOC1/R009";
-import NornirPlatformView from "components/SNOC/components/NornirPlatformView";
-import DashOrigin from "components/SNOC/views/dashboard/DashOrigin/SystemHealthDashboard";
+
 import { Config } from "components/System";
 import { Account, Organ, Permission, Role } from "components/User";
 import { Cookie } from "helpers/cookie";
@@ -45,8 +44,13 @@ import {
   default as ConfigReport,
   default as DashboardR007,
 } from "components/RNOC1/R009";
+// snoc start
+
+import UserGroupDeptManager from "components/SNOC/Admin/UserGroupDeptManager";
+import NornirPlatformView from "components/SNOC/components/NornirPlatformView";
 import DnsConfigDashboard from "components/SNOC/views/dashboard/DashOrigin/DnsConfigDashboard";
 import SbcDashboardWithNavbar from "components/SNOC/views/dashboard/DashOrigin/SbcDashboardWithNavbar";
+import DashOrigin from "components/SNOC/views/dashboard/DashOrigin/SystemHealthDashboard";
 import DnsLacracrnc from "components/SNOC/views/forms/dns/Dnslacracrnc";
 import TACConfigPanel from "components/SNOC/views/forms/dns/TACConfigPanel";
 import Healthcheck from "components/SNOC/views/forms/health/Healthcheck";
@@ -56,25 +60,27 @@ import DeclareNumberForm from "components/SNOC/views/forms/sbc/DeclareNumberForm
 import RequestHistoryTable from "components/SNOC/views/forms/sbc/RequestHistoryTable";
 import RoutingDeclarationForm from "components/SNOC/views/forms/sbc/RoutingDeclarationForm";
 import HistoricalReporting from "components/SNOC/views/tables/health/HistoricalReporting";
-/// SNOC
+
 import RequireSnocAuthInline from "components/SNOC/auth/RequireSnocAuthInline";
+import RequireSuperUserInline from "components/SNOC/auth/RequireSuperUserInline";
 import SnocLoginInline from "components/SNOC/auth/SnocLoginInline";
 import SnocSubApp from "components/SNOC/SnocSubApp";
 import HostConfigPanel from "components/SNOC/views/forms/hosts/HostConfigPanel";
 import KPIChartDashboard from "components/SNOC/views/forms/kpi/KPIChartDashboard";
 import KPISelectorPage from "components/SNOC/views/forms/kpi/KPISelectorPage";
 import ScheduleGeneric from "components/SNOC/views/forms/kpi/ScheduleCausecode";
-///
+///snoc end
 interface Props {
   Apps: any;
 }
+// snoc start
 const SNOC_CODES = new Set<string>([
   "hc-dashboard",
   "hc-dashboard-dns",
   "hc-dashboard-sbc",
   "hc-snoc-admin-dashboard",
 ]);
-
+//snoc end
 const MainPageRoute = (props: Props) => {
   const GetPage = (code: String) => {
     switch (code) {
@@ -150,6 +156,7 @@ const MainPageRoute = (props: Props) => {
         return <Ucppoe />;
       case "i004_1":
         return <I004_1List />;
+      // snoc start
       case "hc-dashboard":
         return <DashOrigin />;
       case "hc-dashboard-dns":
@@ -157,6 +164,7 @@ const MainPageRoute = (props: Props) => {
       case "hc-dashboard-sbc":
         return <SbcDashboardWithNavbar />;
       case "ClearThuebaoDaphien":
+        //snoc end
         return <ClearThuebaoDaphien />;
       case "LspQuocte":
         return <LspQuocte />;
@@ -166,43 +174,6 @@ const MainPageRoute = (props: Props) => {
         return <Page404 />;
     }
   };
-  // const RouteRender = () => {
-  //   let html = [];
-  //   let rootMenu: any = menu_config.Menu;
-  //   for (let i = 0; i < rootMenu.length; i++) {
-  //     let menu = rootMenu[i];
-  //     if (IsMenuOfUser(menu)) {
-  //       // BỎ QUA các route SNOC (để tránh trùng với nhóm RequireSnocAuthInline phía dưới)
-  //       if (!SNOC_CODES.has(menu.code)) {
-  //         html.push(
-  //           <Route
-  //             key={menu.code}
-  //             path={menu.url}
-  //             element={GetPage(menu.code)}
-  //           />
-  //         );
-  //       }
-  //       html.push(
-  //         <Route key={menu.code} path={menu.url} element={GetPage(menu.code)} />
-  //       );
-  //     }
-  //     if (menu.subMenu && menu.subMenu.length > 0) {
-  //       for (let j = 0; j < menu.subMenu.length; j++) {
-  //         let subMenu = menu.subMenu[j];
-  //         if (IsMenuOfUser(subMenu)) {
-  //           html.push(
-  //             <Route
-  //               key={subMenu.code}
-  //               path={subMenu.url}
-  //               element={GetPage(subMenu.code)}
-  //             />
-  //           );
-  //         }
-  //       }
-  //     }
-  //   }
-  //   return html;
-  // };
 
   const RouteRender = () => {
     const html: JSX.Element[] = [];
@@ -211,13 +182,13 @@ const MainPageRoute = (props: Props) => {
     for (const menu of rootMenu) {
       if (!IsMenuOfUser(menu)) continue;
 
-      // 🔒 BỎ QUA HOÀN TOÀN route SNOC ở đây
+      // 🔒 SNOC config BỎ QUA HOÀN TOÀN route SNOC ở đây start
       if (!SNOC_CODES.has(menu.code)) {
         html.push(
           <Route key={menu.code} path={menu.url} element={GetPage(menu.code)} />
         );
       }
-
+      // 🔒 SNOC config BỎ QUA HOÀN TOÀN route SNOC ở đây end
       if (menu.subMenu?.length) {
         for (const sub of menu.subMenu) {
           if (IsMenuOfUser(sub) && !SNOC_CODES.has(sub.code)) {
@@ -266,6 +237,11 @@ const MainPageRoute = (props: Props) => {
           {/* các route SNOC cần login */}
 
           <Route path="/app/dashboard/origin" element={<DashOrigin />} />
+          {/* chỉ super mới vào được khu Admin */}
+          <Route element={<RequireSuperUserInline />}>
+            <Route path="/app/snoc/admin" element={<UserGroupDeptManager />} />
+          </Route>
+
           <Route path="/healthcheck/devices" element={<HostConfigPanel />} />
           <Route path="/healthcheck/schedule" element={<Schedule />} />
           <Route path="/healthcheck/checks" element={<Healthcheck />} />
