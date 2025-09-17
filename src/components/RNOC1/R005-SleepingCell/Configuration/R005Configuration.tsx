@@ -314,7 +314,7 @@ const Configuration: React.FC = () => {
       {/* MRBTS Modal - search term riêng 18092025 */}
       <MRBTSModal show={showMRBTSModal} selectedConfig={selectedConfig} modalData={modalData} modalLoading={modalLoading} modalSearchTerm={modalSearchTerm} onSearch={handleModalSearch} onClose={closeAllModals} onAdd={handleAddNew} onEdit={handleEditItem} onDelete={handleDeleteItem} onRefresh={() => selectedConfig && loadConfigData(selectedConfig.id)} />
 
-      {/* Archive Modal 1 *   /}
+      {/* Archive Modal 1 * 2025   /}
       <ArchiveModal show={showArchiveModal} onClose={closeAllModals} onEdit={handleEditItem} onAdd={handleAddNew} />
       {/* a  c d e f gh  12345 */}
       <AddEditModal show={showAddEditModal} selectedConfig={selectedConfig} editingItem={editingItem} formData={formData} setFormData={setFormData} onSave={handleSaveForm} onClose={() => setShowAddEditModal(false)} />
