@@ -311,12 +311,12 @@ const Configuration: React.FC = () => {
       {/* Normal Modal */}
       <DataTableModal show={showModal} selectedConfig={selectedConfig} modalData={modalData} modalLoading={modalLoading} modalSearchTerm={modalSearchTerm} onSearch={handleModalSearch} onClose={closeAllModals} onAdd={handleAddNew} onEdit={handleEditItem} onDelete={handleDeleteItem} />
 
-      {/* MRBTS Modal - search term riêng 18092025 */}
+      {/* MRBTS Modal - search term riêng */}
       <MRBTSModal show={showMRBTSModal} selectedConfig={selectedConfig} modalData={modalData} modalLoading={modalLoading} modalSearchTerm={modalSearchTerm} onSearch={handleModalSearch} onClose={closeAllModals} onAdd={handleAddNew} onEdit={handleEditItem} onDelete={handleDeleteItem} onRefresh={() => selectedConfig && loadConfigData(selectedConfig.id)} />
 
-      {/* Archive Modal 1 * 2025   /}
+      {/* Archive Modal */}
       <ArchiveModal show={showArchiveModal} onClose={closeAllModals} onEdit={handleEditItem} onAdd={handleAddNew} />
-      {/* a  c d e f gh  12345 */}
+      {/* a  c d e f gh  12345 1809*/}
       <AddEditModal show={showAddEditModal} selectedConfig={selectedConfig} editingItem={editingItem} formData={formData} setFormData={setFormData} onSave={handleSaveForm} onClose={() => setShowAddEditModal(false)} />
     </div>
   );
