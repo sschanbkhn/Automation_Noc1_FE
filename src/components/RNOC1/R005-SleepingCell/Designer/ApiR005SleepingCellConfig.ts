@@ -1,4 +1,4 @@
-// const IS_LOCAL = false; // ← true: local, false: server
+// const IS_LOCAL = true; // ← true: local, false: server
 const IS_LOCAL = false; // ← true: local, false: server
 
 export const API_CONFIG = {

@@ -4,13 +4,14 @@
 import React, { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 // import { faEnvelope, faFolderOpen, faNetworkWired, faShieldAlt, faClock, faDatabase } from "@fortawesome/free-solid-svg-icons";
-import { faEnvelope, faFolderOpen, faNetworkWired, faShieldAlt, faClock, faDatabase, faPlus, faTimes, faSearch, faDownload } from "@fortawesome/free-solid-svg-icons";
+import { faClipboardList, faEnvelope, faFolderOpen, faNetworkWired, faShieldAlt, faClock, faDatabase, faPlus, faTimes, faSearch, faDownload } from "@fortawesome/free-solid-svg-icons";
 import BangLog from "./BangLog";
 import API_URL from "./apiConfig";
 // Mapping card với table
 const configTableMapping: { [key: number]: { table: string; api: string; title: string } } = {
   1: { table: "tablefilepath", api: `${API_URL}/thong-ke-log/`, title: "Execution Log" },
   2: { table: "objtablemrbts_infor", api: "/api/mrbts", title: "Data Storage" },
+  3: { table: "user_log", api: "/api/mrbts", title: "Operation Log" },
 };
 
 // //Chia loại API để vào dev hoặc production
@@ -64,14 +65,14 @@ const Monitor = () => {
       iconColor: "#10b981",
       status: "active",
     },
-    // {
-    //   id: 3,
-    //   title: "Email Configuration",
-    //   description: "SMTP & Notification Settings",
-    //   icon: faEnvelope,
-    //   iconColor: "#3b82f6",
-    //   status: "active",
-    // },
+    {
+      id: 3,
+      title: "Operation Log",
+      description: "User Action Records",
+      icon: faClipboardList,
+      iconColor: "#3b82f6",
+      status: "maintenance",
+    },
     
     // {
     //   id: 4,
@@ -127,7 +128,7 @@ const Monitor = () => {
 
   const handleDownloadCSDL = () => {
     // Gọi API download file CSDL
-    window.location.href = `${API_URL}download/doi-soat/`; 
+    window.location.href = `${API_URL}/download/doi-soat/`; 
   };
 
   return (
@@ -555,7 +556,7 @@ const Monitor = () => {
               >
                 <thead>
                   <tr style={{ background: "#f0f0f0", borderBottom: "2px solid #ccc" }}>
-                    <th style={{ padding: "12px" }}>Tác vụ thực hiện</th>
+                    <th style={{ padding: "12px" }}>Dữ liệu lưu trữ</th>
                     <th style={{ padding: "12px" }}></th>
                   </tr>
                 </thead>

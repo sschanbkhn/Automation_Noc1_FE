@@ -21,7 +21,9 @@ import API_URL from './apiConfig';
 
 
 function VPN3G4G() {
-  const [tab, setTab] = useState("toanquoc");
+  const [tab, setTab] = useState("dashboard");
+  const [option, setOption] = useState("toanquoc");
+  const [isDisplayed, setIsDisplayed] = useState(false);
 
   
 
@@ -47,24 +49,64 @@ return (
       <div className="w-full">
       {/* Header */}
       <Header />
-      <div className="flex justify-between items-center p-2 w-full">
-      {/* Nút bấm */}
-      <Button onChangeTab={setTab} tab={tab} />
-       {/* Thời gian cập nhật */}
-      <span className="text-sm text-gray-500 whitespace-nowrap">
-      Cập nhật gần nhất: {runTime ? runTime : "Chưa có dữ liệu"}
-      </span>
+        <div className="flex justify-between items-center p-2 w-full">
+        {/* Nút bấm */}
+        <Button onChangeTab={setTab} tab={tab} />
+        </div>
+         {/* Lựa chọn tab bên trong */}
+        {/* <div className="flex justify-between items-center w-full"> */}
+        <div className="d-flex align-items-center justify-content-between mb-3 flex-nowrap">
+        {/* Thời gian cập nhật */}
+          <div className="d-flex align-items-center" style={{ marginLeft: "1rem" }}>
+                <span style={{ fontSize: "1.2rem", marginRight: "4px" }}>⏰</span>
+                <h6 className="fw-bold mb-0">Cập nhật gần nhất: {runTime ? runTime : "Chưa có dữ liệu"}</h6>
+          </div>
+          {tab === "dashboard" && (
+              <span 
+                // className="position-fixed end-0 me-3 bg-info shadow-lg rounded p-3" 
+                className="position-relative end-0 me-3 bg-info-subtle text-info-emphasis shadow-lg rounded-3 p-2"
+              >
+                <label className="block text-gray-700 text-sm mb-2" >Chọn khu vực:</label>
+                <select
+                  value={option}
+                  onChange={(e) => {
+                    setOption(e.target.value);
+                    setIsDisplayed(false); // reset dữ liệu mỗi lần chuyển khu vực
+                  }}
+                  className="border rounded px-2 w-40"
+                >
+                  <option value="toanquoc">Toàn Quốc</option>
+                  <option value="mienbac">Miền Bắc</option>
+                  <option value="mientrung">Miền Trung</option>
+                  <option value="miennam">Miền Nam</option>
+                </select>
+                <button
+                  className="btn btn-success ms-3"
+                  onClick={() => setIsDisplayed(!isDisplayed)}
+                >
+                  {isDisplayed ? "Ẩn dữ liệu" : "Display"}
+                </button>
+          </span>
+            )}
+        </div>
+        <div style={{ padding: "1rem" }}>
+          {/* Giao diện hiển thị theo tab */}
+          {/* {tab === "toanquoc" && <ToanQuoc />}
+          {tab === "mienbac" && <MienBac />}
+          {tab === "miennam" && <MienNam />}
+          {tab === "mientrung" && <MienTrung />} */}
+          {tab === "dashboard" && (
+            <>
+            {option === "toanquoc" && <ToanQuoc isDisplayed={isDisplayed} />}
+            {option === "mienbac" && <MienBac isDisplayed={isDisplayed} />}
+            {option === "mientrung" && <MienTrung isDisplayed={isDisplayed} />}
+            {option === "miennam" && <MienNam isDisplayed={isDisplayed} />}
+            </>
+          )}
+          {tab === "giamsat" && <Giamsat />}
+          {tab === "thietlap" && <ThietLap />}
+        </div>
       </div>
-      <div style={{ padding: "1rem" }}>
-        {/* Giao diện hiển thị theo tab */}
-        {tab === "toanquoc" && <ToanQuoc />}
-        {tab === "mienbac" && <MienBac />}
-        {tab === "miennam" && <MienNam />}
-        {tab === "mientrung" && <MienTrung />}
-        {tab === "giamsat" && <Giamsat />}
-        {tab === "thietlap" && <ThietLap />}
-      </div>
-    </div>
   );
 }
 ;

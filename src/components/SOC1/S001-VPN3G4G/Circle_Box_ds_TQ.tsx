@@ -21,6 +21,7 @@ const COLORS = ['#035294de', '#2f8af3ff', '#43faccff'];
 
 interface Props {
   onZoneClick: (index: number) => void;
+  isDisplayed: boolean;
 }
 
 // Hiển thị % nằm trong mỗi miếng Pie
@@ -53,12 +54,14 @@ const renderCustomizedLabel = ({
   );
 };
 
-export default function PieWithPercentage({ onZoneClick }: Props) {
+export default function PieWithPercentage({ onZoneClick , isDisplayed }: Props) {
 
     const [soLuongMb,setSoLuongMb] = useState<number>(0);
     const [soLuongMt,setSoLuongMt] = useState<number>(0);
     const [soLuongMn,setSoLuongMn] = useState<number>(0);
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
     // useEffect(() => {
         
     //     fetch("http://127.0.0.1:8000/api/doi_soat/count/MB_total/")
@@ -75,6 +78,13 @@ export default function PieWithPercentage({ onZoneClick }: Props) {
     //     }, []); 
       
     useEffect(() => {
+
+        if (!isDisplayed) {
+            setError(null); // reset lỗi khi không hiển thị
+            return;
+          }
+
+          setError(null); // reset lỗi trước khi fetch
         const endpoints = [
           "MB_total",
           "MT_total",
@@ -92,9 +102,26 @@ export default function PieWithPercentage({ onZoneClick }: Props) {
           setSoLuongMt(results[1]);
           setSoLuongMn(results[2]);
         });
-      }, []);
+      }, [isDisplayed]);
+    if (!isDisplayed) {
+        return (
+          <div
+            style={{
+              fontSize: "24px",       // chữ to hơn
+              fontWeight: "bold",     // đậm
+              textAlign: "center",    // căn giữa ngang
+              marginTop: "20%",       // đẩy xuống giữa màn hình (tương đối)
+              color: "#555555ff",          // màu xám nhẹ (tùy chỉnh)
+            }}
+          >
+            No Data
+          </div>
+        );
+      }
 
-
+    if (error) {
+      return <div style={{ color: "red" }}>Error: {error}</div>;
+    }
 
     const data = [
     { name: 'Miền Bắc', value: soLuongMb },

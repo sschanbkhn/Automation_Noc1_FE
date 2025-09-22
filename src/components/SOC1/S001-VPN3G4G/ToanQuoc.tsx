@@ -20,8 +20,10 @@ import API_URL from "./apiConfig"
 // type ToanQuocProps = {
 //   onChangeTab: (tab: string) => void;
 // };
-
-function ToanQuoc()
+interface ToanQuocProps {
+  isDisplayed: boolean;
+}
+function ToanQuoc({ isDisplayed }: ToanQuocProps)
   {
     type ThietBi = {
       ten_apn: string;
@@ -121,6 +123,7 @@ type LoaiBang =
   const [loaiBangTron, setLoaiBangTron] = useState<"mienbac" | "miennam" | "mientrung" |"mienbac_ds" | "miennam_ds"| "mientrung_ds"|null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [tieuDe, setTieuDe] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   // //Chia loại API để vào dev hoặc production
   // let ENV = "dev"; // hoặc "prod"
@@ -137,7 +140,11 @@ type LoaiBang =
 // } else {
 //   API_URL = "http://10.155.43.210:8000/api/vpn3g4g";
 // }
-
+const headerAnimation = useSpring({
+            from: { opacity: 0, transform: 'translateY(-20px)' },
+            to: { opacity: 1, transform: 'translateY(0)' },
+            config: { tension: 300, friction: 30 }
+            });
 const handleBoxClick = (
   dataMoi: any[], // hoặc bạn tạo interface cụ thể
   tieuDeMoi: string,
@@ -185,6 +192,23 @@ const handleClickPieSlice_ds = (index: number) => {
 }
  
     useEffect(() => {
+     if (!isDisplayed) {
+        setError(null); // reset lỗi
+        // reset dữ liệu
+        setSoLechAPN(0);
+        setSoLechPGW(0);
+        setSoLechIpSim(0);
+        setSoLechDaiIp(0);
+        setSoLechIpGw(0);
+        setSoLechVlan(0);
+        setSoLechOspf(0);
+        setSoLechApnid(0);
+        setSoLechPdpcp(0);
+        setSoLechHss(0);
+        setSoLechTrungLap(0);
+        return;
+      }
+    setError(null); // reset lỗi trước khi fetch
     const endpoints = [
       "khong_dung_apn",
       "khong_dung_pgw",
@@ -219,7 +243,27 @@ const handleClickPieSlice_ds = (index: number) => {
       setSoLechHss(results[9]);
       setSoLechTrungLap(results[10]);
     });
-  }, []);
+  }, [isDisplayed]);
+  
+  //  if (!isDisplayed) {
+  //       return (
+  //         <div
+  //           style={{
+  //             fontSize: "24px",       // chữ to hơn
+  //             fontWeight: "bold",     // đậm
+  //             textAlign: "center",    // căn giữa ngang
+  //             marginTop: "20%",       // đẩy xuống giữa màn hình (tương đối)
+  //             color: "#555555ff",          // màu xám nhẹ (tùy chỉnh)
+  //           }}
+  //         >
+  //           No Data
+  //         </div>
+  //       );
+  //     }
+
+  //   if (error) {
+  //     return <div style={{ color: "red" }}>Error: {error}</div>;
+  //   }
 
   const thongKeData = [
     { ten: "APN", soLuong: soLechAPN },
@@ -360,11 +404,7 @@ const handleClickPieSlice_ds = (index: number) => {
       setDanhSachDsMN(data); // data là mảng object thiết bị
     });}
 
-    const headerAnimation = useSpring({
-            from: { opacity: 0, transform: 'translateY(-20px)' },
-            to: { opacity: 1, transform: 'translateY(0)' },
-            config: { tension: 300, friction: 30 }
-            });
+    
 
 
     return (
@@ -430,11 +470,11 @@ const handleClickPieSlice_ds = (index: number) => {
           {/* Cột bên trái: khối thống kê */}
           <div className = "box_trai_zone1" style={{ width: '40%', height:'400px'}}>
           <h2 className="text_display_tren">THỐNG KÊ CHƯA CHUẨN HOÁ BE</h2>
-          <Circle_box_TQ onZoneClick={handleClickPieSlice} />  {/* ✅ truyền callback */}
+          <Circle_box_TQ onZoneClick={handleClickPieSlice} isDisplayed={isDisplayed}/>  {/* ✅ truyền callback */}
         </div>
         <div className= "box_phai_zone1" style={{ width: '40%', height:'400px'}}>
             <h2 className="text_display_tren">THỐNG KÊ ĐỐI SOÁT BE VÀ CSDL</h2>
-            <Circle_Box_ds_TQ onZoneClick={handleClickPieSlice_ds}/>
+            <Circle_Box_ds_TQ onZoneClick={handleClickPieSlice_ds} isDisplayed={isDisplayed}/>
         </div>
       </div>
       
@@ -442,7 +482,8 @@ const handleClickPieSlice_ds = (index: number) => {
        {/* Khung zone 2*/}
       <div  style={{ marginTop: "20px", display: 'flex', gap: '20px' }}>
         <div className = "box_trai_zone2" style={{ width: '50%', height:'420px'}}>
-      <h2 className="text_display_tren">DANH MỤC LỖI CHUẨN HÓA DỮ LIỆU BE</h2>
+           {/* Thông báo No Data khi isDisplayed = false */}
+        <h2 className="text_display_tren">DANH MỤC LỖI CHUẨN HÓA DỮ LIỆU BE</h2>
         <ResponsiveContainer width="90%" height="90%">
         <BarChart barSize={28} data={thongKeData}>
           <CartesianGrid strokeDasharray="3 3" />
@@ -508,7 +549,7 @@ const handleClickPieSlice_ds = (index: number) => {
         </div>
 
         <div className= "box_phai_zone2" style={{ width: '50%', height:'420px'}}>
-          <BoxDoiSoat onClickBox={handleBoxClick} />
+          <BoxDoiSoat onClickBox={handleBoxClick} isDisplayed={isDisplayed}/>
         </div>
       </div>
     <hr style={{ margin: '40px 0', border: '2.5', borderTop: '2px solid #ccc' }} />

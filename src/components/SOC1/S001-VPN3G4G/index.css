@@ -200,13 +200,15 @@
   border-radius: 10px;
 }
 .nut_bam{
-  padding: 5px 5px;
+  padding: 6px 14px;
   border-radius: 10px;
   font-size: 20px;
-  font-family: 'Times New Roman', Times, serif;
+  /* font-family: 'Times New Roman', Times, serif; */
+  font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   /* font-weight: bold; */
   background-color: aliceblue;
-   transition: 0.3s;
+  transition: 0.3s;
+  margin-right: 8px; /* cách nút bên phải 8px */
 }
 .nut_bam:hover{
   /* background-color: hsl(172, 88%, 74%); */
@@ -216,6 +218,7 @@
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
 }
 .nut_bam.active {
+  transform: scale(1.1); /* khi click giữ: phóng to thêm */
   background-color: #007bff;
   color: white;
   font-weight: bold;

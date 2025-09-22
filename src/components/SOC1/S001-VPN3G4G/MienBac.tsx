@@ -21,7 +21,12 @@ import API_URL from './apiConfig';
 // };
 // { onChangeTab }: KhuVucProps
 
-function MienBac()
+
+interface MienBacProps {
+  isDisplayed: boolean;
+}
+
+function MienBac({ isDisplayed }: MienBacProps)
   {
     type ThietBi = {
       ten_apn: string;
@@ -51,6 +56,8 @@ function MienBac()
     HSS_Profile_be: string;
     Ghi_chu: string;
     };
+
+   
 
     //Chia loại API để vào dev hoặc production
     // let ENV = "prod"; // hoặc "prod"
@@ -172,7 +179,8 @@ const handleBoxClick = (
     setLoaiBangTron(null);
   }
 }
- 
+
+  
   //Các action gọi bảng
   const displayDanhSachTenAPN = () =>{
     fetch(`${API_URL}/thong-ke-loi/mb/khong_dung_apn/`)
@@ -342,12 +350,12 @@ const handleBoxClick = (
       {/* Cột bên trái: khối thống kê */}
         <div className= "box_trai_zone1" style={{ width: '50%', height:'400px'}}>
             <h2 className="text_display_tren">DANH SÁCH KHÁCH HÀNG CHƯA CHUẨN HOÁ BE</h2>
-                <Circle_box_MB onZoneClick={handleClickPieSlice} />  {/* ✅ truyền callback */}
+                <Circle_box_MB onZoneClick={handleClickPieSlice} isDisplayed={isDisplayed}/>  {/* ✅ truyền callback */}
         
         </div>
         <div className= "box_phai_zone1" style={{ width: '50%', height:'400px'}}>
             <h2 className="text_display_tren">THỐNG KÊ ĐỐI SOÁT BE VÀ CSDL</h2>
-                <Circle_box_ds_MB onZoneClick={handleClickPieSlice_ds} />  {/* ✅ truyền callback */}
+                <Circle_box_ds_MB onZoneClick={handleClickPieSlice_ds} isDisplayed={isDisplayed} />  {/* ✅ truyền callback */}
         </div>
       </div>
        {/* Khung zone 2*/}
@@ -407,3 +415,6 @@ const handleBoxClick = (
 </>);
   }
 export default MienBac;
+
+
+

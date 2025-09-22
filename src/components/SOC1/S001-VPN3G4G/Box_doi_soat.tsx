@@ -25,16 +25,18 @@ type DoiSoat = {
 
 interface Props {
   onClickBox: (data: any[], tieuDe: string, loaiBang: string) => void;
+  isDisplayed: boolean;
 }
 
 // Component duy nhất
-const BoxDoiSoat = ({ onClickBox }: Props) => {
+const BoxDoiSoat = ({ onClickBox , isDisplayed }: Props) => {
   const [soDoiSoatAPN, setSoDoiSoatAPN] = useState(0);
   const [soDoiSoatAPNID, setSoDoiSoatAPNID] = useState(0);
   const [soDoiSoatPDPCP, setSoDoiSoatPDPCP] = useState(0);
   const [soDoiSoatHss, setSoDoiSoatHss] = useState(0);
   const [soDoiSoatIp, setSoDoiSoatIp] = useState(0);
   const [soDoiSoatPgw, setSoDoiSoatPgw] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   const displayDoiSoatAPN = () => {
     fetch(`${API_URL}/doi_soat/lech_APN/`)
@@ -84,6 +86,12 @@ const BoxDoiSoat = ({ onClickBox }: Props) => {
       });
   };
   useEffect(() => {
+        if (!isDisplayed) {
+            setError(null); // reset lỗi khi không hiển thị
+            return;
+          }
+
+          setError(null); // reset lỗi trước khi fetch
         const endpoints = [
           "lech_APN",
           "lech_APNID",
@@ -108,7 +116,26 @@ const BoxDoiSoat = ({ onClickBox }: Props) => {
           setSoDoiSoatIp(results[4]);
           setSoDoiSoatPgw(results[5]);
         });
-    }, []);
+    }, [isDisplayed]);
+    if (!isDisplayed) {
+        return (
+          <div
+            style={{
+              fontSize: "24px",       // chữ to hơn
+              fontWeight: "bold",     // đậm
+              textAlign: "center",    // căn giữa ngang
+              marginTop: "20%",       // đẩy xuống giữa màn hình (tương đối)
+              color: "#555555ff",          // màu xám nhẹ (tùy chỉnh)
+            }}
+          >
+            No Data
+          </div>
+        );
+      }
+
+    if (error) {
+      return <div style={{ color: "red" }}>Error: {error}</div>;
+    }
 
   const tongLoi = soDoiSoatAPN + soDoiSoatAPNID + soDoiSoatPDPCP + soDoiSoatHss + soDoiSoatIp + soDoiSoatPgw;
   return (
