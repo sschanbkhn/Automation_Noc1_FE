@@ -22,8 +22,8 @@ import {
   toggleDeviceExcluded,
   upsertLatestFromClient, // ✅ upsert ngay vào latest
 } from "../../../redux/Healthcheck/healthcheckSlice";
+import KPIExplorerCore from "../../forms/kpi/KPIExplorerCore";
 import styles from "./../../../styles/SystemHealth.module.scss";
-
 // ✅ Recharts cho đồ thị
 import {
   Bar,
@@ -34,6 +34,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+
+// 👉 KPI Explorer core (tách phần chính để embed vào modal)
 
 const NOK_BAR_COLOR = "#dc3545";
 
@@ -89,6 +91,9 @@ const HealthcheckTable = ({
   const [showHourModal, setShowHourModal] = useState(false);
   const [selectedHour, setSelectedHour] = useState(null);
   const [selectedHourItems, setSelectedHourItems] = useState([]);
+
+  // 👉 KPI Explorer modal
+  const [kpiOpen, setKpiOpen] = useState(false);
 
   // ✅ trạng thái đang chạy healthcheck theo từng host (chỉ row đó quay)
   const [runningByHost, setRunningByHost] = useState({});
@@ -509,6 +514,17 @@ const HealthcheckTable = ({
               >
                 Xuất Excel
               </Button>
+              <Button
+                type="button"
+                variant="outline-primary"
+                onClick={() => setKpiOpen(true)}
+                disabled={!platformList?.length}
+                title={
+                  platformList?.length ? "" : "Chưa có platform để xem KPI"
+                }
+              >
+                📈 KPI Explorer
+              </Button>
             </Form>
           </Card.Header>
           <Card.Body>
@@ -888,6 +904,28 @@ const HealthcheckTable = ({
               </>
             )}
           </Card.Body>
+          {/* ==== KPI SECTION (inline, no modal) ==== */}
+          <div className="mt-3">
+            <Card>
+              <Card.Header>
+                <Card.Title as="h6" className="mb-0">
+                  KPI charts (embedded)
+                </Card.Title>
+              </Card.Header>
+              <Card.Body>
+                <KPIExplorerCore
+                  // gán ngữ cảnh sẵn cho KPI (nếu bạn có các prop này trong component)
+                  defaultGroup={group}
+                  defaultSubsystem={subsystem}
+                  defaultPlatform={platformList?.[0] || ""}
+                  // QUAN TRỌNG: tắt realtime để không mở WS trong trang Healthcheck
+                  realtime={false}
+                  // nếu bạn có prop "embedded" hoặc "hideChrome"
+                  embedded
+                />
+              </Card.Body>
+            </Card>
+          </div>
         </Card>
       </Col>
     </Row>

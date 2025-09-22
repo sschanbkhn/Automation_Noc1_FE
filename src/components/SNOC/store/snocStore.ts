@@ -22,7 +22,7 @@ import { getSnocToken, onSnocUnauthorized } from "../api/snocApiWithAutoToken";
 import departmentReducer from "./../redux/User/departmentSlice";
 import groupReducer from "./../redux/User/groupSlice";
 import userReducer from "./../redux/User/userSlice";
-
+import kpiPinnedReducer from "../redux/KPI/kpiPinnedSlice";
 
 const snocStore = configureStore({
   reducer: {
@@ -38,6 +38,7 @@ const snocStore = configureStore({
     user: userReducer,
     group: groupReducer,
     department: departmentReducer,
+    kpiPinned: kpiPinnedReducer,
   },
 });
 

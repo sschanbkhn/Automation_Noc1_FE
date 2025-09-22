@@ -175,7 +175,7 @@ export const snocApi: AxiosInstance = buildInstance(BASE);
 export const snocApiNoAuth: AxiosInstance = buildInstance(BASE);
 
 // 🔹 Chỉ dành cho các route FastAPI (ví dụ /fastapi/me)
-const HOST_ROOT = BASE.replace(/\/api$/i, "");
+const HOST_ROOT = BASE;
 export const snocFastApi: AxiosInstance = buildInstance(`${HOST_ROOT}/fastapi`);
 
 /* ===== Login API (KHÔNG tự lưu token) ===== */
