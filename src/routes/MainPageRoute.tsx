@@ -20,15 +20,10 @@ import CenterDashboard from '../DashboardAutomation/CenterDashboard';
 import RoomDashboard from '../DashboardAutomation/RoomDashboard';
 import DashboardRnocSummary from '../DashboardAutomation/DashboardRnoc/DashboardRnocSummary';
 import DashboardRnocRoom from '../DashboardAutomation/DashboardRnoc/DashboardRnocRoom';
-import Anm_uc1 from 'components/ANM/UC1';
-import Anm_uc2 from 'components/ANM/UC2';
-import Anm_uc3 from 'components/ANM/UC3';
-import Anm_uc4 from 'components/ANM/UC4';
-import Anm_uc5 from 'components/ANM/UC5';
-import Anm2_uc1 from 'components/ANM2/UC1';
-import Anm2_uc2 from 'components/ANM2/UC2';
-import Anm2_uc4 from 'components/ANM2/UC4';
-import Anm3_uc1 from 'components/ANM3/UC1';
+import AnmTabs from 'components/ANM/Anmtabs';
+import AnmTabs2 from 'components/ANM2/Anmtabs';
+import AnmTabs3 from 'components/ANM3/Anmtabs';
+import AnmTabs4 from 'components/ANM3/Anmtabs2';
 
 interface Props {
     Apps: any
@@ -89,23 +84,13 @@ const MainPageRoute = (props: Props) => {
             case "DashboardRnocRoom":
                 return <DashboardRnocRoom />;
             case "anm_uc1":
-                return <Anm_uc1 />;
-            case "anm_uc2":
-                return <Anm_uc2 />;
-            case "anm_uc3":
-                return <Anm_uc3 />;
-            case "anm_uc4":
-                return <Anm_uc4 />;
-            case "anm_uc5":
-                return <Anm_uc5 />;
+                return <AnmTabs />;
             case "anm2_uc1":
-                return <Anm2_uc1 />;
-            case "anm2_uc2":
-                return <Anm2_uc2 />;
-            case "anm2_uc4":
-                return <Anm2_uc4 />;
+                return <AnmTabs2 />;
             case "anm3_uc1":
-                return <Anm3_uc1 />;
+                return <AnmTabs3 />;
+            case "anm4_uc1":
+                return <AnmTabs4 />;
             default:
                 return <Page404 />;                                                                                                         
         }        
