@@ -7,11 +7,6 @@ import API_CONFIG from "../Designer/ApiR005SleepingCellConfig";
 import * as ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 
-// Import
-import { exportArchiveDetail, exportArchiveList } from "./ExportExcelFileUtils";
-// 
-
-
 // Thay đổi imports
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimes, faEdit, faTrash, faDownload, faPlus, faSearch, faFilter, faArchive, faCalendarAlt, faMapMarkerAlt, faIndustry } from "@fortawesome/free-solid-svg-icons";
@@ -55,43 +50,13 @@ const ArchiveModal: React.FC<ArchiveModalProps> = ({ show, onClose, onEdit, onAd
     setArchiveLoading(true);
     try {
       const params = new URLSearchParams();
+      if (archiveFilters.startDate) params.append("startDate", archiveFilters.startDate);
+      if (archiveFilters.endDate) params.append("endDate", archiveFilters.endDate);
+      if (archiveFilters.province) params.append("province", archiveFilters.province);
+      if (archiveFilters.district) params.append("district", archiveFilters.district);
+      if (archiveFilters.vendor) params.append("vendor", archiveFilters.vendor);
 
-      // Kiểm tra xem có filters không
-      const hasDateFilter = archiveFilters.startDate || archiveFilters.endDate;
-      const hasLocationFilter = archiveFilters.province || archiveFilters.district || archiveFilters.vendor;
-      const hasSearchFilter = searchTerm.trim();
-      const hasAnyFilter = hasDateFilter || hasLocationFilter || hasSearchFilter;
-
-      let endpoint = "";
-      let pageSize = 100; // Mặc định
-
-      if (hasAnyFilter) {
-        // Có filter -> dùng API có date
-        endpoint = "archive-reports-date";
-        pageSize = 1000;
-
-        if (archiveFilters.startDate) params.append("startDate", archiveFilters.startDate);
-        if (archiveFilters.endDate) params.append("endDate", archiveFilters.endDate);
-        if (archiveFilters.province) params.append("province", archiveFilters.province);
-        if (archiveFilters.district) params.append("district", archiveFilters.district);
-        if (archiveFilters.vendor) params.append("vendor", archiveFilters.vendor);
-        if (searchTerm.trim()) params.append("searchTerm", searchTerm.trim());
-      } else {
-        // Không có filter -> dùng API mặc định
-        endpoint = "archive-reports";
-      }
-
-      params.append("page", "1");
-      params.append("pageSize", pageSize.toString());
-
-      // Gọi API - nếu không có filter thì lấy mặc định, có filter thì lấy theo filter
-      // const pageSize = hasDateFilter || hasLocationFilter || hasSearchFilter ? 1000 : 100;
-      pageSize = hasDateFilter || hasLocationFilter || hasSearchFilter ? 1000 : 100;
-
-      const response = await fetch(`${API_CONFIG.BASE_URL}/configuration/${endpoint}?${params.toString()}`);
-
-      // Sử dụng endpoint mới với filters
-      // const response = await fetch(`${API_CONFIG.BASE_URL}/configuration/archive-reports-filtered?${params.toString()}`);
+      const response = await fetch(`${API_CONFIG.BASE_URL}/configuration/archive-reports?page=1&pageSize=50&${params.toString()}`);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -100,14 +65,9 @@ const ArchiveModal: React.FC<ArchiveModalProps> = ({ show, onClose, onEdit, onAd
       const result = await response.json();
       const data = result.data || result;
       setArchiveData(data);
-      setPagination((prev) => ({ ...prev, currentPage: 1, total: data.length }));
+      setPagination((prev) => ({ ...prev, currentPage: 1 }));
 
-      // *** QUAN TRỌNG: Load lại dropdown options sau khi có data mới ***
-      if (hasDateFilter) {
-        loadDropdownOptions(); // Refresh dropdown theo ngày mới
-      }
-
-      console.log("Archive data loaded:", result.data);
+      console.log("Archive data loaded:", data);
     } catch (error) {
       console.error("Error loading archive data:", error);
       setArchiveData([]);
@@ -116,7 +76,6 @@ const ArchiveModal: React.FC<ArchiveModalProps> = ({ show, onClose, onEdit, onAd
     }
   }, [archiveFilters.startDate, archiveFilters.endDate, archiveFilters.province, archiveFilters.district, archiveFilters.vendor]);
 
-  /*
   const loadDropdownOptions = useCallback(async () => {
     try {
       const [provincesRes, districtsRes, vendorsRes] = await Promise.all([fetch(`${API_CONFIG.BASE_URL}/configuration/get-archive-provinces`), fetch(`${API_CONFIG.BASE_URL}/configuration/get-archive-districts`), fetch(`${API_CONFIG.BASE_URL}/configuration/get-archive-vendors`)]);
@@ -137,69 +96,6 @@ const ArchiveModal: React.FC<ArchiveModalProps> = ({ show, onClose, onEdit, onAd
       });
     }
   }, []);
-
-*/
-
-  // Thêm function này sau loadDropdownOptions
-  const loadDistricts = useCallback(
-    async (province: string) => {
-      try {
-        const dateParams = new URLSearchParams();
-        if (archiveFilters.startDate) dateParams.append("startDate", archiveFilters.startDate);
-        if (archiveFilters.endDate) dateParams.append("endDate", archiveFilters.endDate);
-        dateParams.append("province", province);
-
-        const response = await fetch(`${API_CONFIG.BASE_URL}/configuration/get-archive-districts?${dateParams.toString()}`);
-        const districts = await response.json();
-
-        setDropdownOptions((prev) => ({
-          ...prev,
-          districts: districts || [],
-        }));
-      } catch (error) {
-        console.error("Error loading districts:", error);
-      }
-    },
-    [archiveFilters.startDate, archiveFilters.endDate]
-  );
-
-  const loadDropdownOptions = useCallback(async () => {
-    try {
-      const dateParams = new URLSearchParams();
-      if (archiveFilters.startDate) dateParams.append("startDate", archiveFilters.startDate);
-      if (archiveFilters.endDate) dateParams.append("endDate", archiveFilters.endDate);
-
-      // const [provincesRes, vendorsRes] = await Promise.all([fetch(`${API_CONFIG.BASE_URL}/configuration/get-archive-provinces?${dateParams.toString()}`), fetch(`${API_CONFIG.BASE_URL}/configuration/get-archive-vendors?${dateParams.toString()}`)]);
-      const [provincesRes, vendorsRes] = await Promise.all([fetch(`${API_CONFIG.BASE_URL}/configuration/get-archive-provinces?${dateParams.toString()}`), fetch(`${API_CONFIG.BASE_URL}/configuration/get-archive-vendors?${dateParams.toString()}`)]);
-
-      const [provincesData, vendorsData] = await Promise.all([provincesRes.json(), vendorsRes.json()]);
-
-      setDropdownOptions((prev) => ({
-        ...prev,
-        provinces: provincesData || [],
-        vendors: vendorsData || [],
-        districts: [], // Reset districts khi load provinces mới
-      }));
-
-      // Load districts nếu đã chọn province
-      if (archiveFilters.province) {
-        loadDistricts(archiveFilters.province);
-      }
-    } catch (error) {
-      console.error("Error loading dropdown options:", error);
-    }
-  }, [archiveFilters.startDate, archiveFilters.endDate, archiveFilters.province]);
-
-  // Thêm useEffect này sau các useEffect hiện có
-  useEffect(() => {
-    if (archiveFilters.province) {
-      loadDistricts(archiveFilters.province);
-      setArchiveFilters((prev) => ({ ...prev, district: "" })); // Reset district khi đổi province
-    } else {
-      // Nếu không chọn province thì clear districts
-      setDropdownOptions((prev) => ({ ...prev, districts: [] }));
-    }
-  }, [archiveFilters.province, loadDistricts]);
 
   // ✅ useEffect with proper dependencies
   useEffect(() => {
@@ -291,7 +187,6 @@ const ArchiveModal: React.FC<ArchiveModalProps> = ({ show, onClose, onEdit, onAd
     }
   };
 
-  /*
   const exportToExcel = async () => {
     if (!sortedData || sortedData.length === 0) {
       alert("Không có dữ liệu để export");
@@ -314,27 +209,6 @@ const ArchiveModal: React.FC<ArchiveModalProps> = ({ show, onClose, onEdit, onAd
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
     saveAs(blob, `archive_reports_${archiveFilters.startDate}_to_${archiveFilters.endDate}.xlsx`);
-  };
-
-*/
-
-  // Thay thế hàm exportToExcel cũ
-  /*
-  const exportToExcel = () => {
-    exportArchiveList(archiveData);
-  };
-*/
-  const exportToExcel = async () => {
-    if (!archiveData || archiveData.length === 0) {
-      alert("No data to export");
-      return;
-    }
-    await exportArchiveList(archiveData);
-  };
-
-  // Export single record detail
-  const handleExportDetail = (record: any) => {
-    exportArchiveDetail(record);
   };
 
   return (
@@ -569,16 +443,9 @@ const ArchiveModal: React.FC<ArchiveModalProps> = ({ show, onClose, onEdit, onAd
             flexWrap: "wrap",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-            <label style={{ fontSize: "12px", fontWeight: "600", color: "#374151", minWidth: "70px" }}>Start Time:</label>
-            <input type="date" value={archiveFilters.startDate} onChange={(e) => setArchiveFilters((prev) => ({ ...prev, startDate: e.target.value }))} style={{ width: "120px", padding: "4px 6px", fontSize: "14px", border: "1px solid #d1d5db", borderRadius: "4px" }} />
-          </div>
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <label style={{ fontSize: "12px", fontWeight: "600", color: "#374151", minWidth: "70px", marginRight: "-10px" }}>End Time:</label>
-
-            <input type="date" value={archiveFilters.endDate} onChange={(e) => setArchiveFilters((prev) => ({ ...prev, endDate: e.target.value }))} style={{ width: "120px", padding: "4px 6px", fontSize: "14px", border: "1px solid #d1d5db", borderRadius: "4px" }} />
-          </div>
-          <select value={archiveFilters.province} onChange={(e) => setArchiveFilters((prev) => ({ ...prev, province: e.target.value }))} style={{ width: "100px", padding: "4px 6px", fontSize: "14px", border: "1px solid #d1d5db", borderRadius: "4px" }}>
+          <input type="date" value={archiveFilters.startDate} onChange={(e) => setArchiveFilters((prev) => ({ ...prev, startDate: e.target.value }))} style={{ width: "120px", padding: "4px 6px", fontSize: "12px", border: "1px solid #d1d5db", borderRadius: "4px" }} />
+          <input type="date" value={archiveFilters.endDate} onChange={(e) => setArchiveFilters((prev) => ({ ...prev, endDate: e.target.value }))} style={{ width: "120px", padding: "4px 6px", fontSize: "12px", border: "1px solid #d1d5db", borderRadius: "4px" }} />
+          <select value={archiveFilters.province} onChange={(e) => setArchiveFilters((prev) => ({ ...prev, province: e.target.value }))} style={{ width: "100px", padding: "4px 6px", fontSize: "12px", border: "1px solid #d1d5db", borderRadius: "4px" }}>
             <option value="">Province</option>
             {dropdownOptions.provinces.map((p) => (
               <option key={p} value={p}>
@@ -586,7 +453,7 @@ const ArchiveModal: React.FC<ArchiveModalProps> = ({ show, onClose, onEdit, onAd
               </option>
             ))}
           </select>
-          <select value={archiveFilters.district} onChange={(e) => setArchiveFilters((prev) => ({ ...prev, district: e.target.value }))} style={{ width: "100px", padding: "4px 6px", fontSize: "14px", border: "1px solid #d1d5db", borderRadius: "4px" }}>
+          <select value={archiveFilters.district} onChange={(e) => setArchiveFilters((prev) => ({ ...prev, district: e.target.value }))} style={{ width: "100px", padding: "4px 6px", fontSize: "12px", border: "1px solid #d1d5db", borderRadius: "4px" }}>
             <option value="">District</option>
             {dropdownOptions.districts.map((d) => (
               <option key={d} value={d}>
@@ -594,7 +461,7 @@ const ArchiveModal: React.FC<ArchiveModalProps> = ({ show, onClose, onEdit, onAd
               </option>
             ))}
           </select>
-          <select value={archiveFilters.vendor} onChange={(e) => setArchiveFilters((prev) => ({ ...prev, vendor: e.target.value }))} style={{ width: "100px", padding: "4px 6px", fontSize: "14px", border: "1px solid #d1d5db", borderRadius: "4px" }}>
+          <select value={archiveFilters.vendor} onChange={(e) => setArchiveFilters((prev) => ({ ...prev, vendor: e.target.value }))} style={{ width: "100px", padding: "4px 6px", fontSize: "12px", border: "1px solid #d1d5db", borderRadius: "4px" }}>
             <option value="">Vendor</option>
             {dropdownOptions.vendors.map((v) => (
               <option key={v} value={v}>
@@ -609,7 +476,7 @@ const ArchiveModal: React.FC<ArchiveModalProps> = ({ show, onClose, onEdit, onAd
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{
-              width: "340px",
+              width: "300px",
               padding: "8px 12px",
               border: "1px solid #d1d5db",
               borderRadius: "8px",

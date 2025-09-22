@@ -236,74 +236,70 @@ const MainPageRoute = (props: Props) => {
                 return <Page404 />;
         }
     };
+//     const RouteRender = () => {
+//     const html: JSX.Element[] = [];
+//     const rootMenu: any = menu_config.Menu;
+
+//     for (const menu of rootMenu) {
+//       if (!IsMenuOfUser(menu)) continue;
+
+//       // 🔒 SNOC config BỎ QUA HOÀN TOÀN route SNOC ở đây start
+//       if (!SNOC_CODES.has(menu.code)) {
+//         html.push(
+//           <Route key={menu.code} path={menu.url} element={GetPage(menu.code)} />
+//         );
+//       }
+//       // 🔒 SNOC config BỎ QUA HOÀN TOÀN route SNOC ở đây end
+//       if (menu.subMenu?.length) {
+//         for (const sub of menu.subMenu) {
+//           if (IsMenuOfUser(sub) && !SNOC_CODES.has(sub.code)) {
+//             html.push(
+//               <Route
+//                 key={sub.code}
+//                 path={sub.url}
+//                 element={GetPage(sub.code)}
+//               />
+//             );
+//           }
+//         }
+//       }
+//     }
+//     return html;
+//   };
     const RouteRender = () => {
-    const html: JSX.Element[] = [];
-    const rootMenu: any = menu_config.Menu;
-
-    for (const menu of rootMenu) {
-      if (!IsMenuOfUser(menu)) continue;
-
-      // 🔒 SNOC config BỎ QUA HOÀN TOÀN route SNOC ở đây start
-      if (!SNOC_CODES.has(menu.code)) {
-        html.push(
-          <Route key={menu.code} path={menu.url} element={GetPage(menu.code)} />
-        );
-      }
-      // 🔒 SNOC config BỎ QUA HOÀN TOÀN route SNOC ở đây end
-      if (menu.subMenu?.length) {
-        for (const sub of menu.subMenu) {
-          if (IsMenuOfUser(sub) && !SNOC_CODES.has(sub.code)) {
-            html.push(
-              <Route
-                key={sub.code}
-                path={sub.url}
-                element={GetPage(sub.code)}
-              />
-            );
-          }
-        }
-      }
-    }
-    return html;
-  };
-    // const RouteRender = () => {
-    //     let html = [];
-    //     let rootMenu: any = menu_config.Menu;
-    //     for (let i = 0; i < rootMenu.length; i++) {
-    //         let menu = rootMenu[i];
-    //         if (IsMenuOfUser(menu)) {
-    //             // BỎ QUA các route SNOC (để tránh trùng với nhóm RequireSnocAuthInline phía dưới)
-    //             if (!SNOC_CODES.has(menu.code)) {
-    //             html.push(
-    //                 <Route
-    //                 key={menu.code}
-    //                 path={menu.url}
-    //                 element={GetPage(menu.code)}
-    //                 />
-    //             );
-    //             }
-    //             html.push(
-    //                 <Route key={menu.code} path={menu.url} element={GetPage(menu.code)} />
-    //             );
+        let html = [];
+        let rootMenu: any = menu_config.Menu;
+        for (let i = 0; i < rootMenu.length; i++) {
+            let menu = rootMenu[i];
+            if (IsMenuOfUser(menu)) {
+                // BỎ QUA các route SNOC (để tránh trùng với nhóm RequireSnocAuthInline phía dưới)
+                if (!SNOC_CODES.has(menu.code)) {
+                        html.push(
+                        <Route key={menu.code} path={menu.url} element={GetPage(menu.code)} />
+                        );
+                    }
+                html.push(
+                    <Route key={menu.code} path={menu.url} element={GetPage(menu.code)} />
+                );
                 
-    //         }
-    //         if (menu.subMenu && menu.subMenu.length > 0) {
-    //             for (let j = 0; j < menu.subMenu.length; j++) {
-    //                 let subMenu = menu.subMenu[j];
-    //                 if (IsMenuOfUser(subMenu)) {
-    //                     html.push(
-    //                         <Route
-    //                             key={subMenu.code}
-    //                             path={subMenu.url}
-    //                             element={GetPage(subMenu.code)}
-    //                         />
-    //                     );
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     return html;
-    // };
+            }
+            if (menu.subMenu && menu.subMenu.length > 0) {
+                for (let j = 0; j < menu.subMenu.length; j++) {
+                    let subMenu = menu.subMenu[j];
+                    if (IsMenuOfUser(subMenu) && !SNOC_CODES.has(subMenu.code)) {
+                        html.push(
+                            <Route
+                                key={subMenu.code}
+                                path={subMenu.url}
+                                element={GetPage(subMenu.code)}
+                            />
+                        );
+                    }
+                }
+            }
+        }
+        return html;
+    };
     const IsMenuOfUser = (menu: any) => {
         let userInfo: IUserInfo = JSON.parse(Cookie.getCookie("UserInfo"));
         if (userInfo.UserName == "admin") return true;

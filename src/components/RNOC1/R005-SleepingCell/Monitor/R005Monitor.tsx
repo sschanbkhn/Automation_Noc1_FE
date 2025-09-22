@@ -757,6 +757,37 @@ const KpiMonitorTab: React.FC = () => {
     }
   };
 
+  const handleResetManual = async (record: KpiRecord) => {
+    try {
+      const encodedIP = encodeURIComponent(record.ssh_host || "");
+
+      const response = await fetch(`${API_CONFIG.BASE_URL}/nsn/sleeping-cell/SleepingCell-reset-mannual/${encodedIP}`, {
+        method: "GET",
+      });
+
+      console.log("Response status:", response.status);
+      console.log("Response ok:", response.ok);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      console.log("API result:", result);
+
+      if (result.success) {
+        alert("Reset completed successfully!");
+        await handleDisplayClick();
+        setShowDetailModal(false);
+      } else {
+        alert("Reset failed!");
+      }
+    } catch (error) {
+      alert("Network error during reset");
+    }
+  };
+
   const handleClearAll = () => {
     setSearchText("");
     setSelectedProvinces([]);
@@ -988,9 +1019,12 @@ const KpiMonitorTab: React.FC = () => {
                       <td className="py-3 px-2" style={{ fontSize: "0.875rem" }}>
                         {record.period_start_time}
                       </td>
+                      <TruncatedCell value={record.mrbts_name} maxWidth="165px" /> {/* Updated line */}
+                      {/*
                       <td className="py-3 px-2" style={{ fontSize: "0.875rem" }}>
                         {record.mrbts_name}
                       </td>
+                      */}
                       <td className="py-3 px-2" style={{ fontSize: "0.875rem" }}>
                         {record.lnbts_name}
                       </td>
@@ -1111,32 +1145,7 @@ const KpiMonitorTab: React.FC = () => {
                               {key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
                             </th>
                           ))}
-                          {/*}
-                          <th
-                            style={{
-                              padding: "10px 8px",
-                              fontSize: "14px",
-                              fontWeight: "600",
-                              minWidth: "150px",
-                              border: "1px solid #2e5082",
-                              textAlign: "center",
-                            }}
-                          >
-                            Reset Permission
-                          </th>
-                          <th
-                            style={{
-                              padding: "10px 8px",
-                              fontSize: "14px",
-                              fontWeight: "600",
-                              minWidth: "120px",
-                              border: "1px solid #2e5082",
-                              textAlign: "center",
-                            }}
-                          >
-                            Blacklist
-                          </th>
-                          */}
+
                           <th
                             style={{
                               padding: "10px 8px",
@@ -1277,37 +1286,7 @@ const KpiMonitorTab: React.FC = () => {
                               </td>
                             );
                           })}
-                          {/*}
-                          <td style={{ padding: "12px 8px", fontSize: "14px", border: "1px solid #e9ecef", textAlign: "center" }}>
-                            <span
-                              style={{
-                                padding: "4px 8px",
-                                borderRadius: "4px",
-                                backgroundColor: selectedRecord.reset_permission ? "#d4edda" : "#f8d7da",
-                                color: selectedRecord.reset_permission ? "#155724" : "#721c24",
-                                fontSize: "14px",
-                                fontWeight: "500",
-                              }}
-                            >
-                              {selectedRecord.reset_permission ? "Denied" : "Allowed"}
-                            </span>
-                          </td>
-                          <td style={{ padding: "12px 8px", fontSize: "14px", border: "1px solid #e9ecef", textAlign: "center" }}>
-                            <span
-                              style={{
-                                padding: "4px 8px",
-                                borderRadius: "4px",
-                                backgroundColor: selectedRecord.action_blacklist ? "#f8d7da" : "#d4edda",
-                                color: selectedRecord.action_blacklist ? "#721c24" : "#155724",
-                                fontSize: "14px",
-                                fontWeight: "500",
-                              }}
-                            >
-                              {selectedRecord.action_blacklist ? "Yes" : "No"}
-                            </span>
-                          </td>
 
-                          */}
                           <td style={{ padding: "12px 8px", fontSize: "14px", border: "1px solid #e9ecef", textAlign: "center" }}>
                             <button
                               className="btn btn-sm"
@@ -1324,6 +1303,7 @@ const KpiMonitorTab: React.FC = () => {
                                 if (confirm(`Reset cell ${selectedRecord.lncel_name}?`)) {
                                   alert("Manual reset initiated");
                                 }
+                                handleResetManual(selectedRecord);
                               }}
                             >
                               Reset Manual

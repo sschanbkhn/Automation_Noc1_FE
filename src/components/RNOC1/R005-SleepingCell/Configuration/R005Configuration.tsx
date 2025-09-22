@@ -18,7 +18,6 @@ import { useConfigData } from "./useConfigData";
 import DataTableModal from "./DataTableModal";
 import AddEditModal from "./AddEditModal";
 import ArchiveModal from "./ArchiveModal";
-
 import MRBTSModal from "./MRBTSModal";
 
 const Configuration: React.FC = () => {
@@ -26,25 +25,17 @@ const Configuration: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [selectedConfig, setSelectedConfig] = useState<ConfigModule | null>(null);
-
   const [showAddEditModal, setShowAddEditModal] = useState(false);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
-
-  // THÊM: Riêng search term cho từng modal
-  const [mrbtsSearchTerm, setMrbtsSearchTerm] = useState("");
-  const [archiveSearchTerm, setArchiveSearchTerm] = useState("");
-  const [schedulerSearchTerm, setSchedulerSearchTerm] = useState("");
+  const [showMRBTSModal, setShowMRBTSModal] = useState(false);
 
   // Custom hook for data management
   const { modalData, modalLoading, modalSearchTerm, loadConfigData, handleModalSearch, handleDelete, handleSave } = useConfigData();
 
   // Filter modules based on search
   const filteredModules = configModules.filter((module) => module.title.toLowerCase().includes(searchTerm.toLowerCase()) || module.description.toLowerCase().includes(searchTerm.toLowerCase()));
-
-  // Thêm state:
-  const [showMRBTSModal, setShowMRBTSModal] = useState(false);
 
   // Handle card click - route to appropriate modal
   const handleCardClick = async (module: ConfigModule) => {
@@ -54,20 +45,11 @@ const Configuration: React.FC = () => {
       case 8: // Detail Archive Reports - special modal
         setShowArchiveModal(true);
         break;
-
-      case 5: // Scheduler - needs special handling for date selection
-        // For now, treat as normal. Later can add date picker
-        setShowModal(true);
-        await loadConfigData(module.id);
-        break;
-
-      // Trong handleCardClick:
       case 3: // MRBTS - special modal
         setShowMRBTSModal(true);
         await loadConfigData(module.id);
         break;
-
-      default: // Normal modules (1,2,4,6,7)
+      default: // Normal modules (1,2,4,5,6,7)
         setShowModal(true);
         await loadConfigData(module.id);
         break;
@@ -77,7 +59,6 @@ const Configuration: React.FC = () => {
   // Handle add new item
   const handleAddNew = () => {
     setEditingItem(null);
-
     if (modalData && modalData.length > 0) {
       const sampleItem = modalData[0];
       const emptyForm = createEmptyFormData(sampleItem, selectedConfig!.id);
@@ -85,7 +66,6 @@ const Configuration: React.FC = () => {
     } else {
       setFormData({});
     }
-
     setShowAddEditModal(true);
   };
 
@@ -105,8 +85,6 @@ const Configuration: React.FC = () => {
       setShowAddEditModal(false);
       setEditingItem(null);
       setFormData({});
-
-      // THÊM: Force refresh modal data
       await loadConfigData(selectedConfig.id);
     }
   };
@@ -118,30 +96,15 @@ const Configuration: React.FC = () => {
   };
 
   // Close all modals
-  /*
   const closeAllModals = () => {
     setShowModal(false);
+    setShowMRBTSModal(false);
     setShowAddEditModal(false);
     setShowArchiveModal(false);
     setSelectedConfig(null);
     setEditingItem(null);
     setFormData({});
-  };
-
-  */
-  const closeAllModals = () => {
-    setShowModal(false);
-    setShowMRBTSModal(false); // THÊM dòng này
-    setShowAddEditModal(false);
-    setShowArchiveModal(false);
-    setSelectedConfig(null);
-    setEditingItem(null);
-    setFormData({});
-
-    // Reset search terms
-    setMrbtsSearchTerm("");
-    setArchiveSearchTerm("");
-    setSchedulerSearchTerm("");
+    handleModalSearch(""); // Reset search term
   };
 
   return (
@@ -346,38 +309,14 @@ const Configuration: React.FC = () => {
       )}
 
       {/* Normal Modal */}
-      <DataTableModal
-        show={showModal}
-        selectedConfig={selectedConfig}
-        modalData={modalData}
-        modalLoading={modalLoading}
-        modalSearchTerm={modalSearchTerm} // Dùng chung
-        onSearch={handleModalSearch}
-        onClose={closeAllModals}
-        onAdd={handleAddNew}
-        onEdit={handleEditItem}
-        onDelete={handleDeleteItem}
-      />
+      <DataTableModal show={showModal} selectedConfig={selectedConfig} modalData={modalData} modalLoading={modalLoading} modalSearchTerm={modalSearchTerm} onSearch={handleModalSearch} onClose={closeAllModals} onAdd={handleAddNew} onEdit={handleEditItem} onDelete={handleDeleteItem} />
 
       {/* MRBTS Modal - search term riêng */}
-      <MRBTSModal
-        show={showMRBTSModal}
-        selectedConfig={selectedConfig}
-        modalData={modalData}
-        modalLoading={modalLoading}
-        modalSearchTerm={mrbtsSearchTerm} // Search term riêng
-        onSearch={setMrbtsSearchTerm} // Set trực tiếp
-        onClose={closeAllModals}
-        onAdd={handleAddNew}
-        onEdit={handleEditItem}
-        onDelete={handleDeleteItem}
-        onRefresh={() => selectedConfig && loadConfigData(selectedConfig.id)}
-      />
+      <MRBTSModal show={showMRBTSModal} selectedConfig={selectedConfig} modalData={modalData} modalLoading={modalLoading} modalSearchTerm={modalSearchTerm} onSearch={handleModalSearch} onClose={closeAllModals} onAdd={handleAddNew} onEdit={handleEditItem} onDelete={handleDeleteItem} onRefresh={() => selectedConfig && loadConfigData(selectedConfig.id)} />
 
-      {/* Archive Modal - search term riêng */}
+      {/* Archive Modal */}
       <ArchiveModal show={showArchiveModal} onClose={closeAllModals} onEdit={handleEditItem} onAdd={handleAddNew} />
-      {/* check  */}
-      {/* Empty State check */}
+      {/* a  c d e f gh  12345 1809*/}
       <AddEditModal show={showAddEditModal} selectedConfig={selectedConfig} editingItem={editingItem} formData={formData} setFormData={setFormData} onSave={handleSaveForm} onClose={() => setShowAddEditModal(false)} />
     </div>
   );
