@@ -226,96 +226,35 @@
         }
       ]
     },
-     {
-      "code": "Anm",
-      "name": "AU ANM",
-      "url": "/anm",
-      "icon": "bi bi-tools",
-      "subMenu": [
-        {
-          "code": "anm_uc1",
-          "name": "Kết quả",
-          "url": "/link-uc1",
-          "icon": "bi bi-grid"
-        },
-        {
-          "code": "anm_uc2",
-          "name": "Kết quả chi tiết",
-          "url": "/link-uc2",
-          "icon": "bi bi-grid"
-        },
-        {
-          "code": "anm_uc3",
-          "name": "Lịch sử thực thi",
-          "url": "/link-uc3",
-          "icon": "bi bi-grid"
-        },
-        {
-          "code": "anm_uc4",
-          "name": "Thực hiện đột xuất",
-          "url": "/link-uc4",
-          "icon": "bi bi-grid"
-        },
-        {
-          "code": "anm_uc5",
-          "name": "Thực hiện theo tỉnh",
-          "url": "/link-uc5",
-          "icon": "bi bi-grid"
-        }
-      ]
-    },
+     
     {
-      "code": "Anm2",
-      "name": "AU ANM VN2MANE",
-      "url": "/anm2",
-      "icon": "bi bi-tools",
-      "subMenu": [
-        {
-          "code": "anm2_uc1",
-          "name": "Kết quả vn2mane",
-          "url": "/vn2mane",
-          "icon": "bi bi-grid"
+            "code": "Anm",
+            "name" : "AU ANM",
+            "url": "/user",
+            "icon": "bi bi-tools",
+            "subMenu": [
+                {
+                    "code": "anm_uc1",
+                    "name" : "GPON - OLT",
+                    "url": "/OLT",
+                    "icon": "bi bi-grid"
+                },
+                {
+                    "code": "anm3_uc1",
+                    "name" : "GPON - ONU",
+                    "url": "/link-uc3",
+                    "icon": "bi bi-grid"
+                },
+                {
+                    "code": "anm2_uc1",
+                    "name" : "VN2/MANE",
+                    "url": "/link-uc2",
+                    "icon": "bi bi-grid"
+                }
+                
+               
+            ]
         },
-        {
-          "code": "anm2_uc2",
-          "name": "Kết quả chi tiết",
-          "url": "/vn2mane_details",
-          "icon": "bi bi-grid"
-        },
-        {
-          "code": "anm_uc3",
-          "name": "Lịch sử thực thi",
-          "url": "/link-uc3",
-          "icon": "bi bi-grid"
-        },
-        {
-          "code": "anm2_uc4",
-          "name": "Thực hiện đột xuất",
-          "url": "/vn2mane_execute",
-          "icon": "bi bi-grid"
-        },
-        {
-          "code": "anm_uc5",
-          "name": "Thực hiện theo tỉnh",
-          "url": "/link-uc5",
-          "icon": "bi bi-grid"
-        }
-      ]
-    },
-    {
-      "code": "Anm3",
-      "name": "AU ANM ONT",
-      "url": "/anm3",
-      "icon": "bi bi-tools",
-      "subMenu": [
-        {
-          "code": "anm3_uc1",
-          "name": "Kết quả ONU",
-          "url": "/onu",
-          "icon": "bi bi-grid"
-        }
-      ]
-    },
     {
       "code": "SOC1",
       "name": "AU SOC1",
@@ -323,15 +262,15 @@
       "icon": "bi bi-cpu",
       "subMenu": [
         {
-          "code": "s001-vpn3G4G",
-          "name": "S001 VPN3G4G",
-          "url": "/S001-VPN3G4G",
+          "code": "soc001-vpn3G4G",
+          "name": "OC001 VPN3G4G",
+          "url": "/OC001-VPN3G4G",
           "icon": "bi bi-grid"
         },
         {
-          "code": "s002-siptrunk",
-          "name": "S002 SipTrunk",
-          "url": "/s002-Siptrunk",
+          "code": "soc002-siptrunk",
+          "name": "OC002 SipTrunk",
+          "url": "/OC002-Siptrunk",
           "icon": "bi bi-grid"
         }
       ]

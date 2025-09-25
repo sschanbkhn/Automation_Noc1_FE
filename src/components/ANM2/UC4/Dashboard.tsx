@@ -3,7 +3,12 @@ import Card from 'components/common/Card';
 import { Row, Col, Table, Button, Form } from 'react-bootstrap';
 import { useLocation } from 'react-router-dom';
 
-const DeviceUploadDashboard = () => {
+
+interface DashboardProps {
+  goToTab?: (tabKey: string) => void; // function to switch tabs
+}
+
+const DeviceUploadDashboard : React.FC<DashboardProps> = ({ goToTab }) => {
   const [devices, setDevices] = useState<any[]>([]);
   const location = useLocation();
 

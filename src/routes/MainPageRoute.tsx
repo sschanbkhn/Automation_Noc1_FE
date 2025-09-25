@@ -76,15 +76,10 @@ import KPISelectorPage from "components/SNOC/views/forms/kpi/KPISelectorPage";
 import ScheduleGeneric from "components/SNOC/views/forms/kpi/ScheduleCausecode";
 ///snoc end
 // ANM
-import Anm_uc1 from 'components/ANM/UC1';
-import Anm_uc2 from 'components/ANM/UC2';
-import Anm_uc3 from 'components/ANM/UC3';
-import Anm_uc4 from 'components/ANM/UC4';
-import Anm_uc5 from 'components/ANM/UC5';
-import Anm2_uc1 from 'components/ANM2/UC1';
-import Anm2_uc2 from 'components/ANM2/UC2';
-import Anm2_uc4 from 'components/ANM2/UC4';
-import Anm3_uc1 from 'components/ANM3/UC1';
+import AnmTabs from 'components/ANM/Anmtabs';
+import AnmTabs2 from 'components/ANM2/Anmtabs';
+import AnmTabs3 from 'components/ANM3/Anmtabs';
+import AnmTabs4 from 'components/ANM3/Anmtabs2';
 
 ///
 
@@ -172,8 +167,8 @@ const MainPageRoute = (props: Props) => {
               // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
             case "ScheduleTriggerForm":
                 return <ScheduleTriggerForm />;
-            case "anm_uc1":
-                return <Anm_uc1 />;
+            // case "anm_uc1":
+            //     return <Anm_uc1 goToTab={() => {}} setFilters={() => {}} />;
             case "ucppoe":
                 return <Ucppoe />;
             case "i004_1":
@@ -207,29 +202,20 @@ const MainPageRoute = (props: Props) => {
             case "DataLspQuocte":
                 return <DataLspQuocte />;
 
-    ///ANM
-           case "anm_uc1":
-                return <Anm_uc1 />;
-            case "anm_uc2":
-                return <Anm_uc2 />;
-            case "anm_uc3":
-                return <Anm_uc3 />;
-            case "anm_uc4":
-                return <Anm_uc4 />;
-            case "anm_uc5":
-                return <Anm_uc5 />;
+        // menu ANM
+            case "anm_uc1":
+                return <AnmTabs />;
             case "anm2_uc1":
-                return <Anm2_uc1 />;
-            case "anm2_uc2":
-                return <Anm2_uc2 />;
-            case "anm2_uc4":
-                return <Anm2_uc4 />;
+                return <AnmTabs2 />;
             case "anm3_uc1":
-                return <Anm3_uc1 />;
+                return <AnmTabs3 />;
+            case "anm4_uc1":
+                return <AnmTabs4 />;
+                // end menu ANM
     /// SOC1
-              case "s001-vpn3G4G":  
+              case "soc001-vpn3G4G":  
                 return <VPN3G4G />;
-                case "s002-siptrunk":
+                case "soc002-siptrunk":
                 return <SIPTRUNK />;
     ///
             default:

@@ -17,7 +17,12 @@ const provinces = [
   'Viễn thông Trà Vinh', 'Viễn thông Vĩnh Long'
 ];
 
-const DeviceUploadDashboard = () => {
+interface DashboardProps {
+  goToTab?: (tabKey: string) => void; // function to switch tabs
+}
+
+
+const DeviceUploadDashboard : React.FC<DashboardProps> = ({ goToTab }) => {
   const [province, setProvince] = useState<string>('');
   const [devices, setDevices] = useState<any[]>([]);
   const [isSending, setIsSending] = useState(false);

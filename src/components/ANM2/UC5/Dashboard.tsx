@@ -1,23 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import dataJsonRaw from './DashboardMockData.json';
+import { Spinner, Button } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import { Spinner, Button, Table } from 'react-bootstrap';
 
-const provinces = [
-  'Viễn thông An Giang', 'Viễn thông Bà Rịa - Vũng Tàu', 'Viễn thông Bắc Giang',
-  'Viễn thông Bắc Ninh', 'Viễn thông Bến Tre', 'Viễn thông Bình Dương',
-  'Viễn thông Bình Thuận', 'Viễn thông Cà Mau', 'Viễn thông Cao Bằng',
-  'Viễn thông Đắk Lắk', 'Viễn thông Điện Biên', 'Viễn thông Gia Lai',
-  'Viễn thông Hà Nam', 'Viễn thông Hà Nội', 'Viễn thông Hà Tĩnh',
-  'Viễn thông Hưng Yên', 'Viễn thông Kiên Giang', 'Viễn thông Khánh Hòa',
-  'Viễn thông Lào Cai', 'Viễn thông Lâm Đồng', 'Viễn thông Long An',
-  'Viễn thông Nam Định', 'Viễn thông Ninh Bình', 'Viễn thông Nghệ An',
-  'Viễn thông Quảng Nam', 'Viễn thông Sóc Trăng', 'Viễn thông Tây Ninh',
-  'Viễn thông Tiền Giang', 'Viễn thông Thái Bình', 'Viễn thông Thanh Hóa',
-  'Viễn thông Trà Vinh', 'Viễn thông Vĩnh Long'
-];
+const provinces = ['NOC1', 'NOC2', 'NOC3'];
 
-const DeviceUploadDashboard = () => {
+
+interface DashboardProps {
+  goToTab?: (tabKey: string) => void; // function to switch tabs
+}
+
+const DeviceUploadDashboard : React.FC<DashboardProps> = ({ goToTab }) => {
   const [province, setProvince] = useState<string>('');
   const [devices, setDevices] = useState<any[]>([]);
   const [isSending, setIsSending] = useState(false);
@@ -37,21 +30,34 @@ const DeviceUploadDashboard = () => {
     setDevices(enriched);
   }, []);
 
-  const filteredDevices = province
-    ? devices
-    : [];
+  const handleSendProvince = async () => {
+    if (!province) return;
 
-  const handleSendProvince = () => {
-    const count = devices.length;
     setIsSending(true);
     setSendDone(false);
     setDevicesSent(0);
 
-    setTimeout(() => {
-      setIsSending(false);
+    try {
+      const response = await fetch(`http://10.155.43.198:5678/webhook/e2500aeb-7466-4b54-8aee-30964a625c5frunvn2mane?folder=${province}`, {
+        method: 'GET',
+        
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('API response:', result);
+
+      setDevicesSent(devices.length);
       setSendDone(true);
-      setDevicesSent(count);
-    }, 5000);
+    } catch (error) {
+      console.error('Error sending devices:', error);
+      alert('Có lỗi xảy ra khi gửi dữ liệu!');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -61,10 +67,16 @@ const DeviceUploadDashboard = () => {
       <div className="row g-3 mb-3">
         <div className="col-md-4">
           <label className="form-label">Các tỉnh:</label>
-          <select className="form-select" value={province} onChange={e => setProvince(e.target.value)}>
+          <select
+            className="form-select"
+            value={province}
+            onChange={e => setProvince(e.target.value)}
+          >
             <option value="">-- Chọn tỉnh --</option>
             {provinces.map((p, i) => (
-              <option key={i} value={p}>{p}</option>
+              <option key={i} value={p}>
+                {p}
+              </option>
             ))}
           </select>
         </div>
@@ -77,40 +89,17 @@ const DeviceUploadDashboard = () => {
                 Đang thực hiện...
               </>
             ) : (
-              'Gửi toàn bộ'
+              'Thực hiện'
             )}
           </Button>
 
           {sendDone && (
             <span className="ms-3 text-success fw-semibold">
-              ✅ {devicesSent}/{devicesSent} Đã đánh giá xong
+              ✅ Đã bắt đầu thành công Đơn vị: {province}
             </span>
           )}
         </div>
       </div>
-
-      {province && (
-        <Table bordered hover responsive>
-          <thead>
-            <tr>
-              <th>STT</th>
-              <th>Hostname</th>
-              <th>IP Address</th>
-              <th>Loại thiết bị</th>
-            </tr>
-          </thead>
-          <tbody>
-            {devices.map((device, index) => (
-              <tr key={index}>
-                <td>{device.stt}</td>
-                <td>{device.hostname}</td>
-                <td>{device.ip}</td>
-                <td>{device.type}</td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      )}
     </div>
   );
 };

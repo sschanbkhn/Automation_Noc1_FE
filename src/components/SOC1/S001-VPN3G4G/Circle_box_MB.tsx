@@ -39,6 +39,7 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28',
 
 interface Props {
   onZoneClick: (index: number) => void;
+  isDisplayed: boolean;
 }
 // Hiển thị % nằm trong mỗi miếng Pie
 const renderCustomizedLabel = ({
@@ -70,7 +71,7 @@ const renderCustomizedLabel = ({
   );
 };
 
-export default function PieWithPercentage({ onZoneClick }: Props) {
+export default function PieWithPercentage({ onZoneClick, isDisplayed }: Props) {
   
 
     const [soLechAPNMB, setSoLechAPNMB] = useState(0);
@@ -85,62 +86,90 @@ export default function PieWithPercentage({ onZoneClick }: Props) {
     const [soLechHssMB, setSoLechHssMB] = useState(0);
     const [soLechTrungLapMB, setSoLechTrungLapMB] = useState(0);
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-    const [activeIndex, setActiveIndex] = useState<number | null>(null);
+    const [activeIndex, setActiveIndex] = useState<number | null>(null);  
+    
+    const [error, setError] = useState<string | null>(null);
 
       
     useEffect(() => {
+      if (!isDisplayed) {
+            setError(null); // reset lỗi khi không hiển thị
+            return;
+          }
 
-    fetch(`${API_URL}/thong-ke-loi/count/mb/khong_dung_apn/`)
-    .then(res => res.json())
-    .then(data => setSoLechAPNMB(data.count));
+          setError(null); // reset lỗi trước khi fetch
 
-    // Gọi API lấy số lệch PGW
-    fetch(`${API_URL}/thong-ke-loi/count/mb/khong_dung_pgw/`)
+      fetch(`${API_URL}/thong-ke-loi/count/mb/khong_dung_apn/`)
       .then(res => res.json())
-      .then(data => setSoLechPGWMB(data.count));
+      .then(data => setSoLechAPNMB(data.count));
 
-    //Gọi API lấy số lệch IP cho SIM
-    fetch(`${API_URL}/thong-ke-loi/count/mb/khong_dung_ipsim/`)
-      .then(res => res.json())
-      .then(data => setSoLechIpSimMB(data.count));
+      // Gọi API lấy số lệch PGW
+      fetch(`${API_URL}/thong-ke-loi/count/mb/khong_dung_pgw/`)
+        .then(res => res.json())
+        .then(data => setSoLechPGWMB(data.count));
 
-    //Gọi API lấy số lệch dai IP
-    fetch(`${API_URL}/thong-ke-loi/count/mb/khong_dung_daiip/`)
-      .then(res => res.json())
-      .then(data => setSoLechDaiIpMB(data.count));
-    
-    //Gọi API lấy số lệch IP GW
-    fetch(`${API_URL}/thong-ke-loi/count/mb/khong_dung_ippgw/`)
-      .then(res => res.json())
-      .then(data => setSoLechIpGwMB(data.count));
+      //Gọi API lấy số lệch IP cho SIM
+      fetch(`${API_URL}/thong-ke-loi/count/mb/khong_dung_ipsim/`)
+        .then(res => res.json())
+        .then(data => setSoLechIpSimMB(data.count));
 
-      //Gọi API lấy số lệch Vlan
-    fetch(`${API_URL}/thong-ke-loi/count/mb/khong_dung_vlan/`)
-      .then(res => res.json())
-      .then(data => setSoLechVlanMB(data.count));
+      //Gọi API lấy số lệch dai IP
+      fetch(`${API_URL}/thong-ke-loi/count/mb/khong_dung_daiip/`)
+        .then(res => res.json())
+        .then(data => setSoLechDaiIpMB(data.count));
+      
+      //Gọi API lấy số lệch IP GW
+      fetch(`${API_URL}/thong-ke-loi/count/mb/khong_dung_ippgw/`)
+        .then(res => res.json())
+        .then(data => setSoLechIpGwMB(data.count));
 
-    //Gọi API lấy số lệch Ospf
-    fetch(`${API_URL}/thong-ke-loi/count/mb/khong_dung_ospf/`)
-      .then(res => res.json())
-      .then(data => setSoLechOspfMB(data.count));
+        //Gọi API lấy số lệch Vlan
+      fetch(`${API_URL}/thong-ke-loi/count/mb/khong_dung_vlan/`)
+        .then(res => res.json())
+        .then(data => setSoLechVlanMB(data.count));
 
-      //Gọi API lấy số lệch apnid
-    fetch(`${API_URL}/thong-ke-loi/count/mb/khong_dung_apnid/`)
-      .then(res => res.json())
-      .then(data => setSoLechApnidMB(data.count));
+      //Gọi API lấy số lệch Ospf
+      fetch(`${API_URL}/thong-ke-loi/count/mb/khong_dung_ospf/`)
+        .then(res => res.json())
+        .then(data => setSoLechOspfMB(data.count));
 
-    fetch(`${API_URL}/thong-ke-loi/count/mb/khong_dung_pdpcp/`)
-      .then(res => res.json())
-      .then(data => setSoLechPdpcpMB(data.count));
+        //Gọi API lấy số lệch apnid
+      fetch(`${API_URL}/thong-ke-loi/count/mb/khong_dung_apnid/`)
+        .then(res => res.json())
+        .then(data => setSoLechApnidMB(data.count));
 
-    fetch(`${API_URL}/thong-ke-loi/count/mb/khong_dung_hss/`)
-      .then(res => res.json())
-      .then(data => setSoLechHssMB(data.count));
-    //API gọi số lượng trùng lặp
-    fetch(`${API_URL}/thong-ke-loi/count/mb/khong_trung_lap/`)
-      .then(res => res.json())
-      .then(data => setSoLechTrungLapMB(data.count));
-    }, []);
+      fetch(`${API_URL}/thong-ke-loi/count/mb/khong_dung_pdpcp/`)
+        .then(res => res.json())
+        .then(data => setSoLechPdpcpMB(data.count));
+
+      fetch(`${API_URL}/thong-ke-loi/count/mb/khong_dung_hss/`)
+        .then(res => res.json())
+        .then(data => setSoLechHssMB(data.count));
+      //API gọi số lượng trùng lặp
+      fetch(`${API_URL}/thong-ke-loi/count/mb/khong_trung_lap/`)
+        .then(res => res.json())
+        .then(data => setSoLechTrungLapMB(data.count));
+      }, [isDisplayed]);
+    if (!isDisplayed) {
+        return (
+          <div
+            style={{
+              fontSize: "24px",       // chữ to hơn
+              fontWeight: "bold",     // đậm
+              textAlign: "center",    // căn giữa ngang
+              marginTop: "20%",       // đẩy xuống giữa màn hình (tương đối)
+              color: "#555555ff",          // màu xám nhẹ (tùy chỉnh)
+            }}
+          >
+            No Data
+          </div>
+        );
+      }
+
+
+    if (error) {
+      return <div style={{ color: "red" }}>Error: {error}</div>;
+    }
 
         const data = [
         { name: 'Tên APN', value: soLechAPNMB },

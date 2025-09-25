@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelope, faFolderOpen, faNetworkWired, faShieldAlt, faClock, faDatabase, faPlus, faTimes, faSearch } from "@fortawesome/free-solid-svg-icons";
 import BangLog from "./BangLog";
 import API_URL from "./apiConfig";
+import ScheduleForm from "./ScheduleModule";
 // Mapping card với table
 const configTableMapping: { [key: number]: { table: string; api: string; title: string } } = {
   1: { table: "outlook", api: "/api/outlook", title: "Manual Trigger" },
@@ -202,15 +203,51 @@ const Configuration = () => {
               try {
                 const config = configTableMapping[module.id];
 
+                // if (module.id === 1) {
+                //   // Manual Trigger → gọi API runflow
+                //   const response = await fetch(`${API_URL}/run-n8n/`, {
+                //     method: "POST",
+                //     headers: { "Content-Type": "application/json" },
+                //   });
+                //   const result = await response.json();
+                //   alert(result.message || "Đã gọi workflow N8N");
+                //   setExecutionLog(prev => [
+                //       ...prev,
+                //       {
+                //         time: new Date().toLocaleString(),
+                //         workflow: "SOC-VPN3G4G",
+                //         status: result.error ? "❌" : "✅",
+                //         message: result.message || result.error,
+                //       },
+                //     ]);
+                // }
                 if (module.id === 1) {
-                  // Manual Trigger → gọi API runflow
-                  const response = await fetch(`${API_URL}/run-n8n/`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                  });
-                  const result = await response.json();
-                  alert(result.message || "Đã gọi workflow N8N");
-                  setExecutionLog(prev => [
+                  const confirmRun = window.confirm("Bạn có chắc chắn muốn chạy workflow SOC-VPN3G4G không?");
+                  if (!confirmRun) {
+                    setExecutionLog(prev => [
+                      ...prev,
+                      {
+                        time: new Date().toLocaleString(),
+                        workflow: "SOC-VPN3G4G",
+                        status: "⚠️",
+                        message: "Đã hủy thao tác bởi người dùng",
+                      },
+                    ]);
+                    return;
+                  }
+
+                  try {
+                    const response = await fetch(`${API_URL}/run-n8n/`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ trigger: "from_frontend" }),
+                    });
+
+                    const result = await response.json();
+
+                    alert(result.message || result.error || "Đã gọi workflow N8N");
+
+                    setExecutionLog(prev => [
                       ...prev,
                       {
                         time: new Date().toLocaleString(),
@@ -219,8 +256,20 @@ const Configuration = () => {
                         message: result.message || result.error,
                       },
                     ]);
+                  } catch (err) {
+                    alert("Có lỗi kết nối tới API: " + err);
+
+                    setExecutionLog(prev => [
+                      ...prev,
+                      {
+                        time: new Date().toLocaleString(),
+                        workflow: "SOC-VPN3G4G",
+                        status: "❌",
+                        message: "Lỗi kết nối API: " + err,
+                      },
+                    ]);
                 }
-                
+                }
                 else {
                   // Các card khác → load data table
                   const response = await fetch(config.api);
@@ -433,7 +482,7 @@ const Configuration = () => {
 
               {/* Action Buttons */}
               <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                {!showLog && (
+                {/* {!showLog && (
                 <>
                 <button
                   style={{
@@ -463,7 +512,7 @@ const Configuration = () => {
                   Export Excel
                 </button>
                 </>
-                )}
+                )} */}
                 <button
                   onClick={() => {
                     setShowModal(false);
@@ -484,7 +533,7 @@ const Configuration = () => {
             </div>
 
             {/* Search & Filter Bar */}
-            {!showLog && (
+            {/* {!showLog && (
               
             <div
               style={{
@@ -522,7 +571,7 @@ const Configuration = () => {
                 Search
               </button>
             </div>
-            )}
+            )} */}
             {/* Table Content */}
             <div
               style={{
@@ -633,7 +682,8 @@ const Configuration = () => {
                 </tbody>
 
               </table>
-
+             ): selectedConfig?.id === 3 ? (
+                <ScheduleForm/>
             ) : (
                 <table
                   style={{

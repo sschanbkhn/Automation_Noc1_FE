@@ -2,14 +2,19 @@ import React, { useEffect, useState } from 'react';
 import { Table, Card, Modal, Button, Form, Spinner } from 'react-bootstrap';
 import logDataJson from './DashboardMockData.json';
 
-const Dashboard = () => {
+// Props for tab navigation
+interface DashboardProps {
+  goToTab?: (tabKey: string) => void; // function to switch tabs
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ goToTab }) => {
   const [logData, setLogData] = useState<any[]>([]);
   const [selectedDevices, setSelectedDevices] = useState<any[] | null>(null);
   const [selectedLogIndex, setSelectedLogIndex] = useState<number | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
   const [loadingDevices, setLoadingDevices] = useState<number[]>([]); // track loading uploads
-
+  
   useEffect(() => {
     setLogData(logDataJson);
   }, []);

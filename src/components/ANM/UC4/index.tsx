@@ -1,10 +1,17 @@
-import React from 'react';
-import Dashboard from './Dashboard';
+import React from "react";
+import Dashboard from "./Dashboard";
 
-const IndexPage = () => {
+
+interface UCProps {
+  goToTab?: (tabKey: string) => void;
+}
+
+const Anm_uc4: React.FC<UCProps> = ({ goToTab }) => {
   return (
-    <Dashboard />
-  )
+    <div className="p-3">
+      <Dashboard goToTab={goToTab as (tabKey: string) => void} />
+    </div>
+  );
 };
 
-export default IndexPage;
+export default Anm_uc4;

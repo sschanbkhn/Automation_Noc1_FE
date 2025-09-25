@@ -20,8 +20,10 @@ import API_URL from './apiConfig';
 //   onChangeTab: (tab: string) => void;
 // };
 // { onChangeTab }: KhuVucProps
-
-function MienTrung()
+interface MienTrungProps {
+  isDisplayed: boolean;
+}
+function MienTrung({ isDisplayed }: MienTrungProps)
   {
     type ThietBi = {
       ten_apn: string;
@@ -367,12 +369,12 @@ const handleBoxClick = (
       {/* Cột bên trái: khối thống kê */}
         <div className= "box_trai_zone1" style={{ width: '50%', height:'400px'}}>
             <h2 className="text_display_tren">DANH SÁCH KHÁCH HÀNG CHƯA CHUẨN HOÁ BE</h2>
-                <Circle_box_MT onZoneClick={handleClickPieSlice} />  {/* ✅ truyền callback */}
+                <Circle_box_MT onZoneClick={handleClickPieSlice} isDisplayed={isDisplayed}/>  {/* ✅ truyền callback */}
         
         </div>
         <div className= "box_phai_zone1" style={{ width: '50%', height:'400px'}}>
             <h2 className="text_display_tren">THỐNG KÊ ĐỐI SOÁT BE VÀ CSDL</h2>
-                <Circle_box_ds_MT onZoneClick={handleClickPieSlice_ds} />  {/* ✅ truyền callback */}
+                <Circle_box_ds_MT onZoneClick={handleClickPieSlice_ds} isDisplayed={isDisplayed}/>  {/* ✅ truyền callback */}
         </div>
       </div>
        {/* Khung zone 2*/}

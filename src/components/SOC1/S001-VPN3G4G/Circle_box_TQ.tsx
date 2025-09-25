@@ -24,6 +24,7 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28'];
 
 interface Props {
   onZoneClick: (index: number) => void;
+  isDisplayed: boolean;
 }
 // Hiển thị % nằm trong mỗi miếng Pie
 const renderCustomizedLabel = ({
@@ -55,7 +56,7 @@ const renderCustomizedLabel = ({
   );
 };
 
-export default function PieWithPercentage({ onZoneClick }: Props) {
+export default function PieWithPercentage({ onZoneClick, isDisplayed }: Props) {
   
 
     const [soLuongMb,setSoLuongMb] = useState<number>(0);
@@ -63,6 +64,7 @@ export default function PieWithPercentage({ onZoneClick }: Props) {
     const [soLuongMn,setSoLuongMn] = useState<number>(0);
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
+    const [error, setError] = useState<string | null>(null);
     // useEffect(() => {
         
     //     fetch(`${API_URL}/api/thong-ke-loi/count/MB_total/`)
@@ -78,6 +80,13 @@ export default function PieWithPercentage({ onZoneClick }: Props) {
     //         .then(data => setSoLuongMn(data.count));
     //     }, []); 
      useEffect(() => {
+
+    if (!isDisplayed) {
+            setError(null); // reset lỗi khi không hiển thị
+            return;
+          }
+          setError(null); // reset lỗi trước khi fetch
+    
     // Fetch song song bằng Promise.all
     Promise.all([
       fetch(`${API_URL}/thong-ke-loi/count/MB_total/`).then((res) =>
@@ -96,12 +105,31 @@ export default function PieWithPercentage({ onZoneClick }: Props) {
             setSoLuongMn(mn.count || 0);
           })
           .catch((error) => console.error("Fetch error:", error));
-      }, []);
-        const data = [
-        { name: 'Miền Bắc', value: soLuongMb },
-        { name: 'Miền Trung', value: soLuongMt },
-        { name: 'Miền Nam', value: soLuongMn },
-        ];
+      }, [isDisplayed]);
+      if (!isDisplayed) {
+        return (
+          <div
+            style={{
+              fontSize: "24px",       // chữ to hơn
+              fontWeight: "bold",     // đậm
+              textAlign: "center",    // căn giữa ngang
+              marginTop: "20%",       // đẩy xuống giữa màn hình (tương đối)
+              color: "#555555ff",          // màu xám nhẹ (tùy chỉnh)
+            }}
+          >
+            No Data
+          </div>
+        );
+      }
+      if (error) {
+        return <div style={{ color: "red" }}>Error: {error}</div>;
+      }
+
+      const data = [
+      { name: 'Miền Bắc', value: soLuongMb },
+      { name: 'Miền Trung', value: soLuongMt },
+      { name: 'Miền Nam', value: soLuongMn },
+      ];
   
   return (
     <div style={{ width: '100%', height: 350 }}>

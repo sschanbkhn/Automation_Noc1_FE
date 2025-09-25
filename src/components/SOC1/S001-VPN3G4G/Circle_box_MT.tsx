@@ -39,6 +39,7 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28',
 
 interface Props {
   onZoneClick: (index: number) => void;
+  isDisplayed: boolean;
 }
 // Hiển thị % nằm trong mỗi miếng Pie
 const renderCustomizedLabel = ({
@@ -70,7 +71,7 @@ const renderCustomizedLabel = ({
   );
 };
 
-export default function PieWithPercentage({ onZoneClick }: Props) {
+export default function PieWithPercentage({ onZoneClick, isDisplayed }: Props) {
   
 
     const [soLechAPNMT, setSoLechAPNMT] = useState(0);
@@ -86,8 +87,15 @@ export default function PieWithPercentage({ onZoneClick }: Props) {
     const [soLechTrungLapMT, setSoLechTrungLapMT] = useState(0);
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
+    const [error, setError] = useState<string | null>(null);
    
     useEffect(() => {
+      if (!isDisplayed) {
+          setError(null); // reset lỗi khi không hiển thị
+          return;
+        }
+
+      setError(null); // reset lỗi trước khi fetch
        fetch(`${API_URL}/thong-ke-loi/count/mt/khong_dung_apn/`)
         .then(res => res.json())
         .then(data => setSoLechAPNMT(data.count));
@@ -138,7 +146,27 @@ export default function PieWithPercentage({ onZoneClick }: Props) {
       fetch(`${API_URL}/thong-ke-loi/count/mt/khong_trung_lap/`)
         .then(res => res.json())
         .then(data => setSoLechTrungLapMT(data.count));
-      }, []);
+      }, [isDisplayed]);
+    if (!isDisplayed) {
+        return (
+          <div
+            style={{
+              fontSize: "24px",       // chữ to hơn
+              fontWeight: "bold",     // đậm
+              textAlign: "center",    // căn giữa ngang
+              marginTop: "20%",       // đẩy xuống giữa màn hình (tương đối)
+              color: "#555555ff",          // màu xám nhẹ (tùy chỉnh)
+            }}
+          >
+            No Data
+          </div>
+        );
+      }
+
+
+    if (error) {
+      return <div style={{ color: "red" }}>Error: {error}</div>;
+    }
 
     const data = [
     { name: 'Tên APN', value: soLechAPNMT },

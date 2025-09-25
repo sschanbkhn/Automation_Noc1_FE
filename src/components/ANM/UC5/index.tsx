@@ -1,12 +1,17 @@
-import React from 'react';
-import Dashboard from './Dashboard';
+import React from "react";
+import Dashboard from "./Dashboard";
 
-const Anm_uc1 = () => {
+
+interface UCProps {
+  goToTab?: (tabKey: string) => void;
+}
+
+const Anm_uc5: React.FC<UCProps> = ({ goToTab }) => {
   return (
     <div className="p-3">
-      <Dashboard />
+      <Dashboard goToTab={goToTab as (tabKey: string) => void} />
     </div>
   );
 };
 
-export default Anm_uc1;
+export default Anm_uc5;

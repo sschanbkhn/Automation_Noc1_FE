@@ -40,6 +40,7 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28',
 
 interface Props {
   onZoneClick: (index: number) => void;
+  isDisplayed: boolean;
 }
 // Hiển thị % nằm trong mỗi miếng Pie
 const renderCustomizedLabel = ({
@@ -71,7 +72,7 @@ const renderCustomizedLabel = ({
   );
 };
 
-export default function PieWithPercentage({ onZoneClick }: Props) {
+export default function PieWithPercentage({ onZoneClick, isDisplayed }: Props) {
   
 
     const [soDoiSoatAPNMB, setDoiSoatAPNMB] = useState(0);
@@ -83,9 +84,16 @@ export default function PieWithPercentage({ onZoneClick }: Props) {
     const [soLechTrungLapMB, setSoLechTrungLapMB] = useState(0);
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
+    const [error, setError] = useState<string | null>(null);
          
   useEffect(() => {
-      const endpoints = [
+        if (!isDisplayed) {
+          setError(null); // reset lỗi khi không hiển thị
+          return;
+        }
+
+        setError(null); // reset lỗi trước khi fetch
+        const endpoints = [
         "lech_APN",
         "lech_APNID",
         "lech_PDPCP",
@@ -107,8 +115,26 @@ export default function PieWithPercentage({ onZoneClick }: Props) {
         setDoiSoatIpSimMB(results[4].count);
         setDoiSoatPgwMB(results[5].count);
       });
-  }, []);
+    }, [isDisplayed]);
+    if (!isDisplayed) {
+        return (
+          <div
+            style={{
+              fontSize: "24px",       // chữ to hơn
+              fontWeight: "bold",     // đậm
+              textAlign: "center",    // căn giữa ngang
+              marginTop: "20%",       // đẩy xuống giữa màn hình (tương đối)
+              color: "#555555ff",          // màu xám nhẹ (tùy chỉnh)
+            }}
+          >
+            No Data
+          </div>
+        );
+      }
 
+    if (error) {
+      return <div style={{ color: "red" }}>Error: {error}</div>;
+    }
 
         const data = [
         { name: 'Tên APN', value: soDoiSoatAPNMB },

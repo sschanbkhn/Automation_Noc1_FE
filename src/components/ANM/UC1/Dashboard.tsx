@@ -3,40 +3,83 @@ import MyPieChart from './MyPieChart';
 import MyBarChart from './MyBarChart';
 import { useNavigate } from 'react-router-dom';
 
+// Props for tab navigation
+interface DashboardProps {
+  goToTab?: (tabKey: string) => void;
+  setFilters?: React.Dispatch<
+    React.SetStateAction<{
+      province?: string;
+      olt?: string;
+      vendor?: string;
+    }>
+  >;
+}
+
 // Province mapping
 const provinceCodeMap: Record<string, string> = {
-  AGG: 'Viễn thông An Giang',
-  BRA: 'Viễn thông Bà Rịa - Vũng Tàu',
   BGG: 'Viễn thông Bắc Giang',
-  CTV: 'Viễn thông Bắc Ninh',
-  BTE: 'Viễn thông Bến Tre',
-  BDG: 'Viễn thông Bình Dương',
-  BTN: 'Viễn thông Bình Thuận',
-  CMU: 'Viễn thông Cà Mau',
+  BKN: 'Viễn thông Bắc Kạn',
+  BNH: 'Viễn thông Bắc Ninh',
   CBG: 'Viễn thông Cao Bằng',
-  DLC: 'Viễn thông Đắk Lắk',
   DBN: 'Viễn thông Điện Biên',
-  GLI: 'Viễn thông Gia Lai',
-  HNM: 'Viễn thông Hà Nam',
+  HBH: 'Viễn thông Hòa Bình',
+  HDG: 'Viễn thông Hải Dương',
+  HGG: 'Viễn thông Hà Giang',
   HNI: 'Viễn thông Hà Nội',
+  HNM: 'Viễn thông Hà Nam',
+  HPG: 'Viễn thông Hải Phòng',
   HTH: 'Viễn thông Hà Tĩnh',
   HYN: 'Viễn thông Hưng Yên',
-  KGG: 'Viễn thông Kiên Giang',
-  KHA: 'Viễn thông Khánh Hòa',
   LCI: 'Viễn thông Lào Cai',
-  LDG: 'Viễn thông Lâm Đồng',
-  LAN: 'Viễn thông Long An',
-  NDH: 'Viễn thông Nam Định',
-  NBH: 'Viễn thông Ninh Bình',
+  LCU: 'Viễn thông Lai Châu',
+  LSN: 'Viễn thông Lạng Sơn',
   NAN: 'Viễn thông Nghệ An',
-  QNM: 'Viễn thông Quảng Nam',
-  STG: 'Viễn thông Sóc Trăng',
-  TNH: 'Viễn thông Tây Ninh',
-  TGG: 'Viễn thông Tiền Giang',
+  NBH: 'Viễn thông Ninh Bình',
+  NDH: 'Viễn thông Nam Định',
+  PTO: 'Viễn thông Phú Thọ',
+  QNH: 'Viễn thông Quảng Ninh',
+  SLA: 'Viễn thông Sơn La',
   TBH: 'Viễn thông Thái Bình',
   THA: 'Viễn thông Thanh Hóa',
+  TNN: 'Viễn thông Thái Nguyên',
+  TQG: 'Viễn thông Tuyên Quang',
+  VPC: 'Viễn thông Vĩnh Phúc',
+  YBI: 'Viễn thông Yên Bái',
+  AGG: 'Viễn thông An Giang',
+  BDG: 'Viễn thông Bình Dương',
+  BLU: 'Viễn thông Bạc Liêu',
+  BPC: 'Viễn thông Bình Phước',
+  BTE: 'Viễn thông Bến Tre',
+  BTN: 'Viễn thông Bình Thuận',
+  CMU: 'Viễn thông Cà Mau',
+  CTO: 'Viễn thông Cần Thơ',
+  DNI: 'Viễn thông Đồng Nai',
+  DTP: 'Viễn thông Đồng Tháp',
+  HCM: 'Viễn thông Hồ Chí Minh',
+  HGI: 'Viễn thông Hậu Giang',
+  KGG: 'Viễn thông Kiên Giang',
+  LAN: 'Viễn thông Long An',
+  LDG: 'Viễn thông Lâm Đồng',
+  NTN: 'Viễn thông Ninh Thuận',
+  STG: 'Viễn thông Sóc Trăng',
+  TGG: 'Viễn thông Tiền Giang',
+  TNH: 'Viễn thông Tây Ninh',
   TVH: 'Viễn thông Trà Vinh',
-  VLG: 'Viễn thông Vĩnh Long'
+  VLG: 'Viễn thông Vĩnh Long',
+  VTU: 'Viễn thông Vũng Tàu',
+  BDH: 'Viễn thông Bình Định',
+  DLK: 'Viễn thông Đắk Lắk',
+  DNG: 'Viễn thông Đà Nẵng',
+  DNO: 'Viễn thông Đắk Nông',
+  GLI: 'Viễn thông Gia Lai',
+  HUE: 'Viễn thông Thừa Thiên Huế',
+  KHA: 'Viễn thông Khánh Hòa',
+  KTM: 'Viễn thông Kon Tum',
+  PYN: 'Viễn thông Phú Yên',
+  QBH: 'Viễn thông Quảng Bình',
+  QNI: 'Viễn thông Quảng Ngãi',
+  QNM: 'Viễn thông Quảng Nam',
+  QTI: 'Viễn thông Quảng Trị'
 };
 
 const criteriaMap: Record<string, string> = {
@@ -54,9 +97,7 @@ const criteriaMap: Record<string, string> = {
   tc_ntp_sec: 'Bảo mật NTP'
 };
 
-const provinces = Object.values(provinceCodeMap);
-
-const Dashboard = () => {
+const Dashboard: React.FC<DashboardProps> = ({ goToTab, setFilters }) => {
   const [dataJson, setDataJson] = useState<any[]>([]);
   const [province, setProvince] = useState<string>('');
   const [olt, setOlt] = useState<string>('');
@@ -73,10 +114,9 @@ const Dashboard = () => {
         const apiData: any[] = await res.json();
 
         const enriched = apiData.map((device) => {
-          const hostname = device.test_result?.hostname || '';
+          const hostname = device.test_result?.tc_hostname || '';
           const match = hostname.trim().match(/([A-Z]{3})\./);
           const code = match ? match[1] : '';
-
           let provinceName = device.province;
           if (!provinceName || provinceName === 'Không rõ') {
             provinceName = provinceCodeMap[code] || 'Không rõ';
@@ -91,18 +131,26 @@ const Dashboard = () => {
           };
         });
 
-        setDataJson(enriched);
+          setDataJson(enriched);
       } catch (err) {
         console.error('❌ Failed loading device data:', err);
       }
     })();
   }, []);
 
-  const handleClickSlice = (label: string) => {
-    if (label === 'Fail') {
-      navigate(`/link-uc2?${new URLSearchParams({ type: olt, vendor, province })}`);
-    }
-  };
+  // Dynamically get provinces from dataJson
+  const availableProvinces = Array.from(
+    new Set(
+      dataJson
+        .map((device) => {
+          const hostname = device.test_result?.tc_hostname || '';
+          const match = hostname.trim().match(/([A-Z]{3})\./);
+          const code = match ? match[1] : '';
+          return provinceCodeMap[code];
+        })
+        .filter((p) => p)
+    )
+  );
 
   const olts = Array.from(
     new Set(
@@ -132,14 +180,13 @@ const Dashboard = () => {
   );
 
   const getDeviceStatusChart = () => {
-    let pass = 0,
-      fail = 0;
+    let pass = 0, fail = 0;
     filteredData.forEach((device) => {
       const results = Object.entries(device.test_result || {})
         .filter(([k, v]) => k !== 'tc_hostname' && v !== 'n/a')
         .map(([, v]) => v);
-      if (results.length && results.every((r) => r === 'pass')) pass++;
-      else fail++;
+      if (results.length && results.some((r) => r === 'Fail')) fail++;
+      else pass++;
     });
     return [
       { label: 'Pass', value: pass, color: '#4CAF50' },
@@ -168,132 +215,213 @@ const Dashboard = () => {
     }));
   };
 
-  const getProvinceBarChartData = () => {
-    const stats: Record<string, { total: number; fail: number; vendors: string[] }> = {};
+  // --- replace getProvinceBarChartData with vendor version ---
+    const getVendorBarChartData = () => {
+        const stats: Record<string, { pass: number; fail: number; provinces: string[] }> = {};
 
-    dataJson.forEach((device) => {
-      const p = device.province || 'Không rõ';
-      const isFail = Object.values(device.test_result || {}).some(
-        (v: any) => typeof v === 'string' && v.trim().toLowerCase() === 'fail'
-      );
+        dataJson
+            .filter((device) => device.vendor && device.vendor !== 'Không rõ')
+            .forEach((device) => {
+                const v = device.vendor;
+                const isFail = Object.values(device.test_result || {}).some(
+                    (val: any) => typeof val === 'string' && val.trim().toLowerCase() === 'fail'
+                );
 
-      stats[p] = stats[p] || { total: 0, fail: 0, vendors: [] };
-      stats[p].total++;
-      if (isFail) stats[p].fail++;
-      if (!stats[p].vendors.includes(device.vendor)) stats[p].vendors.push(device.vendor);
-    });
+                stats[v] = stats[v] || { pass: 0, fail: 0, provinces: [] };
+                if (isFail) stats[v].fail++;
+                else stats[v].pass++;
 
-    return Object.entries(stats)
-      .map(([province, { total, fail, vendors }]) => {
-        const percentFail = total > 0 ? Math.round((fail / total) * 100) : 0;
-        return {
-          label: province,
-          value: percentFail,
-          color: '#F44336',
-          vendors
-        };
-      })
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 10);
+                if (!stats[v].provinces.includes(device.province)) {
+                    stats[v].provinces.push(device.province);
+                }
+            });
+
+        return Object.entries(stats)
+            .map(([vendor, { pass, fail }]) => ({
+                label: vendor,
+                rawFail: fail,
+                rawTotal: pass + fail, // ✅ matches MyBarChart expectation
+            }))
+            .sort((a, b) => b.rawTotal - a.rawTotal) // sort by total devices
+            .slice(0, 10);
+    };
+
+    const getProvinceBarChartData = () => {
+        const stats: Record<string, { total: number; fail: number; vendors: string[] }> = {};
+
+        dataJson
+            .filter((device) => device.province && device.province !== 'Không rõ')
+            .forEach((device) => {
+                const p = device.province;
+                const isFail = Object.values(device.test_result || {}).some(
+                    (v: any) => typeof v === 'string' && v.trim().toLowerCase() === 'fail'
+                );
+
+                stats[p] = stats[p] || { total: 0, fail: 0, vendors: [] };
+                stats[p].total++;
+                if (isFail) stats[p].fail++;
+                if (!stats[p].vendors.includes(device.vendor)) stats[p].vendors.push(device.vendor);
+            });
+
+        return Object.entries(stats)
+            .map(([province, { total, fail, vendors }]) => {
+                const percentFail = total > 0 ? Math.round((fail / total) * 100) : 0;
+                return {
+                    label: province,
+                    value: percentFail,
+                    rawFail: fail,
+                    rawTotal: total,
+                    color: '#F44336',
+                    vendors
+                };
+            })
+            .sort((a, b) => b.rawTotal - a.rawTotal)
+            .slice(0, 5);
+    };
+
+    // --- New: top 5 criteria fail bar chart ---
+    const excludedCriteria = ['tc_hostname', 'tc_patch_info']; // put keys you want to skip
+
+    const getTopCriteriaFailChartData = () => {
+        const stats: Record<string, { total: number; fail: number }> = {};
+
+        filteredData.forEach((device) => {
+            const testResult = device.test_result || {};
+            Object.entries(testResult).forEach(([k, v]) => {
+                if (excludedCriteria.includes(k) || v === 'n/a') return;
+
+                stats[k] = stats[k] || { total: 0, fail: 0 };
+                stats[k].total++;
+                if (typeof v === 'string' && v.trim().toLowerCase() === 'fail') {
+                    stats[k].fail++;
+                }
+            });
+        });
+
+        return Object.entries(stats)
+            .map(([criterion, { total, fail }]) => {
+                const percentFail = total > 0 ? Math.round((fail / total) * 100) : 0;
+                return {
+                    label: criteriaMap[criterion] || criterion,
+                    value: percentFail,
+                    rawFail: fail,
+                    rawTotal: total,
+                    color: '#FF9800',
+                };
+            })
+            // ✅ Sort by fail percentage descending
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 5);
+    };
+
+
+
+
+    
+
+// --- click handler for vendors ---
+const handleBarClick = (vendorData: any) => {
+  if (goToTab && setFilters) {
+    setFilters({ vendor: vendorData.label });
+    goToTab('uc2');
+  } else {
+    const vendorFilter = vendorData.label || '';
+    navigate(`/link-uc2?${new URLSearchParams({ vendor: vendorFilter })}`);
+  }
+};
+
+    const handleBarClickProvince = (vendorData: any) => {
+        if (goToTab && setFilters) {
+            setFilters({ province: vendorData.label });
+            goToTab('uc2');
+        } else {
+            const vendorFilter = vendorData.label || '';
+            navigate(`/link-uc2?${new URLSearchParams({ vendor: vendorFilter })}`);
+        }
+    };
+
+  // Compute totals
+  const totalDevices = dataJson.length;
+  const totalFailedDevices = dataJson.filter((device) =>
+    Object.values(device.test_result || {}).some(
+      (v: any) => typeof v === 'string' && v.trim().toLowerCase() === 'fail'
+    )
+  ).length;
+
+  const handleClickSlice = (label: string) => {
+    if (label === 'Fail') {
+      if (goToTab && setFilters) {
+        setFilters({ province, olt, vendor });
+        goToTab('uc2');
+      } else {
+        navigate(`/link-uc2?${new URLSearchParams({ type: olt, vendor, province })}`);
+      }
+    }
   };
 
-  const handleBarClick = (provinceData: any) => {
-  // Use the province from the clicked bar
-  const provinceFilter = provinceData.label || ''; // label contains the province name
-  navigate(`/link-uc2?${new URLSearchParams({ province: provinceFilter })}`);
-};
 
   return (
     <div className="container mt-4">
-      <h2 className="mb-4">Thiết bị - Báo cáo kiểm tra</h2>
+         <h2 className="mb-4">Thiết bị - Báo cáo kiểm tra</h2>
+      
 
-      <div className="row mb-4" style={{ width: '100%', height: '400px' }}>
-        <MyBarChart
-          title="🚩 Tỷ lệ lỗi theo tỉnh (%)"
-          data={getProvinceBarChartData()}
-          onClickBar={handleBarClick} // <-- new handler
-        />
+      {/* Totals */}
+      <div className="mb-3">
+        <strong>Tổng số thiết bị:</strong> {totalDevices} &nbsp; | &nbsp;
+        <strong>Tổng số thiết bị lỗi:</strong> {totalFailedDevices}
       </div>
 
-      <div className="row g-3 mb-4">
-        <div className="col-md-4">
-          <label className="form-label">Các tỉnh:</label>
-          <select
-            className="form-select"
-            value={province}
-            onChange={(e) => {
-              setProvince(e.target.value);
-              setOlt('');
-              setVendor('');
-            }}
-          >
-            <option value="">-- Tất cả --</option>
-            {provinces.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-        </div>
+      {/* Province bar chart */}
+          <div className="row mb-4" style={{ width: '100%', height: '400px' }}>
+              <div className="col-md-6">
+                  <MyBarChart
+                      title="🚩 Tỷ lệ lỗi theo Vendor (%)"
+                      data={getVendorBarChartData()}
+                      onClickBar={handleBarClick}
+                  />
+              </div>
+              <div className="col-md-6">
+                  <MyPieChart
+                      title="📊 Phân bổ số lượng thiết bị theo Vendor"
+                      data={Object.entries(
+                          dataJson.reduce((acc: Record<string, number>, device) => {
+                              if (device.vendor && device.vendor !== 'Không rõ') {
+                                  acc[device.vendor] = (acc[device.vendor] || 0) + 1;
+                              }
+                              return acc;
+                          }, {})
+                      ).map(([vendor, count], i) => {
+                          const colors = ['#FF9800', '#2196F3', '#4CAF50', '#9C27B0', '#E91E63'];
+                          return {
+                              label: vendor,
+                              value: count as number,  // ✅ force number type
+                              color: colors[i % colors.length],
+                          };
+                      })}
+                  />
+              </div>
 
-        <div className="col-md-4">
-          <label className="form-label">Chọn phân vùng:</label>
-          <select
-            className="form-select"
-            value={olt}
-            onChange={(e) => {
-              setOlt(e.target.value);
-              setVendor('');
-            }}
-          >
-            <option value="">-- Tất cả --</option>
-            {olts.map((o) => (
-              <option key={o} value={o}>
-                {o}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="col-md-4">
-          <label className="form-label">Chọn Vendor:</label>
-          <select
-            className="form-select"
-            value={vendor}
-            onChange={(e) => setVendor(e.target.value)}
-            disabled={!olt && !province}
-          >
-            <option value="">-- Tất cả --</option>
-            {vendors.map((v) => (
-              <option key={v} value={v}>
-                {v}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {olt && vendor ? (
-        <div className="row">
-          <div className="col-md-6">
-            <MyPieChart
-              title="1️⃣ Tổng kết thiết bị (Đạt/ không đạt)"
-              data={getDeviceStatusChart()}
-              onClickSlice={handleClickSlice}
-            />
           </div>
-          <div className="col-md-6">
-            <MyPieChart
-              title="2️⃣ Tổng kết tiêu chí không đạt"
-              data={getCriteriaFailChart()}
-            />
+
+          <div className="row mb-4" style={{ width: '100%', height: '400px' }}>
+              <div className="col-md-6">
+              <MyBarChart
+                      title="🚩 Top 5 tỉnh không tuân thủ"
+                  data={getProvinceBarChartData()}
+                      onClickBar={handleBarClickProvince}
+                      failColor="#FF9800"
+                      passColor="#2196F3"
+              />
+              </div>
+              <div className="col-md-6">
+                  <MyBarChart
+                      title="🚩 Top 5 tiêu chí lỗi nhiều nhất"
+                      data={getTopCriteriaFailChartData()}
+                      failColor="#FF9800"
+                      passColor="#2196F3"
+                  />
+              </div>
           </div>
-        </div>
-      ) : (
-        <p className="text-muted mt-4">
-          🎯 Vui lòng chọn phân vùng và Vendor để hiển thị biểu đồ.
-        </p>
-      )}
     </div>
   );
 };

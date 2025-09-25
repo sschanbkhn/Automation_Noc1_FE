@@ -20,12 +20,24 @@ type TestResult = {
 
 type ApiResponse = { data: TestResult[] } | TestResult[];
 
-const API_URL = "http://10.155.43.198:5678/webhook/0ccdc9e0-f2fb-448f-9661-9fd3ef11c049?datamode=test_results"; // 🔹 replace with your API
+const API_URL =
+  "http://10.155.43.198:5678/webhook/0ccdc9e0-f2fb-448f-9661-9fd3ef11c049?datamode=test_results";
 
 const isTrue = (v?: string) => v?.toLowerCase() === "true";
 const lines = (s?: string) => (s ? s.split(/\r?\n/) : []);
 
-export default function Dashboard() {
+interface Filters {
+  vendor?: string;
+  department?: string;
+}
+
+interface UC2Props {
+  goToTab?: (tabKey: string) => void;
+  filters?: Filters;
+  setFilters?: (filters: Filters) => void;
+}
+
+export default function Dashboard({ goToTab, filters, setFilters }: UC2Props) {
   const location = useLocation();
   const navigate = useNavigate();
   const queryParams = new URLSearchParams(location.search);
@@ -35,8 +47,21 @@ export default function Dashboard() {
   const [showModal, setShowModal] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
-  const [filterVendor, setFilterVendor] = useState(queryParams.get("vendor") || "");
-  const [filterDepartment, setFilterDepartment] = useState(queryParams.get("department") || "");
+  // Initialize from filters prop, URL params, or empty
+  const [filterVendor, setFilterVendor] = useState(
+    filters?.vendor || queryParams.get("vendor") || ""
+  );
+  const [filterDepartment, setFilterDepartment] = useState(
+    filters?.department || queryParams.get("department") || ""
+  );
+
+  // sync incoming filters
+  useEffect(() => {
+    if (filters) {
+      if (filters.vendor !== undefined) setFilterVendor(filters.vendor);
+      if (filters.department !== undefined) setFilterDepartment(filters.department);
+    }
+  }, [filters]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -47,35 +72,39 @@ export default function Dashboard() {
     fetchData();
   }, []);
 
-  // 🔹 update URL when filters change
+  // update URL & parent filters
   useEffect(() => {
     const params = new URLSearchParams();
     if (filterVendor) params.set("vendor", filterVendor);
     if (filterDepartment) params.set("department", filterDepartment);
     navigate({ search: params.toString() }, { replace: true });
-  }, [filterVendor, filterDepartment, navigate]);
 
-  // 🔹 vendor options depend on department
+    if (setFilters) {
+      setFilters({ vendor: filterVendor, department: filterDepartment });
+    }
+  }, [filterVendor, filterDepartment, navigate, setFilters]);
+
+  // vendor options depend on department
   const vendorOptions = useMemo(() => {
     const filtered = filterDepartment
-      ? data.filter(d => d.department === filterDepartment)
+      ? data.filter((d) => d.department === filterDepartment)
       : data;
-    return Array.from(new Set(filtered.map(d => d.device_type))).sort();
+    return Array.from(new Set(filtered.map((d) => d.device_type))).sort();
   }, [data, filterDepartment]);
 
-  // 🔹 filter data by vendor + department
+  // filter data by vendor + department
   const filteredData = useMemo(() => {
-    return data.filter(d => {
+    return data.filter((d) => {
       if (filterVendor && d.device_type !== filterVendor) return false;
       if (filterDepartment && d.department !== filterDepartment) return false;
       return true;
     });
   }, [data, filterVendor, filterDepartment]);
 
-  // 🔹 group tests by hostname
+  // group tests by hostname
   const groupedByHost = useMemo(() => {
     const map = new Map<string, TestResult[]>();
-    filteredData.forEach(item => {
+    filteredData.forEach((item) => {
       if (!map.has(item.hostname)) map.set(item.hostname, []);
       map.get(item.hostname)!.push(item);
     });
@@ -84,7 +113,7 @@ export default function Dashboard() {
 
   const toggleDetail = (hostname: string, testId: string) => {
     const key = `${hostname}_${testId}`;
-    setExpanded(prev => ({ ...prev, [key]: !prev[key] }));
+    setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   return (
@@ -102,18 +131,32 @@ export default function Dashboard() {
       {/* Filters */}
       <Row className="mb-3">
         <Col>
-          <Form.Select value={filterDepartment} onChange={e => setFilterDepartment(e.target.value)}>
+          <Form.Select
+            value={filterDepartment}
+            onChange={(e) => {
+              setFilterDepartment(e.target.value);
+              setFilterVendor("");
+            }}
+          >
             <option value="">Tất cả phòng ban</option>
-            {Array.from(new Set(data.map(d => d.department))).map(dep => (
-              <option key={dep} value={dep}>{dep}</option>
+            {Array.from(new Set(data.map((d) => d.department))).map((dep) => (
+              <option key={dep} value={dep}>
+                {dep}
+              </option>
             ))}
           </Form.Select>
         </Col>
         <Col>
-          <Form.Select value={filterVendor} onChange={e => setFilterVendor(e.target.value)}>
+          <Form.Select
+            value={filterVendor}
+            onChange={(e) => setFilterVendor(e.target.value)}
+            disabled={!filterDepartment}
+          >
             <option value="">Tất cả vendor</option>
-            {vendorOptions.map(v => (
-              <option key={v} value={v}>{v}</option>
+            {vendorOptions.map((v) => (
+              <option key={v} value={v}>
+                {v}
+              </option>
             ))}
           </Form.Select>
         </Col>
@@ -133,7 +176,7 @@ export default function Dashboard() {
         <tbody>
           {groupedByHost.length > 0 ? (
             groupedByHost.map(([host, tests], index) => {
-              const hasFail = tests.some(t => isTrue(t.failed));
+              const hasFail = tests.some((t) => isTrue(t.failed));
               if (!hasFail) return null;
 
               return (
@@ -143,10 +186,14 @@ export default function Dashboard() {
                   <td>N/A</td>
                   <td>{tests[0].device_type}</td>
                   <td className="text-danger">
-                    <Button variant="danger" size="sm" onClick={() => {
-                      setSelectedHost(tests);
-                      setShowModal(true);
-                    }}>
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedHost(tests);
+                        setShowModal(true);
+                      }}
+                    >
                       Fail
                     </Button>
                   </td>
@@ -169,7 +216,7 @@ export default function Dashboard() {
           <Modal.Title>Chi tiết thiết bị</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          {selectedHost.map(t => {
+          {selectedHost.map((t) => {
             const isFail = isTrue(t.failed);
             const key = `${t.hostname}_${t.test_id}`;
             const isExpanded = expanded[key];
@@ -198,15 +245,11 @@ export default function Dashboard() {
                   <div className="mt-2 ps-3">
                     <div className="mb-2">
                       <strong>Cấu hình hiện tại:</strong>
-                      <pre className="bg-light p-2 rounded mb-0">
-                        {lines(t.result).join("\n")}
-                      </pre>
+                      <pre className="bg-light p-2 rounded mb-0">{lines(t.result).join("\n")}</pre>
                     </div>
                     <div>
                       <strong>Cấu hình yêu cầu:</strong>
-                      <pre className="bg-light p-2 rounded mb-0">
-                        {lines(t.solution).join("\n")}
-                      </pre>
+                      <pre className="bg-light p-2 rounded mb-0">{lines(t.solution).join("\n")}</pre>
                     </div>
                   </div>
                 )}

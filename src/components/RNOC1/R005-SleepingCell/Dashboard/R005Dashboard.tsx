@@ -10,6 +10,8 @@ import Zone2_ChartProvinceDistribution from "./Zone2_ChartProvinceDistribution";
 import Zone3CellsProgressChart from "./Zone3CellsProgressChart";
 import Zone4TableCells_DistributionChart from "./zone4TableCellsDistribution";
 
+import Zone1ASuccessfulSleeping from "./Zone1ASuccessfulSleeping";
+
 interface DashboardProps {
   sidebarWidth?: number;
   isSidebarCollapsed?: boolean;
@@ -49,6 +51,14 @@ const Dashboard: React.FC<DashboardProps> = ({ sidebarWidth = 250, isSidebarColl
         />
         {/* ket thuc zone 1 */}
         {/* ===============================================================*/}
+        {/* ===============================================================*/}
+
+        {/*  bat dau zone 1A */}
+        {/* ===============================================================*/}
+        <Zone1ASuccessfulSleeping selectedDate={selectedDate} loading={loading} />
+        {/*  ket thuc zone 1A */}
+        {/* ===============================================================*/}
+
         {/*  bat dau zone 2 */}
         {/* ===============================================================*/}
         {/* <Zone2ProvinceDistribution /> */}
