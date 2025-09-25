@@ -1,0 +1,362 @@
+[
+  {
+    "olt": "OLT",
+    "vendor": "Huawei",
+    "device": "sysname BNH00SHA",
+    "province": "Không rõ",
+    "test_result": {
+      "tc_hostname": "sysname BNH00SHA",
+      "tc_patch_info": "N/A",
+      "tc_telnet_status": "Fail",
+      "tc_ssh_sec": "Fail",
+      "tc_ssh_version": "Fail",
+      "tc_ssh_root": "Fail",
+      "tc_remote_access": "Fail",
+      "tc_ssh_timeout": "Fail",
+      "tc_snmp_version": "Fail",
+      "tc_snmp_access": "Fail",
+      "tc_snmp_community": "Pass",
+      "tc_ntp_sec": "Pass"
+    }
+  },
+  {
+    "olt": "OLT",
+    "vendor": "Huawei",
+    "device": " sysname VLG.TON.LST.OLT.HU.21",
+    "province": "Viễn thông Vĩnh Long",
+    "test_result": {
+      "tc_hostname": " sysname VLG.TON.LST.OLT.HU.21",
+      "tc_patch_info": "N/A",
+      "tc_telnet_status": "Fail",
+      "tc_ssh_sec": "Fail",
+      "tc_ssh_version": "Fail",
+      "tc_ssh_root": "Fail",
+      "tc_remote_access": "Fail",
+      "tc_ssh_timeout": "Fail",
+      "tc_snmp_version": "Fail",
+      "tc_snmp_access": "Fail",
+      "tc_snmp_community": "Pass",
+      "tc_ntp_sec": "Pass"
+    }
+  },
+  {
+    "olt": "OLT",
+    "vendor": "Huawei",
+    "device": " sysname VLG.VLG.NHE.OLT.HU.21",
+    "province": "Viễn thông Vĩnh Long",
+    "test_result": {
+      "tc_hostname": " sysname VLG.VLG.NHE.OLT.HU.21",
+      "tc_patch_info": "N/A",
+      "tc_telnet_status": "Fail",
+      "tc_ssh_sec": "Fail",
+      "tc_ssh_version": "Fail",
+      "tc_ssh_root": "Fail",
+      "tc_remote_access": "Fail",
+      "tc_ssh_timeout": "Fail",
+      "tc_snmp_version": "Fail",
+      "tc_snmp_access": "Fail",
+      "tc_snmp_community": "Pass",
+      "tc_ntp_sec": "Pass"
+    }
+  },
+  {
+    "olt": "OLT",
+    "vendor": "Huawei",
+    "device": " sysname VLG.BMH.DHG.OLT.HU.21",
+    "province": "Viễn thông Vĩnh Long",
+    "test_result": {
+      "tc_hostname": " sysname VLG.BMH.DHG.OLT.HU.21",
+      "tc_patch_info": "N/A",
+      "tc_telnet_status": "Fail",
+      "tc_ssh_sec": "Fail",
+      "tc_ssh_version": "Fail",
+      "tc_ssh_root": "Fail",
+      "tc_remote_access": "Fail",
+      "tc_ssh_timeout": "Fail",
+      "tc_snmp_version": "Fail",
+      "tc_snmp_access": "Fail",
+      "tc_snmp_community": "Pass",
+      "tc_ntp_sec": "Pass"
+    }
+  },
+  {
+    "olt": "OLT",
+    "vendor": "Huawei",
+    "device": " sysname TNH.DMC.VPM.OLT.HU21",
+    "province": "Viễn thông Tây Ninh",
+    "test_result": {
+      "tc_hostname": " sysname TNH.DMC.VPM.OLT.HU21",
+      "tc_patch_info": "N/A",
+      "tc_telnet_status": "Fail",
+      "tc_ssh_sec": "Fail",
+      "tc_ssh_version": "Fail",
+      "tc_ssh_root": "Fail",
+      "tc_remote_access": "Fail",
+      "tc_ssh_timeout": "Fail",
+      "tc_snmp_version": "Fail",
+      "tc_snmp_access": "Pass",
+      "tc_snmp_community": "Pass",
+      "tc_ntp_sec": "Pass"
+    }
+  },
+  {
+    "olt": "OLT",
+    "vendor": "Huawei",
+    "device": " sysname TNH.DMC.CL2.OLT.HU21",
+    "province": "Viễn thông Tây Ninh",
+    "test_result": {
+      "tc_hostname": " sysname TNH.DMC.CL2.OLT.HU21",
+      "tc_patch_info": "N/A",
+      "tc_telnet_status": "Fail",
+      "tc_ssh_sec": "Fail",
+      "tc_ssh_version": "Fail",
+      "tc_ssh_root": "Fail",
+      "tc_remote_access": "Fail",
+      "tc_ssh_timeout": "Fail",
+      "tc_snmp_version": "Fail",
+      "tc_snmp_access": "Pass",
+      "tc_snmp_community": "Pass",
+      "tc_ntp_sec": "Pass"
+    }
+  },
+  {
+    "olt": "OLT",
+    "vendor": "Huawei",
+    "device": " sysname TNH.TBG.VGB.OLT.HU21",
+    "province": "Viễn thông Tây Ninh",
+    "test_result": {
+      "tc_hostname": " sysname TNH.TBG.VGB.OLT.HU21",
+      "tc_patch_info": "N/A",
+      "tc_telnet_status": "Fail",
+      "tc_ssh_sec": "Fail",
+      "tc_ssh_version": "Fail",
+      "tc_ssh_root": "Fail",
+      "tc_remote_access": "Fail",
+      "tc_ssh_timeout": "Fail",
+      "tc_snmp_version": "Fail",
+      "tc_snmp_access": "Pass",
+      "tc_snmp_community": "Pass",
+      "tc_ntp_sec": "Pass"
+    }
+  },
+  {
+    "olt": "OLT",
+    "vendor": "Huawei",
+    "device": " sysname TNH.GDU.TCH.OLT.HU21",
+    "province": "Viễn thông Tây Ninh",
+    "test_result": {
+      "tc_hostname": " sysname TNH.GDU.TCH.OLT.HU21",
+      "tc_patch_info": "N/A",
+      "tc_telnet_status": "Fail",
+      "tc_ssh_sec": "Fail",
+      "tc_ssh_version": "Fail",
+      "tc_ssh_root": "Fail",
+      "tc_remote_access": "Fail",
+      "tc_ssh_timeout": "Fail",
+      "tc_snmp_version": "Fail",
+      "tc_snmp_access": "Pass",
+      "tc_snmp_community": "Pass",
+      "tc_ntp_sec": "Pass"
+    }
+  },
+  {
+    "olt": "OLT",
+    "vendor": "Huawei",
+    "device": " sysname TNH.GDU.VTD.OLT.HU21",
+    "province": "Viễn thông Tây Ninh",
+    "test_result": {
+      "tc_hostname": " sysname TNH.GDU.VTD.OLT.HU21",
+      "tc_patch_info": "N/A",
+      "tc_telnet_status": "Pass",
+      "tc_ssh_sec": "Pass",
+      "tc_ssh_version": "Pass",
+      "tc_ssh_root": "Pass",
+      "tc_remote_access": "Pass",
+      "tc_ssh_timeout": "Pass",
+      "tc_snmp_version": "Pass",
+      "tc_snmp_access": "Pass",
+      "tc_snmp_community": "Pass",
+      "tc_ntp_sec": "Pass"
+    }
+  },
+  {
+    "olt": "OLT",
+    "vendor": "Huawei",
+    "device": " sysname THA.BTC.DTM.OLT.HU11",
+    "province": "Viễn thông Thanh Hóa",
+    "test_result": {
+      "tc_hostname": " sysname THA.BTC.DTM.OLT.HU11",
+      "tc_patch_info": "N/A",
+      "tc_telnet_status": "Fail",
+      "tc_ssh_sec": "Fail",
+      "tc_ssh_version": "Fail",
+      "tc_ssh_root": "Fail",
+      "tc_remote_access": "Fail",
+      "tc_ssh_timeout": "Fail",
+      "tc_snmp_version": "Fail",
+      "tc_snmp_access": "Fail",
+      "tc_snmp_community": "Pass",
+      "tc_ntp_sec": "Pass"
+    }
+  },
+  {
+    "olt": "OLT",
+    "vendor": "Huawei",
+    "device": " sysname THA.NLC.MTN.OLT.HU21",
+    "province": "Viễn thông Thanh Hóa",
+    "test_result": {
+      "tc_hostname": " sysname THA.NLC.MTN.OLT.HU21",
+      "tc_patch_info": "N/A",
+      "tc_telnet_status": "Fail",
+      "tc_ssh_sec": "Fail",
+      "tc_ssh_version": "Fail",
+      "tc_ssh_root": "Fail",
+      "tc_remote_access": "Fail",
+      "tc_ssh_timeout": "Fail",
+      "tc_snmp_version": "Fail",
+      "tc_snmp_access": "Fail",
+      "tc_snmp_community": "Pass",
+      "tc_ntp_sec": "Pass"
+    }
+  },
+  {
+    "olt": "OLT",
+    "vendor": "Huawei",
+    "device": " sysname THA.BSN.XMG.OLT.HU21",
+    "province": "Viễn thông Thanh Hóa",
+    "test_result": {
+      "tc_hostname": " sysname THA.BSN.XMG.OLT.HU21",
+      "tc_patch_info": "N/A",
+      "tc_telnet_status": "Fail",
+      "tc_ssh_sec": "Fail",
+      "tc_ssh_version": "Fail",
+      "tc_ssh_root": "Fail",
+      "tc_remote_access": "Fail",
+      "tc_ssh_timeout": "Fail",
+      "tc_snmp_version": "Fail",
+      "tc_snmp_access": "Fail",
+      "tc_snmp_community": "Pass",
+      "tc_ntp_sec": "Pass"
+    }
+  },
+  {
+    "olt": "OLT",
+    "vendor": "Huawei",
+    "device": " sysname THA.BTC.DLU.OLT.HU21",
+    "province": "Viễn thông Thanh Hóa",
+    "test_result": {
+      "tc_hostname": " sysname THA.BTC.DLU.OLT.HU21",
+      "tc_patch_info": "N/A",
+      "tc_telnet_status": "Fail",
+      "tc_ssh_sec": "Fail",
+      "tc_ssh_version": "Fail",
+      "tc_ssh_root": "Fail",
+      "tc_remote_access": "Fail",
+      "tc_ssh_timeout": "Fail",
+      "tc_snmp_version": "Fail",
+      "tc_snmp_access": "Fail",
+      "tc_snmp_community": "Pass",
+      "tc_ntp_sec": "Pass"
+    }
+  },
+  {
+    "olt": "OLT",
+    "vendor": "Huawei",
+    "device": " sysname THA.HTG.HBC.OLT.HU11",
+    "province": "Viễn thông Thanh Hóa",
+    "test_result": {
+      "tc_hostname": " sysname THA.HTG.HBC.OLT.HU11",
+      "tc_patch_info": "N/A",
+      "tc_telnet_status": "Fail",
+      "tc_ssh_sec": "Fail",
+      "tc_ssh_version": "Fail",
+      "tc_ssh_root": "Fail",
+      "tc_remote_access": "Fail",
+      "tc_ssh_timeout": "Fail",
+      "tc_snmp_version": "Fail",
+      "tc_snmp_access": "Fail",
+      "tc_snmp_community": "Pass",
+      "tc_ntp_sec": "Pass"
+    }
+  },
+  {
+    "olt": "OLT",
+    "vendor": "Huawei",
+    "device": " sysname THA.HTG.HLG.OLT.HU11",
+    "province": "Viễn thông Thanh Hóa",
+    "test_result": {
+      "tc_hostname": " sysname THA.HTG.HLG.OLT.HU11",
+      "tc_patch_info": "N/A",
+      "tc_telnet_status": "Fail",
+      "tc_ssh_sec": "Fail",
+      "tc_ssh_version": "Fail",
+      "tc_ssh_root": "Fail",
+      "tc_remote_access": "Fail",
+      "tc_ssh_timeout": "Fail",
+      "tc_snmp_version": "Fail",
+      "tc_snmp_access": "Fail",
+      "tc_snmp_community": "Pass",
+      "tc_ntp_sec": "Pass"
+    }
+  },
+  {
+    "olt": "OLT",
+    "vendor": "Huawei",
+    "device": " sysname THA.HTG.CCU.OLT.HU11",
+    "province": "Viễn thông Thanh Hóa",
+    "test_result": {
+      "tc_hostname": " sysname THA.HTG.CCU.OLT.HU11",
+      "tc_patch_info": "N/A",
+      "tc_telnet_status": "Fail",
+      "tc_ssh_sec": "Fail",
+      "tc_ssh_version": "Fail",
+      "tc_ssh_root": "Fail",
+      "tc_remote_access": "Fail",
+      "tc_ssh_timeout": "Fail",
+      "tc_snmp_version": "Fail",
+      "tc_snmp_access": "Fail",
+      "tc_snmp_community": "Pass",
+      "tc_ntp_sec": "Pass"
+    }
+  },
+  {
+    "olt": "OLT",
+    "vendor": "Huawei",
+    "device": " sysname VLG.LHO.HNH.OLT.HU.21",
+    "province": "Viễn thông Vĩnh Long",
+    "test_result": {
+      "tc_hostname": " sysname VLG.LHO.HNH.OLT.HU.21",
+      "tc_patch_info": "N/A",
+      "tc_telnet_status": "Fail",
+      "tc_ssh_sec": "Fail",
+      "tc_ssh_version": "Fail",
+      "tc_ssh_root": "Fail",
+      "tc_remote_access": "Fail",
+      "tc_ssh_timeout": "Fail",
+      "tc_snmp_version": "Fail",
+      "tc_snmp_access": "Fail",
+      "tc_snmp_community": "Pass",
+      "tc_ntp_sec": "Pass"
+    }
+  },
+  {
+    "olt": "OLT",
+    "vendor": "Huawei",
+    "device": " sysname VLG.VLM.HNN.OLT.HU.21",
+    "province": "Viễn thông Vĩnh Long",
+    "test_result": {
+      "tc_hostname": " sysname VLG.VLM.HNN.OLT.HU.21",
+      "tc_patch_info": "N/A",
+      "tc_telnet_status": "Fail",
+      "tc_ssh_sec": "Fail",
+      "tc_ssh_version": "Fail",
+      "tc_ssh_root": "Fail",
+      "tc_remote_access": "Fail",
+      "tc_ssh_timeout": "Fail",
+      "tc_snmp_version": "Fail",
+      "tc_snmp_access": "Fail",
+      "tc_snmp_community": "Pass",
+      "tc_ntp_sec": "Pass"
+    }
+  }
+]
