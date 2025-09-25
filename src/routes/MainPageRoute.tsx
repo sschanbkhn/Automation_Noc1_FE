@@ -83,6 +83,8 @@ const MainPageRoute = (props: Props) => {
                 return <DashboardRnocSummary />;
             case "DashboardRnocRoom":
                 return <DashboardRnocRoom />;
+            
+            //ANM 
             case "anm_uc1":
                 return <AnmTabs />;
             case "anm2_uc1":
