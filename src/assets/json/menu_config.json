@@ -225,36 +225,32 @@
       ]
     },
     {
-      "code": "Anm",
-      "name": "AU ANM",
-      "url": "/user",
-      "icon": "bi bi-tools",
-      "subMenu": [
-        {
-          "code": "anm_uc1",
-          "name": "OLT",
-          "url": "/OLT",
-          "icon": "bi bi-grid"
-        },
-        {
-          "code": "anm2_uc1",
-          "name": "VN2/Mane",
-          "url": "/link-uc2",
-          "icon": "bi bi-grid"
-        },
-        {
-          "code": "anm3_uc1",
-          "name": "ONU",
-          "url": "/link-uc3",
-          "icon": "bi bi-grid"
-        },
-        {
-          "code": "anm4_uc1",
-          "name": "SERVER (ON GOING)",
-          "url": "/link-uc4",
-          "icon": "bi bi-grid"
+            "code": "Anm",
+            "name" : "AU ANM",
+            "url": "/user",
+            "icon": "bi bi-tools",
+            "subMenu": [
+                {
+                    "code": "anm_uc1",
+                    "name" : "GPON - OLT",
+                    "url": "/OLT",
+                    "icon": "bi bi-grid"
+                },
+                {
+                    "code": "anm3_uc1",
+                    "name" : "GPON - ONU",
+                    "url": "/link-uc3",
+                    "icon": "bi bi-grid"
+                },
+                {
+                    "code": "anm2_uc1",
+                    "name" : "VN2/MANE",
+                    "url": "/link-uc2",
+                    "icon": "bi bi-grid"
+                }
+                
+               
+            ]
         }
-      ]
-    }
   ]
 }
