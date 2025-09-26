@@ -186,7 +186,7 @@
       "subMenu": [
         {
           "code": "ClearThuebaoDaphien",
-          "name": "Clear thuê bao đa phiên ",
+          "name": "Kiểm soát các phiên PPPoE",
           "url": "/ClearThuebaoDaphien",
           "icon": "bi bi-grid"
         },

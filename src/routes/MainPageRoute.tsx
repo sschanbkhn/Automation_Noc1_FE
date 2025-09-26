@@ -181,6 +181,7 @@ const MainPageRoute = (props: Props) => {
             case "hc-dashboard-sbc":
                 return <SbcDashboardWithNavbar />;
             case "ClearThuebaoDaphien":
+                return <ClearThuebaoDaphien />;
                 //snoc end
 
             case "hc-schedule":
