@@ -45,6 +45,15 @@ const I003Service = {
             data: { username: username, ip: ip }
         });
         return res
+    },
+    
+    GetDashboardData: async (fromDate?: string, toDate?: string) => {        
+        let res: any = await request({
+            url: `/${I003_BNG}/GetDashboardData`,
+            method: 'get',
+            params: { fromDate, toDate }
+        });
+        return res
     }
 }
 

@@ -3,8 +3,7 @@ import { useDispatch } from "react-redux";
 import { setWebSocketStatus } from "../redux/Healthcheck/healthcheckSlice";
 import { wsUpsertScheduleStatus } from "../redux/KPI/genericScheduleSlice"; // chỉnh path nếu khác
 
-const BASE_WS = "ws://10.155.43.201:8000/ws/";
-
+const BASE_WS = process.env.REACT_APP_SNOC_WS_URL || "ws://localhost:8000/ws";
 export default function useScheduleKpiWebSocket({
   endpoint = "schedule",
   silent = true,

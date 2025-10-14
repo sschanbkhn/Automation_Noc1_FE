@@ -31,6 +31,7 @@ const config = {
   },
   resolve: {
     extensions: ['.js', '.jsx', '.ts', '.tsx'],
+    plugins: [new TsconfigPathsPlugin({ configFile: "./tsconfig.json" })],
     alias: {
       '@fortawesome/fontawesome-svg-core': '@fortawesome/fontawesome-svg-core/index.js', 
       'app': resolve(__dirname, './src/app'),
@@ -108,7 +109,6 @@ const config = {
       title: 'Automation APP',
       template: 'src/index.html',
     }),
-    new TsconfigPathsPlugin({ configFile: "./tsconfig.json" }),
     new MiniCssExtractPlugin({ filename: devMode ? '[name].css' : 'assets/css/[name].css' }),
     new ESLintPlugin(),
     new CleanWebpackPlugin({ cleanStaleWebpackAssets: false }),    

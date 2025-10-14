@@ -10,7 +10,13 @@ export default function ThuebaoDaphien() {
   const [clearing, setClearing] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [activeTab, setActiveTab] = useState('clear-multi'); // Tab state
+  const [activeTab, setActiveTab] = useState('dashboard'); // Tab state - default to dashboard
+  
+  // Dashboard states
+  const [dashboardData, setDashboardData] = useState(null);
+  const [dashboardLoading, setDashboardLoading] = useState(false);
+  const [selectedFromDate, setSelectedFromDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedToDate, setSelectedToDate] = useState(new Date().toISOString().split('T')[0]);
   
   // Sorting states
   const [sortField, setSortField] = useState('');
@@ -250,14 +256,42 @@ export default function ThuebaoDaphien() {
     });
   };
 
+  // Fetch dashboard data
+  const fetchDashboardData = useCallback(async () => {
+    setDashboardLoading(true);
+    try {
+      const response = await I003Service.GetDashboardData(selectedFromDate, selectedToDate);
+      
+      if (response && response.Success && response.Data) {
+        setDashboardData(response.Data);
+      } else {
+        throw new Error(response?.Message || 'Không thể tải dữ liệu dashboard');
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      alert('Lỗi khi tải dữ liệu dashboard: ' + (error.message || 'Không xác định'));
+    } finally {
+      setDashboardLoading(false);
+    }
+  }, [selectedFromDate, selectedToDate]);
+
   // Load data on component mount
   useEffect(() => {
-    if (activeTab === 'clear-multi') {
+    if (activeTab === 'dashboard') {
+      fetchDashboardData();
+    } else if (activeTab === 'clear-multi') {
       fetchData();
     } else if (activeTab === 'clear-user') {
       fetchBngData();
     }
-  }, [activeTab]);
+  }, [activeTab, fetchDashboardData]);
+
+  // Auto-refresh dashboard data when date changes
+  useEffect(() => {
+    if (activeTab === 'dashboard') {
+      fetchDashboardData();
+    }
+  }, [selectedFromDate, selectedToDate, activeTab, fetchDashboardData]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -311,6 +345,22 @@ export default function ThuebaoDaphien() {
       <div style={{ marginBottom: 20, borderBottom: '2px solid #e2e8f0' }}>
         <div style={{ display: 'flex', gap: 0 }}>
           <button
+            onClick={() => setActiveTab('dashboard')}
+            style={{
+              padding: '12px 24px',
+              border: 'none',
+              borderBottom: activeTab === 'dashboard' ? '3px solid #1890ff' : '3px solid transparent',
+              background: activeTab === 'dashboard' ? '#f0f9ff' : 'transparent',
+              color: activeTab === 'dashboard' ? '#1890ff' : '#666',
+              cursor: 'pointer',
+              fontWeight: activeTab === 'dashboard' ? 600 : 400,
+              fontSize: 14,
+              transition: 'all 0.3s ease'
+            }}
+          >
+            Dashboard
+          </button>
+          <button
             onClick={() => setActiveTab('clear-multi')}
             style={{
               padding: '12px 24px',
@@ -346,6 +396,330 @@ export default function ThuebaoDaphien() {
       </div>
       
       {/* Tab Content */}
+      {/* Dashboard Tab */}
+      {activeTab === 'dashboard' && (
+      <div style={{ background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: 24 }}>
+        {/* Date Picker */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, padding: '16px 0', borderBottom: '1px solid #e2e8f0' }}>
+          <h3 style={{ color: '#1890ff', fontWeight: 600, fontSize: 18, margin: 0 }}>Dashboard theo dõi các phiên PPPoE</h3>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <label style={{ fontWeight: 500, fontSize: 14 }}>Từ ngày:</label>
+            <input
+              type="date"
+              value={selectedFromDate}
+              onChange={(e) => setSelectedFromDate(e.target.value)}
+              style={{
+                padding: '6px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: 4,
+                fontSize: 14
+              }}
+            />
+            <label style={{ fontWeight: 500, fontSize: 14 }}>Đến ngày:</label>
+            <input
+              type="date"
+              value={selectedToDate}
+              onChange={(e) => setSelectedToDate(e.target.value)}
+              style={{
+                padding: '6px 12px',
+                border: '1px solid #d1d5db',
+                borderRadius: 4,
+                fontSize: 14
+              }}
+            />
+            <button
+              onClick={fetchDashboardData}
+              disabled={dashboardLoading}
+              style={{
+                padding: '6px 16px',
+                background: dashboardLoading ? '#94a3b8' : '#1890ff',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 4,
+                fontSize: 14,
+                cursor: dashboardLoading ? 'not-allowed' : 'pointer',
+                fontWeight: 500
+              }}
+            >
+              {dashboardLoading ? 'Đang tải...' : 'Cập nhật'}
+            </button>
+          </div>
+        </div>
+        
+        {dashboardLoading ? (
+          <div style={{ textAlign: 'center', padding: '60px 0' }}>
+            <div style={{ fontSize: 16, color: '#666' }}>Đang tải dữ liệu dashboard...</div>
+          </div>
+        ) : dashboardData ? (
+          <div>
+            {/* Summary Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20, marginBottom: 30 }}>
+              <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: 8, padding: 20, color: '#fff' }}>
+                <div style={{ fontSize: 14, opacity: 0.9, marginBottom: 8 }}>Tổng số phiên PPPoE xác thực</div>
+                <div style={{ fontSize: 28, fontWeight: 700 }}>
+                  {dashboardData.Summary?.TongSoPhienBaoXacThuc?.toLocaleString() || '0'}
+                </div>
+                <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>100%</div>
+              </div>
+              
+              <div style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', borderRadius: 8, padding: 20, color: '#fff' }}>
+                <div style={{ fontSize: 14, opacity: 0.9, marginBottom: 8 }}>Vượt phiên</div>
+                <div style={{ fontSize: 28, fontWeight: 700 }}>
+                  {dashboardData.Summary?.VuotPhien?.toLocaleString() || '0'}
+                </div>
+                <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>
+                  {dashboardData.Summary?.TongSoPhienBaoXacThuc > 0 
+                    ? ((dashboardData.Summary.VuotPhien / dashboardData.Summary.TongSoPhienBaoXacThuc) * 100).toFixed(1)
+                    : '0'
+                  }%
+                </div>
+              </div>
+              
+              <div style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', borderRadius: 8, padding: 20, color: '#fff' }}>
+                <div style={{ fontSize: 14, opacity: 0.9, marginBottom: 8 }}>Đã xóa</div>
+                <div style={{ fontSize: 28, fontWeight: 700 }}>
+                  {dashboardData.Summary?.DaXoa?.toLocaleString() || '0'}
+                </div>
+                <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>
+                  {dashboardData.Summary?.VuotPhien > 0 
+                    ? ((dashboardData.Summary.DaXoa / dashboardData.Summary.VuotPhien) * 100).toFixed(1)
+                    : '0'
+                  }%
+                </div>
+              </div>
+              
+              <div style={{ background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', borderRadius: 8, padding: 20, color: '#fff' }}>
+                <div style={{ fontSize: 14, opacity: 0.9, marginBottom: 8 }}>Còn lại</div>
+                <div style={{ fontSize: 28, fontWeight: 700 }}>
+                  {dashboardData.Summary?.ConLai?.toLocaleString() || '0'}
+                </div>
+                <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>
+                  {dashboardData.Summary?.VuotPhien > 0 
+                    ? ((dashboardData.Summary.ConLai / dashboardData.Summary.VuotPhien) * 100).toFixed(1)
+                    : '0'
+                  }%
+                </div>
+              </div>
+            </div>
+            
+            {/* Chart and Top Provinces */}
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
+              {/* Chart */}
+              <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: 20 }}>
+                <h4 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, color: '#374151' }}>Biểu đồ theo dõi số phiên PPPoE theo ngày</h4>
+                <div style={{ height: 300, display: 'flex', alignItems: 'end', gap: 8, padding: '0 16px' }}>
+                  {dashboardData.ChartData?.map((item, idx) => (
+                    <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+                      {/* Tooltip hiển thị khi hover */}
+                      <div 
+                        style={{ 
+                          position: 'absolute',
+                          top: -80,
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          background: '#1f2937',
+                          color: '#fff',
+                          padding: '8px 12px',
+                          borderRadius: 6,
+                          fontSize: 11,
+                          whiteSpace: 'nowrap',
+                          opacity: 0,
+                          pointerEvents: 'none',
+                          transition: 'opacity 0.3s ease',
+                          zIndex: 10,
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                        }}
+                        className={`tooltip-${idx}`}
+                      >
+                        <div>Xác thực: {item.XacThuc?.toLocaleString()}</div>
+                        <div>Đã xóa: {item.DaXoa?.toLocaleString()}</div>
+                        <div>Vượt phiên: {item.VuotPhien?.toLocaleString()}</div>
+                      </div>
+                      
+                      <div 
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', height: 250, cursor: 'pointer' }}
+                        onMouseEnter={(e) => {
+                          const tooltip = e.currentTarget.parentElement.querySelector(`.tooltip-${idx}`);
+                          if (tooltip) tooltip.style.opacity = '1';
+                        }}
+                        onMouseLeave={(e) => {
+                          const tooltip = e.currentTarget.parentElement.querySelector(`.tooltip-${idx}`);
+                          if (tooltip) tooltip.style.opacity = '0';
+                        }}
+                      >
+                        {/* Xác thực bar */}
+                        <div style={{ 
+                          background: '#10b981', 
+                          width: '30%', 
+                          height: `${Math.max(10, (item.XacThuc / 3000000) * 100)}%`,
+                          borderRadius: '2px 2px 0 0',
+                          position: 'relative',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          {(item.XacThuc / 3000000) * 100 > 15 && (
+                            <span style={{ 
+                              color: '#fff', 
+                              fontSize: 9, 
+                              fontWeight: 600,
+                              transform: 'rotate(-90deg)',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {item.XacThuc > 1000 ? `${(item.XacThuc/1000).toFixed(0)}k` : item.XacThuc}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Đã xóa bar */}
+                        <div style={{ 
+                          background: '#f59e0b', 
+                          width: '30%', 
+                          height: `${Math.max(5, (item.DaXoa / 30000) * 100)}%`,
+                          borderRadius: '0',
+                          position: 'relative',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          {(item.DaXoa / 30000) * 100 > 10 && (
+                            <span style={{ 
+                              color: '#fff', 
+                              fontSize: 9, 
+                              fontWeight: 600,
+                              transform: 'rotate(-90deg)',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {item.DaXoa > 1000 ? `${(item.DaXoa/1000).toFixed(0)}k` : item.DaXoa}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Vượt phiên bar */}
+                        <div style={{ 
+                          background: '#ef4444', 
+                          width: '30%', 
+                          height: `${Math.max(5, (item.VuotPhien / 60000) * 100)}%`,
+                          borderRadius: '0 0 2px 2px',
+                          position: 'relative',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          {(item.VuotPhien / 60000) * 100 > 10 && (
+                            <span style={{ 
+                              color: '#fff', 
+                              fontSize: 9, 
+                              fontWeight: 600,
+                              transform: 'rotate(-90deg)',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {item.VuotPhien > 1000 ? `${(item.VuotPhien/1000).toFixed(0)}k` : item.VuotPhien}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 12, color: '#6b7280', marginTop: 8 }}>{item.Date}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginTop: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div style={{ width: 12, height: 12, background: '#ef4444', borderRadius: 2 }}></div>
+                    <span style={{ fontSize: 12, color: '#6b7280' }}>Vượt phiên</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div style={{ width: 12, height: 12, background: '#f59e0b', borderRadius: 2 }}></div>
+                    <span style={{ fontSize: 12, color: '#6b7280' }}>Đã xóa</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div style={{ width: 12, height: 12, background: '#10b981', borderRadius: 2 }}></div>
+                    <span style={{ fontSize: 12, color: '#6b7280' }}>Xác thực</span>
+                  </div>
+                </div>
+                
+                {/* Chi tiết dữ liệu theo ngày */}
+                <div style={{ marginTop: 20, maxHeight: 200, overflowY: 'auto' }}>
+                  <h5 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: '#374151' }}>Chi tiết dữ liệu theo ngày:</h5>
+                  <table style={{ width: '100%', fontSize: 11, borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, color: '#374151' }}>Ngày</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600, color: '#10b981' }}>Xác thức</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600, color: '#f59e0b' }}>Đã xóa</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600, color: '#ef4444' }}>Vượt phiên</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 600, color: '#6b7280' }}>Còn lại</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dashboardData.ChartData?.map((item, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                          <td style={{ padding: '6px 12px', fontWeight: 500 }}>{item.Date}</td>
+                          <td style={{ padding: '6px 12px', textAlign: 'right', color: '#10b981', fontWeight: 600 }}>
+                            {item.XacThuc?.toLocaleString()}
+                          </td>
+                          <td style={{ padding: '6px 12px', textAlign: 'right', color: '#f59e0b', fontWeight: 600 }}>
+                            {item.DaXoa?.toLocaleString()}
+                          </td>
+                          <td style={{ padding: '6px 12px', textAlign: 'right', color: '#ef4444', fontWeight: 600 }}>
+                            {item.VuotPhien?.toLocaleString()}
+                          </td>
+                          <td style={{ padding: '6px 12px', textAlign: 'right', color: '#6b7280', fontWeight: 600 }}>
+                            {(item.VuotPhien - item.DaXoa)?.toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              
+              {/* Top Provinces */}
+              <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, padding: 20 }}>
+                <h4 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, color: '#374151' }}>Top tỉnh theo số vượt phiên</h4>
+                <div style={{ maxHeight: 300, overflowY: 'auto' }}>
+                  {dashboardData.TopProvinces?.slice(0, 8).map((province, idx) => (
+                    <div key={idx} style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      padding: '12px 0',
+                      borderBottom: idx < 7 ? '1px solid #f3f4f6' : 'none'
+                    }}>
+                      <div>
+                        <div style={{ fontWeight: 500, fontSize: 14, color: '#374151' }}>
+                          {province.ProvinceName}
+                        </div>
+                        <div style={{ fontSize: 12, color: '#6b7280' }}>
+                          {province.BngCount} BNG
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ 
+                          color: province.VuotPhien > 0 ? '#ef4444' : '#10b981',
+                          fontWeight: 600,
+                          fontSize: 14
+                        }}>
+                          {province.VuotPhien.toLocaleString()}
+                        </div>
+                        <div style={{ fontSize: 12, color: '#6b7280' }}>
+                          {province.DaXoa} đã xóa
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '60px 0' }}>
+            <div style={{ fontSize: 16, color: '#666' }}>Không có dữ liệu</div>
+          </div>
+        )}
+      </div>
+      )}
+      
       {activeTab === 'clear-multi' && (
       <div style={{ background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', padding: 18 }}>
         {loading ? (
