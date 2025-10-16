@@ -1098,11 +1098,10 @@ const Dashboard = () => {
                        <div>
                          <h6 className="card-title text-white-75 mb-1 fs-6">Tổng Sites</h6>
                          <h3 className="font-weight-bold mb-0 text-white">
-                          47.975
-                           {/* {((dashboardData.provincialTotals.nokia_sites || 0) + 
+                           {((dashboardData.provincialTotals.nokia_sites || 0) + 
                              (dashboardData.provincialTotals.huawei_sites || 0) +
                              (dashboardData.provincialTotals.zte_sites || 0) +
-                             (dashboardData.provincialTotals.ericsson_sites || 0)).toLocaleString()} */}
+                             (dashboardData.provincialTotals.ericsson_sites || 0)).toLocaleString()}
                          </h3>
                        </div>
                        <div className="p-2 rounded" style={{ background: 'rgba(255, 255, 255, 0.2)' }}>
@@ -1125,14 +1124,13 @@ const Dashboard = () => {
                            {selectedTechnology === '4G' ? "Tổng cell 4G" : `${selectedTechnology} Cells`}
                          </h6>
                          <h3 className="font-weight-bold mb-0 text-white">
-                          202.720
-                           {/* {selectedTechnology === '4G' 
+                           {selectedTechnology === '4G' 
                              ? ((dashboardData.provincialTotals.huawei_4g_cells || 0) +
                                 (dashboardData.provincialTotals.nokia_4g_cells || 0) +
                                 (dashboardData.provincialTotals.zte_4g_cells || 0) +
                                 (dashboardData.provincialTotals.ericsson_4g_cells || 0)).toLocaleString()
                              : ((dashboardData.provincialTotals as any).total5GCells || 0).toLocaleString()
-                           } */}
+                           }
                          </h3>
                        </div>
                        <div className="p-2 rounded" style={{ background: 'rgba(255, 255, 255, 0.2)' }}>
@@ -1155,8 +1153,7 @@ const Dashboard = () => {
                            <div>
                              <h6 className="card-title text-white-75 mb-1 fs-6">Cell Moran</h6>
                              <h3 className="font-weight-bold mb-0 text-white">
-                              6.487
-                              {/* {dashboardData.provincialTotals.moran_cells?.toLocaleString() || '0'} */}
+                              {dashboardData.provincialTotals.moran_cells?.toLocaleString() || '0'}
                               </h3>
                            </div>
                            <div className="p-2 rounded" style={{ background: 'rgba(255, 255, 255, 0.2)' }}>
@@ -1177,8 +1174,7 @@ const Dashboard = () => {
                            <div>
                              <h6 className="card-title text-white-75 mb-1 fs-6">Cell IOT</h6>
                              <h3 className="font-weight-bold mb-0 text-white">
-                               2.467
-                              {/* {dashboardData.provincialTotals.iot_cells?.toLocaleString() || '0'} */}
+                               {dashboardData.provincialTotals.iot_cells?.toLocaleString() || '0'}
                               </h3>
                            </div>
                            <div className="p-2 rounded" style={{ background: 'rgba(255, 255, 255, 0.2)' }}>
@@ -1207,8 +1203,7 @@ const Dashboard = () => {
                              <i className="fas fa-wifi" style={{ fontSize: '12px' }}></i>
                              <div className="fs-8 mb-0">900MHz</div>
                              <div className="fw-bold mb-0" style={{ fontSize: '14px' }}>
-                              15.490
-                              {/* {dashboardData.bandBreakdown['900MHz']} */}
+                              {dashboardData.bandBreakdown['900MHz']}
                               </div>
                            </div>
                          </div>
@@ -1220,8 +1215,7 @@ const Dashboard = () => {
                              <i className="fas fa-broadcast-tower" style={{ fontSize: '12px' }}></i>
                              <div className="fs-8 mb-0">1800MHz</div>
                              <div className="fw-bold mb-0" style={{ fontSize: '14px' }}>
-                              153.514
-                              {/* {dashboardData.bandBreakdown['1800MHz']} */}
+                              {dashboardData.bandBreakdown['1800MHz']}
                               </div>
                            </div>
                          </div>
@@ -1233,8 +1227,7 @@ const Dashboard = () => {
                              <i className="fas fa-satellite-dish" style={{ fontSize: '12px' }}></i>
                              <div className="fs-8 mb-0">2100MHz</div>
                              <div className="fw-bold mb-0" style={{ fontSize: '14px' }}>
-                              33.718
-                              {/* {dashboardData.bandBreakdown['2100MHz']} */}
+                              {dashboardData.bandBreakdown['2100MHz']}
                               </div>
                            </div>
                          </div>

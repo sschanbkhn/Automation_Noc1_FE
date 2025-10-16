@@ -10,8 +10,8 @@ const service = axios.create({
 })
 
 // Debug: Log the actual base URL being used
-console.log('🌐 Axios baseURL:', service.defaults.baseURL);
-console.log('🌐 process.env.API_URL:', process.env.API_URL);
+//console.log('🌐 Axios baseURL:', service.defaults.baseURL);
+//console.log('🌐 process.env.API_URL:', process.env.API_URL);
 
 // request interceptor
 service.interceptors.request.use(

@@ -54,7 +54,8 @@ export default function useScheduleKpiWebSocket({
   };
 
   const connect = () => {
-    const url = `${BASE_WS}${endpoint}/`;
+    //const url = `${BASE_WS}${endpoint}/`;
+    const url = `${BASE_WS}/${endpoint}/`;
     const ws = new WebSocket(url);
     socketRef.current = ws;
 

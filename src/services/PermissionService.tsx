@@ -17,11 +17,13 @@ const PermissionService = {
       return res;
     },    
     GetMenusByRoles: async (data:any) => {
+     // console.log('🚀 PermissionService.GetMenusByRoles called with data:', data);
       let res:any = await request({
         url: `/${Sys_Permission}/GetMenusByRoles`,
         method: 'post',
         data
       })
+     // console.log('🎯 PermissionService.GetMenusByRoles response:', res);
       return res;
     }
 }

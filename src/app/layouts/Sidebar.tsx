@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { connect } from "react-redux";
 import { NavLink, useLocation } from 'react-router-dom';
 import menu_config from 'assets/json/menu_config.json';
-import { Actions } from 'store/app/Action';
 import { Cookie } from 'helpers/cookie';
 import { IUserInfo } from 'models/Apps';
 
@@ -16,7 +15,7 @@ const Sidebar = (props: Props) => {
     const [openMenus, setOpenMenus] = useState<string[]>([]);
 
     // Tìm đường dẫn menu để tự động mở
-    const findMenuPathByUrl = (menus: any[], targetUrl: string, path: string[] = []): string[] => {
+    const findMenuPathByUrl = useCallback((menus: any[], targetUrl: string, path: string[] = []): string[] => {
         for (const menu of menus) {
             const currentPath = [...path, menu.code];
             if (menu.url === targetUrl) {
@@ -30,14 +29,14 @@ const Sidebar = (props: Props) => {
             }
         }
         return [];
-    };
+    }, []);
 
     // Tự động mở menu theo route hiện tại
     useEffect(() => {
         const currentPath = location.pathname;
         const autoOpenMenus = findMenuPathByUrl(menu_config.Menu, currentPath);
         setOpenMenus(autoOpenMenus);
-    }, [location.pathname]);
+    }, [location.pathname, findMenuPathByUrl]);
 
     // Toggle menu mở/đóng
     const toggleMenu = (menuCode: string) => {
@@ -132,15 +131,15 @@ const Sidebar = (props: Props) => {
                     )}
                 </li>
             );
-        }).filter(Boolean);
+        }).filter((item): item is JSX.Element => item !== null);
     };
 
     const IsMenuOfUser = (menu: any): boolean => { 
         let userInfo: IUserInfo = JSON.parse(Cookie.getCookie("UserInfo"));    
-        if (userInfo && userInfo.UserName == "admin") return true;   
-        if (userInfo != null) {
+        if (userInfo && userInfo.UserName === "admin") return true;   
+        if (userInfo !== null) {
             for (let i = 0; i < userInfo.Menus.length; i++) {
-                if (userInfo.Menus[i] == menu.code) {
+                if (userInfo.Menus[i] === menu.code) {
                     return true;
                 }
             }
