@@ -1,34 +1,37 @@
 import { Button, Input } from 'element-react';
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { connect } from "react-redux";
-import CtrlButton from './CtrlButton';
+
 interface Props {
-    key: string,
     title: string,
     children?: React.ReactNode,
-    buttonGroups?: React.ReactNode
+    buttonGroups?: React.ReactNode,
+    className?: string,
+    icon?: string
 }
 
-const Card = (props: Props) => {  
-
+const Card = (props: Props) => {
+    const { title, children, buttonGroups, className, icon } = props;
     return (
-        <div key={props.key} className="card">
-            <div className="card-header">{props.title}
+        <div className={`card ${className ? className : ''}`.trim()}>
+            <div className="card-header">
+                {icon ? <i className={`${icon} me-2`}></i> : null}
+                {title}
                 <div className="button-groups">
-                    {props.buttonGroups?props.buttonGroups:<></>}
+                    {buttonGroups ? buttonGroups : <></>}
                 </div>
             </div>
             <div className="card-body">
-                {props.children}
+                {children}
             </div>
-        </div>    
+        </div>
     )
 }
 const mapState = ({ ...state }) => ({
-    
+
 });
 const mapDispatchToProps = {
-    
+
 };
 
 export default connect(mapState, mapDispatchToProps)(Card);
