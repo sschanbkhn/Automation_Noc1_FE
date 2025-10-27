@@ -49,7 +49,7 @@ import LspQuocte from "components/INOC1/I004";
 import DataLspQuocte from "components/INOC1/I004_1";
 import ConfigReport from "components/RNOC1/R009";
 import Sleeping from "components/RNOC1/R005-SleepingCell/R005HomeSleepingCell";
-import DashboardR001 from "components/RNOC1/R001";
+import DashboardAudit from "components/RNOC1/R001";
 import DashboardR007 from "components/RNOC1/R009"
 // snoc start
 import UserGroupDeptManager from "components/SNOC/Admin/UserGroupDeptManager";
@@ -125,7 +125,7 @@ const MainPageRoute = (props: Props) => {
             case "ConfigReport":
                 return <ConfigReport />;
             case "DashboardR001":
-                return <DashboardR001 />;
+                return <DashboardAudit />;
             case "CableManagement":
                 return <CableManagement />;
             case "ConfigurationLogs":
@@ -148,18 +148,18 @@ const MainPageRoute = (props: Props) => {
                 return <CenterDashboard />;
             case "RoomDashboard":
                 return <RoomDashboard />;
-            case "DashboardR001":
-            return <DashboardR001 />;
+            case "audit-cau-hinh-vo-tuyen":
+            return <DashboardAudit />;
             case "DashboardR002":
-              return <DashboardR001 />; // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
+              return <DashboardAudit />; // Tạm thời dùng DashboardAudit, sau này thay bằng component thực tế
             case "DashboardR003":
-              return <DashboardR001 />; // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
+              return <DashboardAudit />; // Tạm thời dùng DashboardAudit, sau này thay bằng component thực tế
             case "DashboardR004":
-              return <DashboardR001 />; // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
+              return <DashboardAudit />; // Tạm thời dùng DashboardAudit, sau này thay bằng component thực tế
             case "DashboardR005":
-              return <DashboardR001 />; // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
+              return <DashboardAudit />; // Tạm thời dùng DashboardAudit, sau này thay bằng component thực tế
             case "DashboardR006":
-              return <DashboardR001 />; // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
+              return <DashboardAudit />; // Tạm thời dùng DashboardAudit, sau này thay bằng component thực tế
             case "DashboardR007":
               return <DashboardR007 />;
             case "SleepingCellManagement":

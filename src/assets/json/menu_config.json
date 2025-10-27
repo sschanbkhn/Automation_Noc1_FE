@@ -109,9 +109,9 @@
           "icon": "bi bi-grid"
         },
         {
-          "code": "DashboardR001",
-          "name": "Tự động đánh giá cấu hình Vô tuyến",
-          "url": "/tu-dong-danh-gia-cau-hinh-vo-tuyen",
+          "code": "audit-cau-hinh-vo-tuyen",
+          "name": "Audit cấu hình vô tuyến",
+          "url": "/audit-cau-hinh-vo-tuyen",
           "icon": "bi bi-bar-chart"
         },
         {

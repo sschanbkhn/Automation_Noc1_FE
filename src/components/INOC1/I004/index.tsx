@@ -605,6 +605,7 @@ const I004Dashboard = () => {
     // New API function for bandwidthbypath endpoint with automatic time calculation
     const loadLSPBandwidthDataV2 = async (fromData?: string[], toData?: string[], useSelectedRange?: string) => {
         try {
+           
             // SỬ DỤNG selectedRange hiện tại nếu không truyền useSelectedRange
             const currentRange = useSelectedRange || selectedRange;
             
@@ -797,74 +798,99 @@ const I004Dashboard = () => {
 
     const handleSubmitParameters = async () => {
         try {
-            refNotification.current?.showNotification("info", "Đang cập nhật dữ liệu với tham số đã chọn...");
+            // Clear all old data first
+            setBandwidthData([]); // Clear bandwidth data
+            (window as any).lspPaths = []; // Clear LSP paths for chart rendering
+            
+            setRoutePCEPStatus({ upCount: 0, downCount: 0 }); // Clear PCEP status
+            setLspDelegatedStatus({ activeCount: 0, downCount: 0, unknownCount: 0 }); // Clear LSP delegated status
+            setLspActionStats({ addCount: 0, updateCount: 0, removeCount: 0 }); // Clear LSP action stats
+            setLspDetailData([]); // Clear LSP detail data
+            setCurrentPage(1); // Reset pagination
+            setTotalRecords(0); // Reset total records count
+            
+            // Clear LSP data from reducer
+            dispatch({
+                type: "GetItems",
+                items: []
+            });
+            
+            refNotification.current?.showNotification("info", "Đang xóa dữ liệu cũ và cập nhật với tham số mới...");
             
             // Close dropdowns
             setShowPDataDropdown(false);
             setShowPOPDataDropdown(false);
             
+            // Add a small delay to ensure UI updates with cleared data
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
             // Reload all data with current selections
             await loadAllData();
             
+            // If we're on data tab, reload LSP data as well
+            if (activeTab === 'data') {
+                await loadLSPData();
+            }
+            
             // If both P-Data and POP-Data are selected, load bandwidth data
             if (selectedPData.length > 0 && selectedPOPData.length > 0) {
-                console.log('Loading bandwidth data with selected values and CURRENT selectedRange:', {
-                    selectedPData,
-                    selectedPOPData,
-                    selectedRange,
-                    timeRange: selectedRange
-                });
+                // console.log('Loading bandwidth data with selected values and CURRENT selectedRange:', {
+                //     selectedPData,
+                //     selectedPOPData,
+                //     selectedRange,
+                //     timeRange: selectedRange
+                // });
                 
                 // Debug: Log exact values from dropdowns
-                console.log('🔍 DEBUGGING DROPDOWN VALUES:');
-                console.log('  📋 selectedPData (raw):', selectedPData);
-                console.log('  📋 selectedPOPData (raw):', selectedPOPData);
-                console.log('  📋 CURRENT selectedRange:', selectedRange);
+                // console.log('🔍 DEBUGGING DROPDOWN VALUES:');
+                // console.log('  📋 selectedPData (raw):', selectedPData);
+                // console.log('  📋 selectedPOPData (raw):', selectedPOPData);
+                // console.log('  📋 CURRENT selectedRange:', selectedRange);
                 
-                // Check if we have the known working IP pair in selections
-                const hasWorkingFromIP = selectedPData.includes('123.29.4.86/32');
-                const hasWorkingToIP = selectedPOPData.includes('123.29.4.1/32');
+                // // Check if we have the known working IP pair in selections
+                // const hasWorkingFromIP = selectedPData.includes('123.29.4.86/32');
+                // const hasWorkingToIP = selectedPOPData.includes('123.29.4.1/32');
                 
-                console.log('🔍 Analysis:');
-                console.log('  📋 Has working FROM IP (123.29.4.86/32):', hasWorkingFromIP);
-                console.log('  📋 Has working TO IP (123.29.4.1/32):', hasWorkingToIP);
+                // console.log('🔍 Analysis:');
+                // console.log('  📋 Has working FROM IP (123.29.4.86/32):', hasWorkingFromIP);
+                // console.log('  📋 Has working TO IP (123.29.4.1/32):', hasWorkingToIP);
                 
                 let fromDataToUse = selectedPData;
                 let toDataToUse = selectedPOPData;
                 
-                // If user selections don't include known working pair, suggest it
-                if (!hasWorkingFromIP || !hasWorkingToIP) {
-                    console.log('⚠️ Selected IPs may not have data. Adding known working pair...');
+                // // If user selections don't include known working pair, suggest it
+                // if (!hasWorkingFromIP || !hasWorkingToIP) {
+                //     console.log('⚠️ Selected IPs may not have data. Adding known working pair...');
                     
-                    // Add working IPs to the selection if not already present
-                    if (!hasWorkingFromIP) {
-                        fromDataToUse = [...selectedPData, '123.29.4.86/32'];
-                    }
-                    if (!hasWorkingToIP) {
-                        toDataToUse = [...selectedPOPData, '123.29.4.1/32', '123.29.4.8/32']; // Add both available target IPs
-                    }
+                //     // Add working IPs to the selection if not already present
+                //     if (!hasWorkingFromIP) {
+                //         fromDataToUse = [...selectedPData, '123.29.4.86/32'];
+                //     }
+                //     if (!hasWorkingToIP) {
+                //         toDataToUse = [...selectedPOPData, '123.29.4.1/32', '123.29.4.8/32']; // Add both available target IPs
+                //     }
                     
-                    console.log('🔧 Enhanced fromData:', fromDataToUse);
-                    console.log('🔧 Enhanced toData:', toDataToUse);
+                //     console.log('🔧 Enhanced fromData:', fromDataToUse);
+                //     console.log('🔧 Enhanced toData:', toDataToUse);
                     
-                    refNotification.current?.showNotification("info", 
-                        `Đã thêm IP có dữ liệu (123.29.4.86→123.29.4.1/123.29.4.8) vào truy vấn cho khoảng thời gian ${selectedRange} để đảm bảo có kết quả`);
-                }
+                //     refNotification.current?.showNotification("info", 
+                //         `Đã thêm IP có dữ liệu (123.29.4.86→123.29.4.1/123.29.4.8) vào truy vấn cho khoảng thời gian ${selectedRange} để đảm bảo có kết quả`);
+                // }
                 
-                // Test with enhanced data và CURRENT selectedRange
-                console.log('🚀 Trying V2 API with enhanced data and CURRENT selectedRange:', selectedRange);
+                // // Test with enhanced data và CURRENT selectedRange
+                // console.log('🚀 Trying V2 API with enhanced data and CURRENT selectedRange:', selectedRange);
                 await loadLSPBandwidthDataV2(fromDataToUse, toDataToUse, selectedRange);
                 
-                // Check if we got data after a short delay to let state update
+                // // Check if we got data after a short delay to let state update
                 setTimeout(async () => {
-                    console.log('🔍 After V2 API call, bandwidthData.length:', bandwidthData.length);
+                   /// console.log('🔍 After V2 API call, bandwidthData.length:', bandwidthData.length);
                     if (bandwidthData.length === 0) {
-                        console.log('🔄 No data with V2 API and selected IPs, trying V2 with hardcoded data and CURRENT selectedRange...');
-                        const knownFromData = ['123.29.4.86/32']; 
-                        const knownToData = ['123.29.4.1/32'];
-                        refNotification.current?.showNotification("warning", 
-                            `V2 API: Không có dữ liệu cho IP đã chọn (${selectedRange}). Đang thử với dữ liệu mẫu: ${knownFromData[0].replace('/32', '')} → ${knownToData[0].replace('/32', '')}`
-                        );
+                       // console.log('🔄 No data with V2 API and selected IPs, trying V2 with hardcoded data and CURRENT selectedRange...');
+                        const knownFromData = selectedPData; 
+                        const knownToData = selectedPOPData;
+                        // refNotification.current?.showNotification("warning", 
+                        //     `V2 API: Không có dữ liệu cho IP đã chọn (${selectedRange}). Đang thử với dữ liệu mẫu: ${knownFromData[0].replace('/32', '')} → ${knownToData[0].replace('/32', '')}`
+                        // );
                         await loadLSPBandwidthDataV2(knownFromData, knownToData, selectedRange);
                     }
                 }, 1000);
@@ -873,20 +899,20 @@ const I004Dashboard = () => {
                 setNextRefreshIn(30);
             }
             
-            console.log('Submitted parameters with CURRENT time range:', {
-                selectedPData,
-                selectedPOPData,
-                selectedRange,
-                fromDate,
-                toDate,
-                autoRefresh,
-                timeRange: selectedRange
-            });
+            // console.log('Submitted parameters with CURRENT time range:', {
+            //     selectedPData,
+            //     selectedPOPData,
+            //     selectedRange,
+            //     fromDate,
+            //     toDate,
+            //     autoRefresh,
+            //     timeRange: selectedRange
+            // });
             
             refNotification.current?.showNotification("success", 
                 autoRefresh ? 
-                "Đã cập nhật dữ liệu thành công! Auto-refresh đang hoạt động." : 
-                "Đã cập nhật dữ liệu thành công!"
+                "Đã xóa dữ liệu cũ và cập nhật thành công! Auto-refresh đang hoạt động." : 
+                "Đã xóa dữ liệu cũ và cập nhật thành công!"
             );
         } catch (error) {
             console.error('Submit parameters error:', error);
@@ -1277,9 +1303,9 @@ const I004Dashboard = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', margin: '18px 0', gap: 40 }}>
                     <div style={{ display: 'flex', gap: 40, flexWrap: 'wrap', minWidth: '60%' }}>
                         <div style={{ position: 'relative', minWidth: 180 }}>
-                            <div style={{ fontWeight: 600, marginBottom: 6 }}>P-Data:</div>
+                            <div style={{ fontWeight: 600, marginBottom: 6 }}>POP-Data:</div>
                             <button onClick={() => setShowPDataDropdown(!showPDataDropdown)} style={{ padding: '6px 12px', border: '1px solid #ccc', borderRadius: 4, minWidth: 180 }}>
-                                Chọn P-Data ({selectedPData.length})
+                                Chọn POP-Data ({selectedPData.length})
                             </button>
                             {showPDataDropdown && (
                                 <div style={{ position: 'absolute', top: '100%', left: 0, background: '#fff', boxShadow: '0 2px 6px rgba(0,0,0,0.15)', padding: 10, zIndex: 10, maxHeight: 240, overflowY: 'auto', minWidth: 200 }}>
@@ -1301,9 +1327,9 @@ const I004Dashboard = () => {
                         </div>
 
                         <div style={{ position: 'relative', minWidth: 180 }}>
-                            <div style={{ fontWeight: 600, marginBottom: 6 }}>POP-Data:</div>
+                            <div style={{ fontWeight: 600, marginBottom: 6 }}>P-Data:</div>
                             <button onClick={() => setShowPOPDataDropdown(!showPOPDataDropdown)} style={{ padding: '6px 12px', border: '1px solid #ccc', borderRadius: 4, minWidth: 180 }}>
-                                Chọn POP-Data ({selectedPOPData.length})
+                                Chọn P-Data ({selectedPOPData.length})
                             </button>
                             {showPOPDataDropdown && (
                                 <div style={{ position: 'absolute', top: '100%', left: 0, background: '#fff', boxShadow: '0 2px 6px rgba(0,0,0,0.15)', padding: 10, zIndex: 10, maxHeight: 240, overflowY: 'auto', minWidth: 200 }}>
@@ -1367,7 +1393,7 @@ const I004Dashboard = () => {
                                 backgroundColor: '#2563eb', 
                                 color: 'white', 
                                 border: 'none', 
-                                borderRadius: 4, 
+                                borderRadius: 0.5, 
                                 cursor: 'pointer',
                                 fontWeight: 600
                             }}
@@ -1396,7 +1422,7 @@ const I004Dashboard = () => {
                                 padding: '4px 8px',
                                 background: '#d4edda',
                                 border: '1px solid #c3e6cb',
-                                borderRadius: 4,
+                                borderRadius: 1,
                                 fontSize: 12,
                                 color: '#155724'
                             }}>
@@ -1436,11 +1462,11 @@ const I004Dashboard = () => {
                     <ResponsiveContainer width="100%" height={400}>
                         <LineChart 
                             data={(() => {
-                                console.log('🔥 Raw bandwidthData:', bandwidthData);
+                                //console.log('🔥 Raw bandwidthData:', bandwidthData);
                                 
                                 // Nếu không có dữ liệu thực, hiển thị dữ liệu test
                                 if (!bandwidthData || bandwidthData.length === 0) {
-                                    console.log('❌ No bandwidth data available, using test data');
+                                    //console.log('❌ No bandwidth data available, using test data');
                                     return [
                                         { 
                                             time: '16:30', 
@@ -1545,9 +1571,9 @@ const I004Dashboard = () => {
                                         return result;
                                     });
 
-                                console.log('📊 Chart data processed:', chartData.length, 'time points');
-                                console.log('📊 Paths found:', allPaths.length);
-                                console.log('📊 Sample data:', chartData.slice(0, 3));
+                                // console.log('📊 Chart data processed:', chartData.length, 'time points');
+                                // console.log('📊 Paths found:', allPaths.length);
+                                // console.log('📊 Sample data:', chartData.slice(0, 3));
                                 
                                 // Store paths for rendering Lines
                                 (window as any).lspPaths = allPaths;
@@ -1608,7 +1634,7 @@ const I004Dashboard = () => {
                                         stroke={colors[index % colors.length]} 
                                         strokeWidth={2} 
                                         name={path}
-                                        dot={{ r: 2, fill: colors[index % colors.length] }}
+                                        dot={false}
                                         activeDot={{ r: 4, stroke: colors[index % colors.length], strokeWidth: 2, fill: '#fff' }}
                                         connectNulls={false}
                                     />

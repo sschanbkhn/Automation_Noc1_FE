@@ -47,7 +47,7 @@ export const Actions: any = {
                     RoleName: userRes.Data.RoleName,
                     Menus: menus
                 }
-                //console.log('👤 Final Social UserInfo:', userInfo);
+                console.log('👤 Final Social UserInfo:', userInfo);
                 Cookie.setCookie("UserInfo", JSON.stringify(userInfo), null)
                 console.log('🍪 Social UserInfo saved to cookie');
                 dispatch({
@@ -83,7 +83,7 @@ export const Actions: any = {
                 RoleName: userRes.Data.RoleName,
                 Menus: menus
             }
-            //console.log('👤 Final UserInfo:', userInfo);
+            console.log('👤 Final UserInfo:', userInfo);
             Cookie.setCookie("UserInfo", JSON.stringify(userInfo), null)
             //console.log('🍪 UserInfo saved to cookie');
             dispatch({

@@ -19,8 +19,6 @@ function _normPlatform(p) {
   return (p ?? "").toString().trim();
 }
 
-
-
 /* =========================
  * Thunk: toggle excluded
  * ========================= */
@@ -308,10 +306,21 @@ export const GenericHealthCheckView = createAsyncThunk(
     { rejectWithValue, dispatch }
   ) => {
     try {
-      const response = await snocApi.post("/nornirps/GenericHealthCheckView/", {
-        selectedPlatform,
-        selectedDevice,
-      });
+      const response = await snocApi.post(
+        "/nornirps/GenericHealthCheckView/",
+        { selectedPlatform, selectedDevice },
+        {
+          // ⏳ chờ 2 phút
+          timeout: 120000,
+          // tránh bị abort bởi AbortController ở nơi khác
+          signal: undefined,
+          // (tuỳ thích) thông điệp khi quá thời gian
+          timeoutErrorMessage: "Healthcheck timed out after 2 minutes.",
+          // (an toàn) vô hiệu cancel token cũ nếu có (axios<1) — không bắt buộc
+          cancelToken: undefined,
+        }
+      );
+
       dispatch(
         showTemporaryAlert({
           message: "Nodes is healthcheck successfully!",
@@ -320,10 +329,21 @@ export const GenericHealthCheckView = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
-      const errorMessage =
-        error?.response?.data?.detail || "Failed to healthcheck nodes.";
+      const isCanceled =
+        (axios.isCancel && axios.isCancel(error)) ||
+        error?.code === "ERR_CANCELED";
+
+      const isTimeout =
+        error?.code === "ECONNABORTED" || /timeout/i.test(error?.message || "");
+
+      const errorMessage = isCanceled
+        ? "Healthcheck request was canceled."
+        : isTimeout
+        ? "Healthcheck timed out after 2 minutes."
+        : error?.response?.data?.detail || "Failed to healthcheck nodes.";
+
       dispatch(showTemporaryAlert({ message: errorMessage, type: "error" }));
-      return rejectWithValue(error?.response?.data);
+      return rejectWithValue(error?.response?.data ?? { detail: errorMessage });
     }
   }
 );
@@ -473,7 +493,7 @@ const psCoreSlice = createSlice({
       if (!state.recentlyUpdated[group]) state.recentlyUpdated[group] = {};
       state.recentlyUpdated[group][subsystem] = Date.now();
     },
-    
+
     upsertLatestFromClient: (state, { payload }) => {
       const host = payload?.host?.trim?.();
       if (!host) return;

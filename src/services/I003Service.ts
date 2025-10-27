@@ -54,6 +54,32 @@ const I003Service = {
             params: { fromDate, toDate }
         });
         return res
+    },
+    
+    GetLocationList: async () => {        
+        let res: any = await request({
+            url: `/${I003_BNG}/GetLocationList`,
+            method: 'get'
+        });
+        return res
+    },
+    
+    GetBNGDataByLocation: async (location: string, reportDate?: string) => {        
+        let res: any = await request({
+            url: `/${I003_BNG}/GetBNGDataByLocation`,
+            method: 'get',
+            params: { location, reportDate }
+        });
+        return res
+    },
+    
+    GetSessionUserDashboardData: async (fromDate?: string, toDate?: string) => {        
+        let res: any = await request({
+            url: `/${I003_BNG}/GetSessionUserDashboardData`,
+            method: 'get',
+            params: { fromDate, toDate }
+        });
+        return res
     }
 }
 
