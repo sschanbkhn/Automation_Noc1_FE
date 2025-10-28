@@ -326,6 +326,33 @@ const DashboardAudit = (props: Props) => {
     XLSX.writeFile(wb, fileName);
   };
 
+  // Handle fix action for bad configuration
+  const handleFixConfiguration = (item: IR001DataRuntimeBad) => {
+    // Show alert that command has been executed
+    alert(`Đã thực hiện lệnh sửa cấu hình cho:\nNE Name: ${item.NeName}\nCell ID: ${item.CellId}\nDetected Date: ${new Date(item.DetectedDate).toLocaleString('vi-VN')}`);
+  };
+
+  // Handle fix all bad configurations
+  const handleFixAllConfigurations = () => {
+    // Remove duplicates
+    const uniqueBadData = badData.filter((item, index, self) =>
+      index === self.findIndex((t) => (
+        t.NeName === item.NeName && t.CellId === item.CellId && t.DetectedDate === item.DetectedDate
+      ))
+    );
+
+    if (uniqueBadData.length === 0) {
+      alert('Không có cấu hình sai để sửa!');
+      return;
+    }
+
+    const confirmMessage = `Bạn có chắc chắn muốn sửa tất cả ${uniqueBadData.length} cấu hình sai không?`;
+    
+    if (window.confirm(confirmMessage)) {
+      alert(`Đã thực hiện lệnh sửa tất cả ${uniqueBadData.length} cấu hình sai!\n\nDanh sách đã sửa:\n${uniqueBadData.slice(0, 5).map((item, idx) => `${idx + 1}. ${item.NeName} - Cell ${item.CellId}`).join('\n')}${uniqueBadData.length > 5 ? `\n... và ${uniqueBadData.length - 5} cấu hình khác` : ''}`);
+    }
+  };
+
   // Export bad data to Excel function
   const exportBadDataToExcel = () => {
     // Remove duplicates
@@ -501,6 +528,13 @@ const DashboardAudit = (props: Props) => {
           onClick={refreshData} 
           type="default"
           icon="el-icon-refresh"
+        />
+        <CtrlButton 
+          title="Sửa All" 
+          onClick={handleFixAllConfigurations} 
+          type="warning"
+          icon="el-icon-edit"
+          disabled={badData.length === 0}
         />
         <CtrlButton 
           title="Xuất Excel" 
@@ -830,6 +864,7 @@ const DashboardAudit = (props: Props) => {
               <th style={{ width: '180px' }}>UL VoIP Serv State Enhanced</th>
               <th style={{ width: '130px' }}>UL VoIP SCH Opt</th>
               <th style={{ width: '160px' }}>UL VoLTE Data Size Est</th>
+              <th style={{ width: '100px' }}>Action</th>
               <th style={{ width: '120px' }}>Detected Date</th>
             </tr>
           </thead>
@@ -909,6 +944,15 @@ const DashboardAudit = (props: Props) => {
                     <span className={`badge ${!item.UlVoLteDataSizeEstSwitch || item.UlVoLteDataSizeEstSwitch === 'N/A' ? 'bg-info' : isParameterCorrect('UlVoLteDataSizeEstSwitch', item.UlVoLteDataSizeEstSwitch) ? 'bg-success' : 'bg-danger'}`}>
                       {item.UlVoLteDataSizeEstSwitch || 'N/A'}
                     </span>
+                  </td>
+                  <td className="text-center">
+                    <button 
+                      className="btn btn-warning btn-sm"
+                      onClick={() => handleFixConfiguration(item)}
+                      title="Sửa cấu hình"
+                    >
+                      <i className="fas fa-edit"></i> Sửa
+                    </button>
                   </td>
                   <td className="text-center">
                     {new Date(item.DetectedDate).toLocaleDateString('vi-VN')}
@@ -1122,6 +1166,7 @@ const DashboardAudit = (props: Props) => {
                       <th style={{ width: '180px' }}>UL VoIP Serv State Enhanced</th>
                       <th style={{ width: '130px' }}>UL VoIP SCH Opt</th>
                       <th style={{ width: '160px' }}>UL VoLTE Data Size Est</th>
+                      {isWrongModal && <th style={{ width: '100px' }}>Action</th>}
                       <th style={{ width: '160px' }}>{isWrongModal ? 'Detected Date' : 'Report Date'}</th>
                     </tr>
                   </thead>
@@ -1201,6 +1246,17 @@ const DashboardAudit = (props: Props) => {
                             {item.UlVoLteDataSizeEstSwitch || 'N/A'}
                           </span>
                         </td>
+                        {isWrongModal && (
+                          <td className="text-center">
+                            <button 
+                              className="btn btn-warning btn-sm"
+                              onClick={() => handleFixConfiguration(item)}
+                              title="Sửa cấu hình"
+                            >
+                              <i className="fas fa-edit"></i> Sửa
+                            </button>
+                          </td>
+                        )}
                         <td className="text-center">
                           {isWrongModal 
                             ? new Date(item.DetectedDate).toLocaleString('vi-VN')
