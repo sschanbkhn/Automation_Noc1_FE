@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { connect } from "react-redux";
 import { Doughnut } from 'react-chartjs-2';
 import * as XLSX from 'xlsx';
@@ -80,6 +80,20 @@ const DashboardAudit = (props: Props) => {
   const [modalTitle, setModalTitle] = useState('');
   const [selectedBaselineType, setSelectedBaselineType] = useState<IBaselineTypeSummary | null>(null);
   
+  // Single parameter modal states
+  const [singleParamModalVisible, setSingleParamModalVisible] = useState(false);
+  const [singleParamData, setSingleParamData] = useState<any[]>([]);
+  const [singleParamTitle, setSingleParamTitle] = useState('');
+  const [selectedParameterName, setSelectedParameterName] = useState('');
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(50);
+  
+  // Modal pagination states
+  const [modalCurrentPage, setModalCurrentPage] = useState(1);
+  const [modalPageSize] = useState(50);
+  
   const refNotification = useRef<any>();
   const isMountedRef = useRef(true);
 
@@ -94,6 +108,11 @@ const DashboardAudit = (props: Props) => {
     fetchAllData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Reset pagination when data changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [badData]);
 
   // Helper function to group parameters by baseline type (MUST BE BEFORE fetchAllData)
   const groupParametersByBaselineType = useCallback((params: IR001ParameterSummary[]): IBaselineTypeSummary[] => {
@@ -251,6 +270,7 @@ const DashboardAudit = (props: Props) => {
 
     setModalData(correctItems);
     setModalTitle('Danh sách cấu hình đúng');
+    setModalCurrentPage(1); // Reset pagination
     setCorrectModalVisible(true);
   };
 
@@ -258,6 +278,7 @@ const DashboardAudit = (props: Props) => {
   const showWrongModal = () => {
     setModalData(badData);
     setModalTitle('Danh sách cấu hình sai');
+    setModalCurrentPage(1); // Reset pagination
     setWrongModalVisible(true);
   };
 
@@ -326,6 +347,15 @@ const DashboardAudit = (props: Props) => {
     XLSX.writeFile(wb, fileName);
   };
 
+  // Memoized unique bad data (moved here before usage)
+  const uniqueBadData = useMemo(() => {
+    return badData.filter((item, index, self) =>
+      index === self.findIndex((t) => (
+        t.NeName === item.NeName && t.CellId === item.CellId && t.DetectedDate === item.DetectedDate
+      ))
+    );
+  }, [badData]);
+
   // Handle fix action for bad configuration
   const handleFixConfiguration = (item: IR001DataRuntimeBad) => {
     // Show alert that command has been executed
@@ -333,14 +363,7 @@ const DashboardAudit = (props: Props) => {
   };
 
   // Handle fix all bad configurations
-  const handleFixAllConfigurations = () => {
-    // Remove duplicates
-    const uniqueBadData = badData.filter((item, index, self) =>
-      index === self.findIndex((t) => (
-        t.NeName === item.NeName && t.CellId === item.CellId && t.DetectedDate === item.DetectedDate
-      ))
-    );
-
+  const handleFixAllConfigurations = useCallback(() => {
     if (uniqueBadData.length === 0) {
       alert('Không có cấu hình sai để sửa!');
       return;
@@ -351,17 +374,10 @@ const DashboardAudit = (props: Props) => {
     if (window.confirm(confirmMessage)) {
       alert(`Đã thực hiện lệnh sửa tất cả ${uniqueBadData.length} cấu hình sai!\n\nDanh sách đã sửa:\n${uniqueBadData.slice(0, 5).map((item, idx) => `${idx + 1}. ${item.NeName} - Cell ${item.CellId}`).join('\n')}${uniqueBadData.length > 5 ? `\n... và ${uniqueBadData.length - 5} cấu hình khác` : ''}`);
     }
-  };
+  }, [uniqueBadData]);
 
   // Export bad data to Excel function
-  const exportBadDataToExcel = () => {
-    // Remove duplicates
-    const uniqueBadData = badData.filter((item, index, self) =>
-      index === self.findIndex((t) => (
-        t.NeName === item.NeName && t.CellId === item.CellId && t.DetectedDate === item.DetectedDate
-      ))
-    );
-
+  const exportBadDataToExcel = useCallback(() => {
     if (uniqueBadData.length === 0) {
       refNotification.current?.showNotification("warning", "Không có dữ liệu để xuất!");
       return;
@@ -426,7 +442,7 @@ const DashboardAudit = (props: Props) => {
     XLSX.writeFile(wb, fileName);
     
     refNotification.current?.showNotification("success", `Đã xuất ${uniqueBadData.length} bản ghi ra file Excel!`);
-  };
+  }, [uniqueBadData, selectedDate]);
 
   // Helper function to check if parameter value is correct
   const isParameterCorrect = (paramName: string, value: string | null | undefined): boolean => {
@@ -534,18 +550,18 @@ const DashboardAudit = (props: Props) => {
           onClick={handleFixAllConfigurations} 
           type="warning"
           icon="el-icon-edit"
-          disabled={badData.length === 0}
+          disabled={uniqueBadData.length === 0}
         />
         <CtrlButton 
           title="Xuất Excel" 
           onClick={exportBadDataToExcel} 
           type="success"
           icon="el-icon-download"
-          disabled={badData.length === 0}
+          disabled={uniqueBadData.length === 0}
         />
       </div>
     );
-  }, [selectedDate, handleSubmit, refreshData, loading, badData.length]);
+  }, [selectedDate, handleSubmit, refreshData, loading, uniqueBadData.length, handleFixAllConfigurations, exportBadDataToExcel]);
 
   // Show baseline type detail modal
   const showBaselineTypeDetail = (baselineType: IBaselineTypeSummary) => {
@@ -553,7 +569,66 @@ const DashboardAudit = (props: Props) => {
     setDetailModalVisible(true);
   };
 
-  // Show parameter detail (correct or incorrect configurations)
+  // Show single parameter detail (only show specific parameter column)
+  const showSingleParameterDetail = (parameterName: string, showCorrect: boolean) => {
+    // Map snake_case parameter name to PascalCase property name
+    const paramMapping: { [key: string]: keyof IR001DataRuntime } = {
+      'utran_srvcc_switch': 'UtranSrvccSwitch',
+      'utran_csfb_switch': 'UtranCsfbSwitch',
+      'utran_flash_csfb_switch': 'UtranFlashCsfbSwitch',
+      'geran_flash_csfb_switch': 'GeranFlashCsfbSwitch',
+      'csfb_adaptive_blind_ho_switch': 'CsfbAdaptiveBlindHoSwitch',
+      'utran_csfb_steering_switch': 'UtranCsfbSteeringSwitch',
+      'idle_csfb_redirect_opt_switch': 'IdleCsfbRedirectOptSwitch',
+      'dl_voip_bundling_switch': 'DlVoipBundlingSwitch',
+      'ul_voip_pre_allocation_switch': 'UlVoipPreAllocationSwitch',
+      'ul_voip_delay_sch_switch': 'UlVoipDelaySchSwitch',
+      'ul_voip_load_based_sch_switch': 'UlVoipLoadBasedSchSwitch',
+      'ul_voip_serv_state_enhanced_sw': 'UlVoipServStateEnhancedSw',
+      'ul_voip_sch_opt_switch': 'UlVoipSchOptSwitch',
+      'ul_vo_lte_data_size_est_switch': 'UlVoLteDataSizeEstSwitch'
+    };
+    
+    const propertyName = paramMapping[parameterName];
+    if (!propertyName) return;
+    
+    // Get expected value for this parameter
+    const shouldBeOn = [
+      'UtranSrvccSwitch',
+      'UtranCsfbSwitch',
+      'IdleCsfbRedirectOptSwitch',
+      'DlVoipBundlingSwitch',
+      'UlVoipPreAllocationSwitch',
+      'UlVoipSchOptSwitch'
+    ];
+    
+    const expectedValue = shouldBeOn.includes(propertyName) ? 'ON' : 'OFF';
+    
+    if (showCorrect) {
+      // Show correct configurations - filter from runtimeData
+      const correctItems = runtimeData.filter(item => {
+        const value = item[propertyName];
+        return typeof value === 'string' && value.toUpperCase() === expectedValue;
+      });
+      setSingleParamData(correctItems);
+      setSingleParamTitle(`Cấu hình đúng - ${parameterName}`);
+    } else {
+      // Show incorrect configurations - filter from runtimeData
+      const incorrectItems = runtimeData.filter(item => {
+        const value = item[propertyName];
+        return typeof value === 'string' && value.toUpperCase() !== expectedValue;
+      });
+      
+      setSingleParamData(incorrectItems);
+      setSingleParamTitle(`Cấu hình sai - ${parameterName}`);
+    }
+    
+    setSelectedParameterName(parameterName);
+    setModalCurrentPage(1); // Reset pagination
+    setSingleParamModalVisible(true);
+  };
+
+  // Show parameter detail (correct or incorrect configurations) - for baseline type detail
   const showParameterDetail = (parameterName: string, showCorrect: boolean) => {
     // Close the detail modal first
     setDetailModalVisible(false);
@@ -597,27 +672,402 @@ const DashboardAudit = (props: Props) => {
         const value = item[propertyName];
         return typeof value === 'string' && value.toUpperCase() === expectedValue;
       });
-      setModalData(correctItems);
-      setModalTitle(`Cấu hình đúng - ${parameterName}`);
-      setCorrectModalVisible(true);
+      setSingleParamData(correctItems);
+      setSingleParamTitle(`Cấu hình đúng - ${parameterName}`);
     } else {
-      // Show incorrect configurations - filter from runtimeData (not badData)
-      // because badData only contains records with ANY wrong parameter, not this specific one
+      // Show incorrect configurations - filter from runtimeData
       const incorrectItems = runtimeData.filter(item => {
         const value = item[propertyName];
         return typeof value === 'string' && value.toUpperCase() !== expectedValue;
       });
       
-      // Convert to bad data format with DetectedDate
-      const badItems = incorrectItems.map(item => ({
-        ...item,
-        DetectedDate: item.ReportDate
-      }));
-      
-      setModalData(badItems);
-      setModalTitle(`Cấu hình sai - ${parameterName}`);
-      setWrongModalVisible(true);
+      setSingleParamData(incorrectItems);
+      setSingleParamTitle(`Cấu hình sai - ${parameterName}`);
     }
+    
+    setSelectedParameterName(parameterName);
+    setModalCurrentPage(1); // Reset pagination
+    setSingleParamModalVisible(true);
+  };
+
+  // Memoized statistics calculations
+  const statistics = useMemo(() => {
+    // Calculate NE statistics
+    const totalNE = Array.from(new Set(runtimeData.map(item => item.NeName))).filter(name => name).length;
+
+    // Calculate Cell statistics
+    const totalCells = runtimeData.length;
+    
+    // Calculate correct cells (all parameters must be correct)
+    const correctCells = runtimeData.filter(item => {
+      return (item.UtranSrvccSwitch?.toUpperCase() === 'ON') &&
+             (item.UtranCsfbSwitch?.toUpperCase() === 'ON') &&
+             (item.UtranFlashCsfbSwitch?.toUpperCase() === 'OFF') &&
+             (item.GeranFlashCsfbSwitch?.toUpperCase() === 'OFF') &&
+             (item.CsfbAdaptiveBlindHoSwitch?.toUpperCase() === 'OFF') &&
+             (item.UtranCsfbSteeringSwitch?.toUpperCase() === 'OFF') &&
+             (item.IdleCsfbRedirectOptSwitch?.toUpperCase() === 'ON') &&
+             (item.DlVoipBundlingSwitch?.toUpperCase() === 'ON') &&
+             (item.UlVoipPreAllocationSwitch?.toUpperCase() === 'ON') &&
+             (item.UlVoipDelaySchSwitch?.toUpperCase() === 'OFF') &&
+             (item.UlVoipLoadBasedSchSwitch?.toUpperCase() === 'OFF') &&
+             (item.UlVoipServStateEnhancedSw?.toUpperCase() === 'OFF') &&
+             (item.UlVoipSchOptSwitch?.toUpperCase() === 'ON') &&
+             (item.UlVoLteDataSizeEstSwitch?.toUpperCase() === 'OFF');
+    }).length;
+
+    // Get unique bad cells
+    const uniqueBadCells = badData.filter((item, index, self) =>
+      index === self.findIndex((t) => (
+        t.NeName === item.NeName && t.CellId === item.CellId
+      ))
+    ).length;
+
+    return {
+      totalNE,
+      totalCells,
+      correctCells,
+      uniqueBadCells
+    };
+  }, [runtimeData, badData]);
+
+  // Render overview pie charts for NE and Cell statistics
+  const renderOverviewPieCharts = () => {
+    const { totalNE, totalCells, correctCells, uniqueBadCells } = statistics;
+
+    // NE Pie Chart Data
+    const nePieData = {
+      labels: ['NE đã kiểm tra'],
+      datasets: [{
+        data: [totalNE],
+        backgroundColor: ['#52c41a'],
+        borderColor: ['#fff'],
+        borderWidth: 3
+      }]
+    };
+
+    const nePieOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '70%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(context: any) {
+              const label = context.label || '';
+              const value = context.parsed || 0;
+              return `${label}: ${value}`;
+            }
+          }
+        }
+      }
+    };
+
+    // Cell Pie Chart Data
+    const cellPieData = {
+      labels: ['Cell đúng', 'Cell sai'],
+      datasets: [{
+        data: [correctCells, uniqueBadCells],
+        backgroundColor: ['#52c41a', '#ff4d4f'],
+        borderColor: ['#fff', '#fff'],
+        borderWidth: 3
+      }]
+    };
+
+    const cellPieOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '70%',
+      plugins: {
+        legend: { 
+          display: true,
+          position: 'bottom' as const,
+          labels: {
+            padding: 15,
+            font: {
+              size: 12
+            }
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context: any) {
+              const label = context.label || '';
+              const value = context.parsed || 0;
+              const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+              const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+              return `${label}: ${value} (${percentage}%)`;
+            }
+          }
+        }
+      }
+    };
+
+      return (
+      <div className="row g-4 mb-4">
+        {/* NE Statistics Pie Chart */}
+        <div className="col-xl-6 col-lg-6 col-md-12">
+          <div className="card h-100 shadow-lg border-0">
+            <div className="card-body text-center p-4">
+              <div className="mb-3">
+                <i className="fas fa-network-wired fa-2x text-success"></i>
+              </div>
+              <h4 className="card-title fw-bold mb-3">
+                Thống kê NE đã kiểm tra
+              </h4>
+              
+              <div style={{ height: '250px', position: 'relative' }} className="my-3">
+                <Doughnut data={nePieData} options={nePieOptions} />
+                <div className="position-absolute top-50 start-50 translate-middle">
+                  <div className="fw-bold text-success" style={{ fontSize: '32px' }}>
+                    {totalNE}
+                  </div>
+                  <small className="text-muted">NE</small>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-3 border-top">
+                <div className="text-center">
+                  <div className="fw-bold" style={{ fontSize: '24px', color: '#52c41a' }}>
+                    {totalNE}
+                  </div>
+                  <small className="text-muted">Tổng số NE đã kiểm tra</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Cell Statistics Pie Chart */}
+        <div className="col-xl-6 col-lg-6 col-md-12">
+          <div className="card h-100 shadow-lg border-0">
+            <div className="card-body text-center p-4">
+              <div className="mb-3">
+                <i className="fas fa-th fa-2x text-primary"></i>
+              </div>
+              <h4 className="card-title fw-bold mb-3">
+                Thống kê Cell đã kiểm tra
+              </h4>
+              
+              <div style={{ height: '250px', position: 'relative' }} className="my-3">
+                <Doughnut data={cellPieData} options={cellPieOptions} />
+                <div className="position-absolute top-50 start-50 translate-middle">
+                  <div className="fw-bold text-primary" style={{ fontSize: '32px' }}>
+                    {totalCells}
+                  </div>
+                  <small className="text-muted">Cell</small>
+                </div>
+              </div>
+
+              <div className="d-flex justify-content-around mt-4">
+                <div className="text-center">
+                  <div className="fw-bold" style={{ fontSize: '20px', color: '#52c41a' }}>
+                    {correctCells}
+                  </div>
+                  <small className="text-muted">Cell đúng</small>
+                </div>
+                <div className="text-center">
+                  <div className="fw-bold" style={{ fontSize: '20px', color: '#ff4d4f' }}>
+                    {uniqueBadCells}
+                  </div>
+                  <small className="text-muted">Cell sai</small>
+                </div>
+              </div>
+
+              <div className="mt-3 pt-3 border-top">
+                <small className="text-muted">
+                  Tổng: <strong>{totalCells}</strong> Cell đã kiểm tra
+                </small>
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
+      );
+  };
+
+  // Memoized parameter display names
+  const parameterDisplayNames: { [key: string]: string } = useMemo(() => ({
+      'utran_srvcc_switch': 'UTRAN SRVCC',
+      'utran_csfb_switch': 'UTRAN CSFB',
+      'utran_flash_csfb_switch': 'UTRAN Flash CSFB',
+      'geran_flash_csfb_switch': 'GERAN Flash CSFB',
+      'csfb_adaptive_blind_ho_switch': 'CSFB Adaptive Blind HO',
+      'utran_csfb_steering_switch': 'UTRAN CSFB Steering',
+      'idle_csfb_redirect_opt_switch': 'Idle CSFB Redirect Opt',
+      'dl_voip_bundling_switch': 'DL VoIP Bundling',
+      'ul_voip_pre_allocation_switch': 'UL VoIP Pre Allocation',
+      'ul_voip_delay_sch_switch': 'UL VoIP Delay SCH',
+      'ul_voip_load_based_sch_switch': 'UL VoIP Load Based SCH',
+      'ul_voip_serv_state_enhanced_sw': 'UL VoIP Serv State Enhanced',
+      'ul_voip_sch_opt_switch': 'UL VoIP SCH Opt',
+      'ul_vo_lte_data_size_est_switch': 'UL VoLTE Data Size Est'
+  }), []);
+
+  // Render parameter summaries table
+  const renderParameterSummariesTable = () => {
+    if (!parameterSummaries || parameterSummaries.length === 0) {
+      return (
+        <div className="text-center p-4 text-muted">
+          <i className="fas fa-info-circle me-2"></i>
+          Không có dữ liệu tham số
+        </div>
+      );
+    }
+
+    return (
+      <div className="table-responsive">
+        <table className="table table-striped table-hover table-bordered">
+          <thead style={{ backgroundColor: '#f8f9fa' }}>
+            <tr>
+              <th style={{ width: '50px' }}>STT</th>
+              <th style={{ minWidth: '200px' }}>Tên tham số</th>
+              <th style={{ width: '120px', textAlign: 'center' }}>Tổng số</th>
+              <th style={{ width: '120px', textAlign: 'center' }}>Đúng</th>
+              <th style={{ width: '120px', textAlign: 'center' }}>Sai</th>
+              <th style={{ width: '120px', textAlign: 'center' }}>Tỷ lệ đúng (%)</th>
+              <th style={{ width: '150px', textAlign: 'center' }}>Trạng thái</th>
+              <th style={{ width: '120px', textAlign: 'center' }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {parameterSummaries.map((param, index) => {
+              const displayName = parameterDisplayNames[param.ParameterName] || param.ParameterName;
+              const percentage = param.CorrectPercentage || 0;
+              const isGood = percentage >= 90;
+              const isWarning = percentage >= 70 && percentage < 90;
+              const isBad = percentage < 70;
+              
+              return (
+                <tr key={param.ParameterName}>
+                  <td className="text-center">{index + 1}</td>
+                  <td>
+                    <strong>{displayName}</strong>
+                    <br />
+                    <small className="text-muted">{param.ParameterName}</small>
+                  </td>
+                  <td className="text-center">
+                    <span className="badge bg-info fs-6">
+                      {param.TotalCount?.toLocaleString() || '0'}
+                    </span>
+                  </td>
+                  <td className="text-center">
+                    <span 
+                      className="badge bg-success fs-6"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => showSingleParameterDetail(param.ParameterName, true)}
+                      title="Click để xem chi tiết cấu hình đúng"
+                    >
+                      {param.CorrectCount?.toLocaleString() || '0'}
+                    </span>
+                  </td>
+                  <td className="text-center">
+                    <span 
+                      className="badge bg-danger fs-6"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => showSingleParameterDetail(param.ParameterName, false)}
+                      title="Click để xem chi tiết cấu hình sai"
+                    >
+                      {param.IncorrectCount?.toLocaleString() || '0'}
+                    </span>
+                  </td>
+                  <td className="text-center">
+                    <span className={`badge fs-6 ${isGood ? 'bg-success' : isWarning ? 'bg-warning' : 'bg-danger'}`}>
+                      {percentage.toFixed(1)}%
+                    </span>
+                  </td>
+                  <td className="text-center">
+                    {isGood && (
+                      <span className="badge bg-success">
+                        <i className="fas fa-check-circle me-1"></i>
+                        Tốt
+                      </span>
+                    )}
+                    {isWarning && (
+                      <span className="badge bg-warning">
+                        <i className="fas fa-exclamation-triangle me-1"></i>
+                        Cảnh báo
+                      </span>
+                    )}
+                    {isBad && (
+                      <span className="badge bg-danger">
+                        <i className="fas fa-times-circle me-1"></i>
+                        Cần sửa
+                      </span>
+                    )}
+                  </td>
+                  <td className="text-center">
+                    <div className="btn-group btn-group-sm" role="group">
+                      <button 
+                        className="btn btn-outline-success btn-sm"
+                        onClick={() => showSingleParameterDetail(param.ParameterName, true)}
+                        disabled={param.CorrectCount === 0}
+                        title="Xem cấu hình đúng"
+                      >
+                        <i className="fas fa-check"></i>
+                      </button>
+                      <button 
+                        className="btn btn-outline-danger btn-sm"
+                        onClick={() => showSingleParameterDetail(param.ParameterName, false)}
+                        disabled={param.IncorrectCount === 0}
+                        title="Xem cấu hình sai"
+                      >
+                        <i className="fas fa-times"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        
+        {/* Summary row */}
+        <div className="mt-4">
+          <div className="row g-3">
+            <div className="col-md-3">
+              <div className="card bg-primary text-white">
+                <div className="card-body text-center">
+                  <h4>{parameterSummaries.reduce((sum, p) => sum + (p.TotalCount || 0), 0).toLocaleString()}</h4>
+                  <small>Tổng cấu hình</small>
+                </div>
+              </div>
+            </div>
+            <div className="col-md-3">
+              <div className="card bg-success text-white">
+                <div className="card-body text-center">
+                  <h4>{parameterSummaries.reduce((sum, p) => sum + (p.CorrectCount || 0), 0).toLocaleString()}</h4>
+                  <small>Cấu hình đúng</small>
+                </div>
+              </div>
+            </div>
+            <div className="col-md-3">
+              <div className="card bg-danger text-white">
+                <div className="card-body text-center">
+                  <h4>{parameterSummaries.reduce((sum, p) => sum + (p.IncorrectCount || 0), 0).toLocaleString()}</h4>
+                  <small>Cấu hình sai</small>
+                </div>
+              </div>
+            </div>
+            <div className="col-md-3">
+              <div className="card bg-info text-white">
+                <div className="card-body text-center">
+                  <h4>
+                    {parameterSummaries.length > 0 
+                      ? ((parameterSummaries.reduce((sum, p) => sum + (p.CorrectCount || 0), 0) / 
+                          parameterSummaries.reduce((sum, p) => sum + (p.TotalCount || 0), 0)) * 100).toFixed(1)
+                      : '0'
+                    }%
+                  </h4>
+                  <small>Tỷ lệ đúng tổng</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // Render baseline type summaries with pie charts (3 charts only)
@@ -833,16 +1283,206 @@ const DashboardAudit = (props: Props) => {
     );
   };
 
-  // Render bad data table (Tab 3)
-  const renderBadDataTable = () => {
-    // Remove duplicates based on NeName + CellId + DetectedDate
-    const uniqueBadData = badData.filter((item, index, self) =>
-      index === self.findIndex((t) => (
-        t.NeName === item.NeName && t.CellId === item.CellId && t.DetectedDate === item.DetectedDate
-      ))
-    );
+  // Paginated bad data
+  const paginatedBadData = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return uniqueBadData.slice(startIndex, endIndex);
+  }, [uniqueBadData, currentPage, pageSize]);
+
+  // Total pages
+  const totalPages = useMemo(() => {
+    return Math.ceil(uniqueBadData.length / pageSize);
+  }, [uniqueBadData.length, pageSize]);
+
+  // Paginated modal data
+  const paginatedModalData = useMemo(() => {
+    const startIndex = (modalCurrentPage - 1) * modalPageSize;
+    const endIndex = startIndex + modalPageSize;
+    return modalData.slice(startIndex, endIndex);
+  }, [modalData, modalCurrentPage, modalPageSize]);
+
+  // Paginated single param data
+  const paginatedSingleParamData = useMemo(() => {
+    const startIndex = (modalCurrentPage - 1) * modalPageSize;
+    const endIndex = startIndex + modalPageSize;
+    return singleParamData.slice(startIndex, endIndex);
+  }, [singleParamData, modalCurrentPage, modalPageSize]);
+
+  // Modal total pages
+  const modalTotalPages = useMemo(() => {
+    const dataLength = singleParamModalVisible ? singleParamData.length : modalData.length;
+    return Math.ceil(dataLength / modalPageSize);
+  }, [singleParamModalVisible, singleParamData.length, modalData.length, modalPageSize]);
+
+  // Render pagination component
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+
+    const pages = [];
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+    if (endPage - startPage < maxVisiblePages - 1) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
 
     return (
+      <div className="d-flex justify-content-between align-items-center mt-3">
+        <div className="text-muted">
+          Hiển thị {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, uniqueBadData.length)} trong tổng số {uniqueBadData.length} bản ghi
+        </div>
+        <nav>
+          <ul className="pagination mb-0">
+            <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+              <button 
+                className="page-link" 
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+              >
+                <i className="fas fa-angle-double-left"></i>
+              </button>
+            </li>
+            <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+              <button 
+                className="page-link" 
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage === 1}
+              >
+                <i className="fas fa-angle-left"></i>
+              </button>
+            </li>
+            {startPage > 1 && (
+              <li className="page-item disabled">
+                <span className="page-link">...</span>
+              </li>
+            )}
+            {Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i).map(page => (
+              <li key={page} className={`page-item ${currentPage === page ? 'active' : ''}`}>
+                <button 
+                  className="page-link" 
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </button>
+              </li>
+            ))}
+            {endPage < totalPages && (
+              <li className="page-item disabled">
+                <span className="page-link">...</span>
+              </li>
+            )}
+            <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+              <button 
+                className="page-link" 
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+              >
+                <i className="fas fa-angle-right"></i>
+              </button>
+            </li>
+            <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+              <button 
+                className="page-link" 
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+              >
+                <i className="fas fa-angle-double-right"></i>
+              </button>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    );
+  };
+
+  // Render modal pagination component
+  const renderModalPagination = () => {
+    if (modalTotalPages <= 1) return null;
+
+    const dataLength = singleParamModalVisible ? singleParamData.length : modalData.length;
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, modalCurrentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(modalTotalPages, startPage + maxVisiblePages - 1);
+
+    if (endPage - startPage < maxVisiblePages - 1) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    return (
+      <div className="d-flex justify-content-between align-items-center mt-3 px-3">
+        <div className="text-muted">
+          Hiển thị {(modalCurrentPage - 1) * modalPageSize + 1} - {Math.min(modalCurrentPage * modalPageSize, dataLength)} trong tổng số {dataLength} bản ghi
+        </div>
+        <nav>
+          <ul className="pagination mb-0">
+            <li className={`page-item ${modalCurrentPage === 1 ? 'disabled' : ''}`}>
+              <button 
+                className="page-link" 
+                onClick={() => setModalCurrentPage(1)}
+                disabled={modalCurrentPage === 1}
+              >
+                <i className="fas fa-angle-double-left"></i>
+              </button>
+            </li>
+            <li className={`page-item ${modalCurrentPage === 1 ? 'disabled' : ''}`}>
+              <button 
+                className="page-link" 
+                onClick={() => setModalCurrentPage(modalCurrentPage - 1)}
+                disabled={modalCurrentPage === 1}
+              >
+                <i className="fas fa-angle-left"></i>
+              </button>
+            </li>
+            {startPage > 1 && (
+              <li className="page-item disabled">
+                <span className="page-link">...</span>
+              </li>
+            )}
+            {Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i).map(page => (
+              <li key={page} className={`page-item ${modalCurrentPage === page ? 'active' : ''}`}>
+                <button 
+                  className="page-link" 
+                  onClick={() => setModalCurrentPage(page)}
+                >
+                  {page}
+                </button>
+              </li>
+            ))}
+            {endPage < modalTotalPages && (
+              <li className="page-item disabled">
+                <span className="page-link">...</span>
+              </li>
+            )}
+            <li className={`page-item ${modalCurrentPage === modalTotalPages ? 'disabled' : ''}`}>
+              <button 
+                className="page-link" 
+                onClick={() => setModalCurrentPage(modalCurrentPage + 1)}
+                disabled={modalCurrentPage === modalTotalPages}
+              >
+                <i className="fas fa-angle-right"></i>
+              </button>
+            </li>
+            <li className={`page-item ${modalCurrentPage === modalTotalPages ? 'disabled' : ''}`}>
+              <button 
+                className="page-link" 
+                onClick={() => setModalCurrentPage(modalTotalPages)}
+                disabled={modalCurrentPage === modalTotalPages}
+              >
+                <i className="fas fa-angle-double-right"></i>
+              </button>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    );
+  };
+
+  // Render bad data table (Tab 3)
+  const renderBadDataTable = () => {
+    return (
+      <>
       <div className="table-responsive" style={{ maxHeight: '500px', overflowY: 'auto' }}>
         <table className="table table-sm table-striped table-hover table-bordered">
           <thead style={{ backgroundColor: '#f8f9fa', position: 'sticky', top: 0, zIndex: 1 }}>
@@ -869,10 +1509,11 @@ const DashboardAudit = (props: Props) => {
             </tr>
           </thead>
           <tbody>
-            {uniqueBadData.map((item, index) => {
+              {paginatedBadData.map((item, index) => {
+                const globalIndex = (currentPage - 1) * pageSize + index;
               return (
-                <tr key={`${item.NeName}-${item.CellId}-${index}`}>
-                  <td className="text-center">{index + 1}</td>
+                <tr key={`${item.NeName}-${item.CellId}-${globalIndex}`}>
+                  <td className="text-center">{globalIndex + 1}</td>
                   <td>{item.NeName}</td>
                   <td className="text-center">{item.CellId}</td>
                   <td className="text-center">
@@ -968,6 +1609,158 @@ const DashboardAudit = (props: Props) => {
             Không có cấu hình sai
           </div>
         )}
+      </div>
+      {renderPagination()}
+    </>
+    );
+  };
+
+  // Render single parameter modal (only show specific parameter column)
+  const renderSingleParameterModal = () => {
+    if (!singleParamModalVisible || !selectedParameterName) return null;
+
+    // Map parameter names to display names
+    const parameterDisplayNames: { [key: string]: string } = {
+      'utran_srvcc_switch': 'UTRAN SRVCC',
+      'utran_csfb_switch': 'UTRAN CSFB',
+      'utran_flash_csfb_switch': 'UTRAN Flash CSFB',
+      'geran_flash_csfb_switch': 'GERAN Flash CSFB',
+      'csfb_adaptive_blind_ho_switch': 'CSFB Adaptive Blind HO',
+      'utran_csfb_steering_switch': 'UTRAN CSFB Steering',
+      'idle_csfb_redirect_opt_switch': 'Idle CSFB Redirect Opt',
+      'dl_voip_bundling_switch': 'DL VoIP Bundling',
+      'ul_voip_pre_allocation_switch': 'UL VoIP Pre Allocation',
+      'ul_voip_delay_sch_switch': 'UL VoIP Delay SCH',
+      'ul_voip_load_based_sch_switch': 'UL VoIP Load Based SCH',
+      'ul_voip_serv_state_enhanced_sw': 'UL VoIP Serv State Enhanced',
+      'ul_voip_sch_opt_switch': 'UL VoIP SCH Opt',
+      'ul_vo_lte_data_size_est_switch': 'UL VoLTE Data Size Est'
+    };
+
+    const paramMapping: { [key: string]: keyof IR001DataRuntime } = {
+      'utran_srvcc_switch': 'UtranSrvccSwitch',
+      'utran_csfb_switch': 'UtranCsfbSwitch',
+      'utran_flash_csfb_switch': 'UtranFlashCsfbSwitch',
+      'geran_flash_csfb_switch': 'GeranFlashCsfbSwitch',
+      'csfb_adaptive_blind_ho_switch': 'CsfbAdaptiveBlindHoSwitch',
+      'utran_csfb_steering_switch': 'UtranCsfbSteeringSwitch',
+      'idle_csfb_redirect_opt_switch': 'IdleCsfbRedirectOptSwitch',
+      'dl_voip_bundling_switch': 'DlVoipBundlingSwitch',
+      'ul_voip_pre_allocation_switch': 'UlVoipPreAllocationSwitch',
+      'ul_voip_delay_sch_switch': 'UlVoipDelaySchSwitch',
+      'ul_voip_load_based_sch_switch': 'UlVoipLoadBasedSchSwitch',
+      'ul_voip_serv_state_enhanced_sw': 'UlVoipServStateEnhancedSw',
+      'ul_voip_sch_opt_switch': 'UlVoipSchOptSwitch',
+      'ul_vo_lte_data_size_est_switch': 'UlVoLteDataSizeEstSwitch'
+    };
+
+    const displayName = parameterDisplayNames[selectedParameterName] || selectedParameterName;
+    const propertyName = paramMapping[selectedParameterName];
+    const isWrongModal = singleParamTitle.includes('sai');
+
+    return (
+      <div className="modal fade show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <div className="modal-dialog modal-lg modal-dialog-scrollable">
+          <div className="modal-content">
+            <div className="modal-header bg-primary text-white">
+              <h5 className="modal-title">
+                <i className="fas fa-list me-2"></i>
+                {singleParamTitle} - {displayName}
+              </h5>
+              <button 
+                type="button" 
+                className="btn-close btn-close-white" 
+                onClick={() => setSingleParamModalVisible(false)}
+              ></button>
+            </div>
+            <div className="modal-body">
+              <div className="alert alert-info">
+                <i className="fas fa-info-circle me-2"></i>
+                Hiển thị chi tiết cho tham số: <strong>{displayName}</strong>
+              </div>
+              
+              <div className="table-responsive">
+                <table className="table table-sm table-striped table-hover table-bordered">
+                  <thead className="table-dark" style={{ position: 'sticky', top: 0, zIndex: 10 }}>
+                    <tr>
+                      <th style={{ width: '50px' }}>STT</th>
+                      <th style={{ width: '120px' }}>NE Name</th>
+                      <th style={{ width: '80px' }}>Cell ID</th>
+                      <th style={{ width: '150px' }}>{displayName}</th>
+                      {isWrongModal && <th style={{ width: '100px' }}>Action</th>}
+                      <th style={{ width: '160px' }}>Report Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedSingleParamData.map((item, index) => {
+                      const globalIndex = (modalCurrentPage - 1) * modalPageSize + index;
+                      const paramValue = item[propertyName as keyof typeof item];
+                      return (
+                        <tr key={globalIndex}>
+                          <td className="text-center">{globalIndex + 1}</td>
+                          <td>{item.NeName}</td>
+                          <td className="text-center">{item.CellId}</td>
+                          <td className="text-center">
+                            <span className={`badge ${isParameterCorrect(propertyName as string, paramValue as string) ? 'bg-success' : 'bg-danger'}`}>
+                              {paramValue || 'N/A'}
+                            </span>
+                          </td>
+                          {isWrongModal && (
+                            <td className="text-center">
+                              <button 
+                                className="btn btn-warning btn-sm"
+                                onClick={() => handleFixConfiguration({...item, DetectedDate: item.ReportDate})}
+                                title="Sửa cấu hình"
+                              >
+                                <i className="fas fa-edit"></i> Sửa
+                              </button>
+                            </td>
+                          )}
+                          <td className="text-center">
+                            {new Date(item.ReportDate).toLocaleString('vi-VN')}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              
+              <div className="mt-3">
+                <div className="row g-3">
+                  <div className="col-md-6">
+                    <div className="card bg-info text-white">
+                      <div className="card-body text-center">
+                        <h4>{singleParamData.length.toLocaleString()}</h4>
+                        <small>Tổng bản ghi</small>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-md-6">
+                    <div className={`card ${isWrongModal ? 'bg-danger' : 'bg-success'} text-white`}>
+                      <div className="card-body text-center">
+                        <h4>{displayName}</h4>
+                        <small>{isWrongModal ? 'Cấu hình sai' : 'Cấu hình đúng'}</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Pagination */}
+              {renderModalPagination()}
+            </div>
+            <div className="modal-footer">
+              <button 
+                type="button" 
+                className="btn btn-secondary" 
+                onClick={() => setSingleParamModalVisible(false)}
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   };
@@ -1171,9 +1964,11 @@ const DashboardAudit = (props: Props) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {modalData.map((item, index) => (
-                      <tr key={index}>
-                        <td className="text-center">{index + 1}</td>
+                    {paginatedModalData.map((item, index) => {
+                      const globalIndex = (modalCurrentPage - 1) * modalPageSize + index;
+                      return (
+                      <tr key={globalIndex}>
+                        <td className="text-center">{globalIndex + 1}</td>
                         <td>{item.NeName}</td>
                         <td className="text-center">{item.CellId}</td>
                         <td className="text-center">
@@ -1264,10 +2059,13 @@ const DashboardAudit = (props: Props) => {
                           }
                         </td>
                       </tr>
-                    ))}
+                    )})}
                   </tbody>
                 </table>
               </div>
+              
+              {/* Pagination */}
+              {renderModalPagination()}
             </div>
             <div className="modal-footer">
               <button type="button" className="btn btn-secondary" onClick={onClose}>Đóng</button>
@@ -1298,6 +2096,29 @@ const DashboardAudit = (props: Props) => {
         activeName="parameters"
         tabsPanel={[
           {
+              label: "Tổng quan tham số",
+            name: "parameter-summary",
+            panel: (
+              <Card 
+                title="Tổng quan tham số cấu hình - R001" 
+                icon="fas fa-table" 
+                buttonGroups={ButtonGroupsRender()}
+              >
+                <div className="alert alert-info mb-4">
+                  <i className="fas fa-info-circle me-2"></i>
+                  <strong>Dashboard tổng quan:</strong> Hiển thị thống kê NE và Cell đã kiểm tra. 
+                  <strong> Click vào số liệu Chuẩn hóa/chưa chuẩn hóa</strong> để xem chi tiết cấu hình của từng tham số.
+                </div>
+                
+                {/* Overview Pie Charts */}
+                {renderOverviewPieCharts()}
+                
+                {/* Parameter Summary Table */}
+                {renderParameterSummariesTable()}
+              </Card>
+            )
+          },
+          {
             label: "Tổng quan theo Baseline Type",
             name: "parameters",
             panel: (
@@ -1314,32 +2135,32 @@ const DashboardAudit = (props: Props) => {
               </Card>
             )
           },
-          {
-            label: "Danh sách NE đã thực hiện",
-            name: "ne-list",
-            panel: (
-              <Card 
-                title="Danh sách NE đã thực hiện cấu hình" 
-                icon="fas fa-list" 
-                buttonGroups={ButtonGroupsRender()}
-              >
-                {renderNeNamesList()}
-              </Card>
-            )
-          },
-          {
-            label: "Site thực hiện",
-            name: "runtime",
-            panel: (
-              <Card 
-                title="Chi tiết dữ liệu Cell Id" 
-                icon="fas fa-database" 
-                buttonGroups={ButtonGroupsRender()}
-              >
-                {renderRuntimeDataTable()}
-              </Card>
-            )
-          },
+          // {
+          //   label: "Danh sách NE đã thực hiện",
+          //   name: "ne-list",
+          //   panel: (
+          //     <Card 
+          //       title="Danh sách NE đã thực hiện cấu hình" 
+          //       icon="fas fa-list" 
+          //       buttonGroups={ButtonGroupsRender()}
+          //     >
+          //       {renderNeNamesList()}
+          //     </Card>
+          //   )
+          // },
+          // {
+          //   label: "Site thực hiện",
+          //   name: "runtime",
+          //   panel: (
+          //     <Card 
+          //       title="Chi tiết dữ liệu Cell Id" 
+          //       icon="fas fa-database" 
+          //       buttonGroups={ButtonGroupsRender()}
+          //     >
+          //       {renderRuntimeDataTable()}
+          //     </Card>
+          //   )
+          // },
           {
             label: "Danh sách audit sai",
             name: "bad-config",
@@ -1360,6 +2181,7 @@ const DashboardAudit = (props: Props) => {
       />
 
       {/* Modals */}
+      {renderSingleParameterModal()}
       {renderBaselineTypeDetailModal()}
       {renderModal(correctModalVisible, () => setCorrectModalVisible(false))}
       {renderModal(wrongModalVisible, () => setWrongModalVisible(false))}
