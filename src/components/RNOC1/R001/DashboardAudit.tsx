@@ -269,7 +269,7 @@ const DashboardAudit = (props: Props) => {
     console.log('Correct items found:', correctItems);
 
     setModalData(correctItems);
-    setModalTitle('Danh sách cấu hình đúng');
+    setModalTitle('Danh sách cấu hình chuẩn');
     setModalCurrentPage(1); // Reset pagination
     setCorrectModalVisible(true);
   };
@@ -277,14 +277,14 @@ const DashboardAudit = (props: Props) => {
   // Show wrong configurations modal
   const showWrongModal = () => {
     setModalData(badData);
-    setModalTitle('Danh sách cấu hình sai');
+    setModalTitle('Danh sách cấu hình chưa chuẩn');
     setModalCurrentPage(1); // Reset pagination
     setWrongModalVisible(true);
   };
 
   // Export to Excel function
   const exportToExcel = () => {
-    const isWrongModal = modalTitle.includes('sai');
+    const isWrongModal = modalTitle.includes('chưa chuẩn');
     
     // Prepare data for export
     const exportData = modalData.map((item, index) => ({
@@ -338,7 +338,7 @@ const DashboardAudit = (props: Props) => {
 
     // Create workbook
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, isWrongModal ? 'Cấu hình sai' : 'Cấu hình đúng');
+    XLSX.utils.book_append_sheet(wb, ws, isWrongModal ? 'Cấu hình chưa chuẩn' : 'Cấu hình chuẩn');
 
     // Generate filename with date
     const fileName = `R001_${isWrongModal ? 'Cau_hinh_sai' : 'Cau_hinh_dung'}_${selectedDate.replace(/-/g, '')}.xlsx`;
@@ -611,7 +611,7 @@ const DashboardAudit = (props: Props) => {
         return typeof value === 'string' && value.toUpperCase() === expectedValue;
       });
       setSingleParamData(correctItems);
-      setSingleParamTitle(`Cấu hình đúng - ${parameterName}`);
+      setSingleParamTitle(`Cấu hình chuẩn - ${parameterName}`);
     } else {
       // Show incorrect configurations - filter from runtimeData
       const incorrectItems = runtimeData.filter(item => {
@@ -620,7 +620,7 @@ const DashboardAudit = (props: Props) => {
       });
       
       setSingleParamData(incorrectItems);
-      setSingleParamTitle(`Cấu hình sai - ${parameterName}`);
+      setSingleParamTitle(`Cấu hình chưa chuẩn - ${parameterName}`);
     }
     
     setSelectedParameterName(parameterName);
@@ -673,7 +673,7 @@ const DashboardAudit = (props: Props) => {
         return typeof value === 'string' && value.toUpperCase() === expectedValue;
       });
       setSingleParamData(correctItems);
-      setSingleParamTitle(`Cấu hình đúng - ${parameterName}`);
+      setSingleParamTitle(`Cấu hình chuẩn - ${parameterName}`);
     } else {
       // Show incorrect configurations - filter from runtimeData
       const incorrectItems = runtimeData.filter(item => {
@@ -682,7 +682,7 @@ const DashboardAudit = (props: Props) => {
       });
       
       setSingleParamData(incorrectItems);
-      setSingleParamTitle(`Cấu hình sai - ${parameterName}`);
+      setSingleParamTitle(`Cấu hình chưa chuẩn - ${parameterName}`);
     }
     
     setSelectedParameterName(parameterName);
@@ -766,7 +766,7 @@ const DashboardAudit = (props: Props) => {
 
     // Cell Pie Chart Data
     const cellPieData = {
-      labels: ['Cell đúng', 'Cell sai'],
+      labels: ['Cell chuẩn', 'Cell chưa chuẩn'],
       datasets: [{
         data: [correctCells, uniqueBadCells],
         backgroundColor: ['#52c41a', '#ff4d4f'],
@@ -865,13 +865,13 @@ const DashboardAudit = (props: Props) => {
                   <div className="fw-bold" style={{ fontSize: '20px', color: '#52c41a' }}>
                     {correctCells}
                   </div>
-                  <small className="text-muted">Cell đúng</small>
+                  <small className="text-muted">Cell chuẩn</small>
                 </div>
                 <div className="text-center">
                   <div className="fw-bold" style={{ fontSize: '20px', color: '#ff4d4f' }}>
                     {uniqueBadCells}
                   </div>
-                  <small className="text-muted">Cell sai</small>
+                  <small className="text-muted">Cell chưa chuẩn</small>
                 </div>
               </div>
 
@@ -924,9 +924,9 @@ const DashboardAudit = (props: Props) => {
               <th style={{ width: '50px' }}>STT</th>
               <th style={{ minWidth: '200px' }}>Tên tham số</th>
               <th style={{ width: '120px', textAlign: 'center' }}>Tổng số</th>
-              <th style={{ width: '120px', textAlign: 'center' }}>Đúng</th>
-              <th style={{ width: '120px', textAlign: 'center' }}>Sai</th>
-              <th style={{ width: '120px', textAlign: 'center' }}>Tỷ lệ đúng (%)</th>
+              <th style={{ width: '120px', textAlign: 'center' }}>Chuẩn</th>
+              <th style={{ width: '120px', textAlign: 'center' }}>Chưa chuẩn</th>
+              <th style={{ width: '120px', textAlign: 'center' }}>Tỷ lệ chuẩn (%)</th>
               <th style={{ width: '150px', textAlign: 'center' }}>Trạng thái</th>
               <th style={{ width: '120px', textAlign: 'center' }}>Actions</th>
             </tr>
@@ -957,7 +957,7 @@ const DashboardAudit = (props: Props) => {
                       className="badge bg-success fs-6"
                       style={{ cursor: 'pointer' }}
                       onClick={() => showSingleParameterDetail(param.ParameterName, true)}
-                      title="Click để xem chi tiết cấu hình đúng"
+                      title="Click để xem chi tiết cấu hình chuẩn"
                     >
                       {param.CorrectCount?.toLocaleString() || '0'}
                     </span>
@@ -1003,7 +1003,7 @@ const DashboardAudit = (props: Props) => {
                         className="btn btn-outline-success btn-sm"
                         onClick={() => showSingleParameterDetail(param.ParameterName, true)}
                         disabled={param.CorrectCount === 0}
-                        title="Xem cấu hình đúng"
+                        title="Xem cấu hình chuẩn"
                       >
                         <i className="fas fa-check"></i>
                       </button>
@@ -1038,7 +1038,7 @@ const DashboardAudit = (props: Props) => {
               <div className="card bg-success text-white">
                 <div className="card-body text-center">
                   <h4>{parameterSummaries.reduce((sum, p) => sum + (p.CorrectCount || 0), 0).toLocaleString()}</h4>
-                  <small>Cấu hình đúng</small>
+                  <small>Cấu hình chuẩn</small>
                 </div>
               </div>
             </div>
@@ -1046,7 +1046,7 @@ const DashboardAudit = (props: Props) => {
               <div className="card bg-danger text-white">
                 <div className="card-body text-center">
                   <h4>{parameterSummaries.reduce((sum, p) => sum + (p.IncorrectCount || 0), 0).toLocaleString()}</h4>
-                  <small>Cấu hình sai</small>
+                  <small>Cấu hình chưa chuẩn</small>
                 </div>
               </div>
             </div>
@@ -1060,7 +1060,7 @@ const DashboardAudit = (props: Props) => {
                       : '0'
                     }%
                   </h4>
-                  <small>Tỷ lệ đúng tổng</small>
+                  <small>Tỷ lệ chuẩn tổng</small>
                 </div>
               </div>
             </div>
@@ -1085,7 +1085,7 @@ const DashboardAudit = (props: Props) => {
       <div className="row g-4 justify-content-center">
         {baselineTypeSummaries.map((baseline) => {
           const pieData = {
-            labels: ['Đúng', 'Sai'],
+            labels: ['Chuẩn', 'Chưa chuẩn'],
             datasets: [{
               data: [baseline.CorrectCount || 0, baseline.IncorrectCount || 0],
               backgroundColor: ['#1890ff', '#d9d9d9'],
@@ -1156,13 +1156,13 @@ const DashboardAudit = (props: Props) => {
                       <div className="fw-bold" style={{ fontSize: '20px', color: '#1890ff' }}>
                         {baseline.CorrectCount || 0}
                       </div>
-                      <small className="text-muted">Đúng</small>
+                      <small className="text-muted">Chuẩn</small>
                     </div>
                     <div className="text-center">
                       <div className="fw-bold" style={{ fontSize: '20px', color: '#8c8c8c' }}>
                         {baseline.IncorrectCount || 0}
                       </div>
-                      <small className="text-muted">Sai</small>
+                      <small className="text-muted">Chưa chuẩn</small>
                     </div>
                   </div>
 
@@ -1740,7 +1740,7 @@ const DashboardAudit = (props: Props) => {
                     <div className={`card ${isWrongModal ? 'bg-danger' : 'bg-success'} text-white`}>
                       <div className="card-body text-center">
                         <h4>{displayName}</h4>
-                        <small>{isWrongModal ? 'Cấu hình sai' : 'Cấu hình đúng'}</small>
+                        <small>{isWrongModal ? 'Cấu hình chưa chuẩn' : 'Cấu hình chuẩn'}</small>
                       </div>
                     </div>
                   </div>
@@ -1792,15 +1792,15 @@ const DashboardAudit = (props: Props) => {
                       <div className="row text-center">
                         <div className="col-md-4">
                           <h3 style={{ color: '#1890ff' }}>{selectedBaselineType.CorrectPercentage.toFixed(1)}%</h3>
-                          <small className="text-muted">Tỷ lệ đúng</small>
+                          <small className="text-muted">Tỷ lệ chuẩn</small>
                         </div>
                         <div className="col-md-4">
                           <h3 style={{ color: '#1890ff' }}>{selectedBaselineType.CorrectCount}</h3>
-                          <small className="text-muted">Cấu hình đúng</small>
+                          <small className="text-muted">Cấu hình chưa chuẩn</small>
                         </div>
                         <div className="col-md-4">
                           <h3 style={{ color: '#8c8c8c' }}>{selectedBaselineType.IncorrectCount}</h3>
-                          <small className="text-muted">Cấu hình sai</small>
+                          <small className="text-muted">Cấu hình chưa chuẩn</small>
                         </div>
                       </div>
                     </div>
@@ -1811,7 +1811,7 @@ const DashboardAudit = (props: Props) => {
               <div className="row g-3">
                 {selectedBaselineType.Parameters.map((param) => {
                   const pieData = {
-                    labels: ['Đúng', 'Sai'],
+                    labels: ['Chuẩn', 'Chưa chuẩn'],
                     datasets: [{
                       data: [param.CorrectCount || 0, param.IncorrectCount || 0],
                       backgroundColor: ['#1890ff', '#d9d9d9'],
@@ -1858,11 +1858,11 @@ const DashboardAudit = (props: Props) => {
                           <div className="d-flex justify-content-around small mb-2">
                             <div style={{ cursor: 'pointer', color: '#1890ff' }} onClick={() => showParameterDetail(param.ParameterName, true)}>
                               <i className="fas fa-check-circle me-1"></i>
-                              <strong>{param.CorrectCount || 0}</strong> Đúng
+                              <strong>{param.CorrectCount || 0}</strong> Chuẩn
                             </div>
                             <div style={{ cursor: 'pointer', color: '#8c8c8c' }} onClick={() => showParameterDetail(param.ParameterName, false)}>
                               <i className="fas fa-times-circle me-1"></i>
-                              <strong>{param.IncorrectCount || 0}</strong> Sai
+                              <strong>{param.IncorrectCount || 0}</strong> Chưa chuẩn
                             </div>
                           </div>
 
@@ -1878,7 +1878,7 @@ const DashboardAudit = (props: Props) => {
                               disabled={param.CorrectCount === 0}
                             >
                               <i className="fas fa-list me-1"></i>
-                              Xem đúng
+                              Xem chuẩn
                             </button>
                             <button 
                               type="button" 
@@ -1887,7 +1887,7 @@ const DashboardAudit = (props: Props) => {
                               disabled={param.IncorrectCount === 0}
                             >
                               <i className="fas fa-list me-1"></i>
-                              Xem sai
+                              Xem chưa chuẩn
                             </button>
                           </div>
                         </div>
@@ -2106,7 +2106,7 @@ const DashboardAudit = (props: Props) => {
               >
                 <div className="alert alert-info mb-4">
                   <i className="fas fa-info-circle me-2"></i>
-                  <strong>Dashboard tổng quan:</strong> Hiển thị thống kê NE và Cell đã kiểm tra. 
+                  <strong>Dashboard tổng quan:</strong> Hiển thị thống kê trạm và Cell đã kiểm tra. 
                   <strong> Click vào số liệu Chuẩn hóa/chưa chuẩn hóa</strong> để xem chi tiết cấu hình của từng tham số.
                 </div>
                 
