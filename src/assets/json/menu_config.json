@@ -204,9 +204,9 @@
 
             },
         {
-          "code": "ConfigurationLogs",
+          "code": "HardwareAlarms",
           "name": "Xử lý cảnh báo phần cứng",
-          "url": "/configuration-logs",
+          "url": "/HardwareAlarms",
           "icon": "bi bi-grid"
         }
       ]
