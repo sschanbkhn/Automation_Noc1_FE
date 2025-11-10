@@ -1124,7 +1124,7 @@ const DashboardAudit = (props: Props) => {
     if (!visible) return null;
 
     const isWrongModal = modalTitle.includes('sai');
-
+    
     return (
       <div className="modal fade show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}>
         <div className="modal-dialog modal-dialog-scrollable" style={{ maxWidth: '90%' }}>
