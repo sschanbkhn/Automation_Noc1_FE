@@ -13,6 +13,8 @@ import Card from 'components/common/Card';
 import Tab from 'components/common/Tab';
 import CtrlButton from 'components/common/CtrlButton';
 import RnocR001Service from 'services/RnocR001Service';
+import { Cookie } from 'helpers/cookie';
+import { IUserInfo } from 'models/Apps';
 
 // Đăng ký các thành phần Chart.js
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -39,6 +41,7 @@ interface IR001DataRuntime {
   Id: number;
   NeName: string;
   CellId: number;
+  UtranPsHoSwitch: string;
   ReportDate: string;
   UtranSrvccSwitch: string;
   UtranCsfbSwitch: string;
@@ -66,11 +69,25 @@ interface Props {
 
 const DashboardAudit = (props: Props) => {
   const [loading, setLoading] = useState(false);
+  const [fixingId, setFixingId] = useState<string | null>(null); // Track ID của item đang được fix
+  const [fixingAll, setFixingAll] = useState(false); // Track khi đang fix all
   const [parameterSummaries, setParameterSummaries] = useState<IR001ParameterSummary[]>([]);
   const [baselineTypeSummaries, setBaselineTypeSummaries] = useState<IBaselineTypeSummary[]>([]);
   const [runtimeData, setRuntimeData] = useState<IR001DataRuntime[]>([]);
   const [badData, setBadData] = useState<IR001DataRuntimeBad[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  
+  // ⚡ User permissions
+  const [userInfo, setUserInfo] = useState<IUserInfo | null>(null);
+  const [hasSyncCMDPermission, setHasSyncCMDPermission] = useState(false);
+  
+  // Tab and lazy loading states
+  const [activeTab, setActiveTab] = useState(0);
+  const [dataLoaded, setDataLoaded] = useState({
+    summary: false,    // parameter-summaries API
+    configured: false, // configured-sites-paged API
+    bad: false         // bad-configurations-paged API
+  });
   
   // Modal states
   const [correctModalVisible, setCorrectModalVisible] = useState(false);
@@ -86,9 +103,21 @@ const DashboardAudit = (props: Props) => {
   const [singleParamTitle, setSingleParamTitle] = useState('');
   const [selectedParameterName, setSelectedParameterName] = useState('');
   
-  // Pagination states
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(50);
+  // Pagination states - Server-side pagination (separate for each tab)
+  const [pageSize] = useState(50); // ⚡ Dựa trên test: pageSize=50 nhanh hơn (108ms vs 156ms)
+  
+  // Tab 1: Configured Sites pagination
+  const [configuredCurrentPage, setConfiguredCurrentPage] = useState(1);
+  const [configuredTotalPages, setConfiguredTotalPages] = useState(1);
+  const [configuredTotalCount, setConfiguredTotalCount] = useState(0);
+  
+  // Tab 2: Bad Configurations pagination
+  const [badCurrentPage, setBadCurrentPage] = useState(1);
+  const [badTotalPages, setBadTotalPages] = useState(1);
+  const [badTotalCount, setBadTotalCount] = useState(0);
+  
+  // Total unique NE count
+  const [totalUniqueNE, setTotalUniqueNE] = useState(0);
   
   // Modal pagination states
   const [modalCurrentPage, setModalCurrentPage] = useState(1);
@@ -96,6 +125,9 @@ const DashboardAudit = (props: Props) => {
   
   const refNotification = useRef<any>();
   const isMountedRef = useRef(true);
+  
+  // ⚡ Simple cache để tránh re-fetch GetParameterSummaries (mất 3s)
+  const summaryDataCache = useRef<Map<string, {summaries: IR001ParameterSummary[], baselineTypes: IBaselineTypeSummary[]}>>(new Map());
 
   // Cleanup on unmount
   useEffect(() => {
@@ -104,15 +136,84 @@ const DashboardAudit = (props: Props) => {
     };
   }, []);
 
+  // ⚡ Load UserInfo from Cookie and check SyncCMD permission
   useEffect(() => {
-    fetchAllData();
+    try {
+      const userInfoStr = Cookie.getCookie("UserInfo");
+      if (userInfoStr) {
+        const parsedUserInfo: IUserInfo = JSON.parse(userInfoStr);
+        setUserInfo(parsedUserInfo);
+        
+        // Check if user has SyncCMD permission
+        const hasSyncCMD = parsedUserInfo.Menus?.includes('SyncCMD') || false;
+        setHasSyncCMDPermission(hasSyncCMD);
+        
+        console.log('👤 R001 UserInfo loaded:', parsedUserInfo);
+        console.log('🔐 SyncCMD Permission:', hasSyncCMD);
+      }
+    } catch (error) {
+      console.error('❌ Error parsing UserInfo from cookie:', error);
+    }
+  }, []);
+
+  // ⚡ LOAD TẤT CẢ DATA NGAY TỪ ĐẦU - Không lazy load
+  useEffect(() => {
+    const loadAllData = async () => {
+      console.log('🚀 R001 Module - Loading ALL data with date:', selectedDate);
+      const startTime = Date.now();
+      setLoading(true);
+      
+      try {
+        // Load song song TẤT CẢ 3 API - KHÔNG SILENT MODE
+        const results = await Promise.all([
+          fetchSummaryData(selectedDate, false).then(() => {
+            console.log('✅ API loaded: /api/Rnoc_R001/parameter-summaries');
+          }).catch((err: any): null => {
+            console.error('❌ Failed to load parameter-summaries:', err);
+            return null;
+          }),
+          fetchBadConfigurations(selectedDate, 1, false).then(() => {
+            console.log('✅ API loaded: /api/Rnoc_R001/bad-configurations-paged');
+          }).catch((err: any): null => {
+            console.error('❌ Failed to load bad-configurations-paged:', err);
+            return null;
+          }),
+          fetchConfiguredSites(selectedDate, 1, false).then(() => {
+            console.log('✅ API loaded: /api/Rnoc_R001/configured-sites-paged');
+          }).catch((err: any): null => {
+            console.error('❌ Failed to load configured-sites-paged:', err);
+            return null;
+          })
+        ]);
+        
+        const loadTime = Date.now() - startTime;
+        console.log(`✅ R001 Module - All data loaded in ${loadTime}ms`);
+        console.log('📊 Final data state:', {
+          parameterSummaries: parameterSummaries.length,
+          runtimeData: runtimeData.length,
+          badData: badData.length,
+          badTotalCount: badTotalCount
+        });
+        
+        if (results.every(r => r !== null)) {
+          refNotification.current?.showNotification("success", "Tải tất cả dữ liệu thành công!");
+        } else {
+          refNotification.current?.showNotification("warning", "Một số dữ liệu không tải được. Vui lòng kiểm tra lại.");
+        }
+      } catch (error) {
+        console.error('❌ Error during initial data load:', error);
+        refNotification.current?.showNotification("error", "Lỗi khi tải dữ liệu!");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadAllData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Reset pagination when data changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [badData]);
+  // ⚡ No need to reset pagination when data changes (server-side pagination)
+  // Each tab maintains its own page state independently
 
   // Helper function to group parameters by baseline type (MUST BE BEFORE fetchAllData)
   const groupParametersByBaselineType = useCallback((params: IR001ParameterSummary[]): IBaselineTypeSummary[] => {
@@ -169,6 +270,208 @@ const DashboardAudit = (props: Props) => {
     return result;
   }, []);
 
+  // ⚡ OPTIMIZED: Fetch with cache (GetParameterSummaries mất 3s - cần cache!)
+  const fetchSummaryData = useCallback(async (date?: string, forceRefresh: boolean = false) => {
+    if (!isMountedRef.current) return;
+    
+    const dateToUse = date || selectedDate;
+    
+    // ⚡ Kiểm tra cache trước
+    if (!forceRefresh && summaryDataCache.current.has(dateToUse)) {
+      const cached = summaryDataCache.current.get(dateToUse);
+      if (cached) {
+        setParameterSummaries(cached.summaries);
+        setBaselineTypeSummaries(cached.baselineTypes);
+        setDataLoaded(prev => ({ ...prev, summary: true }));
+        console.log('✅ Using cached summary data for', dateToUse);
+        return;
+      }
+    }
+    
+    setLoading(true);
+    try {
+      // Fetch both parameter summaries and total unique NE
+      const [paramSummariesRes, totalNERes] = await Promise.all([
+        RnocR001Service.GetParameterSummaries(dateToUse),
+        RnocR001Service.GetTotalUniqueNE(dateToUse)
+      ]);
+
+      if (!isMountedRef.current) return;
+
+      let params: IR001ParameterSummary[] = [];
+      if (Array.isArray(paramSummariesRes)) {
+        params = paramSummariesRes;
+      } else if (paramSummariesRes?.Data && Array.isArray(paramSummariesRes.Data)) {
+        params = paramSummariesRes.Data;
+      }
+      
+      // Set total unique NE - Extract number from response
+      let totalNE = 0;
+      if (typeof totalNERes === 'number') {
+        totalNE = totalNERes;
+      } else if (totalNERes?.Data !== undefined) {
+        totalNE = typeof totalNERes.Data === 'number' ? totalNERes.Data : 0;
+      }
+      
+      setTotalUniqueNE(totalNE);
+      console.log('✅ Total Unique NE:', totalNE, 'Raw response:', totalNERes);
+      
+      const grouped = groupParametersByBaselineType(params);
+      
+      // ⚡ Lưu vào cache
+      summaryDataCache.current.set(dateToUse, {
+        summaries: params,
+        baselineTypes: grouped
+      });
+      
+      setParameterSummaries(params);
+      setBaselineTypeSummaries(grouped);
+      
+      setDataLoaded(prev => ({ ...prev, summary: true }));
+      
+      if (isMountedRef.current) {
+        refNotification.current?.showNotification("success", "Tải thống kê thành công!");
+      }
+    } catch (err) {
+      if (isMountedRef.current) {
+        refNotification.current?.showNotification("error", "Không thể tải thống kê. Vui lòng thử lại sau.");
+        console.error('Error fetching summary:', err);
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
+    }
+  }, [selectedDate, groupParametersByBaselineType]);
+
+  // ⚡ Server-side pagination for configured sites
+  const fetchConfiguredSites = useCallback(async (date?: string, page?: number, silent: boolean = false) => {
+    if (!isMountedRef.current) return;
+    
+    if (!silent) {
+      setLoading(true);
+    }
+    
+    try {
+      const dateToUse = date || selectedDate;
+      const pageToUse = page || configuredCurrentPage;
+      
+      console.log('🔄 Fetching configured sites:', {date: dateToUse, page: pageToUse, pageSize});
+      
+      // Use paged API endpoint
+      const runtimeRes = await RnocR001Service.GetConfiguredSitesPaged(dateToUse, pageToUse, pageSize);
+
+      console.log('📦 Configured sites response:', {
+        hasData: !!runtimeRes?.Data,
+        dataLength: runtimeRes?.Data?.Data?.length,
+        totalPages: runtimeRes?.Data?.TotalPages,
+        totalCount: runtimeRes?.Data?.TotalCount
+      });
+
+      if (!isMountedRef.current) return;
+
+      if (runtimeRes?.Data) {
+        const responseData = runtimeRes.Data;
+        const dataArray = responseData.Data || [];
+        console.log('✅ Setting runtimeData:', dataArray.length, 'records');
+        setRuntimeData(dataArray);
+        setConfiguredTotalPages(responseData.TotalPages || 1);
+        setConfiguredCurrentPage(responseData.CurrentPage || 1);
+        setConfiguredTotalCount(responseData.TotalCount || 0);
+      } else {
+        console.warn('⚠️ No Data in configured sites response:', runtimeRes);
+      }
+      
+      setDataLoaded(prev => ({ ...prev, configured: true }));
+      
+      // Only show notification if not silent mode and not page change
+      if (!silent && isMountedRef.current && !page) {
+        refNotification.current?.showNotification("success", "Tải danh sách cấu hình thành công!");
+      }
+    } catch (err) {
+      if (isMountedRef.current) {
+        refNotification.current?.showNotification("error", "Không thể tải danh sách cấu hình. Vui lòng thử lại sau.");
+        console.error('❌ Error fetching configured sites:', err);
+      }
+    } finally {
+      if (!silent && isMountedRef.current) {
+        setLoading(false);
+      }
+    }
+  }, [selectedDate, configuredCurrentPage, pageSize]);
+
+  // ⚡ Server-side pagination for bad configurations
+  const fetchBadConfigurations = useCallback(async (date?: string, page?: number, silent: boolean = false) => {
+    if (!isMountedRef.current) return;
+    
+    if (!silent) {
+      setLoading(true);
+    }
+    
+    try {
+      const dateToUse = date || selectedDate;
+      const pageToUse = page || badCurrentPage;
+      
+      console.log('🔄 Fetching bad configurations:', {date: dateToUse, page: pageToUse, pageSize});
+      
+      // Use paged API endpoint
+      const badRes = await RnocR001Service.GetBadConfigurationsPaged(dateToUse, pageToUse, pageSize);
+
+      console.log('� Bad configurations response:', {
+        hasData: !!badRes?.Data,
+        dataLength: badRes?.Data?.Data?.length,
+        totalPages: badRes?.Data?.TotalPages,
+        totalCount: badRes?.Data?.TotalCount,
+        currentPage: badRes?.Data?.CurrentPage,
+        fullResponse: badRes
+      });
+
+      if (!isMountedRef.current) return;
+
+      if (badRes?.Data) {
+        const responseData = badRes.Data;
+        const dataArray = responseData.Data || [];
+        const totalPages = responseData.TotalPages || 1;
+        const currentPage = responseData.CurrentPage || 1;
+        const totalCount = responseData.TotalCount || 0;
+        
+        console.log('✅ Setting badData:', dataArray.length, 'records | Total:', totalCount);
+        
+        setBadData(dataArray);
+        setBadTotalPages(totalPages);
+        setBadCurrentPage(currentPage);
+        setBadTotalCount(totalCount);
+        
+        // Debug: Show alert nếu totalCount = 0
+        if (totalCount === 0 && dataArray.length > 0) {
+          console.error('❌ BUG: Có data nhưng totalCount = 0!', {
+            dataLength: dataArray.length,
+            responseData: responseData
+          });
+        }
+      } else {
+        console.error('❌ No badRes.Data!', badRes);
+      }
+      
+      setDataLoaded(prev => ({ ...prev, bad: true }));
+      
+      // Only show notification if not silent mode
+      if (!silent && isMountedRef.current && !page) { // Only show on initial load
+        refNotification.current?.showNotification("success", "Tải danh sách audit sai thành công!");
+      }
+    } catch (err) {
+      if (isMountedRef.current) {
+        refNotification.current?.showNotification("error", "Không thể tải danh sách audit sai. Vui lòng thử lại sau.");
+        console.error('Error fetching bad configurations:', err);
+      }
+    } finally {
+      if (!silent && isMountedRef.current) {
+        setLoading(false);
+      }
+    }
+  }, [selectedDate, badCurrentPage, pageSize]);
+
+  // ⚡ OPTIMIZED: Chỉ load summary + bad configs page 1 (với pagination)
   const fetchAllData = useCallback(async (date?: string) => {
     if (!isMountedRef.current) return;
     
@@ -179,10 +482,11 @@ const DashboardAudit = (props: Props) => {
     try {
       const dateToUse = date || selectedDate;
       
-      const [paramSummariesRes, runtimeRes, badRes] = await Promise.all([
+      // ⚡ CHỈ LOAD: Summary + Bad configs trang đầu (có pagination)
+      // KHÔNG load GetConfiguredSites và GetBadConfigurations (quá nặng!)
+      const [paramSummariesRes, badRes] = await Promise.all([
         RnocR001Service.GetParameterSummaries(dateToUse),
-        RnocR001Service.GetConfiguredSites(dateToUse),
-        RnocR001Service.GetBadConfigurations(dateToUse)
+        RnocR001Service.GetBadConfigurationsPaged(dateToUse, 1, pageSize) // Page 1 với pagination
       ]);
 
       if (!isMountedRef.current) return;
@@ -201,19 +505,16 @@ const DashboardAudit = (props: Props) => {
       const grouped = groupParametersByBaselineType(params);
       setBaselineTypeSummaries(grouped);
       
-      // configured-sites returns object with Data property
-      if (runtimeRes?.Data) {
-        setRuntimeData(runtimeRes.Data || []);
-      } else if (Array.isArray(runtimeRes)) {
-        setRuntimeData(runtimeRes);
+      // ⚡ bad-configurations-paged returns paginated data
+      if (badRes?.Data) {
+        const responseData = badRes.Data;
+        setBadData(responseData.Data || []);
+        setBadTotalPages(responseData.TotalPages || 1);
+        setBadCurrentPage(1); // Reset to page 1
+        setBadTotalCount(responseData.TotalCount || 0);
       }
       
-      // bad-configurations returns object with Data property
-      if (badRes?.Data) {
-        setBadData(badRes.Data || []);
-      } else if (Array.isArray(badRes)) {
-        setBadData(badRes);
-      }
+      setDataLoaded({ summary: true, configured: false, bad: true });
       
       if (isMountedRef.current) {
         refNotification.current?.showNotification("success", "Tải dữ liệu thành công!");
@@ -228,25 +529,48 @@ const DashboardAudit = (props: Props) => {
         setLoading(false);
       }
     }
-  }, [selectedDate, groupParametersByBaselineType]);
+  }, [selectedDate, pageSize, groupParametersByBaselineType]);
 
   // Handle date change
   const handleDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSelectedDate(event.target.value);
+    // ⚡ Reset to first page when changing date
+    setConfiguredCurrentPage(1);
+    setBadCurrentPage(1);
   };
 
-  // Handle submit with selected date
+  // Handle submit with selected date - reload all data
   const handleSubmit = useCallback(() => {
+    setDataLoaded({ summary: false, configured: false, bad: false });
     fetchAllData(selectedDate);
   }, [selectedDate, fetchAllData]);
 
-  // Refresh data function
-  const refreshData = useCallback(() => {
-    fetchAllData();
-  }, [fetchAllData]);
+  // ⚡ Handle tab changes - Không cần lazy load vì đã load ALL data từ đầu
+  const handleTabChange = useCallback((newTab: number) => {
+    console.log('🔄 Tab changed to:', newTab);
+    console.log('📊 Current data state:', {
+      runtimeDataLength: runtimeData.length,
+      badDataLength: badData.length,
+      parameterSummariesLength: parameterSummaries.length,
+      badTotalPages: badTotalPages,
+      badTotalCount: badTotalCount,
+      configuredTotalPages: configuredTotalPages,
+      configuredTotalCount: configuredTotalCount
+    });
+    
+    setActiveTab(newTab);
+  }, [runtimeData.length, badData.length, parameterSummaries.length, badTotalPages, badTotalCount, configuredTotalPages, configuredTotalCount]);
+
+  // Refresh data function - reload tất cả data (force refresh - bỏ cache)
+  const refreshData = useCallback(async () => {
+    await Promise.all([
+      fetchSummaryData(selectedDate, true), // Force refresh, bỏ cache
+      fetchBadConfigurations()
+    ]);
+  }, [fetchSummaryData, fetchBadConfigurations, selectedDate]);
 
   // Show correct configurations modal
-  const showCorrectModal = () => {
+  const showCorrectModal = useCallback(() => {
     const correctItems = runtimeData.filter(item => {
       // Check if all parameters match the correct standard values (case-insensitive)
       return (item.UtranSrvccSwitch?.toUpperCase() === 'ON') &&
@@ -272,15 +596,15 @@ const DashboardAudit = (props: Props) => {
     setModalTitle('Danh sách cấu hình chuẩn');
     setModalCurrentPage(1); // Reset pagination
     setCorrectModalVisible(true);
-  };
+  }, [runtimeData]);
 
   // Show wrong configurations modal
-  const showWrongModal = () => {
+  const showWrongModal = useCallback(() => {
     setModalData(badData);
     setModalTitle('Danh sách cấu hình chưa chuẩn');
     setModalCurrentPage(1); // Reset pagination
     setWrongModalVisible(true);
-  };
+  }, [badData]);
 
   // Export to Excel function
   const exportToExcel = () => {
@@ -347,44 +671,158 @@ const DashboardAudit = (props: Props) => {
     XLSX.writeFile(wb, fileName);
   };
 
-  // Memoized unique bad data (moved here before usage)
-  const uniqueBadData = useMemo(() => {
-    return badData.filter((item, index, self) =>
-      index === self.findIndex((t) => (
-        t.NeName === item.NeName && t.CellId === item.CellId && t.DetectedDate === item.DetectedDate
-      ))
-    );
-  }, [badData]);
+  // ⚡ SERVER-SIDE PAGINATION: Backend đã trả về data phân trang
+  // KHÔNG CẦN filter unique nữa, dùng trực tiếp badData
+  const uniqueBadData = badData;
 
   // Handle fix action for bad configuration
-  const handleFixConfiguration = (item: IR001DataRuntimeBad) => {
-    // Show alert that command has been executed
-    alert(`Đã thực hiện lệnh sửa cấu hình cho:\nNE Name: ${item.NeName}\nCell ID: ${item.CellId}\nDetected Date: ${new Date(item.DetectedDate).toLocaleString('vi-VN')}`);
-  };
+  const handleFixConfiguration = useCallback(async (item: IR001DataRuntimeBad) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn sửa cấu hình cho:\nNE Name: ${item.NeName}\nCell ID: ${item.CellId}?`)) {
+      return;
+    }
+    
+    // Tạo unique ID cho item này
+    const itemId = `${item.NeName}-${item.CellId}`;
+    
+    try {
+      setFixingId(itemId); // ⚡ Chỉ disable button của item này
+      // Map from bad config to fix parameter request
+      const fixRequest = {
+        NeName: item.NeName,
+        CellId: item.CellId,
+        ReportDate: item.ReportDate,
+        UtranPsHoSwitch: item.UtranPsHoSwitch,
+        UtranSrvccSwitch: item.UtranSrvccSwitch,
+        UtranCsfbSwitch: item.UtranCsfbSwitch,
+        UtranFlashCsfbSwitch: item.UtranFlashCsfbSwitch,
+        GeranFlashCsfbSwitch: item.GeranFlashCsfbSwitch,
+        CsfbAdaptiveBlindHoSwitch: item.CsfbAdaptiveBlindHoSwitch,
+        UtranCsfbSteeringSwitch: item.UtranCsfbSteeringSwitch,
+        IdleCsfbRedirectOptSwitch: item.IdleCsfbRedirectOptSwitch,
+        DlVoipBundlingSwitch: item.DlVoipBundlingSwitch,
+        UlVoipPreAllocationSwitch: item.UlVoipPreAllocationSwitch,
+        UlVoipDelaySchSwitch: item.UlVoipDelaySchSwitch,
+        UlVoipLoadBasedSchSwitch: item.UlVoipLoadBasedSchSwitch,
+        UlVoipServStateEnhancedSw: item.UlVoipServStateEnhancedSw,
+        UlVoipSchOptSwitch: item.UlVoipSchOptSwitch,
+        UlVoLteDataSizeEstSwitch: item.UlVoLteDataSizeEstSwitch
+      };
+      
+      const result = await RnocR001Service.FixSingleConfiguration(fixRequest);
+      
+      // Handle both response formats: { Data: [...] } or direct array
+      // Backend now returns List (one record per baseline type)
+      const fixDataList = result?.Data || result;
+      
+      if (fixDataList && Array.isArray(fixDataList) && fixDataList.length > 0) {
+        // Show success notification with details
+        const baselineTypes = fixDataList.map((item: any) => item.BaselineType).join(', ');
+        refNotification.current?.showNotification(
+          "success", 
+          `✅ Đã tạo ${fixDataList.length} lệnh sửa cho ${fixDataList[0].NeName} - Cell ${fixDataList[0].CellId} (${baselineTypes})`
+        );
+        
+        // ⚡ CHỈ refresh tab hiện tại (bad configurations) - giữ nguyên trang hiện tại
+        await fetchBadConfigurations(selectedDate, badCurrentPage, true); // Reload current page silently
+      } else {
+        throw new Error("Không nhận được kết quả từ server");
+      }
+    } catch (error: any) {
+      console.error('Error fixing configuration:', error);
+      refNotification.current?.showNotification("error", `Lỗi khi tạo lệnh sửa: ${error.message || 'Unknown error'}`);
+    } finally {
+      setFixingId(null); // ⚡ Clear fixing state
+    }
+  }, [fetchBadConfigurations, selectedDate, badCurrentPage]);
 
-  // Handle fix all bad configurations
-  const handleFixAllConfigurations = useCallback(() => {
-    if (uniqueBadData.length === 0) {
-      alert('Không có cấu hình sai để sửa!');
+  // Handle fix all bad configurations on current page
+  const handleFixAllConfigurations = useCallback(async () => {
+    if (badData.length === 0) {
+      alert('Không có cấu hình sai trên trang này!');
       return;
     }
 
-    const confirmMessage = `Bạn có chắc chắn muốn sửa tất cả ${uniqueBadData.length} cấu hình sai không?`;
+    const confirmMessage = `Bạn có chắc chắn muốn sửa ${badData.length} cấu hình sai trên trang hiện tại không?\n(Tổng: ${badTotalCount.toLocaleString()} cấu hình)`;
     
-    if (window.confirm(confirmMessage)) {
-      alert(`Đã thực hiện lệnh sửa tất cả ${uniqueBadData.length} cấu hình sai!\n\nDanh sách đã sửa:\n${uniqueBadData.slice(0, 5).map((item, idx) => `${idx + 1}. ${item.NeName} - Cell ${item.CellId}`).join('\n')}${uniqueBadData.length > 5 ? `\n... và ${uniqueBadData.length - 5} cấu hình khác` : ''}`);
+    if (!window.confirm(confirmMessage)) {
+      return;
     }
-  }, [uniqueBadData]);
+    
+    try {
+      setFixingAll(true); // ⚡ Dùng fixingAll thay vì loading
+      
+      // Map from bad configs to fix parameter requests
+      const fixRequests = badData.map(item => ({
+        NeName: item.NeName,
+        CellId: item.CellId,
+        ReportDate: item.ReportDate,
+        UtranPsHoSwitch: item.UtranPsHoSwitch,
+        UtranSrvccSwitch: item.UtranSrvccSwitch,
+        UtranCsfbSwitch: item.UtranCsfbSwitch,
+        UtranFlashCsfbSwitch: item.UtranFlashCsfbSwitch,
+        GeranFlashCsfbSwitch: item.GeranFlashCsfbSwitch,
+        CsfbAdaptiveBlindHoSwitch: item.CsfbAdaptiveBlindHoSwitch,
+        UtranCsfbSteeringSwitch: item.UtranCsfbSteeringSwitch,
+        IdleCsfbRedirectOptSwitch: item.IdleCsfbRedirectOptSwitch,
+        DlVoipBundlingSwitch: item.DlVoipBundlingSwitch,
+        UlVoipPreAllocationSwitch: item.UlVoipPreAllocationSwitch,
+        UlVoipDelaySchSwitch: item.UlVoipDelaySchSwitch,
+        UlVoipLoadBasedSchSwitch: item.UlVoipLoadBasedSchSwitch,
+        UlVoipServStateEnhancedSw: item.UlVoipServStateEnhancedSw,
+        UlVoipSchOptSwitch: item.UlVoipSchOptSwitch,
+        UlVoLteDataSizeEstSwitch: item.UlVoLteDataSizeEstSwitch
+      }));
+      
+      const result = await RnocR001Service.FixAllConfigurations(fixRequests);
+      
+      // Handle both response formats: { Data: [...] } or direct array
+      // Backend now returns List (can have multiple records per NE/Cell if multiple baseline types)
+      const fixedList = result?.Data || result;
+      
+      if (fixedList && Array.isArray(fixedList) && fixedList.length > 0) {
+        // Count unique NE/Cell combinations
+        const uniqueConfigs = new Set();
+        fixedList.forEach((item: any) => {
+          uniqueConfigs.add(`${item.NeName}-${item.CellId}`);
+        });
+        
+        // Count by baseline type
+        const baselineCount: { [key: string]: number } = {};
+        fixedList.forEach((item: any) => {
+          baselineCount[item.BaselineType] = (baselineCount[item.BaselineType] || 0) + 1;
+        });
+        const baselineSummary = Object.entries(baselineCount)
+          .map(([type, count]) => `${type}: ${count}`)
+          .join(', ');
+        
+        // Show success notification with summary
+        refNotification.current?.showNotification(
+          "success", 
+          `✅ Đã tạo ${fixedList.length} lệnh sửa cho ${uniqueConfigs.size} cấu hình (${baselineSummary})`
+        );
+        
+        // ⚡ CHỈ refresh tab hiện tại (bad configurations) - giữ nguyên trang hiện tại
+        await fetchBadConfigurations(selectedDate, badCurrentPage, true); // Reload current page silently
+      } else {
+        throw new Error("Không nhận được kết quả từ server");
+      }
+    } catch (error: any) {
+      console.error('Error fixing all configurations:', error);
+      refNotification.current?.showNotification("error", `Lỗi khi tạo lệnh sửa: ${error.message || 'Unknown error'}`);
+    } finally {
+      setFixingAll(false); // ⚡ Clear fixing all state
+    }
+  }, [badData, badTotalCount, fetchBadConfigurations, selectedDate, badCurrentPage]);
 
-  // Export bad data to Excel function
+  // Export bad data to Excel function (current page only)
   const exportBadDataToExcel = useCallback(() => {
-    if (uniqueBadData.length === 0) {
-      refNotification.current?.showNotification("warning", "Không có dữ liệu để xuất!");
+    if (badData.length === 0) {
+      refNotification.current?.showNotification("warning", "Không có dữ liệu trên trang này để xuất!");
       return;
     }
     
-    // Prepare data for export
-    const exportData = uniqueBadData.map((item, index) => ({
+    // Prepare data for export (current page only)
+    const exportData = badData.map((item, index) => ({
       'STT': index + 1,
       'NE Name': item.NeName,
       'Cell ID': item.CellId,
@@ -441,11 +879,12 @@ const DashboardAudit = (props: Props) => {
     // Save file
     XLSX.writeFile(wb, fileName);
     
-    refNotification.current?.showNotification("success", `Đã xuất ${uniqueBadData.length} bản ghi ra file Excel!`);
-  }, [uniqueBadData, selectedDate]);
+    refNotification.current?.showNotification("success", `Đã xuất ${badData.length} bản ghi (trang ${badCurrentPage}/${badTotalPages}) ra file Excel!`);
+  }, [badData, selectedDate, badCurrentPage, badTotalPages]);
 
   // Helper function to check if parameter value is correct
-  const isParameterCorrect = (paramName: string, value: string | null | undefined): boolean => {
+  // ⚡ Memoize parameter validation logic
+  const isParameterCorrect = useCallback((paramName: string, value: string | null | undefined): boolean => {
     const upperValue = value?.toUpperCase();
     
     // Parameters that should be "ON"
@@ -477,7 +916,7 @@ const DashboardAudit = (props: Props) => {
     }
     
     return false;
-  };
+  }, []);
 
   // Button groups for header
   const ButtonGroupsRender = useCallback(() => {
@@ -545,32 +984,59 @@ const DashboardAudit = (props: Props) => {
           type="default"
           icon="el-icon-refresh"
         />
+        {hasSyncCMDPermission && (
+          <CtrlButton 
+            title={fixingAll ? 'Đang xử lý...' : `Sửa trang này (${badData.length})`}
+            onClick={handleFixAllConfigurations} 
+            type="warning"
+            icon={fixingAll ? "el-icon-loading" : "el-icon-edit"}
+            disabled={badData.length === 0 || fixingAll}
+          />
+        )}
         <CtrlButton 
-          title="Sửa All" 
-          onClick={handleFixAllConfigurations} 
-          type="warning"
-          icon="el-icon-edit"
-          disabled={uniqueBadData.length === 0}
-        />
-        <CtrlButton 
-          title="Xuất Excel" 
+          title={`Xuất Excel (Trang ${badCurrentPage})`}
           onClick={exportBadDataToExcel} 
           type="success"
           icon="el-icon-download"
-          disabled={uniqueBadData.length === 0}
+          disabled={badData.length === 0}
         />
       </div>
     );
-  }, [selectedDate, handleSubmit, refreshData, loading, uniqueBadData.length, handleFixAllConfigurations, exportBadDataToExcel]);
+  }, [selectedDate, handleSubmit, refreshData, loading, badData.length, badCurrentPage, fixingAll, handleFixAllConfigurations, exportBadDataToExcel, hasSyncCMDPermission]);
 
   // Show baseline type detail modal
-  const showBaselineTypeDetail = (baselineType: IBaselineTypeSummary) => {
+  const showBaselineTypeDetail = useCallback((baselineType: IBaselineTypeSummary) => {
     setSelectedBaselineType(baselineType);
     setDetailModalVisible(true);
-  };
+  }, []);
 
   // Show single parameter detail (only show specific parameter column)
-  const showSingleParameterDetail = (parameterName: string, showCorrect: boolean) => {
+  // ⚡ OPTIMIZED: Load runtimeData on-demand khi cần
+  const showSingleParameterDetail = useCallback(async (parameterName: string, showCorrect: boolean) => {
+    let dataToUse = runtimeData;
+    
+    // Nếu chưa có runtimeData, load nó trước
+    if (!dataToUse || dataToUse.length === 0) {
+      try {
+        setLoading(true);
+        const runtimeRes = await RnocR001Service.GetConfiguredSites(selectedDate);
+        
+        if (runtimeRes?.Data) {
+          dataToUse = runtimeRes.Data || [];
+          setRuntimeData(dataToUse);
+        } else if (Array.isArray(runtimeRes)) {
+          dataToUse = runtimeRes;
+          setRuntimeData(dataToUse);
+        }
+        setDataLoaded(prev => ({ ...prev, configured: true }));
+        setLoading(false);
+      } catch (error) {
+        refNotification.current?.showNotification("error", "Không thể tải dữ liệu chi tiết!");
+        setLoading(false);
+        return;
+      }
+    }
+    
     // Map snake_case parameter name to PascalCase property name
     const paramMapping: { [key: string]: keyof IR001DataRuntime } = {
       'utran_srvcc_switch': 'UtranSrvccSwitch',
@@ -605,16 +1071,16 @@ const DashboardAudit = (props: Props) => {
     const expectedValue = shouldBeOn.includes(propertyName) ? 'ON' : 'OFF';
     
     if (showCorrect) {
-      // Show correct configurations - filter from runtimeData
-      const correctItems = runtimeData.filter(item => {
+      // Show correct configurations
+      const correctItems = dataToUse.filter((item: any) => {
         const value = item[propertyName];
         return typeof value === 'string' && value.toUpperCase() === expectedValue;
       });
       setSingleParamData(correctItems);
       setSingleParamTitle(`Cấu hình chuẩn - ${parameterName}`);
     } else {
-      // Show incorrect configurations - filter from runtimeData
-      const incorrectItems = runtimeData.filter(item => {
+      // Show incorrect configurations
+      const incorrectItems = dataToUse.filter((item: any) => {
         const value = item[propertyName];
         return typeof value === 'string' && value.toUpperCase() !== expectedValue;
       });
@@ -626,10 +1092,10 @@ const DashboardAudit = (props: Props) => {
     setSelectedParameterName(parameterName);
     setModalCurrentPage(1); // Reset pagination
     setSingleParamModalVisible(true);
-  };
+  }, [runtimeData, selectedDate]);
 
   // Show parameter detail (correct or incorrect configurations) - for baseline type detail
-  const showParameterDetail = (parameterName: string, showCorrect: boolean) => {
+  const showParameterDetail = useCallback((parameterName: string, showCorrect: boolean) => {
     // Close the detail modal first
     setDetailModalVisible(false);
     
@@ -688,40 +1154,32 @@ const DashboardAudit = (props: Props) => {
     setSelectedParameterName(parameterName);
     setModalCurrentPage(1); // Reset pagination
     setSingleParamModalVisible(true);
-  };
+  }, [runtimeData]);
 
   // Memoized statistics calculations
   const statistics = useMemo(() => {
-    // Calculate NE statistics
-    const totalNE = Array.from(new Set(runtimeData.map(item => item.NeName))).filter(name => name).length;
+    // ⚡ Total NE = từ API GetTotalUniqueNE (COUNT DISTINCT ne_name từ r001_data_runtime)
+    const totalNE = totalUniqueNE || 0;
 
-    // Calculate Cell statistics
-    const totalCells = runtimeData.length;
+    // ⚡ uniqueBadCells = badTotalCount (COUNT DISTINCT (ne_name, cell_id) từ r001_data_runtime_bad)
+    const uniqueBadCells = badTotalCount || 0;
     
-    // Calculate correct cells (all parameters must be correct)
-    const correctCells = runtimeData.filter(item => {
-      return (item.UtranSrvccSwitch?.toUpperCase() === 'ON') &&
-             (item.UtranCsfbSwitch?.toUpperCase() === 'ON') &&
-             (item.UtranFlashCsfbSwitch?.toUpperCase() === 'OFF') &&
-             (item.GeranFlashCsfbSwitch?.toUpperCase() === 'OFF') &&
-             (item.CsfbAdaptiveBlindHoSwitch?.toUpperCase() === 'OFF') &&
-             (item.UtranCsfbSteeringSwitch?.toUpperCase() === 'OFF') &&
-             (item.IdleCsfbRedirectOptSwitch?.toUpperCase() === 'ON') &&
-             (item.DlVoipBundlingSwitch?.toUpperCase() === 'ON') &&
-             (item.UlVoipPreAllocationSwitch?.toUpperCase() === 'ON') &&
-             (item.UlVoipDelaySchSwitch?.toUpperCase() === 'OFF') &&
-             (item.UlVoipLoadBasedSchSwitch?.toUpperCase() === 'OFF') &&
-             (item.UlVoipServStateEnhancedSw?.toUpperCase() === 'OFF') &&
-             (item.UlVoipSchOptSwitch?.toUpperCase() === 'ON') &&
-             (item.UlVoLteDataSizeEstSwitch?.toUpperCase() === 'OFF');
-    }).length;
+    // ⚡ totalCells = configuredTotalCount (COUNT DISTINCT (ne_name, cell_id) từ r001_data_runtime)
+    const totalCells = configuredTotalCount || 0;
+    
+    // ⚡ correctCells = Total Cells - Bad Cells
+    const correctCells = totalCells - uniqueBadCells;
 
-    // Get unique bad cells
-    const uniqueBadCells = badData.filter((item, index, self) =>
-      index === self.findIndex((t) => (
-        t.NeName === item.NeName && t.CellId === item.CellId
-      ))
-    ).length;
+    console.log('📊 Statistics calculated (CORRECT FROM DB):', {
+      totalNE: `${totalNE} (DISTINCT ne_name từ r001_data_runtime)`,
+      totalCells: `${totalCells} (DISTINCT (ne_name, cell_id) từ r001_data_runtime)`,
+      correctCells: `${correctCells} (Total - Bad)`,
+      uniqueBadCells: `${uniqueBadCells} (DISTINCT (ne_name, cell_id) từ r001_data_runtime_bad)`,
+      '---Raw Counts---': '',
+      totalUniqueNE,
+      badTotalCount,
+      configuredTotalCount
+    });
 
     return {
       totalNE,
@@ -729,15 +1187,27 @@ const DashboardAudit = (props: Props) => {
       correctCells,
       uniqueBadCells
     };
-  }, [runtimeData, badData]);
+  }, [totalUniqueNE, badTotalCount, configuredTotalCount]);
 
   // Render overview pie charts for NE and Cell statistics
-  const renderOverviewPieCharts = () => {
+  const renderOverviewPieCharts = useMemo(() => {
     const { totalNE, totalCells, correctCells, uniqueBadCells } = statistics;
+    
+    // Debug log
+    console.log('📊 Rendering Overview Charts:', {
+      totalNE,
+      totalCells,
+      correctCells,
+      uniqueBadCells,
+      runtimeDataLength: runtimeData.length,
+      badDataLength: badData.length,
+      dataLoadedConfigured: dataLoaded.configured,
+      dataLoadedBad: dataLoaded.bad
+    });
 
-    // NE Pie Chart Data
+    // NE Pie Chart Data (tổng số NE từ DB)
     const nePieData = {
-      labels: ['NE đã kiểm tra'],
+      labels: ['Tổng số NE đã kiểm tra'],
       datasets: [{
         data: [totalNE],
         backgroundColor: ['#52c41a'],
@@ -804,88 +1274,88 @@ const DashboardAudit = (props: Props) => {
       }
     };
 
-      return (
-      <div className="row g-4 mb-4">
-        {/* NE Statistics Pie Chart */}
-        <div className="col-xl-6 col-lg-6 col-md-12">
-          <div className="card h-100 shadow-lg border-0">
-            <div className="card-body text-center p-4">
-              <div className="mb-3">
-                <i className="fas fa-network-wired fa-2x text-success"></i>
-              </div>
-              <h4 className="card-title fw-bold mb-3">
-                Thống kê NE đã kiểm tra
-              </h4>
+      // return (
+      // <div className="row g-4 mb-4">
+      //   {/* NE Statistics Pie Chart */}
+      //   <div className="col-xl-6 col-lg-6 col-md-12">
+      //     <div className="card h-100 shadow-lg border-0">
+      //       <div className="card-body text-center p-4">
+      //         <div className="mb-3">
+      //           <i className="fas fa-network-wired fa-2x text-success"></i>
+      //         </div>
+      //         <h4 className="card-title fw-bold mb-3">
+      //           Thống kê NE đã kiểm tra
+      //         </h4>
               
-              <div style={{ height: '250px', position: 'relative' }} className="my-3">
-                <Doughnut data={nePieData} options={nePieOptions} />
-                <div className="position-absolute top-50 start-50 translate-middle">
-                  <div className="fw-bold text-success" style={{ fontSize: '32px' }}>
-                    {totalNE}
-                  </div>
-                  <small className="text-muted">NE</small>
-                </div>
-              </div>
+      //         <div style={{ height: '250px', position: 'relative' }} className="my-3">
+      //           <Doughnut data={nePieData} options={nePieOptions} />
+      //           <div className="position-absolute top-50 start-50 translate-middle">
+      //             <div className="fw-bold text-success" style={{ fontSize: '32px' }}>
+      //               {totalNE}
+      //             </div>
+      //             <small className="text-muted">NE</small>
+      //           </div>
+      //         </div>
 
-              <div className="mt-4 pt-3 border-top">
-                <div className="text-center">
-                  <div className="fw-bold" style={{ fontSize: '24px', color: '#52c41a' }}>
-                    {totalNE}
-                  </div>
-                  <small className="text-muted">Tổng số NE đã kiểm tra</small>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      //         <div className="mt-4 pt-3 border-top">
+      //           <div className="text-center">
+      //             <div className="fw-bold" style={{ fontSize: '24px', color: '#52c41a' }}>
+      //               {totalNE}
+      //             </div>
+      //             <small className="text-muted">Tổng số NE đã kiểm tra</small>
+      //           </div>
+      //         </div>
+      //       </div>
+      //     </div>
+      //   </div>
 
-        {/* Cell Statistics Pie Chart */}
-        <div className="col-xl-6 col-lg-6 col-md-12">
-          <div className="card h-100 shadow-lg border-0">
-            <div className="card-body text-center p-4">
-              <div className="mb-3">
-                <i className="fas fa-th fa-2x text-primary"></i>
-              </div>
-              <h4 className="card-title fw-bold mb-3">
-                Thống kê Cell đã kiểm tra
-              </h4>
+      //   {/* Cell Statistics Pie Chart */}
+      //   <div className="col-xl-6 col-lg-6 col-md-12">
+      //     <div className="card h-100 shadow-lg border-0">
+      //       <div className="card-body text-center p-4">
+      //         <div className="mb-3">
+      //           <i className="fas fa-th fa-2x text-primary"></i>
+      //         </div>
+      //         <h4 className="card-title fw-bold mb-3">
+      //           Thống kê Cell đã kiểm tra
+      //         </h4>
               
-              <div style={{ height: '250px', position: 'relative' }} className="my-3">
-                <Doughnut data={cellPieData} options={cellPieOptions} />
-                <div className="position-absolute top-50 start-50 translate-middle">
-                  <div className="fw-bold text-primary" style={{ fontSize: '32px' }}>
-                    {totalCells}
-                  </div>
-                  <small className="text-muted">Cell</small>
-                </div>
-              </div>
+      //         <div style={{ height: '250px', position: 'relative' }} className="my-3">
+      //           <Doughnut data={cellPieData} options={cellPieOptions} />
+      //           <div className="position-absolute top-50 start-50 translate-middle">
+      //             <div className="fw-bold text-primary" style={{ fontSize: '32px' }}>
+      //               {totalCells}
+      //             </div>
+      //             <small className="text-muted">Cell</small>
+      //           </div>
+      //         </div>
 
-              <div className="d-flex justify-content-around mt-4">
-                <div className="text-center">
-                  <div className="fw-bold" style={{ fontSize: '20px', color: '#52c41a' }}>
-                    {correctCells}
-                  </div>
-                  <small className="text-muted">Cell chuẩn</small>
-                </div>
-                <div className="text-center">
-                  <div className="fw-bold" style={{ fontSize: '20px', color: '#ff4d4f' }}>
-                    {uniqueBadCells}
-                  </div>
-                  <small className="text-muted">Cell chưa chuẩn</small>
-                </div>
-              </div>
+      //         <div className="d-flex justify-content-around mt-4">
+      //           <div className="text-center">
+      //             <div className="fw-bold" style={{ fontSize: '20px', color: '#52c41a' }}>
+      //               {correctCells}
+      //             </div>
+      //             <small className="text-muted">Cell chuẩn</small>
+      //           </div>
+      //           <div className="text-center">
+      //             <div className="fw-bold" style={{ fontSize: '20px', color: '#ff4d4f' }}>
+      //               {uniqueBadCells}
+      //             </div>
+      //             <small className="text-muted">Cell chưa chuẩn</small>
+      //           </div>
+      //         </div>
 
-              <div className="mt-3 pt-3 border-top">
-                <small className="text-muted">
-                  Tổng: <strong>{totalCells}</strong> Cell đã kiểm tra
-                </small>
-              </div>
-            </div>
-          </div>
-        </div>
-        </div>
-      );
-  };
+      //         <div className="mt-3 pt-3 border-top">
+      //           <small className="text-muted">
+      //             Tổng: <strong>{totalCells}</strong> Cell đã kiểm tra
+      //           </small>
+      //         </div>
+      //       </div>
+      //     </div>
+      //   </div>
+      //   </div>
+      // );
+  }, [statistics, showCorrectModal, showWrongModal]);
 
   // Memoized parameter display names
   const parameterDisplayNames: { [key: string]: string } = useMemo(() => ({
@@ -906,7 +1376,19 @@ const DashboardAudit = (props: Props) => {
   }), []);
 
   // Render parameter summaries table
-  const renderParameterSummariesTable = () => {
+  const renderParameterSummariesTable = useMemo(() => {
+    // ⚡ Show loading skeleton
+    if (loading && !dataLoaded.summary) {
+      return (
+        <div className="text-center p-5">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Đang tải...</span>
+          </div>
+          <p className="mt-3 text-muted">Đang tải thống kê tham số...</p>
+        </div>
+      );
+    }
+    
     if (!parameterSummaries || parameterSummaries.length === 0) {
       return (
         <div className="text-center p-4 text-muted">
@@ -1068,10 +1550,10 @@ const DashboardAudit = (props: Props) => {
         </div>
       </div>
     );
-  };
+  }, [loading, dataLoaded.summary, parameterSummaries, parameterDisplayNames, showSingleParameterDetail]);
 
   // Render baseline type summaries with pie charts (3 charts only)
-  const renderBaselineTypeSummaries = () => {
+  const renderBaselineTypeSummaries = useMemo(() => {
     if (!baselineTypeSummaries || baselineTypeSummaries.length === 0) {
       return (
         <div className="text-center p-4 text-muted">
@@ -1185,10 +1667,10 @@ const DashboardAudit = (props: Props) => {
         })}
       </div>
     );
-  };
+  }, [baselineTypeSummaries, showBaselineTypeDetail]);
 
   // Render NE names list (Tab 1)
-  const renderNeNamesList = () => {
+  const renderNeNamesList = useMemo(() => {
     const uniqueNeNames = Array.from(new Set(runtimeData.map(item => item.NeName))).filter(name => name);
     
     return (
@@ -1224,10 +1706,10 @@ const DashboardAudit = (props: Props) => {
         )}
       </div>
     );
-  };
+  }, [runtimeData]);
 
   // Render runtime data table (Tab 2)
-  const renderRuntimeDataTable = () => {
+  const renderRuntimeDataTable = useMemo(() => {
     return (
       <div className="table-responsive" style={{ maxHeight: '500px', overflowY: 'auto' }}>
         <table className="table table-sm table-striped table-hover">
@@ -1281,19 +1763,27 @@ const DashboardAudit = (props: Props) => {
         )}
       </div>
     );
-  };
+  }, [runtimeData]);
 
-  // Paginated bad data
-  const paginatedBadData = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    return uniqueBadData.slice(startIndex, endIndex);
-  }, [uniqueBadData, currentPage, pageSize]);
-
-  // Total pages
-  const totalPages = useMemo(() => {
-    return Math.ceil(uniqueBadData.length / pageSize);
-  }, [uniqueBadData.length, pageSize]);
+  // ⚡ No need for client-side pagination anymore - data comes paged from server
+  // uniqueBadData IS the paged data already
+  const paginatedBadData = uniqueBadData;
+  
+  // ⚡ Handle page change - fetch new data from server
+  const handlePageChange = useCallback((newPage: number) => {
+    // Fetch data based on active tab
+    if (activeTab === 1) {
+      // Configured sites tab
+      if (newPage === configuredCurrentPage || newPage < 1 || newPage > configuredTotalPages) return;
+      setConfiguredCurrentPage(newPage);
+      fetchConfiguredSites(undefined, newPage);
+    } else if (activeTab === 2) {
+      // Bad configurations tab
+      if (newPage === badCurrentPage || newPage < 1 || newPage > badTotalPages) return;
+      setBadCurrentPage(newPage);
+      fetchBadConfigurations(undefined, newPage, false);
+    }
+  }, [activeTab, configuredCurrentPage, configuredTotalPages, badCurrentPage, badTotalPages, fetchConfiguredSites, fetchBadConfigurations]);
 
   // Paginated modal data
   const paginatedModalData = useMemo(() => {
@@ -1315,9 +1805,27 @@ const DashboardAudit = (props: Props) => {
     return Math.ceil(dataLength / modalPageSize);
   }, [singleParamModalVisible, singleParamData.length, modalData.length, modalPageSize]);
 
-  // Render pagination component
-  const renderPagination = () => {
-    if (totalPages <= 1) return null;
+  // ⚡ Render pagination component - Server-side pagination
+  const renderPagination = useCallback(() => {
+    // Get current tab's pagination state
+    const currentPage = activeTab === 1 ? configuredCurrentPage : activeTab === 2 ? badCurrentPage : 1;
+    const totalPages = activeTab === 1 ? configuredTotalPages : activeTab === 2 ? badTotalPages : 1;
+    const totalCount = activeTab === 1 ? configuredTotalCount : activeTab === 2 ? badTotalCount : 0;
+    const currentData = activeTab === 2 ? badData : runtimeData;
+    
+    // Debug log
+    console.log('🎨 Render Pagination:', {
+      activeTab,
+      currentPage,
+      totalPages,
+      totalCount,
+      dataLength: currentData.length,
+      badTotalCount,
+      badTotalPages
+    });
+    
+    // ⚡ Hiển thị pagination nếu có data HOẶC totalPages > 1 (fix bug không hiển thị nút)
+    if (currentData.length === 0 && totalPages <= 1) return null;
 
     const pages = [];
     const maxVisiblePages = 5;
@@ -1327,19 +1835,32 @@ const DashboardAudit = (props: Props) => {
     if (endPage - startPage < maxVisiblePages - 1) {
       startPage = Math.max(1, endPage - maxVisiblePages + 1);
     }
+    
+    // Calculate record range for display
+    // ⚡ Fix: Nếu totalCount = 0 nhưng có data, tính toán từ totalPages
+    const effectiveTotalCount = totalCount || (totalPages * pageSize);
+    const startRecord = (currentPage - 1) * pageSize + 1;
+    const endRecord = Math.min(currentPage * pageSize, effectiveTotalCount);
 
     return (
       <div className="d-flex justify-content-between align-items-center mt-3">
         <div className="text-muted">
-          Hiển thị {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, uniqueBadData.length)} trong tổng số {uniqueBadData.length} bản ghi
+          Hiển thị <strong>{startRecord.toLocaleString()}</strong> - <strong>{endRecord.toLocaleString()}</strong> trong tổng số <strong>{effectiveTotalCount.toLocaleString()}</strong> bản ghi
+          {totalCount === 0 && currentData.length > 0 && (
+            <span className="badge bg-warning text-dark ms-2">
+              <i className="fas fa-sync-alt fa-spin me-1"></i>
+              Đang load tổng số...
+            </span>
+          )}
         </div>
-        <nav>
+        <nav aria-label="Pagination Navigation">
           <ul className="pagination mb-0">
             <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
               <button 
                 className="page-link" 
-                onClick={() => setCurrentPage(1)}
+                onClick={() => handlePageChange(1)}
                 disabled={currentPage === 1}
+                title="Trang đầu"
               >
                 <i className="fas fa-angle-double-left"></i>
               </button>
@@ -1347,8 +1868,9 @@ const DashboardAudit = (props: Props) => {
             <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
               <button 
                 className="page-link" 
-                onClick={() => setCurrentPage(currentPage - 1)}
+                onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
+                title="Trang trước"
               >
                 <i className="fas fa-angle-left"></i>
               </button>
@@ -1362,7 +1884,8 @@ const DashboardAudit = (props: Props) => {
               <li key={page} className={`page-item ${currentPage === page ? 'active' : ''}`}>
                 <button 
                   className="page-link" 
-                  onClick={() => setCurrentPage(page)}
+                  onClick={() => handlePageChange(page)}
+                  title={`Trang ${page}`}
                 >
                   {page}
                 </button>
@@ -1376,8 +1899,9 @@ const DashboardAudit = (props: Props) => {
             <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
               <button 
                 className="page-link" 
-                onClick={() => setCurrentPage(currentPage + 1)}
+                onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
+                title="Trang tiếp"
               >
                 <i className="fas fa-angle-right"></i>
               </button>
@@ -1385,8 +1909,9 @@ const DashboardAudit = (props: Props) => {
             <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
               <button 
                 className="page-link" 
-                onClick={() => setCurrentPage(totalPages)}
+                onClick={() => handlePageChange(totalPages)}
                 disabled={currentPage === totalPages}
+                title="Trang cuối"
               >
                 <i className="fas fa-angle-double-right"></i>
               </button>
@@ -1395,7 +1920,7 @@ const DashboardAudit = (props: Props) => {
         </nav>
       </div>
     );
-  };
+  }, [activeTab, configuredCurrentPage, configuredTotalPages, configuredTotalCount, badCurrentPage, badTotalPages, badTotalCount, badData.length, runtimeData.length, pageSize, handlePageChange]);
 
   // Render modal pagination component
   const renderModalPagination = () => {
@@ -1479,10 +2004,26 @@ const DashboardAudit = (props: Props) => {
     );
   };
 
-  // Render bad data table (Tab 3)
-  const renderBadDataTable = () => {
+  // Render bad data table (Tab 3) - ⚡ MEMOIZED
+  const renderBadDataTable = useMemo(() => {
+    // ⚡ Show loading skeleton on initial load
+    if (loading && !dataLoaded.bad) {
+      return (
+        <div className="text-center p-5">
+          <div className="spinner-border text-danger" role="status">
+            <span className="visually-hidden">Đang tải...</span>
+          </div>
+          <p className="mt-3 text-muted">Đang tải danh sách audit sai từ API...</p>
+          <small className="text-muted">API: /api/Rnoc_R001/bad-configurations-paged</small>
+        </div>
+      );
+    }
+    
     return (
       <>
+      {/* Info banner */}
+     
+      
       <div className="table-responsive" style={{ maxHeight: '500px', overflowY: 'auto' }}>
         <table className="table table-sm table-striped table-hover table-bordered">
           <thead style={{ backgroundColor: '#f8f9fa', position: 'sticky', top: 0, zIndex: 1 }}>
@@ -1510,7 +2051,7 @@ const DashboardAudit = (props: Props) => {
           </thead>
           <tbody>
               {paginatedBadData.map((item, index) => {
-                const globalIndex = (currentPage - 1) * pageSize + index;
+                const globalIndex = (badCurrentPage - 1) * pageSize + index;
               return (
                 <tr key={`${item.NeName}-${item.CellId}-${globalIndex}`}>
                   <td className="text-center">{globalIndex + 1}</td>
@@ -1587,13 +2128,28 @@ const DashboardAudit = (props: Props) => {
                     </span>
                   </td>
                   <td className="text-center">
-                    <button 
-                      className="btn btn-warning btn-sm"
-                      onClick={() => handleFixConfiguration(item)}
-                      title="Sửa cấu hình"
-                    >
-                      <i className="fas fa-edit"></i> Sửa
-                    </button>
+                    {hasSyncCMDPermission ? (
+                      <button 
+                        className="btn btn-warning btn-sm"
+                        onClick={() => handleFixConfiguration(item)}
+                        title="Sửa cấu hình"
+                        disabled={fixingId === `${item.NeName}-${item.CellId}`}
+                      >
+                        {fixingId === `${item.NeName}-${item.CellId}` ? (
+                          <>
+                            <i className="fas fa-spinner fa-spin"></i> Đang xử lý...
+                          </>
+                        ) : (
+                          <>
+                            <i className="fas fa-edit"></i> Sửa
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <span className="badge bg-secondary" title="Bạn không có quyền sửa">
+                        <i className="fas fa-lock"></i> Không có quyền
+                      </span>
+                    )}
                   </td>
                   <td className="text-center">
                     {new Date(item.DetectedDate).toLocaleDateString('vi-VN')}
@@ -1603,17 +2159,48 @@ const DashboardAudit = (props: Props) => {
             })}
           </tbody>
         </table>
-        {uniqueBadData.length === 0 && (
+        {badData.length === 0 && !loading && (
           <div className="text-center p-4 text-muted">
             <i className="fas fa-check-circle text-success me-2"></i>
-            Không có cấu hình sai
+            Không có cấu hình sai trên trang này
+          </div>
+        )}
+        {badData.length === 0 && loading && (
+          <div className="text-center p-4">
+            <div className="spinner-border text-primary spinner-border-sm me-2" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <span className="text-muted">Đang tải dữ liệu trang {badCurrentPage}...</span>
           </div>
         )}
       </div>
-      {renderPagination()}
+      
+      {/* ⚡ Pagination - Luôn hiển thị khi có data hoặc nhiều trang */}
+      {(() => {
+        const shouldShowPagination = badTotalPages > 1 || badData.length > 0;
+        console.log('🔍 Pagination check:', {
+          badTotalPages,
+          badDataLength: badData.length,
+          badTotalCount,
+          badCurrentPage,
+          shouldShow: shouldShowPagination
+        });
+        
+        if (shouldShowPagination) {
+          return renderPagination();
+        } else {
+          // Chỉ hiển thị message khi thực sự không có data
+          return (
+            <div className="alert alert-secondary mt-3 text-center">
+              <i className="fas fa-info-circle me-2"></i>
+              Không có dữ liệu để hiển thị phân trang
+            </div>
+          );
+        }
+      })()}
     </>
     );
-  };
+  }, [loading, dataLoaded.bad, paginatedBadData, badCurrentPage, badTotalPages, pageSize, badData.length, badTotalCount, badData, isParameterCorrect, handleFixConfiguration, renderPagination, fixingId, hasSyncCMDPermission]);
 
   // Render single parameter modal (only show specific parameter column)
   const renderSingleParameterModal = () => {
@@ -1711,8 +2298,17 @@ const DashboardAudit = (props: Props) => {
                                 className="btn btn-warning btn-sm"
                                 onClick={() => handleFixConfiguration({...item, DetectedDate: item.ReportDate})}
                                 title="Sửa cấu hình"
+                                disabled={fixingId === `${item.NeName}-${item.CellId}`}
                               >
-                                <i className="fas fa-edit"></i> Sửa
+                                {fixingId === `${item.NeName}-${item.CellId}` ? (
+                                  <>
+                                    <i className="fas fa-spinner fa-spin"></i> Đang xử lý...
+                                  </>
+                                ) : (
+                                  <>
+                                    <i className="fas fa-edit"></i> Sửa
+                                  </>
+                                )}
                               </button>
                             </td>
                           )}
@@ -2047,8 +2643,17 @@ const DashboardAudit = (props: Props) => {
                               className="btn btn-warning btn-sm"
                               onClick={() => handleFixConfiguration(item)}
                               title="Sửa cấu hình"
+                              disabled={fixingId === `${item.NeName}-${item.CellId}`}
                             >
-                              <i className="fas fa-edit"></i> Sửa
+                              {fixingId === `${item.NeName}-${item.CellId}` ? (
+                                <>
+                                  <i className="fas fa-spinner fa-spin"></i> Đang xử lý...
+                                </>
+                              ) : (
+                                <>
+                                  <i className="fas fa-edit"></i> Sửa
+                                </>
+                              )}
                             </button>
                           </td>
                         )}
@@ -2093,10 +2698,10 @@ const DashboardAudit = (props: Props) => {
       
       <Tab 
         key="r001-dashboard-tabs"
-        activeName="parameters"
+        activeName="parameter-summary"
         tabsPanel={[
           {
-              label: "Tổng quan tham số",
+            label: "Tổng quan tham số",
             name: "parameter-summary",
             panel: (
               <Card 
@@ -2104,17 +2709,31 @@ const DashboardAudit = (props: Props) => {
                 icon="fas fa-table" 
                 buttonGroups={ButtonGroupsRender()}
               >
-                <div className="alert alert-info mb-4">
-                  <i className="fas fa-info-circle me-2"></i>
-                  <strong>Dashboard tổng quan:</strong> Hiển thị thống kê trạm và Cell đã kiểm tra. 
-                  <strong> Click vào số liệu Chuẩn hóa/chưa chuẩn hóa</strong> để xem chi tiết cấu hình của từng tham số.
-                </div>
+              
                 
-                {/* Overview Pie Charts */}
-                {renderOverviewPieCharts()}
+                {/* Loading indicator */}
+                {(loading && !dataLoaded.summary) && (
+                  <div className="alert alert-warning">
+                    <i className="fas fa-sync-alt fa-spin me-2"></i>
+                    Đang tải dữ liệu từ 3 API chính: parameter-summaries, bad-configurations, configured-sites...
+                    <br />
+                    <small>
+                      Status: Summary={dataLoaded.summary ? '✅' : '⏳'}, 
+                      Configured={dataLoaded.configured ? '✅' : '⏳'}, 
+                      Bad={dataLoaded.bad ? '✅' : '⏳'}
+                    </small>
+                  </div>
+                )}
+                
+                {/* Overview Pie Charts - Hiển thị khi có ít nhất 1 trong 2 API đã load */}
+                {(dataLoaded.configured || dataLoaded.bad) && (
+                  <div className="mb-4">
+                    {/* {renderOverviewPieCharts} */}
+                  </div>
+                )}
                 
                 {/* Parameter Summary Table */}
-                {renderParameterSummariesTable()}
+                {renderParameterSummariesTable}
               </Card>
             )
           },
@@ -2131,7 +2750,7 @@ const DashboardAudit = (props: Props) => {
                   <i className="fas fa-info-circle me-2"></i>
                   <strong>Click vào biểu đồ</strong> để xem chi tiết các tham số trong từng Baseline Type
                 </div>
-                {renderBaselineTypeSummaries()}
+                {renderBaselineTypeSummaries}
               </Card>
             )
           },
@@ -2170,16 +2789,35 @@ const DashboardAudit = (props: Props) => {
                 icon="fas fa-exclamation-triangle text-danger" 
                 buttonGroups={ButtonGroupsRenderWithExport()}
               >
-                {renderBadDataTable()}
+                {renderBadDataTable}
               </Card>
             )
           }
         ]}
         onTabClick={(tab: any) => {
-          console.log('Tab clicked:', tab);
+          const tabName = tab?.props?.name;
+          console.log('🔄 Tab clicked:', tabName, '| Tab object:', tab);
+          
+          // ⚡ Optimization: Lazy load data based on tab name
+          // Tab 0: "parameter-summary" - Tổng quan tham số
+          // Tab 1: "parameters" - Tổng quan theo Baseline Type  
+          // Tab 2: "bad-config" - Danh sách audit sai
+          const tabNameToIndex: { [key: string]: number } = {
+            'parameter-summary': 0,  // Cần runtimeData + summaries
+            'parameters': 1,         // Cần summaries + baselineTypes
+            'bad-config': 2          // Cần badData
+          };
+          
+          const tabIndex = tabNameToIndex[tabName];
+          console.log('🔄 Tab index:', tabIndex, 'for tab name:', tabName);
+          
+          if (tabIndex !== undefined) {
+            handleTabChange(tabIndex);
+          } else {
+            console.warn('⚠️ Unknown tab name:', tabName, '| Available tabs:', Object.keys(tabNameToIndex));
+          }
         }}
       />
-       //thay đổi nội dung file
       {/* Modals */}
       {renderSingleParameterModal()}
       {renderBaselineTypeDetailModal()}
