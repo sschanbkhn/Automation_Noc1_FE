@@ -4,6 +4,10 @@ import { useSpring, animated } from '@react-spring/web';
 import { FiBarChart2 } from 'react-icons/fi';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import "./index.css";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+
+import { faChartBar, faEye, faTachometerAlt,faCog ,faBinoculars} from "@fortawesome/free-solid-svg-icons";
+// import { FiHome } from "react-icons/fi";
 // type ButtonProps = {
 //   onChangeTab: (tabName: string) => void;
 // };
@@ -23,20 +27,24 @@ function Button({ onChangeTab, tab }: ButtonProps) {
     config: { tension: 300, friction: 30 }
   });
 
-  function updateToanQuoc() {
-            onChangeTab('toanquoc');
-                }
-  function updateAaranetMienBac() {
-             onChangeTab('a// mienbac');
+  // function updateToanQuoc() {
+  //           onChangeTab('toanquoc');
+  //               }
+  // function updateMienBac() {
+  //            onChangeTab('mienbac');
+  //   }
+  // function updateMienTrung() {
+  //            onChangeTab('mientrung');
+  //   }
+  // function updateMienNam() {
+  //            onChangeTab('miennam');
+  //   }
+  
+  function updateDashboard() {
+             onChangeTab('dashboard');
     }
-  function updateAaranetMienNam() {
-             onChangeTab('a// miennam');
-    }
-  function updateImsMienBac() {
-             onChangeTab('ims mienbac');
-    }
-  function updateImsMienNam() {
-             onChangeTab('ims miennam');
+  function updateGiamSat() {
+             onChangeTab('giamsat');
     }
   function updateThietLap() {
              onChangeTab('thietlap');
@@ -44,21 +52,25 @@ function Button({ onChangeTab, tab }: ButtonProps) {
   return (
      <div className="flex-grow-1">
     <div style={{  width: '100%', display: 'flex', gap: '10px' }}>
-                {/* <button className="nut_bam" onClick={updateToanQuoc}>Toàn Quốc</button>
-                <button className="nut_bam" onClick={updateMienBac}>Miền Bắc</button>
-                <button className="nut_bam" onClick={updateMienTrung}>Miền Trung</button>
-                <button className="nut_bam" onClick={updateMienNam}>Miền Nam</button>
-                <button className="nut_bam" onClick={updateThietLap}>Thiết lập</button> */}
-                <button className={`nut_bam ${tab === 'toanquoc' ? 'active' : ''}`} onClick={updateToanQuoc}>Toàn Quốc</button>
-        <button className={`nut_bam ${tab === 'a// mienbac' ? 'active' : ''}`} onClick={updateAaranetMienBac}>Aaranet Miền Bắc</button>
-        <button className={`nut_bam ${tab === 'a// miennam' ? 'active' : ''}`} onClick={updateAaranetMienNam}>Aaranet Miền Nam</button>
-        <button className={`nut_bam ${tab === 'ims mienbac' ? 'active' : ''}`} onClick={updateImsMienBac}>vIms Miền Bắc</button>
-        <button className={`nut_bam ${tab === 'ims miennam' ? 'active' : ''}`} onClick={updateImsMienNam}>vIms Miền Nam</button>
-        <button className={`nut_bam ${tab === 'thietlap' ? 'active' : ''}`} onClick={updateThietLap}>Thiết lập</button>
+                {/* <button className={`nut_bam ${tab === 'toanquoc' ? 'active' : ''}`} onClick={updateToanQuoc}>Toàn Quốc</button>
+                <button className={`nut_bam ${tab === 'mienbac' ? 'active' : ''}`} onClick={updateMienBac}>Miền Bắc</button>
+                <button className={`nut_bam ${tab === 'mientrung' ? 'active' : ''}`} onClick={updateMienTrung}>Miền Trung</button>
+                <button className={`nut_bam ${tab === 'miennam' ? 'active' : ''}`} onClick={updateMienNam}>Miền Nam</button> */}
+                <button className={`nut_bam ${tab === 'dashboard' ? 'active' : ''}`} onClick={updateDashboard} >
+                  <FontAwesomeIcon icon={faTachometerAlt} style={{ color: "#3F51B5" }} className="me-2" />  
+                  Dashboard
+                </button>
+                <button className={`nut_bam ${tab === 'giamsat' ? 'active' : ''}`} onClick={updateGiamSat}>
+                  <FontAwesomeIcon icon={faBinoculars} style={{ color: "#009688" }} className="me-2" />
+                  Giám Sát
+                  </button>
+                <button className={`nut_bam ${tab === 'thietlap' ? 'active' : ''}`} onClick={updateThietLap}>
+                   <FontAwesomeIcon icon={faCog} style={{ color: "#FFC107" }} className="me-2" />
+                   Thiết Lập
+                  </button>
               </div>
-               </div>
+            </div>
     
   );
 }
-
 export default Button;

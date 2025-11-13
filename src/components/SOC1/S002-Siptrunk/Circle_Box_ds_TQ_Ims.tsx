@@ -48,45 +48,29 @@ const renderCustomizedLabel = ({
 
 export default function PieWithPercentage({ onZoneClick }: Props) {
 
-  const [soLuongKhopBevsCsdl, setSoLuongKhopBevsCsdl] = useState<number>(0);
+  const [soLuongKhopBeVsCsdl, setSoLuongKhopBeVsCsdl] = useState<number>(0);
   const [soLuongOnlyBe, setSoLuongOnlyBe] = useState<number>(0);
   const [soLuongOnlyCsdl, setSoLuongOnlyCsdl] = useState<number>(0);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    // const endpoints = [
-    //   "mb/total",
-    //   "mn/total"
-    // ];
-    // Promise.all(
-    //   endpoints.map(ep =>
-    //     fetch(`${API_URL}/doi-soat/count/${ep}/`)
-    //       .then(res => res.ok ? res.json() : { count: 0 })
-    //       .then(data => data.count ?? 0)
-    //       .catch(() => 0) // fallback nếu fetch lỗi
-    //   )
-    // ).then(results => {
-    //   setSoLuongKhopBevsCsdl(results[0]);
-    //   setSoLuongOnlyBe(results[1]);
-    // });
-    fetch(`${API_URL}/doi-soat/count/so_luong_khop_ca_BE_vs_CSDL/`)
+    fetch(`${API_URL}/doi-soat/count/ims/so_luong_kenh_be_and_csdl/`)
     .then(res => (res.ok? res.json() : { count: 0 }))
-    .then(data =>setSoLuongKhopBevsCsdl(data.count??0))
-    .catch(err => setSoLuongKhopBevsCsdl(0))
-    fetch(`${API_URL}/doi-soat/count/number_only_be/`)
+    .then(data =>setSoLuongKhopBeVsCsdl(data.count??0))
+    .catch(err => setSoLuongKhopBeVsCsdl(0))
+    fetch(`${API_URL}/doi-soat/ims/count/number_only_be/`)
     .then(res => (res.ok? res.json(): {count: 0}))
     .then(data => setSoLuongOnlyBe(data.count??0))
     .catch(err=>setSoLuongOnlyBe(0))
-    fetch(`${API_URL}/doi-soat/count/number_only_csdl/`)
+    fetch(`${API_URL}/doi-soat/ims/count/number_only_csdl/`)
     .then(res => (res.ok?res.json(): {count:0}))
     .then(data => setSoLuongOnlyCsdl(data.count??0))
     .catch(err => setSoLuongOnlyCsdl(0))
-
   }, []);
   const data = [
-    { name: 'Đầu số có cả trên BE và CSDL', value: soLuongKhopBevsCsdl },
-    { name: 'Đầu số chỉ có trên BE ', value: soLuongOnlyBe },
-    { name: 'Đầu số chỉ có trên CSDL ', value: soLuongOnlyCsdl },
+    { name: 'Đầu số có cả trên BE và CSDL', value: soLuongKhopBeVsCsdl },
+    { name: 'Đầu số chỉ có trên BE', value: soLuongOnlyBe },
+    { name: 'Đầu số chỉ có trên CSDL', value: soLuongOnlyCsdl },
   ];
 
   return (
@@ -95,7 +79,7 @@ export default function PieWithPercentage({ onZoneClick }: Props) {
         <PieChart>
           <Pie
             data={data}
-            cx="70%"           // Dịch hình tròn sang trái để nhường chỗ cho legend
+            cx="70%"           
             cy="50%"
             // innerRadius={90}
             outerRadius="90%"   // ✅ co giãn tự động theo khung

@@ -32,7 +32,7 @@ interface Props {
   onClose?: () => void;
 }
 
-const BangThongTinDoiSoatTQ: React.FC<Props> = ({ title, data, onClose }) => {
+const BangThongTinDoiSoatTQp2: React.FC<Props> = ({ title, data, onClose }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortAsc, setSortAsc] = useState(true);
 
@@ -205,15 +205,13 @@ const BangThongTinDoiSoatTQ: React.FC<Props> = ({ title, data, onClose }) => {
               >
                 Number {sortAsc ? '▲' : '▼'}
               </th>
-              <th className="tieu_de">Phantom Number (CSDL)</th>
-              <th className="tieu_de">Account Name (CSDL)</th>
-              <th className="tieu_de">Account Name (BE)</th>
-              <th className="tieu_de">Account Info (CSDL)</th>
-              <th className="tieu_de">Account Info (BE)</th>
-              <th className="tieu_de">Số CGĐT (CSDL)</th>
-              <th className="tieu_de">Số CGĐT (BE)</th>
-              <th className="tieu_de">IP K/H (CSDL)</th>
-              <th className="tieu_de">IP K/H (BE)</th>
+              <th className="tieu_de">PhantomNumber</th>
+              <th className="tieu_de">status (CSDL)</th>
+              <th className="tieu_de">Address Disable(BE)</th>
+              <th className="tieu_de">values_added (CSDL)</th>
+              <th className="tieu_de">ADDRESS_INCOMING(CSDL)</th>
+              <th className="tieu_de">ROUTING_TABLE_NAME(BE)</th>
+              <th className="tieu_de">brand_name (CSDL)</th>
               <th className="tieu_de">Khu vực</th>
               <th className="tieu_de">Ghi chú</th>
             </tr>
@@ -221,42 +219,32 @@ const BangThongTinDoiSoatTQ: React.FC<Props> = ({ title, data, onClose }) => {
           <tbody>
              {sortedData.map((item, index) => {
             // So sánh các trường
-              const AccNameMismatch = item.Account_name_csdl !== item.Account_name_be;
-              const InfoMismatch = item.account_info_csdl !== item.account_info_be;
+              const ThanhLyMatch = item.status === "Đã thanh lý"
+              const TamNgungMismatch = (item.ADDRESS_DISABLE === "yes") && (item.status !== "Đang tạm ngưng")||
+                                        (item.ADDRESS_DISABLE !== "yes") && (item.status === "Đang tạm ngưng");
+            //   const AddIncomeMismatch = (item.ADDRESS_INCOMING === "yes") && (item.values_added === "Đang tạm ngưng");
               // 👇 ép kiểu sang số khi so sánh Max channel
-              const ChannelMismatch =
-                parseFloat(item.Max_channel_csdl) !== parseFloat(item.Max_channel_be);
-              // const ChannelMismatch = item.Max_channel_csdl !== item.Max_channel_be;
-              const DestMismatch = item.Destination_csdl !== item.Destionation_be;
+                const QteMismatch =
+                    (item.ROUTING_TABLE_NAME === "SIPTRUNK_QTE" && !item.values_added?.includes("Mở QTE")) ||
+                    (item.ROUTING_TABLE_NAME !== "SIPTRUNK_QTE" && item.values_added?.includes("Mở QTE"))
+                const BrandnameMismatch =
+                    (item.ROUTING_TABLE_NAME === "Route to TSSE1B" && item.brand_name ==="")||
+                    (item.ROUTING_TABLE_NAME === "Route to TSSE1C" && item.brand_name ==="")
+
 
               return (
                 <tr className="du_lieu" key={index}>
                   <td>{item.Number}</td>
                   <td>{item.Phantom_number}</td>
                   
-                  <td style={{ color: AccNameMismatch ? 'red' : 'inherit' }}>{item.Account_name_csdl}</td>
-                  <td style={{ color: AccNameMismatch ? 'red' : 'inherit' }}>{item.Account_name_be}</td>
-
-                  <td style={{ color: InfoMismatch ? 'red' : 'inherit' }} title={item.account_info_csdl}>
-                  {item.account_info_csdl && item.account_info_csdl.length > 30
-                    ? item.account_info_csdl.slice(0, 30) + "..."
-                    : item.account_info_csdl}
-                </td>
-                  <td style={{ color: InfoMismatch ? 'red' : 'inherit' }} title={item.account_info_be}>
-                  {item.account_info_be && item.account_info_be.length > 30
-                    ? item.account_info_be.slice(0, 30) + "..."
-                    : item.account_info_be}
-                </td>
-
-                  <td style={{ color: ChannelMismatch ? 'red' : 'inherit' }}>{item.Max_channel_csdl}</td>
-                  <td style={{ color: ChannelMismatch ? 'red' : 'inherit' }}>{item.Max_channel_be}</td>
-
-                  <td style={{ color: DestMismatch ? 'red' : 'inherit' }}>{item.Destination_csdl}</td>
-                  <td style={{ color: DestMismatch ? 'red' : 'inherit' }}>{item.Destionation_be}</td>
-
-                  
-                <td>{item.Khu_vuc}</td>
-                <td title={item.Ghi_chu}>
+                  <td style={{  color: (ThanhLyMatch || TamNgungMismatch) ? 'red' : 'inherit' }}>{item.status}</td>
+                  <td style={{ color: TamNgungMismatch ? 'red' : 'inherit' }}>{item.ADDRESS_DISABLE}</td>
+                  <td style={{ color: (TamNgungMismatch || QteMismatch ) ? 'red' : 'inherit' }} >{item.values_added}</td>
+                  <td>{item.ADDRESS_INCOMING}</td>
+                  <td style={{ color: (QteMismatch || BrandnameMismatch) ? 'red' : 'inherit' }}> {item.ROUTING_TABLE_NAME}</td>
+                  <td style={{ color: BrandnameMismatch ? 'red' : 'inherit' }}>{item.brand_name}</td>
+                    <td>{item.Khu_vuc}</td>
+                    <td title={item.Ghi_chu}>
                   {item.Ghi_chu && item.Ghi_chu.length > 30
                     ? item.Ghi_chu.slice(0, 30) + "..."
                     : item.Ghi_chu}
@@ -271,7 +259,7 @@ const BangThongTinDoiSoatTQ: React.FC<Props> = ({ title, data, onClose }) => {
   );
 };
 
-export default BangThongTinDoiSoatTQ;
+export default BangThongTinDoiSoatTQp2;
   //             Number: string;
   // Phantom_number: string;
   // Account_name_csdl: string;

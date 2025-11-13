@@ -50,28 +50,31 @@ export default function PieWithPercentage({ onZoneClick }: Props) {
 
     const [soLuongMb,setSoLuongMb] = useState<number>(0);
     const [soLuongMn,setSoLuongMn] = useState<number>(0);
+    const [soLuongKoKv,setSoLuongKoKv] = useState<number>(0);
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
    
      useEffect(() => {
     // Fetch song song bằng Promise.all
     Promise.all([
-      fetch(`${API_URL}/thong-ke-loi/count/mb/total/`).then((res) =>
+      fetch(`${API_URL}/thong-ke-loi/count/mb/ims/total/`).then((res) =>
         res.json()
       ),
-      fetch(`${API_URL}/thong-ke-loi/count/mn/total/`).then((res) =>
+      fetch(`${API_URL}/thong-ke-loi/count/mn/ims/total/`).then((res) =>
         res.json()
       ),
         ])
           .then(([mb, mn]) => {
             setSoLuongMb(mb.count || 0);
             setSoLuongMn(mn.count || 0);
+            // setSoLuongKoKv(Kokv.count || 0);
           })
           .catch((error) => console.error("Fetch error:", error));
       }, []);
         const data = [
         { name: 'Miền Bắc', value: soLuongMb },
         { name: 'Miền Nam', value: soLuongMn },
+        // { name: 'Khu vực không xác định', value: soLuongKoKv },
         ];
   
   return (
