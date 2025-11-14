@@ -7,7 +7,7 @@
 import React from 'react';
 import { Container } from 'react-bootstrap';
 import { useSpring, animated } from '@react-spring/web';
-import { FiActivity, FiRadio, FiShield,FiSettings,FiBarChart2 } from 'react-icons/fi';
+import { FiActivity, FiRadio, FiShield,FiSettings,FiBarChart2, FiAirplay} from 'react-icons/fi';
 import 'bootstrap/dist/css/bootstrap.min.css';
 function Header() {
   // Animation cho header
@@ -21,7 +21,7 @@ function Header() {
     <animated.div 
       style={{
         ...headerAnimation,
-        background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #93c5fd 100%)',
+        background: 'linear-gradient(135deg, #491eafff 0%, #3babf6ff 50%, #93fdfdff 100%)',
         padding: '1.2rem 0', // chinh khoang cach noi dung den vien
         marginBottom: '0.5rem',
         borderRadius: '8px',
@@ -60,7 +60,7 @@ function Header() {
             }} />
             
             {/* Main Icon - Radio Wave/Activity */}
-            {React.createElement(	FiBarChart2 as any, {
+            {React.createElement(	FiAirplay as any, {
               style: {
                 fontSize: '2.5rem',   // bieu tuong
                 color: 'white',

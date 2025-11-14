@@ -32,7 +32,7 @@ interface Props {
   onClose?: () => void;
 }
 
-const BangThongTinDoiSoatTQ: React.FC<Props> = ({ title, data, onClose }) => {
+const BangThongTinDoiSoatTQMB: React.FC<Props> = ({ title, data, onClose }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortAsc, setSortAsc] = useState(true);
 
@@ -67,13 +67,8 @@ const BangThongTinDoiSoatTQ: React.FC<Props> = ({ title, data, onClose }) => {
           Phantom_number: "Phantom Number",
           Account_name_csdl: "AccountName(CSDL)",
           Account_name_be: "Account Name(BE)",
-          account_info_csdl: "Account Info(CSDL)",
-          account_info_be: "Account Info(BE)",
           Max_channel_csdl: "Max channels(CSDL)",
           Max_channel_be: "Max channels(BE)",
-          Destination_csdl: "Destination(CSDL)",
-          Destionation_be: "Destination(BE)",
-          Khu_vuc: "Khu vực",
           Ghi_chu: "Ghi chú",
         };
         const keys = Object.keys(headerMap) as (keyof DoiSoat)[];
@@ -208,70 +203,28 @@ const BangThongTinDoiSoatTQ: React.FC<Props> = ({ title, data, onClose }) => {
               <th className="tieu_de">Phantom Number (CSDL)</th>
               <th className="tieu_de">Account Name (CSDL)</th>
               <th className="tieu_de">Account Name (BE)</th>
-              <th className="tieu_de">Account Info (CSDL)</th>
-              <th className="tieu_de">Account Info (BE)</th>
-              <th className="tieu_de">Số CGĐT (CSDL)</th>
-              <th className="tieu_de">Số CGĐT (BE)</th>
-              <th className="tieu_de">IP K/H (CSDL)</th>
-              <th className="tieu_de">IP K/H (BE)</th>
-              <th className="tieu_de">Khu vực</th>
+              <th className="tieu_de">Max channels (CSDL)</th>
+              <th className="tieu_de">Max channels (BE)</th>
               <th className="tieu_de">Ghi chú</th>
             </tr>
           </thead>
           <tbody>
-             {sortedData.map((item, index) => {
-            // So sánh các trường
-              const AccNameMismatch = item.Account_name_csdl !== item.Account_name_be;
-              const InfoMismatch = item.account_info_csdl !== item.account_info_be;
-              // 👇 ép kiểu sang số khi so sánh Max channel
-              const ChannelMismatch =
-                parseFloat(item.Max_channel_csdl) !== parseFloat(item.Max_channel_be);
-              // const ChannelMismatch = item.Max_channel_csdl !== item.Max_channel_be;
-              const DestMismatch = item.Destination_csdl !== item.Destionation_be;
-
-              return (
-                <tr className="du_lieu" key={index}>
-                  <td>{item.Number}</td>
-                  <td>{item.Phantom_number}</td>
-                  
-                  <td style={{ color: AccNameMismatch ? 'red' : 'inherit' }}>{item.Account_name_csdl}</td>
-                  <td style={{ color: AccNameMismatch ? 'red' : 'inherit' }}>{item.Account_name_be}</td>
-
-                  <td style={{ color: InfoMismatch ? 'red' : 'inherit' }} title={item.account_info_csdl}>
-                  {item.account_info_csdl && item.account_info_csdl.length > 30
-                    ? item.account_info_csdl.slice(0, 30) + "..."
-                    : item.account_info_csdl}
-                </td>
-                  <td style={{ color: InfoMismatch ? 'red' : 'inherit' }} title={item.account_info_be}>
-                  {item.account_info_be && item.account_info_be.length > 30
-                    ? item.account_info_be.slice(0, 30) + "..."
-                    : item.account_info_be}
-                </td>
-
-                  <td style={{ color: ChannelMismatch ? 'red' : 'inherit' }}>{item.Max_channel_csdl}</td>
-                  <td style={{ color: ChannelMismatch ? 'red' : 'inherit' }}>{item.Max_channel_be}</td>
-
-                  <td style={{ color: DestMismatch ? 'red' : 'inherit' }}>{item.Destination_csdl}</td>
-                  <td style={{ color: DestMismatch ? 'red' : 'inherit' }}>{item.Destionation_be}</td>
-
-                  
-                <td>{item.Khu_vuc}</td>
+             {sortedData.map((item, index) => (
+              <tr className="du_lieu" key={index}>
+                <td>{item.Number}</td>
+                <td>{item.Phantom_number}</td>
+                <td>{item.Account_name_csdl}</td>
+                <td>{item.Account_name_be}</td>
+                <td>{item.Max_channel_csdl}</td>
+                <td>{item.Max_channel_be}</td>
+                {/* <td>{item.Ghi_chu}</td> */}
                 <td title={item.Ghi_chu}>
                   {item.Ghi_chu && item.Ghi_chu.length > 30
                     ? item.Ghi_chu.slice(0, 30) + "..."
                     : item.Ghi_chu}
                 </td>
-                </tr>
-              );
-            })}
-          </tbody>
-         </table>
-      </div>
-    </div>
-  );
-};
 
-export default BangThongTinDoiSoatTQ;
+              </tr>
   //             Number: string;
   // Phantom_number: string;
   // Account_name_csdl: string;
@@ -291,5 +244,12 @@ export default BangThongTinDoiSoatTQ;
   // service_type: string;
   // brand_name: string;
   // Ghi_chu: string
-           
-        
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+export default BangThongTinDoiSoatTQMB;

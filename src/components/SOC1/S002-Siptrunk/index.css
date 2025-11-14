@@ -98,63 +98,84 @@
   font-family: Arial, sans-serif;
   background-color: hsl(108, 94%, 80%);
   font-size: 13px;
-  margin-left: 70px;
+  /* margin-left: 70px;
   margin-top: 50px;
-  margin-right: 25px;
+  margin-right: 25px; */
+  padding: 20px;
   border-radius: 15px;
   cursor: pointer;
-  /* word-wrap: break-word;
-  word-break: break-word;   <-- thêm dòng này để hiệu quả hơn */
-  /* white-space: normal; */ 
+  word-wrap: break-word;        /* cho trình duyệt cũ */
+  overflow-wrap: break-word;    /* chuẩn hiện đại */
+  word-break: break-word;       /* ép xuống dòng nếu quá dài */
+  white-space: normal;          /* cho phép xuống dòng */
 }
 .box_list_bound{
   font-family: Arial, sans-serif;
   background-color: hsl(249, 100%, 50%);
   border-radius: 10px;
 }
-.bang_apn {
+.bang_sip {
   border-collapse: collapse;
   width: 100%;
   table-layout: fixed;
 }
 
-.bang_apn th,
-.bang_apn td {
+.bang_sip th {
+  position: sticky;
+  top: 0; /* cố định ở trên cùng */
+  background-color: #3fd2ff; /* nền để che nội dung phía sau */
+  color: white;
+  z-index: 1;
+}
+.bang_sip td {
   border: 1px solid #ccc;
   padding: 8px;
   text-align: left;
   word-wrap: break-word;
   white-space: normal;
 }
-.box_trai_zone2{
-  background-color: hsla(208, 100%, 97%, 0.514);
+.box_trai_zone2_aa{
+  background-color: hsl(69, 78%, 79%);
   justify-content: center;   /* Căn giữa theo chiều dọc */
   align-items: center;       /* Căn giữa theo chiều ngang */
   border: 1px solid rgba(0, 0, 0, 0.1); /* Viền mờ nhẹ */
   border-radius: 10px;
   cursor: pointer;
 }
-.box_trai_zone2:hover{
+/* .box_trai_zone2:hover{
   background-color: hsl(185, 50%, 91%);
-}
-.box_phai_zone2{
-  background-color: hsl(45, 100%, 88%);
+} */
+.box_trai_zone2_ims{
+  background-color: hsl(69, 78%, 79%);
+  justify-content: center;   /* Căn giữa theo chiều dọc */
+  align-items: center;       /* Căn giữa theo chiều ngang */
+  border: 1px solid rgba(0, 0, 0, 0.1); /* Viền mờ nhẹ */
   border-radius: 10px;
+  cursor: pointer;
 }
-.box_phai_zone2:hover{
-  background-color: hsl(157, 87%, 70%);
+
+.box_phai_zone2_aa{
+  background-color: hsl(173, 67%, 86%);
+  border-radius: 10px;
+  cursor: pointer;
 }
+
 .tieu_de{
     position: sticky;
-    text-align: center;           /* Căn giữa theo chiều ngang */
-    vertical-align: middle;       /* Căn giữa theo chiều dọc */
-    padding: 8px;
-    font-size: 15px;
-    height: 100%;                 /* Đảm bảo chiều cao đầy đủ */
-    line-height: 1.4;             /* Căn chỉnh dòng cho dễ nhìn */
-    background-color: #dcf5ff;  /* Nên có màu nền để không bị trong suốt */
-    top: 0;                          /* ⭐ Cố định hàng tiêu đề khi cuộn */
+  top: 0; /* cố định khi cuộn */
+  z-index: 2;
+  text-align: center;    /* căn giữa ngang */
+  vertical-align: middle; /* căn giữa dọc */
+  padding: 8px 12px;      /* padding vừa phải */
+  font-size: 13px;        /* thu nhỏ font */
+  font-weight: bold;
+  background-color: #dcf5ff;
+  line-height: 1.2;       /* giảm khoảng cách dòng */
+  white-space: nowrap;    /* tránh chữ xuống dòng */
+  overflow: hidden;
+  text-overflow: ellipsis; /* nếu chữ dài sẽ bị ... */
      z-index: 2;                      /* ⭐ Giúp tiêu đề nổi lên trên */
+    
 }
 /* .tieu_de:hover{
   color: #450c7a;
@@ -166,7 +187,7 @@
 .text-type{
   font-weight: bold;
   color: #0c0c7a;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.2;
   padding: 5px 5px;
 }
@@ -176,13 +197,24 @@
   font-weight: bold;
 }
 .so_chinh{
-  font-size: 45px;
+  font-size: 38px;
   text-align: center;
   color: rgb(43, 92, 226);
   margin-left: 15px;
   /* margin-top: 10px; */
 }
+.so_chinh_1{
+  font-size: 42px;
+  text-align: center;
+  color: rgb(168, 43, 226);
+  margin-left: 15px;
+  /* margin-top: 10px; */
+}
 .phan_tram {
+  font-size: 14px;
+  color: #4b5563;
+}
+.phan_tram_1 {
   font-size: 16px;
   color: #4b5563;
 }
@@ -221,7 +253,7 @@
   font-weight: bold;
 }
 .box_trai_zone1{
-  background-color: hsl(0, 23%, 91%);
+  background-color: hsl(69, 78%, 79%);
   border-radius: 15px;
   margin-left: 10px;
   cursor: pointer;
@@ -235,11 +267,135 @@
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
 }
 .box_phai_zone1{
-  background-color: hsl(186, 22%, 91%);
+  background-color: hsl(173, 67%, 86%);
   border-radius: 15px;
   margin-left: 10px;
   cursor: pointer;
 }
+/* .box_trai_zone1:hover{
+  background-color: hsla(300, 57%, 87%, 0.938);
+}
+.box_phai_zone1:hover{
+  background-color: hsla(300, 57%, 87%, 0.938);
+} */
 .container mt-4{
   border: #9999db;
+}
+.text_tieude_ngan {
+  font-size: clamp(1rem, 1.2vw, 1.3rem);
+  font-weight: 600;
+  color: #111397;
+  white-space: nowrap;        /* 🔹 Không xuống dòng */
+  overflow: hidden;           /* 🔹 Ẩn phần vượt khung */
+  text-overflow: ellipsis;    /* 🔹 Hiển thị dấu "..." nếu quá dài */
+  text-align: center;
+  margin: 0.3rem 0;
+}
+.text_tieude_ngan_1 {
+  font-size: clamp(0.6rem, 1vw, 0.8rem);
+  font-weight: 500;
+  color: #111397;
+  white-space: nowrap;        /* 🔹 Không xuống dòng */
+  overflow: hidden;           /* 🔹 Ẩn phần vượt khung */
+  text-overflow: ellipsis;    /* 🔹 Hiển thị dấu "..." nếu quá dài */
+  text-align: center;
+  /* margin: 0.3rem 0; */
+}
+.text_tieude_ngan_2 {
+  font-size: clamp(0.8rem, 1vw, 1rem);
+  font-weight: 600;
+  color: #111397;
+  white-space: nowrap;        /* 🔹 Không xuống dòng */
+  overflow: hidden;           /* 🔹 Ẩn phần vượt khung */
+  text-overflow: ellipsis;    /* 🔹 Hiển thị dấu "..." nếu quá dài */
+  text-align: center;
+  /* margin: 0.3rem 0; */
+}
+.text_tieude_dai {
+  font-size: clamp(0.8rem, 1.1vw, 1rem);
+  font-weight: 700;
+  color: #111397;
+  white-space: nowrap;        /* 🔹 Không xuống dòng */
+  overflow: hidden;           /* 🔹 Ẩn phần vượt khung */
+  text-overflow: ellipsis;    /* 🔹 Hiển thị dấu "..." nếu quá dài */
+  text-align: center;
+  margin: 0.3rem 0;
+}
+.giatri_box {
+  position: relative;
+  display: flex;
+  justify-content: center;   /* ✅ căn giữa toàn bộ cụm */
+  align-items: flex-end;     /* căn chữ “đầu số” theo đáy số */
+  width: 100%;
+}
+
+.text_giatri_lon_1 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #590f76;
+  text-align: center;
+  line-height: 1;
+}
+.text_donvi {
+  font-size: 15px;
+  color: #444444;
+  position: relative;
+  white-space: nowrap;        /* 🔹 Không xuống dòng */
+  /* left: 9px;   */
+  /* 👈 dịch nhẹ sang phải */
+  /* top: 2px;    */
+  /* 👈 tùy chỉnh nhẹ để nằm đẹp hơn */
+}
+.text_giatri_lon {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #590f76;
+  white-space: nowrap;        /* 🔹 Không xuống dòng */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  margin: 0;
+}
+.text_giatri_nho {
+  font-size: clamp(1rem, 1vw, 1.2rem);
+  font-weight: 600;
+  color: #0f1176;
+  white-space: nowrap;        /* 🔹 Không xuống dòng */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  margin: 0;
+}
+.soKenhBox {
+  background: rgba(115, 194, 240, 0.8);
+  border-radius: 8px;
+  /* padding: 3px 8px; */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.text_tieude_thoigian {
+  font-size: clamp(0.7rem, 1.2vw, 1rem);
+  font-weight: 600;
+  color: #111397;
+  white-space: nowrap;        /* 🔹 Không xuống dòng */
+  overflow: hidden;           /* 🔹 Ẩn phần vượt khung */
+  text-overflow: ellipsis;    /* 🔹 Hiển thị dấu "..." nếu quá dài */
+  text-align: center;
+  margin: 0.5rem 0;
+}
+.box_sai_dau_so{
+  background-color:#b2e4f3;
+  border-radius: 10px;
+}
+.loader {
+  border: 12px solid #f3f3f3; /* light grey */
+  border-top: 12px solid #3498db; /* blue */
+  border-radius: 50%;
+  width: 80px;
+  height: 80px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
