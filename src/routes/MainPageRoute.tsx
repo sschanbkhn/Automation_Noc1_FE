@@ -38,6 +38,7 @@ import DashboardRnocRoom from "../DashboardAutomation/DashboardRnoc/DashboardRno
 import ScheduleTriggerForm from "components/RNOC1/R009";
 import Ucppoe from "components/INOC1/I003";
 import I004_1List from "components/I004_1";
+import Hardware_Alarm from "components/INOC1/I002/index";
 
 import PSCoreTable from "components/SNOC/views/tables/health/PSCoreTable";
 import CsTable from "components/SNOC/views/tables/health/CsTable";
@@ -74,6 +75,7 @@ import HostConfigPanel from "components/SNOC/views/forms/hosts/HostConfigPanel";
 import KPIChartDashboard from "components/SNOC/views/forms/kpi/KPIChartDashboard";
 import KPISelectorPage from "components/SNOC/views/forms/kpi/KPISelectorPage";
 import ScheduleGeneric from "components/SNOC/views/forms/kpi/ScheduleCausecode";
+
 ///snoc end
 // ANM
 import AnmTabs from 'components/ANM/Anmtabs';
@@ -128,8 +130,8 @@ const MainPageRoute = (props: Props) => {
                 return <DashboardAudit />;
             case "CableManagement":
                 return <CableManagement />;
-            case "ConfigurationLogs":
-                return <ConfigurationLogs />;
+            case "Hardware_Alarm":
+                return <Hardware_Alarm />;
             case "CurenAlarm":
                 return <CurenAlarm />;
             case "HistoryCurenAlarm":
