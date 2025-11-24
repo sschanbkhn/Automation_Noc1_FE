@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { connect } from 'react-redux';
 import CtrlDynamicTable from 'components/common/CtrlDynamicTable';
 import CtrlDialog from 'components/common/CtrlDialog';
@@ -38,6 +38,7 @@ const HardwareAlarmComponent = (props) => {
   const [autoReload, setAutoReload] = useState(true);
   const [reloadInterval, setReloadInterval] = useState(5);
   const tableRef = useRef();
+  const isLoadingRef = useRef(false);
 
   // Load UserInfo from Cookie
   useEffect(() => {
@@ -53,8 +54,11 @@ const HardwareAlarmComponent = (props) => {
     }
   }, []);
 
-  const load = async () => {
+  const load = useCallback(async () => {
+    if (isLoadingRef.current) return; // Prevent concurrent loads
+    
     try {
+      isLoadingRef.current = true;
       const res = await I002Service.GetList();
       const data = (res?.Data || []).map((r) => ({
         Id: r.Id,
@@ -89,8 +93,10 @@ const HardwareAlarmComponent = (props) => {
     } catch (error) {
       console.error('Error loading hardware alarms:', error);
       setRows([]); // Set empty array on error
+    } finally {
+      isLoadingRef.current = false;
     }
-  };
+  }, []);
 
   useEffect(() => { 
     let isMounted = true;
@@ -101,21 +107,23 @@ const HardwareAlarmComponent = (props) => {
     };
     loadData();
     return () => { isMounted = false; };
-  }, []);
+  }, [load]);
 
   // Auto reload effect
   useEffect(() => {
-    if (!autoReload) return;
+    if (!autoReload || modal) return; // Don't reload when modal is open
     
     const intervalId = setInterval(() => {
-      console.log(`🔄 Auto reloading hardware alarms (every ${reloadInterval}s)`);
-      load();
+      if (!modal && !isLoadingRef.current) { // Double check before reload
+        console.log(`🔄 Auto reloading hardware alarms (every ${reloadInterval}s)`);
+        load();
+      }
     }, reloadInterval * 1000);
 
     return () => {
       clearInterval(intervalId);
     };
-  }, [autoReload, reloadInterval]);
+  }, [autoReload, reloadInterval, modal, load]);
 
   useEffect(() => {
     const onClick = async (e) => {
@@ -145,7 +153,7 @@ const HardwareAlarmComponent = (props) => {
     };
     document.addEventListener('click', onClick);
     return () => document.removeEventListener('click', onClick);
-  }, [rows, userInfo]);
+  }, [rows, userInfo, load]);
 
   const handleAutoReboot = async () => {
     if (!currentAlarm) return;
