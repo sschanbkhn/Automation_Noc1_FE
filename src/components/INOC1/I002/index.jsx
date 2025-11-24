@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
-import Dashboard from './I002_1_Dashborad';
 import Report from './I002_2_Report';
 import BadLink from './I002_3_BadLink';
+import HardwareAlarm from './I002_4_HardwareAlarm';
 
 const TabButton = ({ active, onClick, children, leftRounded }) => (
   <button
@@ -27,14 +27,14 @@ const TabButton = ({ active, onClick, children, leftRounded }) => (
 );
 
 const I002 = () => {
-  const [tab, setTab] = useState('dashboard');
+  const [tab, setTab] = useState('hardwarealarm');
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const t = params.get('tab');
-    if (t && ['dashboard','badlink','report'].includes(t)) setTab(t);
+    if (t && ['hardwarealarm','badlink','report'].includes(t)) setTab(t);
   }, [location.search]);
 
   const changeTab = (t) => {
@@ -58,13 +58,13 @@ const I002 = () => {
         borderRadius: '8px 8px 0 0',
         boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
       }}>
-        <TabButton leftRounded active={tab === 'dashboard'} onClick={() => changeTab('dashboard')}>📊 Cảnh báo phần cứng</TabButton>
+        <TabButton leftRounded active={tab === 'hardwarealarm'} onClick={() => changeTab('hardwarealarm')}>⚠️ Cảnh báo phần cứng</TabButton>
         <TabButton active={tab === 'badlink'} onClick={() => changeTab('badlink')}>🧰 Xử lý link xấu</TabButton>
         <TabButton active={tab === 'report'} onClick={() => changeTab('report')}>📄 Report</TabButton>
       </div>
 
       <div>
-        {tab === 'dashboard' && <Dashboard />}
+        {tab === 'hardwarealarm' && <HardwareAlarm />}
         {tab === 'badlink' && <BadLink />}
         {tab === 'report' && <Report />}
       </div>

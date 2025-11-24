@@ -4,22 +4,19 @@ import I002Service from 'services/I002Service';
 
 const chip = (text, fg, bg) => `<span style="background:${bg};color:${fg};padding:3px 10px;border-radius:999px;font-weight:600;font-size:12px;">${text}</span>`;
 
-const statusChip = (status) => {
-  const s = (status || '').toLowerCase();
-  if (s === 'up') return chip('UP', '#065f46', '#d1fae5');
-  if (s === 'down') return chip('DOWN', '#991b1b', '#fee2e2');
-  return chip(status || 'N/A', '#6b7280', '#f3f4f6');
+const statusTag = (s) => {
+  const map = { 
+    up: chip('UP', '#166534', '#dcfce7'), 
+    down: chip('DOWN', '#991b1b', '#fee2e2'),
+    flap: chip('FLAP', '#9333ea', '#f3e8ff')
+  };
+  return map[(s || '').toLowerCase()] || chip(s || 'N/A', '#6b7280', '#f3f4f6');
 };
 
-export default function I002BadLink() {
+export default function BadLinkComponent() {
   const [rows, setRows] = useState([]);
-  const [filters, setFilters] = useState({ 
-    q: '', 
-    host: 'all', 
-    status: 'all',
-    shutLink: 'all'
-  });
-  const ref = useRef();
+  const [filters, setFilters] = useState({ q: '', host: 'all', status: 'all', shutLink: 'all' });
+  const tableRef = useRef();
 
   const load = async () => {
     try {
@@ -31,17 +28,20 @@ export default function I002BadLink() {
         status: r.Status || 'N/A',
         bandwidth: r.Bandwidth || 'N/A',
         ae: r.Ae || 'N/A',
-        inputRate: r.InputRate || 'N/A',
-        outputRate: r.OutputRate || 'N/A',
+        inputRate: r.InputRate || 0,
+        outputRate: r.OutputRate || 0,
         createdAt: r.CreatedAt,
         aeBandwidth: r.AeBandwidth || 'N/A',
-        shutLink: r.ShutLink || 'N/A',
-        statusHtml: statusChip(r.Status),
+        shutLink: r.ShutLink,
+        statusHtml: statusTag(r.Status),
         createdAtFormatted: r.CreatedAt ? new Date(r.CreatedAt).toLocaleString('vi-VN') : 'N/A',
+        shutLinkHtml: r.ShutLink ? chip('YES', '#991b1b', '#fee2e2') : chip('NO', '#166534', '#dcfce7'),
+        inputRateMbps: r.InputRate ? (r.InputRate / 1000000).toFixed(2) + ' Mbps' : '0 Mbps',
+        outputRateMbps: r.OutputRate ? (r.OutputRate / 1000000).toFixed(2) + ' Mbps' : '0 Mbps',
       }));
       setRows(data);
     } catch (error) {
-      console.error('Error loading error links status:', error);
+      console.error('Error loading error links:', error);
       setRows([]);
     }
   };
@@ -59,15 +59,13 @@ export default function I002BadLink() {
 
   const filtered = useMemo(() => {
     return rows.filter(r => {
-      const text = `${r.host} ${r.interface} ${r.ae}`.toLowerCase();
+      const text = `${r.host} ${r.interface} ${r.status} ${r.ae}`.toLowerCase();
       if (filters.q && !text.includes(filters.q.toLowerCase())) return false;
       if (filters.host !== 'all' && r.host !== filters.host) return false;
       if (filters.status !== 'all' && r.status !== filters.status) return false;
       if (filters.shutLink !== 'all') {
-        const shutLinkStr = String(r.shutLink || '').toLowerCase();
-        const isYes = shutLinkStr === 'yes' || shutLinkStr === 'true' || shutLinkStr === '1';
-        if (filters.shutLink === 'yes' && !isYes) return false;
-        if (filters.shutLink === 'no' && isYes) return false;
+        const filterVal = filters.shutLink === 'yes';
+        if (r.shutLink !== filterVal) return false;
       }
       return true;
     });
@@ -75,12 +73,9 @@ export default function I002BadLink() {
 
   const sum = useMemo(() => {
     const total = filtered.length;
-    const up = filtered.filter(r => String(r.status || '').toLowerCase() === 'up').length;
-    const down = filtered.filter(r => String(r.status || '').toLowerCase() === 'down').length;
-    const shutYes = filtered.filter(r => {
-      const shutLinkStr = String(r.shutLink || '').toLowerCase();
-      return shutLinkStr === 'yes' || shutLinkStr === 'true' || shutLinkStr === '1';
-    }).length;
+    const up = filtered.filter(r => (r.status || '').toLowerCase() === 'up').length;
+    const down = filtered.filter(r => (r.status || '').toLowerCase() === 'down').length;
+    const shutYes = filtered.filter(r => r.shutLink === true).length;
     return { total, up, down, shutYes };
   }, [filtered]);
 
@@ -90,15 +85,16 @@ export default function I002BadLink() {
     { Title: 'Host', Key: 'host', Width: 180, Sortable: true },
     { Title: 'Interface', Key: 'interface', Width: 150, Sortable: true },
     { Title: 'Status', Key: 'statusHtml', Width: 100, Sortable: false },
-    { Title: 'Bandwidth', Key: 'bandwidth', Width: 120, Sortable: true },
-    { Title: 'AE', Key: 'ae', Width: 120, Sortable: true },
-    { Title: 'AE Bandwidth', Key: 'aeBandwidth', Width: 130, Sortable: true },
-    { Title: 'Input Rate', Key: 'inputRate', Width: 120, Sortable: true },
-    { Title: 'Output Rate', Key: 'outputRate', Width: 120, Sortable: true },
-    { Title: 'Shut Link', Key: 'shutLink', Width: 100, Sortable: true },
+    { Title: 'Bandwidth', Key: 'bandwidth', Width: 100, Sortable: true },
+    { Title: 'AE', Key: 'ae', Width: 100, Sortable: true },
+    { Title: 'AE Bandwidth', Key: 'aeBandwidth', Width: 120, Sortable: true },
+    { Title: 'Input Rate', Key: 'inputRateMbps', Width: 120, Sortable: true },
+    { Title: 'Output Rate', Key: 'outputRateMbps', Width: 120, Sortable: true },
+    { Title: 'Shut Link', Key: 'shutLinkHtml', Width: 100, Sortable: false },
   ], []);
 
   const hosts = useMemo(() => Array.from(new Set(rows.map(r => r.host).filter(Boolean))), [rows]);
+  const statuses = useMemo(() => Array.from(new Set(rows.map(r => r.status).filter(Boolean))), [rows]);
 
   return (
     <div style={{ padding: '20px' }}>
@@ -107,9 +103,9 @@ export default function I002BadLink() {
           <div style={{ color:'#3730a3', fontSize:12, fontWeight:600 }}>TỔNG LINK</div>
           <div style={{ fontSize:28, fontWeight:800, color:'#3730a3' }}>{sum.total}</div>
         </div>
-        <div style={{ background:'#d1fae5', border:'1px solid #a7f3d0', borderRadius:12, padding:14 }}>
-          <div style={{ color:'#065f46', fontSize:12, fontWeight:600 }}>UP</div>
-          <div style={{ fontSize:28, fontWeight:800, color:'#065f46' }}>{sum.up}</div>
+        <div style={{ background:'#dcfce7', border:'1px solid #bbf7d0', borderRadius:12, padding:14 }}>
+          <div style={{ color:'#166534', fontSize:12, fontWeight:600 }}>UP</div>
+          <div style={{ fontSize:28, fontWeight:800, color:'#166534' }}>{sum.up}</div>
         </div>
         <div style={{ background:'#fee2e2', border:'1px solid #fecaca', borderRadius:12, padding:14 }}>
           <div style={{ color:'#991b1b', fontSize:12, fontWeight:600 }}>DOWN</div>
@@ -143,8 +139,7 @@ export default function I002BadLink() {
             style={{ padding:'8px 12px', border:'1px solid #d1d5db', borderRadius:6, fontSize:14 }}
           >
             <option value='all'>Lọc Status</option>
-            <option value='up'>UP</option>
-            <option value='down'>DOWN</option>
+            {statuses.map(s=> <option key={s} value={s}>{s}</option>)}
           </select>
           <select 
             value={filters.shutLink} 
@@ -152,8 +147,8 @@ export default function I002BadLink() {
             style={{ padding:'8px 12px', border:'1px solid #d1d5db', borderRadius:6, fontSize:14 }}
           >
             <option value='all'>Lọc Shut Link</option>
-            <option value='yes'>YES</option>
-            <option value='no'>NO</option>
+            <option value='yes'>Yes</option>
+            <option value='no'>No</option>
           </select>
         </div>
       </div>
@@ -162,13 +157,13 @@ export default function I002BadLink() {
         {filtered && filtered.length > 0 ? (
           <CtrlDynamicTable
             id="i002-badlink-table"
-            ref={ref}
+            ref={tableRef}
             columnDefs={columns}
             dataItems={filtered}
           />
         ) : (
           <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>
-            {rows.length === 0 ? 'Đang tải dữ liệu...' : 'Không có dữ liệu phù hợp với bộ lọc'}
+            {rows.length === 0 ? 'Đang tải dữ liệu...' : 'Không có dữ liệu phù hợp'}
           </div>
         )}
       </div>
