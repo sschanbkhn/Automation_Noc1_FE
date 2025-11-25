@@ -11,6 +11,13 @@ const statusChip = (status) => {
   return chip(status || 'N/A', '#6b7280', '#f3f4f6');
 };
 
+const ShutdownButton = (id, host, intf) => (
+  `<button class='btn-shutdown' data-id='${id}' data-host='${host}' data-interface='${intf}' 
+    style='background:#dc2626;color:#fff;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-weight:600;font-size:13px;'>
+    Shutdown
+  </button>`
+);
+
 export default function I002BadLink() {
   const [rows, setRows] = useState([]);
   const [filters, setFilters] = useState({ 
@@ -38,6 +45,7 @@ export default function I002BadLink() {
         shutLink: r.ShutLink || 'N/A',
         statusHtml: statusChip(r.Status),
         createdAtFormatted: r.CreatedAt ? new Date(r.CreatedAt).toLocaleString('vi-VN') : 'N/A',
+        actionHtml: ShutdownButton(r.Id, r.Host, r.Interface),
       }));
       setRows(data);
     } catch (error) {
@@ -55,6 +63,21 @@ export default function I002BadLink() {
     };
     loadData();
     return () => { isMounted = false; };
+  }, []);
+
+  useEffect(() => {
+    const onClick = (e) => {
+      const el = e.target.closest('.btn-shutdown');
+      if (!el) return;
+      
+      const host = el.getAttribute('data-host');
+      const intf = el.getAttribute('data-interface');
+      
+      alert(`Đã xử lý shutdown ${host} ${intf}`);
+    };
+    
+    document.addEventListener('click', onClick);
+    return () => document.removeEventListener('click', onClick);
   }, []);
 
   const filtered = useMemo(() => {
@@ -96,6 +119,7 @@ export default function I002BadLink() {
     { Title: 'Input Rate', Key: 'inputRate', Width: 120, Sortable: true },
     { Title: 'Output Rate', Key: 'outputRate', Width: 120, Sortable: true },
     { Title: 'Shut Link', Key: 'shutLink', Width: 100, Sortable: true },
+    { Title: 'Action', Key: 'actionHtml', Width: 120, Sortable: false },
   ], []);
 
   const hosts = useMemo(() => Array.from(new Set(rows.map(r => r.host).filter(Boolean))), [rows]);
