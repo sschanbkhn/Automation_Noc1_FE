@@ -212,16 +212,16 @@
       ]
     },
 
-    {
+   {
       "code": "NetworkTnoc",
       "name": "AU truyền dẫn",
       "url": "/user",
       "icon": "bi bi-tools",
       "subMenu": [
         {
-          "code": "LinksMaps",
-          "name": "Reset xử lý lỗi phần cứng",
-          "url": "/link-cabman",
+          "code": "tnoc1-t001",
+          "name": "T001 Ciena 6500",
+          "url": "/tnoc1-t001",
           "icon": "bi bi-grid"
         }
       ]

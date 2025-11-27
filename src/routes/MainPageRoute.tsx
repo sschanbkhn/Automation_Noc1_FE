@@ -29,7 +29,7 @@ import {
     Manufacturers,
     NetworkLinks,
 } from "components/Network";
-import MapComponent from "components/Network/LinksMaps/Map";
+import Tnoc1T001 from "components/TNOC1/T001/index";
 import Charts from "uielements/charts/Charts";
 import CenterDashboard from "../DashboardAutomation/CenterDashboard";
 import RoomDashboard from "../DashboardAutomation/RoomDashboard";
@@ -204,7 +204,10 @@ const MainPageRoute = (props: Props) => {
                 return <LspQuocte />;
             case "DataLspQuocte":
                 return <DataLspQuocte />;
-
+            //TNOC1
+            case "tnoc1-t001":
+                return <Tnoc1T001 />;
+            //
         // menu ANM
             case "anm_uc1":
                 return <AnmTabs />;
