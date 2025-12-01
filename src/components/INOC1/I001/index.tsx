@@ -22,7 +22,7 @@ interface ASNRowData {
 }
 
 type ModalState = 'closed' | 'config' | 'confirm' | 'result';
-type TabType = 'tab1' | 'tab2';
+type TabType = 'tab1' | 'tab2' | 'tab3';
 
 const I001IPTransitPolicer: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('tab1');
