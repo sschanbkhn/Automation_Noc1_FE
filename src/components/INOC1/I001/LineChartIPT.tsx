@@ -23,8 +23,14 @@ interface LineChartIPTProps {
 
 const LineChartIPT: React.FC<LineChartIPTProps> = ({ data }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('1day');
-  const [fromDate, setFromDate] = useState(dayjs().format('YYYY-MM-DD'));
-  const [toDate, setToDate] = useState(dayjs().format('YYYY-MM-DD'));
+
+  const formatDateString = (date: Date): string => {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  };
+
+  const [fromDate, setFromDate] = useState(formatDateString(new Date()));
+  const [toDate, setToDate] = useState(formatDateString(new Date()));
 
   const getPeriodLabel = () => {
     switch (selectedPeriod) {
