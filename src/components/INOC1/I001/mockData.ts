@@ -1,19 +1,39 @@
-import dayjs from 'dayjs';
+// Utility function to format date
+const formatTime = (date: Date, format: string): string => {
+  const pad = (n: number) => String(n).padStart(2, '0');
+
+  if (format === 'HH:mm') {
+    return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  }
+
+  if (format === 'HH:mm:ss DD/MM/YYYY') {
+    return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())} ${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
+  }
+
+  return '';
+};
+
+// Utility function to subtract minutes from a date
+const subtractMinutes = (date: Date, minutes: number): Date => {
+  const result = new Date(date);
+  result.setMinutes(result.getMinutes() - minutes);
+  return result;
+};
 
 // Generate time series data for the last 24 hours
 const generateChartData = () => {
-  const now = dayjs();
+  const now = new Date();
   const data = [];
-  
+
   for (let i = 95; i >= 0; i--) {
-    const time = now.subtract(i * 15, 'minute');
-    const timeStr = time.format('HH:mm');
-    
+    const time = subtractMinutes(now, i * 15);
+    const timeStr = formatTime(time, 'HH:mm');
+
     // Simulate realistic throughput values
     const baseThrough = 60 + Math.random() * 40;
     const baseCapa = baseThrough + 20 + Math.random() * 20;
     const efficiency = (baseThrough / baseCapa) * 100;
-    
+
     data.push({
       time: timeStr,
       throughput: parseFloat(baseThrough.toFixed(2)),
@@ -21,7 +41,7 @@ const generateChartData = () => {
       efficiency: parseFloat(efficiency.toFixed(2))
     });
   }
-  
+
   return data;
 };
 
@@ -67,7 +87,7 @@ export const mockASNData = [
 ];
 
 export const mockWarningData = {
-  lastWarningTime: dayjs().subtract(5, 'minute').format('HH:mm:ss DD/MM/YYYY'),
+  lastWarningTime: formatTime(subtractMinutes(new Date(), 5), 'HH:mm:ss DD/MM/YYYY'),
   message: '5 phút trước',
   asn: 'AS-54113',
   bandwidth: '29 Gbps',
@@ -77,6 +97,6 @@ export const mockWarningData = {
 export const mockApiMonitorData = {
   status: 80.6, // Will trigger alert at >= 80%
   threshold: 80,
-  timestamp: dayjs().format('HH:mm'),
+  timestamp: formatTime(new Date(), 'HH:mm'),
   note: 'Hiệu suất cao'
 };
