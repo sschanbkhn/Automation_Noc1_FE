@@ -7,6 +7,7 @@ import ConfigPolicerModal from './ConfigPolicerModal';
 import ConfirmModal from './ConfirmModal';
 import ResultModal from './ResultModal';
 import Tab2AddCounter from './Tab2AddCounter';
+import Tab3AdminWork from './Tab3AdminWork';
 import { mockChartData, mockASNData, mockWarningData, mockApiMonitorData } from './mockData';
 import './styles.scss';
 
