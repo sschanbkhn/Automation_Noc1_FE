@@ -9,7 +9,6 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
-import dayjs from 'dayjs';
 
 interface ChartDataPoint {
   time: string;
