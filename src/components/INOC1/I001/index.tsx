@@ -246,6 +246,13 @@ const I001IPTransitPolicer: React.FC = () => {
           <Tab2AddCounter />
         </div>
       )}
+
+      {/* Tab 3: Admin Work */}
+      {activeTab === 'tab3' && (
+        <div className="i001-container tab3-content">
+          <Tab3AdminWork />
+        </div>
+      )}
     </div>
   );
 };
