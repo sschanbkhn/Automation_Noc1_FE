@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Tab1DashboardPolicer from './Tab1DashboardPolicer';
-import Tab2AddCounter from './Tab2AddCounterNew';
-import Tab3AdminWork from './Tab3AdminWorkNew';
+import Tab2AddCounter from './Tab2AddCounter';
+import Tab3AdminWork from './Tab3AdminWork';
 import './styles.scss';
 
 type TabType = 'tab1' | 'tab2' | 'tab3';
