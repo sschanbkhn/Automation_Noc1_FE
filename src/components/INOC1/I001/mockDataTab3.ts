@@ -54,6 +54,16 @@ export const mockIPTMonitoringData: IPTMonitoringItem[] = [
   }
 ];
 
+// Device list for counter configuration
+export const DEVICES_LIST = [
+  'SPG-POP01', 'SPG-POP02',
+  'HKG-POP01', 'HKG-POP02',
+  'HKG-EQX-POP01', 'HKG-EQX-POP02',
+  'HCM-ASBR2', 'HCM-ASBR5',
+  'HNI-ASBR2', 'HNI-ASBR3',
+  'DNG-ASBR2', 'DNG-ASBR3'
+];
+
 export const TRIGGER_ALARM_OPTIONS = [70, 75, 80, 85, 90, 95, 100];
 
 export const DEFAULT_TRIGGER_ALARM = 80; // Default trigger alarm level
