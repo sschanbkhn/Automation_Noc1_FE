@@ -2075,6 +2075,629 @@ $bg-light: #f9fafb;
 }
 
 // ============================================
+// Tab 3 Styles - Admin Work
+// ============================================
+
+.tab3-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.tab3-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  flex-wrap: wrap;
+  gap: 16px;
+
+  .header-left {
+    flex: 1;
+    min-width: 200px;
+
+    .tab3-title {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+      color: $text-primary;
+    }
+
+    .tab3-subtitle {
+      margin: 4px 0 0 0;
+      font-size: 14px;
+      color: $text-secondary;
+    }
+  }
+
+  .header-right {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+
+      &.btn-add-ipt {
+        background: $primary-color;
+        color: white;
+
+        &:hover {
+          background: #1d4ed8;
+          box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+        }
+      }
+
+      &.btn-trigger-alarm {
+        background: #ff6b35;
+        color: white;
+
+        &:hover {
+          background: #e55a24;
+          box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+        }
+      }
+
+      &.btn-rollback-time {
+        background: #8e44ad;
+        color: white;
+
+        &:hover {
+          background: #7d3c98;
+          box-shadow: 0 2px 8px rgba(142, 68, 173, 0.3);
+        }
+      }
+    }
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+
+    .header-right {
+      flex-direction: column;
+
+      .btn {
+        width: 100%;
+      }
+    }
+  }
+}
+
+// ============================================
+// Tab 3 Alert Boxes
+// ============================================
+
+.tab3-alert-boxes {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+
+  .alert-box {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border-left: 4px solid;
+
+    .alert-label {
+      font-size: 13px;
+      color: $text-secondary;
+      margin-bottom: 12px;
+      font-weight: 500;
+    }
+
+    .alert-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: $text-primary;
+    }
+
+    &.trigger-alarm-box {
+      border-left-color: #ff6b35;
+
+      .alert-value {
+        color: #ff6b35;
+      }
+    }
+
+    &.rollback-time-box {
+      border-left-color: #8e44ad;
+
+      .alert-value {
+        color: #8e44ad;
+      }
+    }
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// ============================================
+// Tab 3 Table Section
+// ============================================
+
+.tab3-table-section {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  padding: 24px;
+
+  .table-title {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: $text-primary;
+  }
+}
+
+// ============================================
+// IPT Monitoring Table
+// ============================================
+
+.ipt-monitoring-table-container {
+  overflow-x: auto;
+
+  .ipt-monitoring-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+
+    thead {
+      background: $bg-light;
+      border-bottom: 2px solid $border-color;
+
+      th {
+        padding: 12px 8px;
+        text-align: left;
+        font-weight: 600;
+        color: $text-primary;
+        border-right: 1px solid $border-color;
+
+        &:last-child {
+          border-right: none;
+        }
+      }
+    }
+
+    tbody {
+      .ipt-row {
+        border-bottom: 1px solid $border-color;
+        transition: background 0.2s ease;
+
+        &:hover {
+          background: $bg-light;
+        }
+
+        td {
+          padding: 12px 8px;
+          border-right: 1px solid $border-color;
+
+          &:last-child {
+            border-right: none;
+          }
+
+          &.text-center {
+            text-align: center;
+          }
+
+          &.device-cell {
+            font-weight: 500;
+            color: $text-primary;
+          }
+
+          &.interface-cell,
+          &.prtg-id-cell {
+            code {
+              font-family: 'Monaco', 'Menlo', monospace;
+              font-size: 11px;
+              color: #0369a1;
+              background: $bg-light;
+              padding: 2px 4px;
+              border-radius: 2px;
+            }
+          }
+
+          &.partner-cell {
+            color: $text-primary;
+            font-weight: 500;
+          }
+
+          &.capacity-cell {
+            .capacity-badge {
+              display: inline-block;
+              padding: 4px 8px;
+              background: rgba(59, 130, 246, 0.1);
+              color: #3b82f6;
+              border-radius: 4px;
+              font-size: 12px;
+              font-weight: 600;
+            }
+          }
+
+          &.date-cell {
+            color: $text-secondary;
+          }
+
+          &.actions-cell {
+            .action-buttons {
+              display: flex;
+              gap: 8px;
+              justify-content: center;
+
+              .action-btn {
+                padding: 4px 8px;
+                background: transparent;
+                border: 1px solid $border-color;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 14px;
+                transition: all 0.2s ease;
+
+                &:hover {
+                  background: $bg-light;
+                  border-color: $text-secondary;
+                }
+
+                &.edit-btn {
+                  &:hover {
+                    border-color: #3b82f6;
+                    color: #3b82f6;
+                  }
+                }
+
+                &.delete-btn {
+                  &:hover {
+                    border-color: $danger-color;
+                    color: $danger-color;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 40px 12px !important;
+        border: none !important;
+
+        .empty-message {
+          color: $text-secondary;
+          font-size: 14px;
+        }
+      }
+    }
+  }
+
+  .table-footer {
+    padding-top: 12px;
+    border-top: 1px solid $border-color;
+    text-align: right;
+
+    .total-items {
+      font-size: 13px;
+      color: $text-secondary;
+    }
+  }
+}
+
+// ============================================
+// Add IPT Modal
+// ============================================
+
+.add-ipt-modal {
+  max-width: 500px;
+
+  .modal-subtitle {
+    margin: 6px 0 0 0;
+    font-size: 12px;
+    color: $text-secondary;
+  }
+
+  .modal-body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+
+      label {
+        font-size: 13px;
+        font-weight: 600;
+        color: $text-primary;
+      }
+
+      .form-control {
+        padding: 8px 12px;
+        border: 1px solid $border-color;
+        border-radius: 4px;
+        font-size: 13px;
+        outline: none;
+        transition: all 0.2s ease;
+        font-family: inherit;
+
+        &:focus {
+          border-color: $primary-color;
+          box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+        }
+
+        &.select-input {
+          cursor: pointer;
+        }
+      }
+    }
+  }
+}
+
+// ============================================
+// Set Trigger Alarm Modal
+// ============================================
+
+.set-trigger-alarm-modal {
+  max-width: 450px;
+
+  .alarm-message {
+    padding: 20px;
+    border-bottom: 1px solid $border-color;
+
+    .alarm-message-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: $text-primary;
+      margin-bottom: 12px;
+    }
+
+    .alarm-current {
+      display: flex;
+      gap: 12px;
+      font-size: 13px;
+
+      .current-label {
+        color: $text-secondary;
+        font-weight: 500;
+      }
+
+      .current-value {
+        font-weight: 700;
+        color: #ff6b35;
+      }
+    }
+  }
+
+  .alarm-options {
+    padding: 20px;
+    border-bottom: 1px solid $border-color;
+
+    .options-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: $text-primary;
+      margin-bottom: 12px;
+    }
+
+    .alarm-options-list {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+
+      .alarm-radio-option {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 12px;
+        border: 2px solid $border-color;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+          border-color: #ff6b35;
+          background: rgba(255, 107, 53, 0.05);
+        }
+
+        input {
+          cursor: pointer;
+          accent-color: #ff6b35;
+          margin: 0;
+        }
+
+        input:checked + .option-text {
+          color: #ff6b35;
+          font-weight: 700;
+        }
+
+        .option-text {
+          font-size: 13px;
+          font-weight: 600;
+          color: $text-primary;
+        }
+      }
+    }
+  }
+
+  .modal-footer {
+    .btn-trigger-alarm-action {
+      background: #ff6b35;
+      color: white;
+      border: none;
+
+      &:hover:not(:disabled) {
+        background: #e55a24;
+      }
+    }
+  }
+}
+
+// ============================================
+// Set Time to Rollback Modal
+// ============================================
+
+.set-rollback-time-modal {
+  max-width: 500px;
+
+  .rollback-message {
+    padding: 20px;
+    border-bottom: 1px solid $border-color;
+
+    .rollback-message-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: $text-primary;
+      margin-bottom: 12px;
+    }
+
+    .rollback-current {
+      display: flex;
+      gap: 12px;
+      font-size: 13px;
+
+      .current-label {
+        color: $text-secondary;
+        font-weight: 500;
+      }
+
+      .current-value {
+        font-weight: 700;
+        color: #8e44ad;
+      }
+    }
+  }
+
+  .time-picker-section {
+    padding: 20px;
+    border-bottom: 1px solid $border-color;
+
+    .time-picker-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: $text-primary;
+      margin-bottom: 16px;
+    }
+
+    .time-picker-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 20px;
+
+      .time-input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        align-items: center;
+
+        .time-label {
+          font-size: 11px;
+          color: $text-secondary;
+          font-weight: 600;
+          text-transform: uppercase;
+        }
+
+        .time-select {
+          padding: 8px 12px;
+          border: 1px solid $border-color;
+          border-radius: 4px;
+          font-size: 16px;
+          font-weight: 600;
+          width: 70px;
+          text-align: center;
+          cursor: pointer;
+          outline: none;
+          transition: all 0.2s ease;
+
+          &:focus {
+            border-color: #8e44ad;
+            box-shadow: 0 0 0 2px rgba(142, 68, 173, 0.1);
+          }
+        }
+      }
+
+      .time-separator {
+        font-size: 20px;
+        font-weight: 700;
+        color: $text-primary;
+        margin: 20px 0 0 0;
+      }
+    }
+
+    .time-display {
+      text-align: center;
+      padding: 12px;
+      background: $bg-light;
+      border-radius: 4px;
+
+      .display-label {
+        display: block;
+        font-size: 12px;
+        color: $text-secondary;
+        margin-bottom: 6px;
+        font-weight: 500;
+      }
+
+      .display-value {
+        display: block;
+        font-size: 28px;
+        font-weight: 700;
+        color: #8e44ad;
+      }
+    }
+  }
+
+  .rollback-info {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    margin: 0 20px;
+    background: #f0e6ff;
+    border-left: 3px solid #8e44ad;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #5a3d7a;
+
+    .info-icon {
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .info-text {
+      line-height: 1.4;
+    }
+  }
+
+  .modal-footer {
+    .btn-rollback-time-action {
+      background: #8e44ad;
+      color: white;
+      border: none;
+
+      &:hover:not(:disabled) {
+        background: #7d3c98;
+      }
+    }
+  }
+}
+
+// ============================================
 // Responsive
 // ============================================
 
