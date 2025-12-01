@@ -6,6 +6,7 @@ import ApiMonitorBox from './ApiMonitorBox';
 import ConfigPolicerModal from './ConfigPolicerModal';
 import ConfirmModal from './ConfirmModal';
 import ResultModal from './ResultModal';
+import Tab2AddCounter from './Tab2AddCounter';
 import { mockChartData, mockASNData, mockWarningData, mockApiMonitorData } from './mockData';
 import './styles.scss';
 
@@ -20,8 +21,10 @@ interface ASNRowData {
 }
 
 type ModalState = 'closed' | 'config' | 'confirm' | 'result';
+type TabType = 'tab1' | 'tab2';
 
 const I001IPTransitPolicer: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<TabType>('tab1');
   const [chartData, setChartData] = useState(mockChartData);
   const [asnData, setAsnData] = useState<ASNRowData[]>(mockASNData);
   const [warningData, setWarningData] = useState(mockWarningData);
@@ -138,76 +141,109 @@ const I001IPTransitPolicer: React.FC = () => {
   };
 
   return (
-    <div className="i001-container">
-      {/* Header */}
-      <div className="i001-header">
-        <h2>Quản lý lưu lượng IPTransit - Policer</h2>
-      </div>
-
-      {/* Main Content */}
-      <div className="i001-content">
-        {/* Left Column - Main Chart and Table */}
-        <div className="i001-left">
-          {/* Line Chart */}
-          <div className="i001-section">
-            <LineChartIPT data={chartData} />
-          </div>
-
-          {/* ASN Table */}
-          <div className="i001-section">
-            <h3 className="section-title">Các ASN được counter</h3>
-            <ASNTable 
-              data={asnData}
-              expandedASNId={expandedASNId}
-              onRowClick={handleASNRowClick}
-            />
-          </div>
-        </div>
-
-        {/* Right Column - Info Boxes */}
-        <div className="i001-right">
-          {/* API Monitor Box */}
-          <div className="i001-info-box">
-            <ApiMonitorBox 
-              data={apiMonitorData}
-              onClick={handleApiMonitorClick}
-            />
-          </div>
-
-          {/* Last Warning Box */}
-          <div className="i001-info-box">
-            <LastWarningBox data={warningData} />
-          </div>
+    <div className="i001-wrapper">
+      {/* Tab Navigation */}
+      <div className="i001-tabs-nav">
+        <div className="tabs-container">
+          <button
+            className={`tab-button ${activeTab === 'tab1' ? 'active' : ''}`}
+            onClick={() => setActiveTab('tab1')}
+          >
+            Tab 1: Dashboard & Policer
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'tab2' ? 'active' : ''}`}
+            onClick={() => setActiveTab('tab2')}
+          >
+            Tab 2: Add Counter - Thống kê IPT
+          </button>
+          <button className="tab-button">
+            Tab 3: Admin Work
+          </button>
         </div>
       </div>
 
-      {/* Modals */}
-      {modalState === 'config' && selectedASN && configDetail && (
-        <ConfigPolicerModal
-          asn={configDetail.as}
-          bandwidth={configDetail.bandwidth}
-          selectedDevices={selectedDevices}
-          onDeviceChange={handleDeviceChange}
-          onSelectAll={handleSelectAllDevices}
-          onApply={handleConfigApply}
-          onCancel={handleConfigCancel}
-        />
+      {/* Tab 1: Dashboard & Policer */}
+      {activeTab === 'tab1' && (
+        <div className="i001-container tab1-content">
+          {/* Header */}
+          <div className="i001-header">
+            <h2>Quản lý lưu lượng IPTransit - Policer</h2>
+          </div>
+
+          {/* Main Content */}
+          <div className="i001-content">
+            {/* Left Column - Main Chart and Table */}
+            <div className="i001-left">
+              {/* Line Chart */}
+              <div className="i001-section">
+                <LineChartIPT data={chartData} />
+              </div>
+
+              {/* ASN Table */}
+              <div className="i001-section">
+                <h3 className="section-title">Các ASN được counter</h3>
+                <ASNTable 
+                  data={asnData}
+                  expandedASNId={expandedASNId}
+                  onRowClick={handleASNRowClick}
+                />
+              </div>
+            </div>
+
+            {/* Right Column - Info Boxes */}
+            <div className="i001-right">
+              {/* API Monitor Box */}
+              <div className="i001-info-box">
+                <ApiMonitorBox 
+                  data={apiMonitorData}
+                  onClick={handleApiMonitorClick}
+                />
+              </div>
+
+              {/* Last Warning Box */}
+              <div className="i001-info-box">
+                <LastWarningBox data={warningData} />
+              </div>
+            </div>
+          </div>
+
+          {/* Modals */}
+          {modalState === 'config' && selectedASN && configDetail && (
+            <ConfigPolicerModal
+              asn={configDetail.as}
+              bandwidth={configDetail.bandwidth}
+              selectedDevices={selectedDevices}
+              onDeviceChange={handleDeviceChange}
+              onSelectAll={handleSelectAllDevices}
+              onApply={handleConfigApply}
+              onCancel={handleConfigCancel}
+            />
+          )}
+
+          {modalState === 'confirm' && configDetail && (
+            <ConfirmModal
+              devices={confirmDevices}
+              configDetail={configDetail}
+              onApply={handleConfirmApply}
+              onCancel={handleConfirmCancel}
+            />
+          )}
+
+          {modalState === 'result' && resultData && (
+            <ResultModal
+              result={resultData}
+              onClose={handleResultClose}
+            />
+          )}
+        </div>
       )}
 
-      {modalState === 'confirm' && configDetail && (
-        <ConfirmModal
-          devices={confirmDevices}
-          configDetail={configDetail}
-          onApply={handleConfirmApply}
-          onCancel={handleConfirmCancel}
-        />
-      )}
-
-      {modalState === 'result' && resultData && (
-        <ResultModal
-          result={resultData}
-          onClose={handleResultClose}
-        />
+      {/* Tab 2: Add Counter - Thống kê IPT */}
+      {activeTab === 'tab2' && (
+        <div className="i001-container tab2-content">
+          <Tab2AddCounter />
+        </div>
       )}
     </div>
   );
