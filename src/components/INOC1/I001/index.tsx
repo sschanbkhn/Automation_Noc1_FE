@@ -158,7 +158,10 @@ const I001IPTransitPolicer: React.FC = () => {
           >
             Tab 2: Add Counter - Thống kê IPT
           </button>
-          <button className="tab-button">
+          <button
+            className={`tab-button ${activeTab === 'tab3' ? 'active' : ''}`}
+            onClick={() => setActiveTab('tab3')}
+          >
             Tab 3: Admin Work
           </button>
         </div>
