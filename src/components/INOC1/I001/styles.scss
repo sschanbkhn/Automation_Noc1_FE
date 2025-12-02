@@ -2343,11 +2343,76 @@ $bg-light: #f9fafb;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   padding: 24px;
 
+  .table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
   .table-title {
-    margin: 0 0 16px 0;
+    margin: 0;
     font-size: 16px;
     font-weight: 600;
     color: $text-primary;
+  }
+
+  .filter-toggle-btn {
+    padding: 6px 12px;
+    background: $bg-light;
+    border: 1px solid $border-color;
+    border-radius: 4px;
+    color: $text-secondary;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+
+    &:hover {
+      background: $primary-color;
+      color: white;
+      border-color: $primary-color;
+    }
+  }
+
+  .date-filter-controls {
+    display: flex;
+    gap: 16px;
+    padding: 12px;
+    background: $bg-light;
+    border-radius: 4px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      label {
+        font-size: 12px;
+        font-weight: 600;
+        color: $text-secondary;
+        white-space: nowrap;
+      }
+
+      .filter-date-input {
+        padding: 6px 8px;
+        border: 1px solid $border-color;
+        border-radius: 4px;
+        font-size: 12px;
+        outline: none;
+        background: white;
+
+        &:focus {
+          border-color: $primary-color;
+          box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+        }
+      }
+    }
   }
 }
 
