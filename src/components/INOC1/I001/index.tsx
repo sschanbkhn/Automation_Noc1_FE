@@ -1,9 +1,16 @@
 import React, { useState } from 'react';
-import Tab1DashboardPolicer from './Tab1DashboardPolicer';
-import Tab2AddCounter from './Tab2AddCounter';
-import Tab3AdminWork from './Tab3AdminWork';
+import Tab1 from './Tab1';
+import Tab2 from './Tab2';
+import Tab3 from './Tab3';
 import './styles.scss';
 
+/**
+ * I001IPTransitPolicer - Main component for IP Transit Policer module
+ * Manages three tabs:
+ * - Tab1: Dashboard & Policer
+ * - Tab2: Add Counter - IPT Statistics
+ * - Tab3: Admin Work - IPT Monitoring Management
+ */
 type TabType = 'tab1' | 'tab2' | 'tab3';
 
 const I001IPTransitPolicer: React.FC = () => {
@@ -35,14 +42,10 @@ const I001IPTransitPolicer: React.FC = () => {
         </div>
       </div>
 
-      {/* Tab 1: Dashboard & Policer */}
-      {activeTab === 'tab1' && <Tab1DashboardPolicer />}
-
-      {/* Tab 2: Add Counter - Thống kê IPT */}
-      {activeTab === 'tab2' && <Tab2AddCounter />}
-
-      {/* Tab 3: Admin Work */}
-      {activeTab === 'tab3' && <Tab3AdminWork />}
+      {/* Tab Content */}
+      {activeTab === 'tab1' && <Tab1 />}
+      {activeTab === 'tab2' && <Tab2 />}
+      {activeTab === 'tab3' && <Tab3 />}
     </div>
   );
 };
