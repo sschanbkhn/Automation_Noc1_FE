@@ -1306,74 +1306,13 @@ $bg-light: #f9fafb;
     gap: 16px;
     align-items: center;
 
-    .date-range-controls {
-      display: flex;
-      align-items: flex-end;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .date-range-buttons {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-
-      .range-btn {
-        padding: 6px 12px;
-        border: 1px solid $border-color;
-        border-radius: 4px;
-        background: white;
-        color: $text-secondary;
-        cursor: pointer;
-        font-size: 12px;
-        font-weight: 500;
-        transition: all 0.2s ease;
-        white-space: nowrap;
-
-        &:hover {
-          border-color: $primary-color;
-          color: $primary-color;
-        }
-
-        &.active {
-          background: $primary-color;
-          color: white;
-          border-color: $primary-color;
-        }
-      }
-    }
-
-    .custom-date-range {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-
-      .date-input {
-        padding: 6px 10px;
-        border: 1px solid $border-color;
-        border-radius: 4px;
-        font-size: 12px;
-        outline: none;
-        background: white;
-        cursor: pointer;
-
-        &:focus {
-          border-color: $primary-color;
-          box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
-        }
-      }
-
-      .date-separator {
-        font-size: 12px;
-        color: $text-secondary;
-        font-weight: 500;
-      }
-    }
-
     .date-picker-group {
       display: flex;
       align-items: center;
       gap: 8px;
+      font-size: 12px;
+      color: $text-secondary;
+      font-weight: 500;
     }
 
     .date-picker-input {
