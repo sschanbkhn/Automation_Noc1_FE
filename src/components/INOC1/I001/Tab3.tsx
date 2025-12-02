@@ -448,20 +448,12 @@ const Tab3: React.FC = () => {
         {showDateFilter && (
           <div className="date-filter-controls">
             <div className="filter-group">
-              <label>From:</label>
+              <label htmlFor="tab3-date-picker">Chọn ngày:</label>
               <input
+                id="tab3-date-picker"
                 type="date"
-                value={filterStartDate}
-                onChange={(e) => setFilterStartDate(e.target.value)}
-                className="filter-date-input"
-              />
-            </div>
-            <div className="filter-group">
-              <label>To:</label>
-              <input
-                type="date"
-                value={filterEndDate}
-                onChange={(e) => setFilterEndDate(e.target.value)}
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
                 className="filter-date-input"
               />
             </div>
