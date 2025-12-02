@@ -22,7 +22,7 @@ const Tab3Service = {
   /**
    * Add new IPT monitoring point via N8n
    * @param device - Target device
-   * @param interface - Network interface
+   * @param interfaceName - Network interface
    * @param partner - ISP/Partner name
    * @param capacity - Bandwidth capacity
    * @param prtgId - PRTG monitoring ID
@@ -30,7 +30,7 @@ const Tab3Service = {
    */
   AddIPTMonitoring: async (
     device: string,
-    interface: string,
+    interfaceName: string,
     partner: string,
     capacity: string,
     prtgId: string
@@ -40,7 +40,7 @@ const Tab3Service = {
       method: 'post',
       data: {
         device,
-        interface,
+        interface: interfaceName,
         partner,
         capacity,
         prtgId
