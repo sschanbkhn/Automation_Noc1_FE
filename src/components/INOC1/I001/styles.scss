@@ -99,6 +99,7 @@ $bg-light: #f9fafb;
   .period-buttons {
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
 
     .period-btn {
       padding: 6px 12px;
@@ -109,6 +110,7 @@ $bg-light: #f9fafb;
       cursor: pointer;
       font-size: 13px;
       transition: all 0.3s ease;
+      white-space: nowrap;
 
       &:hover {
         border-color: $primary-color;
@@ -119,6 +121,76 @@ $bg-light: #f9fafb;
         background: $primary-color;
         color: white;
         border-color: $primary-color;
+      }
+    }
+  }
+
+  .custom-range-picker {
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+    padding: 12px;
+    background: $bg-light;
+    border-radius: 4px;
+    flex-wrap: wrap;
+    width: 100%;
+
+    .range-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+
+      .range-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: $text-secondary;
+      }
+
+      .range-inputs {
+        display: flex;
+        gap: 8px;
+
+        .range-input {
+          padding: 6px 8px;
+          border: 1px solid $border-color;
+          border-radius: 4px;
+          font-size: 12px;
+          outline: none;
+          background: white;
+
+          &:focus {
+            border-color: $primary-color;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+          }
+        }
+
+        .date-input {
+          min-width: 140px;
+        }
+
+        .time-input {
+          min-width: 100px;
+        }
+      }
+    }
+
+    .range-apply-btn {
+      padding: 6px 16px;
+      background: $primary-color;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: darken($primary-color, 10%);
+      }
+
+      &:active {
+        transform: scale(0.98);
       }
     }
   }
