@@ -357,8 +357,24 @@ const SetTimeToRollbackModal: React.FC<{
 const Tab3: React.FC = () => {
   const [iptData, setIptData] = useState<IPTMonitoringItem[]>(mockIPTMonitoringData);
   const [modalState, setModalState] = useState<ModalState>('closed');
+  const [showDateFilter, setShowDateFilter] = useState<boolean>(false);
   const [currentTriggerAlarm, setCurrentTriggerAlarm] = useState<number>(DEFAULT_TRIGGER_ALARM);
   const [currentRollbackTime, setCurrentRollbackTime] = useState<string>(DEFAULT_ROLLBACK_TIME);
+
+  // Date filter state for monitoring table
+  const [filterStartDate, setFilterStartDate] = useState<string>(
+    new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  );
+  const [filterEndDate, setFilterEndDate] = useState<string>(
+    new Date().toISOString().split('T')[0]
+  );
+
+  // Filter monitoring data by date range
+  const filteredIptData = iptData.filter(item => {
+    if (!showDateFilter) return true;
+    const itemDate = item.dayAdded;
+    return itemDate >= filterStartDate && itemDate <= filterEndDate;
+  });
 
   const handleAddIPT = (newIPT: Omit<IPTMonitoringItem, 'id' | 'stt'>) => {
     const newItem: IPTMonitoringItem = {
