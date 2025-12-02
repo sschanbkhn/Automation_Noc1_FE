@@ -523,53 +523,15 @@ const Tab2: React.FC = () => {
           <p className="tab2-subtitle">Lưu lượng cao nhất theo ngày</p>
         </div>
         <div className="header-right">
-          <div className="date-range-controls">
-            {/* Quick Date Range Selection */}
-            <div className="date-range-buttons">
-              <button
-                className={`range-btn ${selectedDateRange === 'today' && !useCustomRange ? 'active' : ''}`}
-                onClick={() => handleDateRangeSelect('today')}
-              >
-                Today
-              </button>
-              <button
-                className={`range-btn ${selectedDateRange === 'week' && !useCustomRange ? 'active' : ''}`}
-                onClick={() => handleDateRangeSelect('week')}
-              >
-                7 Days
-              </button>
-              <button
-                className={`range-btn ${selectedDateRange === 'month' && !useCustomRange ? 'active' : ''}`}
-                onClick={() => handleDateRangeSelect('month')}
-              >
-                30 Days
-              </button>
-              <button
-                className={`range-btn ${useCustomRange ? 'active' : ''}`}
-                onClick={handleCustomRangeToggle}
-              >
-                Custom
-              </button>
-            </div>
-
-            {/* Custom Date Range Picker */}
-            {useCustomRange && (
-              <div className="custom-date-range">
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="date-input"
-                />
-                <span className="date-separator">to</span>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="date-input"
-                />
-              </div>
-            )}
+          <div className="date-picker-group">
+            <label htmlFor="tab2-date-picker">Chọn ngày:</label>
+            <input
+              id="tab2-date-picker"
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="date-picker-input"
+            />
           </div>
           <button className="btn-add-counter" onClick={handleAddCounterClick}>
             + Add Counter
