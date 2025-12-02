@@ -36,42 +36,132 @@ type ModalState = 'closed' | 'config' | 'confirm' | 'result';
 /**
  * LineChartIPT Component
  * Displays throughput vs capacity statistics for IPT (IP Transit)
+ * Features date/time range selection with both quick presets and custom date/time pickers
  */
-const LineChartIPT: React.FC<{ data: any[] }> = ({ data }) => (
-  <div className="linechart-container">
-    <div className="linechart-header">
-      <h3 className="linechart-title">Thống kê lưu lượng IPT (Throughput vs Capacity)</h3>
-      <div className="linechart-controls">
-        <div className="period-buttons">
-          <button className="period-btn active">1h</button>
-          <button className="period-btn">6h</button>
-          <button className="period-btn">24h</button>
+const LineChartIPT: React.FC<{ data: any[] }> = ({ data }) => {
+  const [selectedPeriod, setSelectedPeriod] = useState<string>('1h');
+  const [useCustomRange, setUseCustomRange] = useState<boolean>(false);
+  const [startDate, setStartDate] = useState<string>(new Date(Date.now() - 86400000).toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [startTime, setStartTime] = useState<string>('00:00');
+  const [endTime, setEndTime] = useState<string>('23:59');
+
+  const handlePeriodClick = (period: string) => {
+    setSelectedPeriod(period);
+    setUseCustomRange(false);
+  };
+
+  const handleCustomRangeToggle = () => {
+    setUseCustomRange(!useCustomRange);
+  };
+
+  return (
+    <div className="linechart-container">
+      <div className="linechart-header">
+        <h3 className="linechart-title">Thống kê lưu lượng IPT (Throughput vs Capacity)</h3>
+        <div className="linechart-controls">
+          {/* Quick Period Selection Buttons */}
+          <div className="period-buttons">
+            <button
+              className={`period-btn ${selectedPeriod === '1h' && !useCustomRange ? 'active' : ''}`}
+              onClick={() => handlePeriodClick('1h')}
+            >
+              1h
+            </button>
+            <button
+              className={`period-btn ${selectedPeriod === '6h' && !useCustomRange ? 'active' : ''}`}
+              onClick={() => handlePeriodClick('6h')}
+            >
+              6h
+            </button>
+            <button
+              className={`period-btn ${selectedPeriod === '24h' && !useCustomRange ? 'active' : ''}`}
+              onClick={() => handlePeriodClick('24h')}
+            >
+              24h
+            </button>
+            <button
+              className={`period-btn ${useCustomRange ? 'active' : ''}`}
+              onClick={handleCustomRangeToggle}
+            >
+              Custom
+            </button>
+          </div>
+
+          {/* Custom Date/Time Range Picker */}
+          {useCustomRange && (
+            <div className="custom-range-picker">
+              <div className="range-group">
+                <label className="range-label">From</label>
+                <div className="range-inputs">
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="range-input date-input"
+                  />
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className="range-input time-input"
+                  />
+                </div>
+              </div>
+
+              <div className="range-group">
+                <label className="range-label">To</label>
+                <div className="range-inputs">
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="range-input date-input"
+                  />
+                  <input
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className="range-input time-input"
+                  />
+                </div>
+              </div>
+
+              <button className="range-apply-btn">Apply Range</button>
+            </div>
+          )}
         </div>
       </div>
-    </div>
-    <div className="linechart-legend">
-      <div className="legend-item">
-        <span className="legend-color" style={{ backgroundColor: '#3b82f6' }}></span>
-        Throughput
+
+      <div className="linechart-legend">
+        <div className="legend-item">
+          <span className="legend-color" style={{ backgroundColor: '#3b82f6' }}></span>
+          Throughput (Gbps)
+        </div>
+        <div className="legend-item">
+          <span className="legend-color" style={{ backgroundColor: '#10b981' }}></span>
+          Capacity (Gbps)
+        </div>
+        <div className="legend-item">
+          <span className="legend-color" style={{ backgroundColor: '#f59e0b' }}></span>
+          Efficiency (%)
+        </div>
       </div>
-      <div className="legend-item">
-        <span className="legend-color" style={{ backgroundColor: '#10b981' }}></span>
-        Capacity
+
+      <div style={{ height: '300px', background: '#f9fafb', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: '#9ca3af' }}>
+          📊 Chart Data: {useCustomRange ? `${startDate} ${startTime} to ${endDate} ${endTime}` : `Last ${selectedPeriod}`}
+        </p>
       </div>
-      <div className="legend-item">
-        <span className="legend-color" style={{ backgroundColor: '#f59e0b' }}></span>
-        Efficiency
+
+      <div className="linechart-footer">
+        <span>Data updated: 2 minutes ago</span>
+        <span>Interval: 1 minute/data point</span>
+        <span>Status: Normal</span>
       </div>
     </div>
-    <div style={{ height: '300px', background: '#f9fafb', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ color: '#9ca3af' }}>📊 Chart placeholder - Ready for ApexCharts integration</p>
-    </div>
-    <div className="linechart-footer">
-      <span>Data updated: 2 minutes ago</span>
-      <span>Status: Normal</span>
-    </div>
-  </div>
-);
+  );
+};
 
 /**
  * ASNTable Component
