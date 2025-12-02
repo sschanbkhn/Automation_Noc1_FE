@@ -441,8 +441,40 @@ const Tab3: React.FC = () => {
       </div>
 
       <div className="tab3-table-section">
-        <h4 className="table-title">Danh sách IPT đang được theo dõi</h4>
-        <IPTMonitoringTable data={iptData} />
+        <div className="table-header">
+          <h4 className="table-title">Danh sách IPT đang được theo dõi ({filteredIptData.length})</h4>
+          <button
+            className="filter-toggle-btn"
+            onClick={() => setShowDateFilter(!showDateFilter)}
+          >
+            {showDateFilter ? '✕ Hide Filter' : '⏱ Filter by Date'}
+          </button>
+        </div>
+
+        {showDateFilter && (
+          <div className="date-filter-controls">
+            <div className="filter-group">
+              <label>From:</label>
+              <input
+                type="date"
+                value={filterStartDate}
+                onChange={(e) => setFilterStartDate(e.target.value)}
+                className="filter-date-input"
+              />
+            </div>
+            <div className="filter-group">
+              <label>To:</label>
+              <input
+                type="date"
+                value={filterEndDate}
+                onChange={(e) => setFilterEndDate(e.target.value)}
+                className="filter-date-input"
+              />
+            </div>
+          </div>
+        )}
+
+        <IPTMonitoringTable data={filteredIptData} />
       </div>
 
       {modalState === 'addIPT' && (
