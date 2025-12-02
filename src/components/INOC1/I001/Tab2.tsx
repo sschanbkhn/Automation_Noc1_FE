@@ -458,40 +458,12 @@ const Tab2: React.FC = () => {
   const [asnData] = useState<ASNTab2Data[]>(mockTab2ASNData);
   const [expandedASNId, setExpandedASNId] = useState<number | null>(null);
 
-  // Date range state
-  const [selectedDateRange, setSelectedDateRange] = useState<'today' | 'week' | 'month' | 'custom'>('today');
-  const [startDate, setStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [useCustomRange, setUseCustomRange] = useState<boolean>(false);
+  // Single date picker for displaying data on a specific day
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
   const [modalState, setModalState] = useState<ModalState>('closed');
   const [addCounterData, setAddCounterData] = useState<AddCounterData | null>(null);
   const [resultData, setResultData] = useState<ResultData | null>(null);
-
-  const handleDateRangeSelect = (range: 'today' | 'week' | 'month') => {
-    setSelectedDateRange(range);
-    setUseCustomRange(false);
-
-    const now = new Date();
-    const end = now.toISOString().split('T')[0];
-    let start = end;
-
-    if (range === 'week') {
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      start = weekAgo.toISOString().split('T')[0];
-    } else if (range === 'month') {
-      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      start = monthAgo.toISOString().split('T')[0];
-    }
-
-    setStartDate(start);
-    setEndDate(end);
-  };
-
-  const handleCustomRangeToggle = () => {
-    setUseCustomRange(!useCustomRange);
-    setSelectedDateRange('custom');
-  };
 
   const handleASNRowClick = (row: ASNTab2Data) => {
     setExpandedASNId(expandedASNId === row.id ? null : row.id);
