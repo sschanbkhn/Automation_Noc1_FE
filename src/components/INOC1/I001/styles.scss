@@ -2325,6 +2325,7 @@ $bg-light: #f9fafb;
     border-radius: 4px;
     margin-bottom: 16px;
     flex-wrap: wrap;
+    align-items: center;
 
     .filter-group {
       display: flex;
@@ -2345,6 +2346,7 @@ $bg-light: #f9fafb;
         font-size: 12px;
         outline: none;
         background: white;
+        cursor: pointer;
 
         &:focus {
           border-color: $primary-color;
