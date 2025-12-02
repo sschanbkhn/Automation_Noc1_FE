@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { mockChartData, mockASNData, mockWarningData, mockApiMonitorData } from './mockData';
 import Tab1Service from 'services/Tab1Service';
 
+// Ensure useState is available for LineChartIPT component
+
 // ============================================
 // TYPE DEFINITIONS & INTERFACES
 // ============================================
