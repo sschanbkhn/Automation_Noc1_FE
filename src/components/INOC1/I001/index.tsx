@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import Tab1 from './Tab1';
-import Tab2 from './Tab2';
-import Tab3 from './Tab3';
+import Tab1 from './Tab1.jsx';
+import Tab2 from './Tab2.jsx';
+import Tab3 from './Tab3.jsx';
 import './styles.scss';
 
 /**
