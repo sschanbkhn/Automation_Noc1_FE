@@ -25,97 +25,40 @@ const LineChartIPT = ({ data }) => {
         <h3 className="linechart-title">Thống kê lưu lượng IPT (Throughput vs Capacity)</h3>
         <div className="linechart-controls">
           <div className="period-buttons">
-            <button
-              className={`period-btn ${selectedPeriod === '1h' && !useCustomRange ? 'active' : ''}`}
-              onClick={() => handlePeriodClick('1h')}
-            >
-              1h
-            </button>
-            <button
-              className={`period-btn ${selectedPeriod === '6h' && !useCustomRange ? 'active' : ''}`}
-              onClick={() => handlePeriodClick('6h')}
-            >
-              6h
-            </button>
-            <button
-              className={`period-btn ${selectedPeriod === '24h' && !useCustomRange ? 'active' : ''}`}
-              onClick={() => handlePeriodClick('24h')}
-            >
-              24h
-            </button>
-            <button
-              className={`period-btn ${useCustomRange ? 'active' : ''}`}
-              onClick={handleCustomRangeToggle}
-            >
-              Custom
-            </button>
+            <button className={`period-btn ${selectedPeriod === '1h' && !useCustomRange ? 'active' : ''}`} onClick={() => handlePeriodClick('1h')}>1h</button>
+            <button className={`period-btn ${selectedPeriod === '6h' && !useCustomRange ? 'active' : ''}`} onClick={() => handlePeriodClick('6h')}>6h</button>
+            <button className={`period-btn ${selectedPeriod === '24h' && !useCustomRange ? 'active' : ''}`} onClick={() => handlePeriodClick('24h')}>24h</button>
+            <button className={`period-btn ${useCustomRange ? 'active' : ''}`} onClick={handleCustomRangeToggle}>Custom</button>
           </div>
-
           {useCustomRange && (
             <div className="custom-range-picker">
               <div className="range-group">
                 <label className="range-label">From</label>
                 <div className="range-inputs">
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="range-input date-input"
-                  />
-                  <input
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    className="range-input time-input"
-                  />
+                  <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="range-input date-input" />
+                  <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="range-input time-input" />
                 </div>
               </div>
-
               <div className="range-group">
                 <label className="range-label">To</label>
                 <div className="range-inputs">
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="range-input date-input"
-                  />
-                  <input
-                    type="time"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    className="range-input time-input"
-                  />
+                  <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="range-input date-input" />
+                  <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="range-input time-input" />
                 </div>
               </div>
-
               <button className="range-apply-btn">Apply Range</button>
             </div>
           )}
         </div>
       </div>
-
       <div className="linechart-legend">
-        <div className="legend-item">
-          <span className="legend-color" style={{ backgroundColor: '#3b82f6' }}></span>
-          Throughput (Gbps)
-        </div>
-        <div className="legend-item">
-          <span className="legend-color" style={{ backgroundColor: '#10b981' }}></span>
-          Capacity (Gbps)
-        </div>
-        <div className="legend-item">
-          <span className="legend-color" style={{ backgroundColor: '#f59e0b' }}></span>
-          Efficiency (%)
-        </div>
+        <div className="legend-item"><span className="legend-color" style={{ backgroundColor: '#3b82f6' }}></span>Throughput (Gbps)</div>
+        <div className="legend-item"><span className="legend-color" style={{ backgroundColor: '#10b981' }}></span>Capacity (Gbps)</div>
+        <div className="legend-item"><span className="legend-color" style={{ backgroundColor: '#f59e0b' }}></span>Efficiency (%)</div>
       </div>
-
       <div style={{ height: '300px', background: '#f9fafb', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: '#9ca3af' }}>
-          📊 Chart Data: {useCustomRange ? `${startDate} ${startTime} to ${endDate} ${endTime}` : `Last ${selectedPeriod}`}
-        </p>
+        <p style={{ color: '#9ca3af' }}>📊 Chart Data: {useCustomRange ? `${startDate} ${startTime} to ${endDate} ${endTime}` : `Last ${selectedPeriod}`}</p>
       </div>
-
       <div className="linechart-footer">
         <span>Data updated: 2 minutes ago</span>
         <span>Interval: 1 minute/data point</span>
@@ -145,21 +88,12 @@ const ASNTable = ({ data, expandedASNId, onRowClick }) => (
               <td className="text-center">{row.stt}</td>
               <td className="font-mono">{row.asn}</td>
               <td className="text-left">{row.asName}</td>
-              <td className="text-right">
-                <span className="badge badge-in">{row.maxIn}</span>
-              </td>
-              <td className="text-right">
-                <span className="badge badge-out">{row.maxOut}</span>
-              </td>
+              <td className="text-right"><span className="badge badge-in">{row.maxIn}</span></td>
+              <td className="text-right"><span className="badge badge-out">{row.maxOut}</span></td>
               <td className="text-center">
-                {row.prefixes && row.prefixes.length > 0 && (
-                  <span className="expand-icon">
-                    {expandedASNId === row.id ? '▼' : '▶'}
-                  </span>
-                )}
+                {row.prefixes && row.prefixes.length > 0 && <span className="expand-icon">{expandedASNId === row.id ? '▼' : '▶'}</span>}
               </td>
             </tr>
-
             {expandedASNId === row.id && row.prefixes && (
               <tr className="prefix-row">
                 <td colSpan={6}>
@@ -186,7 +120,6 @@ const ASNTable = ({ data, expandedASNId, onRowClick }) => (
 
 const ApiMonitorBox = ({ data, onClick }) => {
   const isAlert = data.status >= data.threshold;
-  
   return (
     <div className={`api-monitor-box ${isAlert ? 'alert-mode blink' : ''}`} onClick={onClick}>
       <div className="monitor-header">
@@ -196,23 +129,15 @@ const ApiMonitorBox = ({ data, onClick }) => {
         </div>
         {isAlert && <span className="alert-badge">ALERT</span>}
       </div>
-
       <div className="monitor-status">
         <div className="status-percentage">
           <span className="percentage-value">{data.status}%</span>
           <span className="percentage-label">API Usage</span>
         </div>
       </div>
-
       <div className="monitor-progress">
         <div className="progress-bar-bg">
-          <div 
-            className="progress-bar-fill" 
-            style={{ 
-              width: `${data.status}%`, 
-              background: isAlert ? '#dc2626' : '#10b981'
-            }}
-          ></div>
+          <div className="progress-bar-fill" style={{ width: `${data.status}%`, background: isAlert ? '#dc2626' : '#10b981' }}></div>
         </div>
         <div className="progress-labels">
           <span>0%</span>
@@ -220,17 +145,14 @@ const ApiMonitorBox = ({ data, onClick }) => {
           <span>100%</span>
         </div>
       </div>
-
       <div className="monitor-threshold">
         <span className="label">Threshold:</span>
         <span className="value">{data.threshold}%</span>
       </div>
-
       <div className="monitor-footer">
         <span className="timestamp">{data.timestamp}</span>
         <span className="note">{data.note}</span>
       </div>
-
       {isAlert && <div className="alert-message">⚠️ API usage is above threshold! Click to configure.</div>}
     </div>
   );
@@ -242,50 +164,29 @@ const LastWarningBox = ({ data }) => (
       <span className="warning-icon">⚠️</span>
       <h4>Cảnh báo gần đây nhất</h4>
     </div>
-
     <div className="warning-content">
       <div className="warning-time">
         <span className="label">Thời gian:</span>
         <span className="value">{data.lastWarningTime}</span>
       </div>
-
       <div className="warning-detail">
-        <div className="detail-row">
-          <span className="label">Lần trước:</span>
-          <span className="value">{data.message}</span>
-        </div>
-        <div className="detail-row">
-          <span className="label">ASN:</span>
-          <span className="value">{data.asn}</span>
-        </div>
-        <div className="detail-row">
-          <span className="label">Bandwidth:</span>
-          <span className="value">{data.bandwidth}</span>
-        </div>
+        <div className="detail-row"><span className="label">Lần trước:</span><span className="value">{data.message}</span></div>
+        <div className="detail-row"><span className="label">ASN:</span><span className="value">{data.asn}</span></div>
+        <div className="detail-row"><span className="label">Bandwidth:</span><span className="value">{data.bandwidth}</span></div>
       </div>
-
       <div className="warning-recommendation">
         <span className="label">Khuyến nghị:</span>
         <code className="recommendation-code">{data.recommendation}</code>
       </div>
     </div>
-
     <div className="warning-footer">Bấm để xem chi tiết</div>
   </div>
 );
 
 const ConfigPolicerModal = ({ asn, bandwidth, selectedDevices, onDeviceChange, onSelectAll, onApply, onCancel }) => {
-  const allDevices = [
-    'SPG-POP01', 'SPG-POP02',
-    'HKG-POP01', 'HKG-POP02', 'HKG-EQX-POP01', 'HKG-EQX-POP02',
-    'HCM-ASBR2', 'HCM-ASBR5',
-    'HNI-ASBR2', 'HNI-ASBR3',
-    'DNG-ASBR2', 'DNG-ASBR3'
-  ];
-  
+  const allDevices = ['SPG-POP01', 'SPG-POP02', 'HKG-POP01', 'HKG-POP02', 'HKG-EQX-POP01', 'HKG-EQX-POP02', 'HCM-ASBR2', 'HCM-ASBR5', 'HNI-ASBR2', 'HNI-ASBR3', 'DNG-ASBR2', 'DNG-ASBR3'];
   const isAllSelected = selectedDevices.length === allDevices.length;
   const configCommand = `set firewall filter Protect-VN2-from-Upstream-Transit term Policer-${asn} then policer ${bandwidth}`;
-
   return (
     <div className="modal-overlay" onClick={onCancel}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -293,60 +194,38 @@ const ConfigPolicerModal = ({ asn, bandwidth, selectedDevices, onDeviceChange, o
           <h3>Config Khuyến nghị</h3>
           <button className="modal-close" onClick={onCancel}>✕</button>
         </div>
-
         <div className="config-info">
           <div className="config-description"><strong>Cấu hình được khuyến nghị:</strong></div>
           <div className="config-detail-box">
-            <div className="config-item">
-              <span className="label">AS:</span>
-              <span className="value">{asn}</span>
-            </div>
-            <div className="config-item">
-              <span className="label">Bandwidth:</span>
-              <span className="value">{bandwidth}</span>
-            </div>
+            <div className="config-item"><span className="label">AS:</span><span className="value">{asn}</span></div>
+            <div className="config-item"><span className="label">Bandwidth:</span><span className="value">{bandwidth}</span></div>
           </div>
-
           <div className="config-code">
             <div className="code-label">Lệnh cấu hình:</div>
             <code className="code-block">{configCommand}</code>
           </div>
         </div>
-
         <div className="device-selection">
           <div className="device-header"><strong>Chọn thiết bị POP/Peering (12 thiết bị)</strong></div>
-
           <div className="select-all-group">
             <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={isAllSelected}
-                onChange={(e) => onSelectAll(e.target.checked)}
-              />
+              <input type="checkbox" checked={isAllSelected} onChange={(e) => onSelectAll(e.target.checked)} />
               <span className="select-all-text">Chọn tất cả</span>
             </label>
             <span className="device-count">({selectedDevices.length}/{allDevices.length} được chọn)</span>
           </div>
-
           <div className="device-grid">
             {allDevices.map((device) => (
               <label key={device} className="device-checkbox">
-                <input
-                  type="checkbox"
-                  checked={selectedDevices.includes(device)}
-                  onChange={(e) => onDeviceChange(device, e.target.checked)}
-                />
+                <input type="checkbox" checked={selectedDevices.includes(device)} onChange={(e) => onDeviceChange(device, e.target.checked)} />
                 <span className="device-name">{device}</span>
               </label>
             ))}
           </div>
         </div>
-
         <div className="modal-footer">
           <button className="btn btn-secondary" onClick={onCancel}>Hủy</button>
-          <button className="btn btn-primary" onClick={onApply} disabled={selectedDevices.length === 0}>
-            Apply
-          </button>
+          <button className="btn btn-primary" onClick={onApply} disabled={selectedDevices.length === 0}>Apply</button>
         </div>
       </div>
     </div>
@@ -360,26 +239,14 @@ const ConfirmModal = ({ devices, configDetail, onApply, onCancel }) => (
         <h3>Xác nhận cấu hình</h3>
         <button className="modal-close" onClick={onCancel}>✕</button>
       </div>
-
       <div className="confirm-message">
         <p>Bạn có chắc muốn áp dụng cấu hình này vào {devices.length} thiết bị đã chọn?</p>
       </div>
-
       <div className="confirm-summary">
-        <div className="summary-item">
-          <span className="label">ASN:</span>
-          <span className="value">{configDetail.as}</span>
-        </div>
-        <div className="summary-item">
-          <span className="label">Bandwidth:</span>
-          <span className="value">{configDetail.bandwidth}</span>
-        </div>
-        <div className="summary-item">
-          <span className="label">Số thiết bị:</span>
-          <span className="value">{devices.length}</span>
-        </div>
+        <div className="summary-item"><span className="label">ASN:</span><span className="value">{configDetail.as}</span></div>
+        <div className="summary-item"><span className="label">Bandwidth:</span><span className="value">{configDetail.bandwidth}</span></div>
+        <div className="summary-item"><span className="label">Số thiết bị:</span><span className="value">{devices.length}</span></div>
       </div>
-
       <div className="selected-devices">
         <div className="devices-title">Thiết bị được chọn:</div>
         <div className="devices-list">
@@ -391,24 +258,21 @@ const ConfirmModal = ({ devices, configDetail, onApply, onCancel }) => (
           ))}
         </div>
       </div>
-
       <div className="confirm-warning">
         <strong>⚠️ Lưu ý quan trọng</strong>
         <p>Cấu hình sẽ được áp dụng ngay lập tức. Không thể hoàn tác sau khi xác nhận.</p>
       </div>
-
       <div className="modal-footer">
         <button className="btn btn-secondary" onClick={onCancel}>Hủy bỏ</button>
         <button className="btn btn-primary" onClick={onApply}>Xác nhận</button>
       </div>
     </div>
-  );
+  </div>
 );
 
 const ResultModal = ({ result, onClose }) => {
   const successCount = result.results.filter(r => r.status === 'success').length;
   const failedCount = result.results.filter(r => r.status === 'failed').length;
-
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content modal-result" onClick={(e) => e.stopPropagation()}>
@@ -416,37 +280,16 @@ const ResultModal = ({ result, onClose }) => {
           <h3>Kết quả cấu hình</h3>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
-
         <div className="result-summary">
-          <div className="summary-card success">
-            <div className="summary-number">{successCount}</div>
-            <div className="summary-label">Thành công</div>
-          </div>
-          <div className="summary-card failed">
-            <div className="summary-number">{failedCount}</div>
-            <div className="summary-label">Thất bại</div>
-          </div>
-          <div className="summary-card total">
-            <div className="summary-number">{result.selectedDevices.length}</div>
-            <div className="summary-label">Tổng cộng</div>
-          </div>
+          <div className="summary-card success"><div className="summary-number">{successCount}</div><div className="summary-label">Thành công</div></div>
+          <div className="summary-card failed"><div className="summary-number">{failedCount}</div><div className="summary-label">Thất bại</div></div>
+          <div className="summary-card total"><div className="summary-number">{result.selectedDevices.length}</div><div className="summary-label">Tổng cộng</div></div>
         </div>
-
         <div className="result-config">
-          <div className="config-row">
-            <span className="label">ASN:</span>
-            <span className="value">{result.configDetail.as}</span>
-          </div>
-          <div className="config-row">
-            <span className="label">Bandwidth:</span>
-            <span className="value">{result.configDetail.bandwidth}</span>
-          </div>
-          <div className="config-row">
-            <span className="label">Thời gian:</span>
-            <span className="value">{result.timestamp}</span>
-          </div>
+          <div className="config-row"><span className="label">ASN:</span><span className="value">{result.configDetail.as}</span></div>
+          <div className="config-row"><span className="label">Bandwidth:</span><span className="value">{result.configDetail.bandwidth}</span></div>
+          <div className="config-row"><span className="label">Thời gian:</span><span className="value">{result.timestamp}</span></div>
         </div>
-
         <div className="result-details">
           <h4>Chi tiết từng thiết bị:</h4>
           <div className="result-list">
@@ -462,7 +305,6 @@ const ResultModal = ({ result, onClose }) => {
             ))}
           </div>
         </div>
-
         <div className="modal-footer">
           <button className="btn btn-primary" onClick={onClose}>Đóng</button>
         </div>
@@ -476,10 +318,8 @@ function Tab1() {
   const [asnData] = useState(mockASNData);
   const [warningData] = useState(mockWarningData);
   const [apiMonitorData] = useState(mockApiMonitorData);
-
   const [expandedASNId, setExpandedASNId] = useState(null);
   const [modalState, setModalState] = useState('closed');
-
   const [selectedASN, setSelectedASN] = useState(null);
   const [selectedDevices, setSelectedDevices] = useState([]);
   const [configDetail, setConfigDetail] = useState(null);
@@ -489,10 +329,7 @@ function Tab1() {
   const handleApiMonitorClick = () => {
     if (apiMonitorData.status >= 80) {
       setSelectedASN(asnData[0]);
-      setConfigDetail({
-        as: asnData[0].asn,
-        bandwidth: asnData[0].maxOut
-      });
+      setConfigDetail({ as: asnData[0].asn, bandwidth: asnData[0].maxOut });
       setSelectedDevices([]);
       setModalState('config');
     }
@@ -503,22 +340,12 @@ function Tab1() {
   };
 
   const handleDeviceChange = (device, checked) => {
-    setSelectedDevices(
-      checked 
-        ? [...selectedDevices, device] 
-        : selectedDevices.filter(d => d !== device)
-    );
+    setSelectedDevices(checked ? [...selectedDevices, device] : selectedDevices.filter(d => d !== device));
   };
 
   const handleSelectAllDevices = (checked) => {
     if (checked) {
-      setSelectedDevices([
-        'SPG-POP01', 'SPG-POP02', 
-        'HKG-POP01', 'HKG-POP02', 'HKG-EQX-POP01', 'HKG-EQX-POP02', 
-        'HCM-ASBR2', 'HCM-ASBR5', 
-        'HNI-ASBR2', 'HNI-ASBR3', 
-        'DNG-ASBR2', 'DNG-ASBR3'
-      ]);
+      setSelectedDevices(['SPG-POP01', 'SPG-POP02', 'HKG-POP01', 'HKG-POP02', 'HKG-EQX-POP01', 'HKG-EQX-POP02', 'HCM-ASBR2', 'HCM-ASBR5', 'HNI-ASBR2', 'HNI-ASBR3', 'DNG-ASBR2', 'DNG-ASBR3']);
     } else {
       setSelectedDevices([]);
     }
@@ -541,7 +368,6 @@ function Tab1() {
 
   const handleConfirmApply = () => {
     setModalState('closed');
-    
     const result = {
       timestamp: new Date().toLocaleString('vi-VN'),
       selectedDevices: confirmDevices,
@@ -552,7 +378,6 @@ function Tab1() {
         message: Math.random() > 0.2 ? 'Cấu hình thành công' : 'Cấu hình thất bại'
       }))
     };
-    
     setResultData(result);
     setModalState('result');
   };
@@ -574,63 +399,33 @@ function Tab1() {
       <div className="i001-header">
         <h2>Quản lý lưu lượng IPTransit - Policer</h2>
       </div>
-
       <div className="i001-content">
         <div className="i001-left">
           <div className="i001-section">
             <LineChartIPT data={chartData} />
           </div>
-
           <div className="i001-section">
             <h3 className="section-title">Các ASN được counter</h3>
-            <ASNTable
-              data={asnData}
-              expandedASNId={expandedASNId}
-              onRowClick={handleASNRowClick}
-            />
+            <ASNTable data={asnData} expandedASNId={expandedASNId} onRowClick={handleASNRowClick} />
           </div>
         </div>
-
         <div className="i001-right">
           <div className="i001-info-box">
-            <ApiMonitorBox
-              data={apiMonitorData}
-              onClick={handleApiMonitorClick}
-            />
+            <ApiMonitorBox data={apiMonitorData} onClick={handleApiMonitorClick} />
           </div>
-
           <div className="i001-info-box">
             <LastWarningBox data={warningData} />
           </div>
         </div>
       </div>
-
       {modalState === 'config' && selectedASN && configDetail && (
-        <ConfigPolicerModal
-          asn={configDetail.as}
-          bandwidth={configDetail.bandwidth}
-          selectedDevices={selectedDevices}
-          onDeviceChange={handleDeviceChange}
-          onSelectAll={handleSelectAllDevices}
-          onApply={handleConfigApply}
-          onCancel={handleConfigCancel}
-        />
+        <ConfigPolicerModal asn={configDetail.as} bandwidth={configDetail.bandwidth} selectedDevices={selectedDevices} onDeviceChange={handleDeviceChange} onSelectAll={handleSelectAllDevices} onApply={handleConfigApply} onCancel={handleConfigCancel} />
       )}
-
       {modalState === 'confirm' && configDetail && (
-        <ConfirmModal
-          devices={confirmDevices}
-          configDetail={configDetail}
-          onApply={handleConfirmApply}
-          onCancel={handleConfirmCancel}
-        />
+        <ConfirmModal devices={confirmDevices} configDetail={configDetail} onApply={handleConfirmApply} onCancel={handleConfirmCancel} />
       )}
-
       {modalState === 'result' && resultData && (
-        <ResultModal
-          result={resultData}
-          onClose={handleResultClose}
-        />
+        <ResultModal result={resultData} onClose={handleResultClose} />
       )}
     </div>
   );
