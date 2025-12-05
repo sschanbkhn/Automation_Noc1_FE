@@ -125,11 +125,7 @@ const LineChartIPT = ({ data }) => {
   );
 };
 
-const ASNTable = ({
-  data,
-  expandedASNId,
-  onRowClick
-}) => (
+const ASNTable = ({ data, expandedASNId, onRowClick }) => (
   <div className="asn-table-container">
     <table className="asn-table">
       <thead>
@@ -278,15 +274,7 @@ const LastWarningBox = ({ data }) => (
   </div>
 );
 
-const ConfigPolicerModal = ({
-  asn,
-  bandwidth,
-  selectedDevices,
-  onDeviceChange,
-  onSelectAll,
-  onApply,
-  onCancel
-}) => {
+const ConfigPolicerModal = ({ asn, bandwidth, selectedDevices, onDeviceChange, onSelectAll, onApply, onCancel }) => {
   const allDevices = [
     'SPG-POP01', 'SPG-POP02',
     'HKG-POP01', 'HKG-POP02', 'HKG-EQX-POP01', 'HKG-EQX-POP02',
@@ -365,12 +353,7 @@ const ConfigPolicerModal = ({
   );
 };
 
-const ConfirmModal = ({
-  devices,
-  configDetail,
-  onApply,
-  onCancel
-}) => (
+const ConfirmModal = ({ devices, configDetail, onApply, onCancel }) => (
   <div className="modal-overlay" onClick={onCancel}>
     <div className="modal-content modal-confirm" onClick={(e) => e.stopPropagation()}>
       <div className="modal-header">
@@ -420,12 +403,9 @@ const ConfirmModal = ({
       </div>
     </div>
   );
-};
+);
 
-const ResultModal = ({
-  result,
-  onClose
-}) => {
+const ResultModal = ({ result, onClose }) => {
   const successCount = result.results.filter(r => r.status === 'success').length;
   const failedCount = result.results.filter(r => r.status === 'failed').length;
 
