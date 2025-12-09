@@ -115,10 +115,10 @@
           "icon": "bi bi-bar-chart"
         },
         {
-          "code": "CableManagement",
-          "name": "Tối ưu cell di động",
-          "url": "/cable-management",
-          "icon": "bi bi-grid"
+          "code": "R003PRBLoadBalancing",
+          "name": "R003-PRBs Load Balancing",
+          "url": "/R003-PRBLoad-Balancing",
+          "icon": "bi bi-cpu"
         },
         {
           "code": "R005SleepingCellManagement",
@@ -133,9 +133,9 @@
           "icon": "bi bi-grid"
         },
         {
-          "code": "HistoryCurenAlarm",
-          "name": "Tự động khai báo trạm 5G",
-          "url": "/history-curen-alarm",
+          "code": "R0075GSRANPnPDeclaration",
+          "name": "R007-5GSRAN PnP Declaration",
+          "url": "/R007-5GSRAN-PnP-Declaration",
           "icon": "bi bi-grid"
         },
         {
@@ -247,14 +247,14 @@
       "icon": "bi bi-cpu",
       "subMenu": [
         {
-          "code": "s001-vpn3G4G",
-          "name": "S001 VPN3G4G",
+          "code": "S001VPN3G4G",
+          "name": "S001-VPN3G4G",
           "url": "/S001-VPN3G4G",
           "icon": "bi bi-grid"
         },
         {
-          "code": "s002-siptrunk",
-          "name": "S002 SipTrunk",
+          "code": "S002SipTrunk",
+          "name": "S002-SipTrunk",
           "url": "/s002-Siptrunk",
           "icon": "bi bi-grid"
         }

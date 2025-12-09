@@ -7,6 +7,7 @@ import {
 import { TooltipProps } from 'recharts';
 import { ValueType, NameType } from 'recharts/types/component/DefaultTooltipContent';
 import BangThongTin from "./Bang_thong_tin";
+import BangThongTinTrungNumber from "./Bang_thong_tin_trungnumber";
 import BangThongTinDoiSoatTQMB from "./Bang_thong_tin_doi_soat_TQ_MB";
 import BangThongTinDoiSoatTQ from "./Bang_thong_tin_doi_soat_TQ";
 import BangThongTinDoiSoatTQp2 from "./Bang_thong_tin_doi_soat_TQ_p2";
@@ -1017,7 +1018,7 @@ function ToanQuoc({ isDisplayed }: ToanQuocProps) {
                   }}>
                     <div className="loader"></div>
                   </div>
-                  :<BangThongTin title="Danh sách trùng lặp Number" data={danhSachTrung} onClose={handleCloseTable} />
+                  :<BangThongTinTrungNumber title="Danh sách trùng lặp Number" data={danhSachTrung} onClose={handleCloseTable} />
               )}
               {loaiBangTron === "khopbevscsdl_ds" && (
                 <BangThongTinDoiSoatTQMB title="Danh sách đầu số có cả trên BE và CSDL" data={danhSachDsAaBothSide} onClose={handleCloseTable} />

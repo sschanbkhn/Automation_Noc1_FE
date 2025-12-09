@@ -236,15 +236,14 @@ const BangThongTinDoiSoatTQp2: React.FC<Props> = ({ title, data, onClose }) => {
                 <tr className="du_lieu" key={index}>
                   <td>{item.Number}</td>
                   <td>{item.Phantom_number}</td>
-                  
                   <td style={{  color: (ThanhLyMatch || TamNgungMismatch) ? 'red' : 'inherit' }}>{item.status}</td>
                   <td style={{ color: TamNgungMismatch ? 'red' : 'inherit' }}>{item.ADDRESS_DISABLE}</td>
                   <td style={{ color: (TamNgungMismatch || QteMismatch ) ? 'red' : 'inherit' }} >{item.values_added}</td>
                   <td>{item.ADDRESS_INCOMING}</td>
                   <td style={{ color: (QteMismatch || BrandnameMismatch) ? 'red' : 'inherit' }}> {item.ROUTING_TABLE_NAME}</td>
                   <td style={{ color: BrandnameMismatch ? 'red' : 'inherit' }}>{item.brand_name}</td>
-                    <td>{item.Khu_vuc}</td>
-                    <td title={item.Ghi_chu}>
+                  <td>{item.Khu_vuc}</td>
+                  <td title={item.Ghi_chu}>
                   {item.Ghi_chu && item.Ghi_chu.length > 30
                     ? item.Ghi_chu.slice(0, 30) + "..."
                     : item.Ghi_chu}

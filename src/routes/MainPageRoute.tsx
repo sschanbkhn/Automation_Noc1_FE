@@ -45,13 +45,26 @@ import RoutingDeclarationForm from "components/SNOC/views/forms/sbc/RoutingDecla
 import RequestHistoryTable from "components/SNOC/views/forms/sbc/RequestHistoryTable";
 import ConfigReport from "components/RNOC1/R009";
 
+// RNOC1
+// duong dan den file
 import HomeSleepingCell from "components/RNOC1/R005-SleepingCell/R005HomeSleepingCell";
 
 import R005Monitor from "../components/RNOC1/R005-SleepingCell/Monitor/R005Monitor";
 import R005Configuration from "../components/RNOC1/R005-SleepingCell/Configuration/R005Configuration";
 
-import VPN3G4G from "../components/SOC1/S001-VPN3G4G/SOC001VPN3G4G";
-import SIPTRUNK from "../components/SOC1/S002-Siptrunk/SOC002SIPTRUNK";
+import HomePRBLoadBalancing from "components/RNOC1/R003-PRBLoadBalancing/R003HomePRBLoadBalancing";
+import Home5GSRANPnPDeclaration from "components/RNOC1/R007-5GSRANPnPDeclaration/R007Home5GSRANPnPDeclaration";
+
+
+
+
+// SOC1
+import VPN3G4G from "components/SOC1/S001-VPN3G4G/SOC001VPN3G4G";
+import SIPTRUNK from "components/SOC1/S002-Siptrunk/SOC002SIPTRUNK";
+
+
+
+
 
 interface Props {
   Apps: any;
@@ -149,14 +162,34 @@ const MainPageRoute = (props: Props) => {
       case "hc-dashboard-sbc":
         return <SbcDashboardWithNavbar />;
 
+      // phan RNOC1
+      //========================================================================
+      //========================================================================
       case "R005SleepingCellManagement": // ← Match với code trong menu
         return <HomeSleepingCell />;
+        // const HomeSleepingCell: React.FC = () => {
+        // ben trong file R005HomeSleepingCell
 
-      case "s001-vpn3G4G": // ← Match với code trong menu config
+      case "R003PRBLoadBalancing": // ← Match với code trong menu
+        return <HomePRBLoadBalancing />;
+
+      case "R0075GSRANPnPDeclaration": // ← Match với code trong menu
+        return <Home5GSRANPnPDeclaration />;
+      // ket thuc RNOC1
+      //========================================================================
+      //========================================================================
+
+            // phan SOC1
+      //========================================================================
+      //========================================================================
+      case "S001VPN3G4G": // ← Match với code trong menu
         return <VPN3G4G />;
 
-      case "s002-siptrunk": // ← Match với code trong menu config
+      case "S002SipTrunk": // ← Match với code trong menu
         return <SIPTRUNK />;
+// ket thuc SOC1
+      //========================================================================
+      //========================================================================
 
       default:
         return <Page404 />;
@@ -230,12 +263,28 @@ const MainPageRoute = (props: Props) => {
       <Route path="/sbc/RoutingDeclarationForm" element={<RoutingDeclarationForm />} />
       <Route path="/sbc/RequestHistoryTable" element={<RequestHistoryTable />} />
 
+{/* RNOC1 */}
+{/* //======================================================================== */}
+{/* //======================================================================== */}
+
       <Route path="/sleeping-cell" element={<HomeSleepingCell />} />
       {/* <Route path="/sleeping-cell/monitor" element={<R005Monitor />} />           // ← ADD THIS
 <Route path="/sleeping-cell/configuration" element={<R005Configuration />} /> // ← ADD THIS
 
 */}
 
+      <Route path="/prbload-balancing" element={<HomePRBLoadBalancing />} />
+
+      <Route path="/5GSRANPnP-Declaration" element={<Home5GSRANPnPDeclaration />} />
+
+{/* ket thuc RNOC1 */}
+{/* //======================================================================== */}
+{/* //======================================================================== */}
+
+            {/*  SOC1 */}
+            {/* //======================================================================== */}
+            {/* //======================================================================== */}
+             
       <Route path="/s001-vpn3G4G" element={<VPN3G4G />} />
       <Route path="/s002-siptrunk" element={<SIPTRUNK />} />
     </Routes>

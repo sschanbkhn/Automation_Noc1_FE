@@ -38,7 +38,7 @@ const renderCustomizedLabel = ({
     <text
       x={x}
       y={y}
-      fill="white"
+      fill="black"
       textAnchor="middle"
       dominantBaseline="central"
       fontSize={12}
@@ -137,26 +137,7 @@ export default function DoubleDonutChart({ onZoneClick }: Props) {
           </Pie>
 
           {/* Vòng trong */}
-          {/* <Pie
-            data={dataInner}
-            cx="60%"
-            cy="50%"
-            outerRadius="50%"
-            innerRadius="25%"
-            paddingAngle={3}
-            dataKey="value"
-            label={renderCustomizedLabel}
-            labelLine={false}
-          >
-            {dataInner.map((_, index) => (
-              <Cell
-                key={`inner-${index}`}
-                fill={COLORS_INNER[index]}
-                style={{ cursor: "pointer" }}
-                onClick={() => onZoneClick(index)}
-            />
-            ))}
-          </Pie> */}
+          
            {/* Vòng trong (có click & phóng to khi chọn) */}
            <Pie
             data={dataInner}
