@@ -128,6 +128,11 @@ if(devMode == false)
         context: resolve(__dirname, "src"),        
         to: '[path][name].[ext]',                  
       },
+      {
+        from: 'assets/docx/**/*.pdf',
+        context: resolve(__dirname, "src"),
+        to: '[path][name].[ext]',
+      },
     ],
   }));
 }

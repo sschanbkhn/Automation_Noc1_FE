@@ -918,6 +918,18 @@ const DashboardAudit = (props: Props) => {
     return false;
   }, []);
 
+  // Download PDF document handler
+  const handleDownloadPDF = useCallback(() => {
+    const pdfUrl = '/assets/docx/VT-RNOC1_R001.pdf';
+    const link = document.createElement('a');
+    link.href = pdfUrl;
+    link.download = 'VT-RNOC1_R001.pdf';
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, []);
+
   // Button groups for header
   const ButtonGroupsRender = useCallback(() => {
     return (
@@ -949,9 +961,15 @@ const DashboardAudit = (props: Props) => {
           type="default"
           icon="el-icon-refresh"
         />
+        <CtrlButton 
+          title="Tài liệu" 
+          onClick={handleDownloadPDF} 
+          type="info"
+          icon="el-icon-document"
+        />
       </div>
     );
-  }, [selectedDate, handleSubmit, refreshData, loading]);
+  }, [selectedDate, handleSubmit, refreshData, loading, handleDownloadPDF]);
 
   // Button groups for bad data tab with export
   const ButtonGroupsRenderWithExport = useCallback(() => {
@@ -984,6 +1002,12 @@ const DashboardAudit = (props: Props) => {
           type="default"
           icon="el-icon-refresh"
         />
+        <CtrlButton 
+          title="Tài liệu" 
+          onClick={handleDownloadPDF} 
+          type="info"
+          icon="el-icon-document"
+        />
         {hasSyncCMDPermission && (
           <CtrlButton 
             title={fixingAll ? 'Đang xử lý...' : `Sửa trang này (${badData.length})`}
@@ -1002,7 +1026,7 @@ const DashboardAudit = (props: Props) => {
         />
       </div>
     );
-  }, [selectedDate, handleSubmit, refreshData, loading, badData.length, badCurrentPage, fixingAll, handleFixAllConfigurations, exportBadDataToExcel, hasSyncCMDPermission]);
+  }, [selectedDate, handleSubmit, refreshData, loading, badData.length, badCurrentPage, fixingAll, handleFixAllConfigurations, exportBadDataToExcel, hasSyncCMDPermission, handleDownloadPDF]);
 
   // Show baseline type detail modal
   const showBaselineTypeDetail = useCallback((baselineType: IBaselineTypeSummary) => {

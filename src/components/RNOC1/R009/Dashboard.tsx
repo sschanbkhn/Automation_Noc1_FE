@@ -304,6 +304,18 @@ const Dashboard = () => {
     }
   }, [dashboardData.provincialData, dashboardData.provincialTotals, selectedTechnology]);
 
+  // Download PDF document handler
+  const handleDownloadPDF = useCallback(() => {
+    const pdfUrl = '/assets/docx/VT-RNOC1_R009.pdf';
+    const link = document.createElement('a');
+    link.href = pdfUrl;
+    link.download = 'VT-RNOC1_R009.pdf';
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, []);
+
   // Sorted data
   const sortedProvincialData = useMemo(() => {
     if (!sortConfig) return dashboardData.provincialData;
@@ -1076,6 +1088,12 @@ const Dashboard = () => {
                   onClick={loadDashboardData}
                   isDisabled={isLoading}
                   type="success"
+                />
+                <CtrlButton
+                  title="Tài liệu"
+                  icon="fas fa-file-pdf"
+                  onClick={handleDownloadPDF}
+                  type="info"
                 />
               </div>
             </div>
