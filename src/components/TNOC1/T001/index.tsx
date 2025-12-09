@@ -52,7 +52,7 @@ const T001 = () => {
       label: (
         <span>
           <BarChartOutlined style={{ marginRight: 8 }} />
-          Thống kê thiết bị restart
+          Thiết bị đã Restart
         </span>
       ),
       children: <RestartStatistic />,

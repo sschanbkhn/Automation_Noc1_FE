@@ -54,8 +54,20 @@ const RestartStatistic: React.FC = () => {
     fetchData();
   }, []);
 
-  // Filter data based on search text
-  const filteredData = items.filter(item => {
+  // Parse reset_time for sorting (fallback to 0 if invalid)
+  const parseResetTime = (value: any) => {
+    if (!value) return 0;
+    const timestamp = new Date(value).getTime();
+    return isNaN(timestamp) ? 0 : timestamp;
+  };
+
+  // Sort by reset_time descending
+  const sortedItems = useMemo(() => {
+    return [...items].sort((a, b) => parseResetTime(b.reset_time) - parseResetTime(a.reset_time));
+  }, [items]);
+
+  // Filter data based on search text (after sorting)
+  const filteredData = sortedItems.filter(item => {
     const searchLower = searchText.toLowerCase();
     return Object.values(item).some(value => {
       if (value === null || value === undefined) return false;
@@ -302,55 +314,159 @@ const RestartStatistic: React.FC = () => {
   return (
     <div className="form-container">
       {/* Statistics Summary with Title */}
-      <div style={{ marginBottom: '16px' }}>
+      <div style={{ marginBottom: '10px' }}>
         <Card size="small" style={{ 
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          background: 'linear-gradient(135deg, #1890ff 0%, #0050b3 100%)',
           borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+          boxShadow: '0 3px 12px rgba(24, 144, 255, 0.3)',
           border: 'none',
-          padding: '12px 16px'
+          padding: '10px 12px',
+          overflow: 'hidden',
+          position: 'relative',
         }}>
+          {/* Decorative background elements */}
+          <div style={{
+            position: 'absolute',
+            top: '-35px',
+            right: '-35px',
+            width: '100px',
+            height: '100px',
+            background: 'rgba(255, 255, 255, 0.1)',
+            borderRadius: '50%',
+            filter: 'blur(25px)',
+          }}></div>
+          <div style={{
+            position: 'absolute',
+            bottom: '-20px',
+            left: '-20px',
+            width: '70px',
+            height: '70px',
+            background: 'rgba(255, 255, 255, 0.08)',
+            borderRadius: '50%',
+            filter: 'blur(20px)',
+          }}></div>
+          
           {/* Title */}
           <div style={{ 
-            marginBottom: '12px',
-            paddingBottom: '10px',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.3)'
+            marginBottom: '8px',
+            paddingBottom: '6px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.25)',
+            position: 'relative',
+            zIndex: 1,
           }}>
             <h4 style={{ 
               margin: 0, 
               color: 'white',
-              fontSize: '16px',
-              fontWeight: 600,
-              textShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+              fontSize: '15px',
+              fontWeight: 700,
+              textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              justifyContent: 'center'
+              gap: '4px',
+              justifyContent: 'center',
+              letterSpacing: '0.1px',
             }}>
-              <BarChartOutlined style={{ fontSize: '18px' }} />
+              <BarChartOutlined style={{ fontSize: '14px', color: 'white' }} />
               Thống kê thiết bị đã được restart
             </h4>
           </div>
           
           {/* Statistics */}
-          <div style={{ display: 'flex', gap: '32px', justifyContent: 'center', alignItems: 'center' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '6px', color: 'white' }}>Manual:</div>
-              <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.9)' }}>
-                Warm: <span style={{ fontWeight: 'bold', color: '#fff', fontSize: '14px' }}>{restartStats.manual.warm}</span>
+          <div style={{ 
+            display: 'flex', 
+            gap: '20px', 
+            justifyContent: 'center', 
+            alignItems: 'flex-start',
+            position: 'relative',
+            zIndex: 1,
+          }}>
+            {/* Manual Section */}
+            <div style={{ textAlign: 'center', minWidth: '90px' }}>
+              <div style={{ 
+                fontSize: '13px', 
+                fontWeight: 700, 
+                marginBottom: '4px', 
+                color: 'white',
+                textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
+                letterSpacing: '0.2px',
+              }}>
+                Manual:
               </div>
-              <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.9)', marginTop: '2px' }}>
-                Cold: <span style={{ fontWeight: 'bold', color: '#fff', fontSize: '14px' }}>{restartStats.manual.cold}</span>
+              <div style={{ 
+                fontSize: '11px', 
+                color: 'rgba(255, 255, 255, 0.95)',
+                marginBottom: '1px',
+                lineHeight: '1.4',
+              }}>
+                Warm: <span style={{ 
+                  fontWeight: 700, 
+                  color: '#fff', 
+                  fontSize: '13px',
+                  textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
+                  marginLeft: '2px',
+                }}>{restartStats.manual.warm}</span>
+              </div>
+              <div style={{ 
+                fontSize: '11px', 
+                color: 'rgba(255, 255, 255, 0.95)',
+                lineHeight: '1.4',
+              }}>
+                Cold: <span style={{ 
+                  fontWeight: 700, 
+                  color: '#fff', 
+                  fontSize: '13px',
+                  textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
+                  marginLeft: '2px',
+                }}>{restartStats.manual.cold}</span>
               </div>
             </div>
-            <div style={{ width: '1px', height: '40px', backgroundColor: 'rgba(255, 255, 255, 0.3)' }}></div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '6px', color: 'white' }}>Auto:</div>
-              <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.9)' }}>
-                Warm: <span style={{ fontWeight: 'bold', color: '#fff', fontSize: '14px' }}>{restartStats.auto.warm}</span>
+            
+            {/* Separator */}
+            <div style={{ 
+              width: '1px', 
+              height: '35px', 
+              backgroundColor: 'rgba(255, 255, 255, 0.25)',
+              alignSelf: 'center',
+            }}></div>
+            
+            {/* Auto Section */}
+            <div style={{ textAlign: 'center', minWidth: '90px' }}>
+              <div style={{ 
+                fontSize: '13px', 
+                fontWeight: 700, 
+                marginBottom: '4px', 
+                color: 'white',
+                textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
+                letterSpacing: '0.2px',
+              }}>
+                Auto:
               </div>
-              <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.9)', marginTop: '2px' }}>
-                Cold: <span style={{ fontWeight: 'bold', color: '#fff', fontSize: '14px' }}>{restartStats.auto.cold}</span>
+              <div style={{ 
+                fontSize: '11px', 
+                color: 'rgba(255, 255, 255, 0.95)',
+                marginBottom: '1px',
+                lineHeight: '1.4',
+              }}>
+                Warm: <span style={{ 
+                  fontWeight: 700, 
+                  color: '#fff', 
+                  fontSize: '13px',
+                  textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
+                  marginLeft: '2px',
+                }}>{restartStats.auto.warm}</span>
+              </div>
+              <div style={{ 
+                fontSize: '11px', 
+                color: 'rgba(255, 255, 255, 0.95)',
+                lineHeight: '1.4',
+              }}>
+                Cold: <span style={{ 
+                  fontWeight: 700, 
+                  color: '#fff', 
+                  fontSize: '13px',
+                  textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
+                  marginLeft: '2px',
+                }}>{restartStats.auto.cold}</span>
               </div>
             </div>
           </div>

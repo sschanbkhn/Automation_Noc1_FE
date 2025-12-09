@@ -17,7 +17,7 @@ const ManageNode: React.FC = () => {
   const fetchNodes = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://10.155.43.200:8001/api/v1/managenode');
+      const response = await fetch('http://10.155.43.200:8001/api/v1/managenode/');
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
