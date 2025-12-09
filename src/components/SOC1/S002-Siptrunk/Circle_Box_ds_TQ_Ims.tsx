@@ -36,7 +36,7 @@ const renderCustomizedLabel = ({
     <text
       x={x}
       y={y}
-      fill="white"
+      fill="black"
       textAnchor="middle"
       dominantBaseline="central"
       fontSize={14}

@@ -124,7 +124,6 @@
   position: sticky;
   top: 0; /* cố định ở trên cùng */
   background-color: #3fd2ff; /* nền để che nội dung phía sau */
-  color: white;
   z-index: 1;
 }
 .bang_sip td {
@@ -161,6 +160,7 @@
 }
 
 .tieu_de{
+  cursor: pointer;
     position: sticky;
   top: 0; /* cố định khi cuộn */
   z-index: 2;
@@ -171,11 +171,14 @@
   font-weight: bold;
   background-color: #dcf5ff;
   line-height: 1.2;       /* giảm khoảng cách dòng */
-  white-space: nowrap;    /* tránh chữ xuống dòng */
-  overflow: hidden;
-  text-overflow: ellipsis; /* nếu chữ dài sẽ bị ... */
-     z-index: 2;                      /* ⭐ Giúp tiêu đề nổi lên trên */
-    
+  /* white-space: nowrap;    
+  overflow: hidden; */
+  white-space: normal; /* chữ có thể xuống dòng */
+  overflow: visible;   /* không cắt chữ */
+  z-index: 2;                      /* ⭐ Giúp tiêu đề nổi lên trên */
+   /* Thêm border */
+  border: 1px solid #ccc; /* viền xám nhạt */
+  color: black;           /* chữ màu đen */
 }
 /* .tieu_de:hover{
   color: #450c7a;
@@ -218,11 +221,7 @@
   font-size: 16px;
   color: #4b5563;
 }
-.tieu_de{
-   cursor: pointer;
-  user-select: none;
-  white-space: nowrap;
-}
+
 .container_doi_soat{
   display: grid;
   grid-template-columns: repeat(3, 1fr);  /* 3 cột bằng nhau */

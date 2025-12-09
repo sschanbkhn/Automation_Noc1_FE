@@ -49,7 +49,7 @@ import ClearThuebaoDaphien from "components/INOC1/I003";
 import LspQuocte from "components/INOC1/I004";
 import DataLspQuocte from "components/INOC1/I004_1";
 import ConfigReport from "components/RNOC1/R009";
-import Sleeping from "components/RNOC1/R005-SleepingCell/R005HomeSleepingCell";
+
 import DashboardAudit from "components/RNOC1/R001";
 import DashboardR007 from "components/RNOC1/R009"
 // snoc start
@@ -83,11 +83,26 @@ import AnmTabs2 from 'components/ANM2/Anmtabs';
 import AnmTabs3 from 'components/ANM3/Anmtabs';
 import AnmTabs4 from 'components/ANM3/Anmtabs2';
 
-///
+
+
+// phan RNOC
+import HomeSleepingCell from "components/RNOC1/R005-SleepingCell/R005HomeSleepingCell";
+// import Sleeping from "components/RNOC1/R005-SleepingCell/R005HomeSleepingCell";
+import HomePRBLoadBalancing from "components/RNOC1/R003-PRBLoadBalancing/R003HomePRBLoadBalancing";
+import Home5GSRANPnPDeclaration from "components/RNOC1/R007-5GSRANPnPDeclaration/R007Home5GSRANPnPDeclaration";
+// RNOC1
+// duong dan den file
+
 
 // SOC1
-import VPN3G4G from "../components/SOC1/S001-VPN3G4G/SOC001VPN3G4G";
-import SIPTRUNK from "../components/SOC1/S002-Siptrunk/SOC002SIPTRUNK";
+// SOC1
+import VPN3G4G from "components/SOC1/S001-VPN3G4G/SOC001VPN3G4G";
+import SIPTRUNK from "components/SOC1/S002-Siptrunk/SOC002SIPTRUNK";
+import DV18001900 from "components/SOC1/S003-18001900/SOC003DV18001900";
+
+
+
+
 
 //
 interface Props {
@@ -164,8 +179,7 @@ const MainPageRoute = (props: Props) => {
               return <DashboardAudit />; // Tạm thời dùng DashboardAudit, sau này thay bằng component thực tế
             case "DashboardR007":
               return <DashboardR007 />;
-            case "SleepingCellManagement":
-              return <Sleeping />;
+
               // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
             case "ScheduleTriggerForm":
                 return <ScheduleTriggerForm />;
@@ -218,11 +232,50 @@ const MainPageRoute = (props: Props) => {
             case "anm4_uc1":
                 return <AnmTabs4 />;
                 // end menu ANM
-    /// SOC1
-              case "soc001-vpn3G4G":  
-                return <VPN3G4G />;
-                case "soc002-siptrunk":
-                return <SIPTRUNK />;
+
+
+                // phan RNOC1
+      //========================================================================
+      //========================================================================
+            // case "SleepingCellManagement":
+              // return <Sleeping />;
+
+                    case "R005SleepingCellManagement": // ← Match với code trong menu
+        return <HomeSleepingCell />;
+        // const HomeSleepingCell: React.FC = () => {
+        // ben trong file R005HomeSleepingCell
+
+
+              // const HomeSleepingCell: React.FC = () => {
+        // ben trong file R005HomeSleepingCell
+
+      case "R003PRBLoadBalancing": // ← Match với code trong menu
+        return <HomePRBLoadBalancing />;
+
+      case "R0075GSRANPnPDeclaration": // ← Match với code trong menu
+        return <Home5GSRANPnPDeclaration />;
+      // ket thuc RNOC1
+      //========================================================================
+      //========================================================================
+
+    // phan SOC1
+      //========================================================================
+      //========================================================================
+              case "S001VPN3G4G": // ← Match với code trong menu
+        return <VPN3G4G />;
+
+                      case "soc1_uc3":  // ← Match với code trong menu
+         return <DV18001900/>;
+
+      case "S002SipTrunk": // ← Match với code trong menu
+        return <SIPTRUNK />;
+
+
+
+
+
+                //========================================================================
+      //========================================================================
     ///
             default:
                 return <Page404 />;
@@ -402,9 +455,51 @@ const MainPageRoute = (props: Props) => {
                 path="/sbc/RequestHistoryTable"
                 element={<RequestHistoryTable />}
             />
-            {/* /// SOC1 */}
+
+{/* ket thuc RNOC1 */}
+{/* //======================================================================== */}
+{/* //======================================================================== */}
+
+            {/* /// RNOC1 */}
+<Route path="/sleeping-cell" element={<HomeSleepingCell />} />
+      {/* <Route path="/sleeping-cell/monitor" element={<R005Monitor />} />           // ← ADD THIS
+<Route path="/sleeping-cell/configuration" element={<R005Configuration />} /> // ← ADD THIS
+
+*/}
+            
+
+      <Route path="/prbload-balancing" element={<HomePRBLoadBalancing />} />
+
+      <Route path="/5GSRANPnP-Declaration" element={<Home5GSRANPnPDeclaration />} />
+{/* ket thuc RNOC1 */}
+{/* //======================================================================== */}
+{/* //======================================================================== */}
+
+            
+            {/*  SOC1 */}
+            {/* //======================================================================== */}
+            {/* //======================================================================== */}
              <Route path="/s001-vpn3G4G" element={<VPN3G4G />} />
             <Route path="/s002-siptrunk" element={<SIPTRUNK />} />
+            <Route path="/18001900" element={<DV18001900 />} />
+
+            {/* ket thuc SOC1 */}
+            
+{/* //======================================================================== */}
+            {/* //======================================================================== */}
+
+
+
+
+
+
+
+
+
+
+
+
+            
         </Routes>
     );
 };

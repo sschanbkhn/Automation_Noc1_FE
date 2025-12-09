@@ -102,12 +102,11 @@
           "url": "/dashboardrnoc",
           "icon": "bi bi-grid"
         },
-        {
-          "code": "SleepingCellManagement",
-          "name": "Sleeping Cell Management",
-          "url": "/sleepingcellmanagement",
-          "icon": "bi bi-grid"
-        },
+
+        
+
+
+        
         {
           "code": "audit-cau-hinh-vo-tuyen",
           "name": "Audit cấu hình vô tuyến",
@@ -115,9 +114,15 @@
           "icon": "bi bi-bar-chart"
         },
         {
-          "code": "DashboardR002",
-          "name": "Tối ưu cell di động",
-          "url": "/dashboardrnoc2",
+          "code": "R003PRBLoadBalancing",
+          "name": "R003-PRBs Load Balancing",
+          "url": "/R003-PRBLoad-Balancing",
+          "icon": "bi bi-cpu"
+        },
+        {
+          "code": "R005SleepingCellManagement",
+          "name": "R005-Sleeping Cell Management",
+          "url": "/R005-Sleeping-Cell",
           "icon": "bi bi-grid"
         },
         {
@@ -127,9 +132,9 @@
           "icon": "bi bi-grid"
         },
         {
-          "code": "DashboardR005",
-          "name": "Tự động khai báo trạm 5G",
-          "url": "/dashboardrnoc5",
+          "code": "R0075GSRANPnPDeclaration",
+          "name": "R007-5GSRAN PnP Declaration",
+          "url": "/R007-5GSRAN-PnP-Declaration",
           "icon": "bi bi-grid"
         },
         {
@@ -262,15 +267,21 @@
       "icon": "bi bi-cpu",
       "subMenu": [
         {
-          "code": "soc001-vpn3G4G",
-          "name": "OC001 VPN3G4G",
-          "url": "/OC001-VPN3G4G",
+          "code": "S001VPN3G4G",
+          "name": "S001-VPN3G4G",
+          "url": "/S001-VPN3G4G",
           "icon": "bi bi-grid"
         },
         {
-          "code": "soc002-siptrunk",
-          "name": "OC002 SipTrunk",
-          "url": "/OC002-Siptrunk",
+          "code": "S002SipTrunk",
+          "name": "S002-SipTrunk",
+          "url": "/s002-SipTrunk",
+          "icon": "bi bi-grid"
+        },
+                {
+          "code": "soc1_uc3",
+          "name": "S003 18001900",
+          "url": "/SOC-18001900",
           "icon": "bi bi-grid"
         }
       ]

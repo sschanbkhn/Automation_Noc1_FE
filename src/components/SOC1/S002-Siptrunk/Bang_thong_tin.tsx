@@ -196,9 +196,10 @@ const BangThongTin: React.FC<Props> = ({ title, data, onClose }) => {
       >
         <table className="bang_sip" style={{ width: "100%" }}>
           <thead>
-            <tr>
+            <tr >
               <th
-                style={{ cursor: "pointer", userSelect: "none" }}
+                
+                style={{ cursor: "pointer", userSelect: "none",border: "1px solid #ccc"}}
                 onClick={(e) => {
                   e.stopPropagation();
                   setSortAsc(!sortAsc);
@@ -206,19 +207,19 @@ const BangThongTin: React.FC<Props> = ({ title, data, onClose }) => {
               >
                 Number {sortAsc ? "▲" : "▼"}
               </th>
-              <th>Account Name</th>
-              <th>Account Info</th>
-              <th>TenantID</th>
-              <th>Số CGĐT</th>
-              <th>IP khách hàng</th>
-              <th>Siptrunk Name</th>
-              <th>Sip Info</th>
-              <th>Routing Table Name</th>
-              <th>Khu vực</th>
-              <th>CallForward</th>
-              <th>Address Disable</th>
-              <th>Address Incoming</th>
-              <th>Ghi chú</th>
+              <th style={{ border: "1px solid #ccc" }}>Account Name</th>
+              <th style={{ border: "1px solid #ccc" }}>Account Info</th>
+              <th style={{ border: "1px solid #ccc" }}>TenantID</th>
+              <th style={{ border: "1px solid #ccc" }}>Số CGĐT</th>
+              <th style={{ border: "1px solid #ccc" }}>IP khách hàng</th>
+              <th style={{ border: "1px solid #ccc" }}>Siptrunk Name</th>
+              <th style={{ border: "1px solid #ccc" }}>Sip Info</th>
+              <th style={{ border: "1px solid #ccc" }}>Routing Table Name</th>
+              <th style={{ border: "1px solid #ccc" }}>Khu vực</th>
+              <th style={{ border: "1px solid #ccc" }}>CallForward</th>
+              <th style={{ border: "1px solid #ccc" }}>Address Disable</th>
+              <th style={{ border: "1px solid #ccc" }}>Address Incoming</th>
+              <th style={{ border: "1px solid #ccc" }}>Ghi chú</th>
             </tr>
           </thead>
           <tbody>
