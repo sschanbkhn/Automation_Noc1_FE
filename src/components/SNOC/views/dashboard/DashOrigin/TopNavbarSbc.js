@@ -1,5 +1,5 @@
 import React from "react";
-import { Navbar, Container, Nav } from "react-bootstrap";
+import { Container, Nav, Navbar } from "react-bootstrap";
 import { NavLink } from "react-router-dom";
 
 const TopNavbar = () => {
@@ -17,6 +17,9 @@ const TopNavbar = () => {
         <Nav className="ms-auto">
           <NavLink to="/sbc/dashboard" className={getLinkClass}>
             Tổng Quan
+          </NavLink>
+          <NavLink to="/sbc/ListConnection" className={getLinkClass}>
+            Danh Sách Kết Nối
           </NavLink>
           <NavLink to="/sbc/CreateConnectionForm" className={getLinkClass}>
             Tạo Kết Nối

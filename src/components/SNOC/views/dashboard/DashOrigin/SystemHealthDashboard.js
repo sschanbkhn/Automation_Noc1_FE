@@ -1,6 +1,8 @@
 // src/components/SNOC/views/dashboard/DashOrigin/SystemHealthDashboard.js
 import React, { useEffect, useMemo, useState } from "react";
 import { Button, Card, Col, Modal, Row, Spinner } from "react-bootstrap";
+import KPIExplorerCore from "../../forms/kpi/KPIExplorerCore";
+
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useParams } from "react-router-dom";
 import Alert from "../../../components/Alert/Alert";
@@ -632,6 +634,7 @@ const SystemHealth = () => {
         <TopNavbarHealth />
         <WebSocketStatusBanner />
         <Alert />
+
         <div className={styles.container}>
           <div className="d-flex align-items-center justify-content-between mb-3">
             <h5 className="mb-0 fw-bold fs-4">
@@ -674,6 +677,7 @@ const SystemHealth = () => {
       <TopNavbarHealth />
       <WebSocketStatusBanner />
       <Alert />
+
       <div className={styles.container}>
         <Row>
           <Col md={12}>
@@ -1132,7 +1136,22 @@ const SystemHealth = () => {
             </Row>
           </Col>
         </Row>
-
+        {/* KPI Explorer cho trang Group: chỉ hiện khi đang ở /healthcheck/:group */}
+        {soloGroup && !isSubDetail && (
+          <Card className="mb-3">
+            <Card.Body>
+              <div className="d-flex align-items-center justify-content-between mb-2">
+                <h5 className="mb-0 fw-bold">KPI Explorer — {soloGroup}</h5>
+              </div>
+              <KPIExplorerCore
+                hideChrome // ẩn header/banner bên trong KPIExplorer
+                disableRealtime // tắt WS causecode để khỏi spam & quay tít
+                defaultGroup={soloGroup}
+              />
+              
+            </Card.Body>
+          </Card>
+        )}
         {/* ✅ Modal: Chart + Table */}
         {modalVisible && selectedSubsystem && (
           <Modal

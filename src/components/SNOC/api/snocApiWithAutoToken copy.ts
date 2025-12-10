@@ -22,9 +22,7 @@ const AUTH_PREFIX = process.env.REACT_APP_SNOC_AUTH_PREFIX ?? "";
 // helper phát sự kiện auth
 function fireAuthEvent(isLoggedIn: boolean) {
   try {
-    window.dispatchEvent(
-      new CustomEvent(AUTH_EVENT, { detail: { isLoggedIn } })
-    );
+    window.dispatchEvent(new CustomEvent(AUTH_EVENT, { detail: { isLoggedIn } }));
   } catch {}
 }
 
@@ -40,10 +38,7 @@ function fireAuthEvent(isLoggedIn: boolean) {
   } catch {}
 })();
 
-export function setSnocToken(
-  token: string | null,
-  opts?: { persist?: boolean }
-) {
+export function setSnocToken(token: string | null, opts?: { persist?: boolean }) {
   accessToken = token;
   try {
     if (token) {

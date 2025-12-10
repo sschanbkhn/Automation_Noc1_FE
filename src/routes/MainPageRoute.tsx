@@ -75,7 +75,7 @@ import HostConfigPanel from "components/SNOC/views/forms/hosts/HostConfigPanel";
 import KPIChartDashboard from "components/SNOC/views/forms/kpi/KPIChartDashboard";
 import KPISelectorPage from "components/SNOC/views/forms/kpi/KPISelectorPage";
 import ScheduleGeneric from "components/SNOC/views/forms/kpi/ScheduleCausecode";
-
+import ConnectionConfigList from "components/SNOC/views/tables/sbc/ConnectionConfigList";
 ///snoc end
 // ANM
 import AnmTabs from 'components/ANM/Anmtabs';
@@ -376,6 +376,8 @@ const MainPageRoute = (props: Props) => {
           {/* các route SNOC cần login */}
 
           <Route path="/app/dashboard/origin" element={<DashOrigin />} />
+          <Route path="/sbc/ListConnection"   element={<ConnectionConfigList />}
+          />
           {/* chỉ super mới vào được khu Admin */}
           <Route element={<RequireSuperUserInline />}>
             <Route path="/app/snoc/admin" element={<UserGroupDeptManager />} />

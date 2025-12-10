@@ -1,4 +1,3 @@
-
 // src/components/SNOC/store/snocStore.ts
 import { configureStore } from "@reduxjs/toolkit";
 
@@ -19,11 +18,12 @@ import accountReducer, {
 
 // ✅ Unauthorized hook (401) từ API
 import { getSnocToken, onSnocUnauthorized } from "../api/snocApiWithAutoToken";
+import kpiPinnedReducer from "../redux/KPI/kpiPinnedSlice";
+import pinnedReducer from "../redux/KPI/pinnedKpisSlice";
+import sbcConnectionReducer from "./../redux/Sbc/sbcConnectionSlice"; // 👈 slice mới
 import departmentReducer from "./../redux/User/departmentSlice";
 import groupReducer from "./../redux/User/groupSlice";
 import userReducer from "./../redux/User/userSlice";
-
-
 const snocStore = configureStore({
   reducer: {
     account: accountReducer, // KHÔNG persist ở store (token đã được API persist trong sessionStorage)
@@ -38,6 +38,9 @@ const snocStore = configureStore({
     user: userReducer,
     group: groupReducer,
     department: departmentReducer,
+    kpiPinned: kpiPinnedReducer,
+    pinned: pinnedReducer,
+    sbcConnection: sbcConnectionReducer,
   },
 });
 

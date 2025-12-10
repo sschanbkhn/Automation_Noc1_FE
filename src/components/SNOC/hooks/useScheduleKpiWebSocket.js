@@ -54,7 +54,6 @@ export default function useScheduleKpiWebSocket({
   };
 
   const connect = () => {
-    //const url = `${BASE_WS}${endpoint}/`;
     const url = `${BASE_WS}/${endpoint}/`;
     const ws = new WebSocket(url);
     socketRef.current = ws;
@@ -85,7 +84,7 @@ export default function useScheduleKpiWebSocket({
           data?.last_run_at || data?.finished_at || data?.timestamp || null;
         const status = data?.status || data?.last_run_status || null;
         const usecase = data?.usecase || null; // "kpi"
-        const action = data?.action || null;   // "causecode" | ...
+        const action = data?.action || null; // "causecode" | ...
         const result_summary = data?.result_summary;
         const platform = data?.platform;
 
