@@ -1,0 +1,425 @@
+/* R007Generator.css */
+/* Main Generator component styles */
+
+.r007-generator {
+  padding: 20px;
+  background-color: #f5f5f5;
+  min-height: 100vh;
+}
+
+/* Header */
+.r007-generator-header {
+  background: white;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
+}
+
+.r007-generator-header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1976d2;
+  margin: 0 0 10px 0;
+}
+
+.r007-generator-header p {
+  font-size: 16px;
+  color: #666;
+  margin: 0;
+}
+
+/* Steps Indicator */
+.r007-steps-indicator {
+  display: flex;
+  justify-content: space-between;
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
+  position: relative;
+}
+
+.r007-steps-indicator::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 60px;
+  right: 60px;
+  height: 2px;
+  background: #e0e0e0;
+  transform: translateY(-50%);
+  z-index: 0;
+}
+
+.r007-step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+  flex: 1;
+}
+
+.r007-step-number {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e0e0e0;
+  color: #999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 16px;
+  transition: all 0.3s;
+}
+
+.r007-step-item.active .r007-step-number {
+  background: #1976d2;
+  color: white;
+  box-shadow: 0 0 0 4px rgba(25, 118, 210, 0.2);
+}
+
+.r007-step-item.completed .r007-step-number {
+  background: #2e7d32;
+  color: white;
+}
+
+.r007-step-label {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}
+
+.r007-step-item.active .r007-step-label {
+  color: #1976d2;
+  font-weight: 600;
+}
+
+/* Content Area */
+.r007-generator-content {
+  background: white;
+  padding: 40px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+  min-height: 400px;
+}
+
+.r007-step-content h2 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 10px 0;
+}
+
+.r007-step-content > p {
+  color: #666;
+  margin-bottom: 30px;
+}
+
+.r007-step-desc {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.r007-step-desc a {
+  color: #1976d2;
+  text-decoration: none;
+}
+
+.r007-step-desc a:hover {
+  text-decoration: underline;
+}
+
+/* Step 1: Commission Type Cards */
+.r007-commission-types {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 30px;
+  margin-top: 30px;
+}
+
+.r007-type-card {
+  background: #f9f9f9;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 30px;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-align: center;
+}
+
+.r007-type-card:hover {
+  border-color: #1976d2;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.r007-type-card.selected {
+  border-color: #1976d2;
+  background: #e3f2fd;
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.2);
+}
+
+.r007-type-icon {
+  font-size: 48px;
+  margin-bottom: 20px;
+}
+
+.r007-type-card h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 10px 0;
+}
+
+.r007-type-card p {
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.r007-type-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+}
+
+.r007-type-card ul li {
+  padding: 8px 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.r007-type-card ul li::before {
+  content: "✓ ";
+  color: #2e7d32;
+  font-weight: bold;
+  margin-right: 8px;
+}
+
+/* Step 2: Upload Area */
+.r007-upload-area {
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  padding: 60px 40px;
+  text-align: center;
+  background: #fafafa;
+  transition: all 0.3s;
+}
+
+.r007-upload-area:hover {
+  border-color: #1976d2;
+  background: #f0f8ff;
+}
+
+.r007-upload-label {
+  cursor: pointer;
+  display: block;
+}
+
+.r007-upload-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+}
+
+.r007-upload-area p {
+  margin: 10px 0;
+  color: #666;
+}
+
+.r007-browse-btn {
+  padding: 10px 24px;
+  background: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  margin: 20px 0;
+  transition: background 0.2s;
+}
+
+.r007-browse-btn:hover {
+  background: #1565c0;
+}
+
+.r007-upload-hint {
+  font-size: 13px;
+  color: #999;
+}
+
+.r007-file-info {
+  margin-top: 20px;
+  padding: 20px;
+  background: #e8f5e9;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.r007-file-info p {
+  margin: 5px 0;
+  color: #2e7d32;
+  font-weight: 500;
+}
+
+/* Step 3: Preview Table */
+.r007-preview-info {
+  display: flex;
+  gap: 30px;
+  padding: 20px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.r007-preview-info p {
+  margin: 0;
+  font-weight: 500;
+  color: #666;
+}
+
+.r007-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+}
+
+.r007-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.r007-preview-table thead {
+  background: #f5f5f5;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.r007-preview-table th {
+  padding: 12px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+}
+
+.r007-preview-table tbody tr {
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.r007-preview-table tbody tr:hover {
+  background: #f9f9f9;
+}
+
+.r007-preview-table td {
+  padding: 12px;
+  font-size: 14px;
+  color: #333;
+}
+
+.r007-status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.r007-status-valid {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.r007-status-invalid {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.r007-status-warning {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+/* Placeholder for future steps */
+.r007-placeholder {
+  padding: 60px;
+  text-align: center;
+  font-size: 18px;
+  color: #999;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 2px dashed #e0e0e0;
+}
+
+/* Navigation Buttons */
+.r007-generator-nav {
+  display: flex;
+  justify-content: space-between;
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.r007-nav-btn {
+  padding: 12px 32px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.r007-btn-primary {
+  background: #1976d2;
+  color: white;
+}
+
+.r007-btn-primary:hover:not(:disabled) {
+  background: #1565c0;
+}
+
+.r007-btn-primary:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.r007-btn-secondary {
+  background: white;
+  color: #666;
+  border: 1px solid #ccc;
+}
+
+.r007-btn-secondary:hover {
+  background: #f5f5f5;
+  border-color: #999;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .r007-generator {
+    padding: 15px;
+  }
+
+  .r007-generator-content {
+    padding: 20px;
+  }
+
+  .r007-commission-types {
+    grid-template-columns: 1fr;
+  }
+
+  .r007-steps-indicator {
+    overflow-x: auto;
+  }
+
+  .r007-step-label {
+    font-size: 11px;
+  }
+}

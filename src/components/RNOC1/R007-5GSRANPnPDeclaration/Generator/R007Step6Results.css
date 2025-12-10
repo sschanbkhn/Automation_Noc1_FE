@@ -1,0 +1,314 @@
+/* R007Step6Results.css */
+/* Step 6: Results & Download styles */
+
+.r007-step6-container {
+  padding: 20px 0;
+}
+
+.r007-step6-header h2 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 10px 0;
+}
+
+.r007-step6-header p {
+  color: #666;
+  margin-bottom: 30px;
+}
+
+.r007-no-result {
+  padding: 60px;
+  text-align: center;
+  background: #fff3e0;
+  border-radius: 8px;
+  border: 2px dashed #ed6c02;
+}
+
+.r007-no-result p {
+  font-size: 16px;
+  color: #e65100;
+  margin: 0;
+}
+
+/* Status Banner */
+.r007-status-banner {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 24px;
+  background: white;
+  border-radius: 8px;
+  border-left: 6px solid;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
+}
+
+.r007-status-success {
+  background: #e8f5e9;
+}
+
+.r007-status-partial {
+  background: #fff3e0;
+}
+
+.r007-status-failed {
+  background: #ffebee;
+}
+
+.r007-status-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 32px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.r007-status-content h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 4px 0;
+}
+
+.r007-status-content p {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+}
+
+/* Statistics Cards */
+.r007-results-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.r007-stat-card {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-left: 4px solid #1976d2;
+}
+
+.r007-stat-success {
+  border-left-color: #2e7d32;
+}
+
+.r007-stat-failed {
+  border-left-color: #d32f2f;
+}
+
+.r007-stat-icon {
+  font-size: 32px;
+}
+
+.r007-stat-content {
+  flex: 1;
+}
+
+.r007-stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #333;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.r007-stat-label {
+  font-size: 13px;
+  color: #666;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+/* Downloads Section */
+.r007-downloads-section {
+  background: white;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  margin-bottom: 30px;
+}
+
+.r007-downloads-section h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 20px 0;
+}
+
+.r007-download-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.r007-download-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  transition: all 0.2s;
+}
+
+.r007-download-card:hover {
+  background: #f0f0f0;
+  border-color: #1976d2;
+}
+
+.r007-download-icon {
+  font-size: 40px;
+  flex-shrink: 0;
+}
+
+.r007-download-info {
+  flex: 1;
+}
+
+.r007-download-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.r007-download-desc {
+  font-size: 14px;
+  color: #666;
+}
+
+.r007-download-btn {
+  padding: 10px 24px;
+  background: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.r007-download-btn:hover {
+  background: #1565c0;
+}
+
+.r007-download-btn:active {
+  transform: scale(0.98);
+}
+
+/* Next Actions */
+.r007-next-actions {
+  background: white;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.r007-next-actions h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 20px 0;
+}
+
+.r007-action-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.r007-action-card {
+  padding: 24px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 2px solid #e0e0e0;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.r007-action-card:hover {
+  border-color: #1976d2;
+  background: #e3f2fd;
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.r007-action-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.r007-action-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.r007-action-desc {
+  font-size: 14px;
+  color: #666;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .r007-results-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .r007-action-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .r007-results-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .r007-status-banner {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .r007-download-card {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+```
+
+---
+
+**✅ HOÀN THÀNH 10 FILES - CHECKPOINT!**
+
+Bạn đã có:
+```
+Generator/
+├── R007generatorTypes.ts          ✅ File 1
+├── R007generatorMockData.ts       ✅ File 2
+├── R007Generator.tsx              ✅ File 3 (Step 1,2,3 inline)
+├── R007Generator.css              ✅ File 4
+├── R007Step4TemplateMatching.tsx  ✅ File 5
+├── R007Step4TemplateMatching.css  ✅ File 6
+├── R007Step5GenerationProgress.tsx ✅ File 7
+├── R007Step5GenerationProgress.css ✅ File 8
+├── R007Step6Results.tsx           ✅ File 9
+└── R007Step6Results.css           ✅ File 10
