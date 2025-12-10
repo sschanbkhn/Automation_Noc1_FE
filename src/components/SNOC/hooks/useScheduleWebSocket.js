@@ -9,7 +9,10 @@ import {
   upsertLatestFromClient,
   wsMergeHourlyItems, // 👈 NHẬN GÓI CHART REALTIME
 } from "../redux/Healthcheck/healthcheckSlice";
-const WS_URL = "ws://10.155.43.201:8000/ws/healthcheck/";
+const BASE_WS_URL =
+  process.env.REACT_APP_SNOC_WS_URL || "ws://localhost:8000/ws";
+const WS_URL = `${BASE_WS_URL}/healthcheck/`;
+
 const RECONNECT_INTERVAL = 5000;
 
 const useScheduleWebSocket = () => {

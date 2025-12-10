@@ -4,7 +4,12 @@ import { useDispatch } from "react-redux";
 import { wsMergeKpiPoints } from "../redux/KPI/kpiSlice";
 
 // Đường WS causecode
-const WS_URL = "ws://10.155.43.201:8000/ws/causecode/";
+
+const BASE_WS_URL =
+  process.env.REACT_APP_SNOC_WS_URL || "ws://localhost:8000/ws";
+
+// const WS_URL = "ws://10.155.43.201:8000/ws/causecode/";
+const WS_URL = `${BASE_WS_URL}/causecode/`;
 const RECONNECT_INTERVAL = 5000;
 
 /**
@@ -80,7 +85,10 @@ export default function useCausecodeWebSocket({
           const data = JSON.parse(ev.data);
 
           // Chỉ xử lý gói điểm KPI realtime từ causecode
-          if (data?.type !== "causecode_chart_points" || !Array.isArray(data?.points)) {
+          if (
+            data?.type !== "causecode_chart_points" ||
+            !Array.isArray(data?.points)
+          ) {
             return;
           }
 
@@ -100,10 +108,10 @@ export default function useCausecodeWebSocket({
           // Lọc sớm theo platform (nếu UI đã chọn platform)
           if (curPlatform && msgPlatform && curPlatform !== msgPlatform) {
             if (process.env.NODE_ENV !== "production") {
-              console.log(
-                "[WS CauseCode] skip: platform mismatch",
-                { ui: curPlatform, ws: msgPlatform }
-              );
+              console.log("[WS CauseCode] skip: platform mismatch", {
+                ui: curPlatform,
+                ws: msgPlatform,
+              });
             }
             return;
           }
@@ -124,7 +132,12 @@ export default function useCausecodeWebSocket({
               };
             })
             .filter((p) => {
-              if (!p.device || !p.kpi || !Number.isFinite(p.value) || !Number.isFinite(p.ts)) {
+              if (
+                !p.device ||
+                !p.kpi ||
+                !Number.isFinite(p.value) ||
+                !Number.isFinite(p.ts)
+              ) {
                 return false;
               }
               // device filter (nếu đã chọn)
@@ -155,7 +168,9 @@ export default function useCausecodeWebSocket({
                 device: sample.device,
                 kpi: sample.kpi,
                 timestamp: sample.timestamp,
-                utc_from_timestamp: sample.timestamp ? new Date(sample.timestamp).toISOString() : null,
+                utc_from_timestamp: sample.timestamp
+                  ? new Date(sample.timestamp).toISOString()
+                  : null,
                 value: sample.value,
               },
             });

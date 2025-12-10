@@ -60,6 +60,7 @@ import DeclareNumberForm from "components/SNOC/views/forms/sbc/DeclareNumberForm
 import RequestHistoryTable from "components/SNOC/views/forms/sbc/RequestHistoryTable";
 import RoutingDeclarationForm from "components/SNOC/views/forms/sbc/RoutingDeclarationForm";
 import HistoricalReporting from "components/SNOC/views/tables/health/HistoricalReporting";
+import ConnectionConfigList from "components/SNOC/views/tables/sbc/ConnectionConfigList";
 
 import RequireSnocAuthInline from "components/SNOC/auth/RequireSnocAuthInline";
 import RequireSuperUserInline from "components/SNOC/auth/RequireSuperUserInline";
@@ -270,6 +271,10 @@ const MainPageRoute = (props: Props) => {
           />
 
           <Route path="/sbc/dashboard" element={<SbcDashboardWithNavbar />} />
+          <Route
+            path="/sbc/ListConnection"
+            element={<ConnectionConfigList />}
+          />
           <Route
             path="/sbc/CreateConnectionForm"
             element={<CreateConnectionForm />}

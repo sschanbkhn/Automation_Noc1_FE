@@ -11,42 +11,119 @@ import {
 import TopNavbarDns from "../../dashboard/DashOrigin/TopNavbarDns";
 
 const MME_GROUP_VALUES = [
-  "mme1x", "mme2x", "mme3x",
-  "mmee1x", "mmee2x", "mmee3x", "mmee3x1",
+  "mme1x",
+  "mme2x",
+  "mme3x",
+  "mmee1x",
+  "mmee2x",
+  "mmee3x",
+  "mmee3x1",
   "mmee1de",
   "mmeet1x",
-  "mmen1abcd", "mmen2abcd",
-  "mmee1a", "mmee1b", "mmee1c", "mmee1d", "mmee1e", "mmee1f",
-  "mmee1g", "mmee1h", "mmee1i", "mmee1k",
-  "mmeet1a", "mmeet1b",
-  "mmee3a", "mmee3b", "mmee3c", "mmee3d",
-  "mmee2a", "mmee2b", "mmee2c", "mmee2d",
-  "mmee2e", "mmee2f", "mmee2g", "mmee2h",
+  "mmen1abcd",
+  "mmen2abcd",
+  "mmee1a",
+  "mmee1b",
+  "mmee1c",
+  "mmee1d",
+  "mmee1e",
+  "mmee1f",
+  "mmee1g",
+  "mmee1h",
+  "mmee1i",
+  "mmee1k",
+  "mmeet1a",
+  "mmeet1b",
+  "mmee3a",
+  "mmee3b",
+  "mmee3c",
+  "mmee3d",
+  "mmee2a",
+  "mmee2b",
+  "mmee2c",
+  "mmee2d",
+  "mmee2e",
+  "mmee2f",
+  "mmee2g",
+  "mmee2h",
 ];
 
 const PGW_POOL_VALUES = [
-  "epg1x", "epg2x", "epg3x", "epg4x",
-  "epg1x5g", "epg2x5g", "epg3x5g", "epg4x5g",
-  "epge1a", "epge1b", "epge1c", "epge1d",
-  "epgce1e", "epgce1f", "epgce1g", "epgce1h", "epgce1i", "epgce1k",
-  "epgcet1a", "epgcet1b",
-  "epge3a", "epge3b", "epge3c",
-  "epgce3d", "epgce3e", "epgce3f",
-  "epge2a", "epge2b", "epge2c", "epge2d",
-  "epgce2e", "epgce2f", "epgce2g", "epgce2h", "epgce2i", "epgce2k",
-  "epge4a", "epge4b",
+  "epg1x",
+  "epg2x",
+  "epg3x",
+  "epg4x",
+  "epg1x5g",
+  "epg2x5g",
+  "epg3x5g",
+  "epg4x5g",
+  "epge1a",
+  "epge1b",
+  "epge1c",
+  "epge1d",
+  "epgce1e",
+  "epgce1f",
+  "epgce1g",
+  "epgce1h",
+  "epgce1i",
+  "epgce1k",
+  "epgcet1a",
+  "epgcet1b",
+  "epge3a",
+  "epge3b",
+  "epge3c",
+  "epgce3d",
+  "epgce3e",
+  "epgce3f",
+  "epge2a",
+  "epge2b",
+  "epge2c",
+  "epge2d",
+  "epgce2e",
+  "epgce2f",
+  "epgce2g",
+  "epgce2h",
+  "epgce2i",
+  "epgce2k",
+  "epge4a",
+  "epge4b",
 ];
 
 const PGW_5G_POOL_VALUES = [
-  "epg1x5g", "epg2x5g", "epg3x5g", "epg4x5g",
-  "epge1a", "epge1b", "epge1c", "epge1d",
-  "epgce1e", "epgce1f", "epgce1g", "epgce1h", "epgce1i", "epgce1k",
-  "epgcet1a", "epgcet1b",
-  "epge3a", "epge3b", "epge3c",
-  "epgce3d", "epgce3e", "epgce3f",
-  "epge2a", "epge2b", "epge2c", "epge2d",
-  "epgce2e", "epgce2f", "epgce2g", "epgce2h", "epgce2i", "epgce2k",
-  "epge4a", "epge4b",
+  "epg1x5g",
+  "epg2x5g",
+  "epg3x5g",
+  "epg4x5g",
+  "epge1a",
+  "epge1b",
+  "epge1c",
+  "epge1d",
+  "epgce1e",
+  "epgce1f",
+  "epgce1g",
+  "epgce1h",
+  "epgce1i",
+  "epgce1k",
+  "epgcet1a",
+  "epgcet1b",
+  "epge3a",
+  "epge3b",
+  "epge3c",
+  "epgce3d",
+  "epgce3e",
+  "epgce3f",
+  "epge2a",
+  "epge2b",
+  "epge2c",
+  "epge2d",
+  "epgce2e",
+  "epgce2f",
+  "epgce2g",
+  "epgce2h",
+  "epgce2i",
+  "epgce2k",
+  "epge4a",
+  "epge4b",
 ];
 
 const TACConfigPanel = () => {
@@ -60,8 +137,11 @@ const TACConfigPanel = () => {
   const [selectedSgw, setSelectedSgw] = useState([]);
   const [selectedPgw5g, setSelectedPgw5g] = useState([]);
 
-  const { tacResult = {}, tmpCommands = {}, loading = false } =
-    useSelector((state) => state.dns || {});
+  const {
+    tacResult = {},
+    tmpCommands = {},
+    loading = false,
+  } = useSelector((state) => state.dns || {});
 
   // Kết quả từ store
   const dns1bArr = [...(tacResult.dns1b || []), ...(tmpCommands.dns1b || [])];
@@ -91,9 +171,18 @@ const TACConfigPanel = () => {
   );
 
   const ALL_OPT = { label: "-- Chọn tất cả --", value: "__all__" };
-  const mmeOptionsCombined = useMemo(() => [ALL_OPT, ...mmeOptions], [mmeOptions]);
-  const sgwOptionsCombined = useMemo(() => [ALL_OPT, ...sgwOptions], [sgwOptions]);
-  const pgw5gOptionsCombined = useMemo(() => [ALL_OPT, ...pgw5gOptions], [pgw5gOptions]);
+  const mmeOptionsCombined = useMemo(
+    () => [ALL_OPT, ...mmeOptions],
+    [mmeOptions]
+  );
+  const sgwOptionsCombined = useMemo(
+    () => [ALL_OPT, ...sgwOptions],
+    [sgwOptions]
+  );
+  const pgw5gOptionsCombined = useMemo(
+    () => [ALL_OPT, ...pgw5gOptions],
+    [pgw5gOptions]
+  );
 
   const handleMmeChange = (selected) => {
     if (!selected) return setSelectedMme([]);
@@ -107,7 +196,8 @@ const TACConfigPanel = () => {
   };
   const handlePgw5gChange = (selected) => {
     if (!selected) return setSelectedPgw5g([]);
-    if (selected.find((o) => o.value === "__all__")) setSelectedPgw5g(pgw5gOptions);
+    if (selected.find((o) => o.value === "__all__"))
+      setSelectedPgw5g(pgw5gOptions);
     else setSelectedPgw5g(selected);
   };
 
@@ -173,11 +263,47 @@ const TACConfigPanel = () => {
     setDns2bText("");
   };
 
-  const handleCopy = (lines, label) => {
-    const text = (lines || []).join("\n");
-    navigator.clipboard.writeText(text).then(() => {
+  const handleCopy = async (text, label) => {
+    const ok = await copyToClipboard(text);
+    if (ok) {
       alert(`📋 Đã copy ${label} vào clipboard`);
-    });
+    } else {
+      alert(
+        `⚠️ Không copy được ${label}.
+- Nếu đang mở qua IP LAN (http://10.x...), hãy dùng http://localhost hoặc bật HTTPS.
+- Hoặc thử copy thủ công (Ctrl/Cmd + A rồi Ctrl/Cmd + C).`
+      );
+    }
+  };
+
+  // Copy-clipboard bền vững: ưu tiên Clipboard API, fallback execCommand cho HTTP/LAN
+  const copyToClipboard = async (text) => {
+    try {
+      const normalized = String(text ?? "");
+      if (!normalized) return false;
+
+      if (window.isSecureContext && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(normalized);
+        return true;
+      }
+
+      // Fallback
+      const ta = document.createElement("textarea");
+      ta.value = normalized;
+      ta.style.position = "fixed";
+      ta.style.top = "-1000px";
+      ta.style.left = "-1000px";
+      ta.setAttribute("readonly", "");
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, ta.value.length);
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch (e) {
+      console.error("copyToClipboard error:", e);
+      return false;
+    }
   };
 
   return (
@@ -189,7 +315,10 @@ const TACConfigPanel = () => {
           <Col md={3}>
             <Form.Group>
               <Form.Label>Node</Form.Label>
-              <Form.Select value={node} onChange={(e) => setNode(e.target.value)}>
+              <Form.Select
+                value={node}
+                onChange={(e) => setNode(e.target.value)}
+              >
                 <option value="dnsgn">dnsgn</option>
               </Form.Select>
             </Form.Group>
@@ -210,7 +339,11 @@ const TACConfigPanel = () => {
           <Col md={6}>
             <Form.Label>Phím chức năng</Form.Label>
             <div className="d-flex gap-2 flex-wrap">
-              <Button variant="primary" onClick={handleCheck} disabled={loading}>
+              <Button
+                variant="primary"
+                onClick={handleCheck}
+                disabled={loading}
+              >
                 {loading ? (
                   <>
                     <Spinner size="sm" animation="border" className="me-2" />
@@ -220,9 +353,15 @@ const TACConfigPanel = () => {
                   "Check"
                 )}
               </Button>
-              <Button variant="success" onClick={handleAdd}>Add</Button>
-              <Button variant="danger" onClick={handleDelete}>Delete</Button>
-              <Button variant="secondary" onClick={handleClearCache}>Clear cache dns</Button>
+              <Button variant="success" onClick={handleAdd}>
+                Add
+              </Button>
+              <Button variant="danger" onClick={handleDelete}>
+                Delete
+              </Button>
+              <Button variant="secondary" onClick={handleClearCache}>
+                Clear cache dns
+              </Button>
             </div>
           </Col>
         </Row>
@@ -251,7 +390,9 @@ const TACConfigPanel = () => {
                   multiValue: (base) => ({ ...base, margin: "1px 2px" }),
                   menuPortal: (base) => ({ ...base, zIndex: 9999 }),
                 }}
-                menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                menuPortalTarget={
+                  typeof document !== "undefined" ? document.body : null
+                }
               />
             </Form.Group>
           </Col>
@@ -278,7 +419,9 @@ const TACConfigPanel = () => {
                   multiValue: (base) => ({ ...base, margin: "1px 2px" }),
                   menuPortal: (base) => ({ ...base, zIndex: 9999 }),
                 }}
-                menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                menuPortalTarget={
+                  typeof document !== "undefined" ? document.body : null
+                }
               />
             </Form.Group>
           </Col>
@@ -305,7 +448,9 @@ const TACConfigPanel = () => {
                   multiValue: (base) => ({ ...base, margin: "1px 2px" }),
                   menuPortal: (base) => ({ ...base, zIndex: 9999 }),
                 }}
-                menuPortalTarget={typeof document !== "undefined" ? document.body : null}
+                menuPortalTarget={
+                  typeof document !== "undefined" ? document.body : null
+                }
               />
             </Form.Group>
           </Col>
@@ -313,9 +458,13 @@ const TACConfigPanel = () => {
           <Col md={12} lg={6}>
             <Form.Label>Phím chức năng</Form.Label>
             <div className="d-flex gap-2 flex-wrap">
-              <Button variant="warning" onClick={handleCreateTmp}>Generate TMP</Button>
+              <Button variant="warning" onClick={handleCreateTmp}>
+                Generate TMP
+              </Button>
               {/* 🔸 nút mới */}
-              <Button variant="secondary" onClick={handleClearTextboxes}>Clear textbox</Button>
+              <Button variant="secondary" onClick={handleClearTextboxes}>
+                Clear textbox
+              </Button>
             </div>
           </Col>
         </Row>
@@ -329,7 +478,8 @@ const TACConfigPanel = () => {
                 <Button
                   size="sm"
                   variant="outline-secondary"
-                  onClick={() => handleCopy(dns1bText.split("\n"), "DNS1B")}
+                  onClick={() => handleCopy(dns1bText, "DNS1B")}
+                  disabled={!dns1bText?.trim()}
                 >
                   Copy DNS1B
                 </Button>
@@ -350,7 +500,8 @@ const TACConfigPanel = () => {
                 <Button
                   size="sm"
                   variant="outline-secondary"
-                  onClick={() => handleCopy(dns2bText.split("\n"), "DNS2B")}
+                  onClick={() => handleCopy(dns2bText, "DNS2B")}
+                  disabled={!dns2bText?.trim()}
                 >
                   Copy DNS2B
                 </Button>

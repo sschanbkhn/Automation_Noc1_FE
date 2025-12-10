@@ -1148,6 +1148,7 @@ const SystemHealth = () => {
                 disableRealtime // tắt WS causecode để khỏi spam & quay tít
                 defaultGroup={soloGroup}
               />
+              
             </Card.Body>
           </Card>
         )}

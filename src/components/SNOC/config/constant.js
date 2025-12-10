@@ -35,12 +35,14 @@
 //   layout6BackSize: '' // disable on free version
 // };
 
-let BACKEND_SERVER = "http://10.155.43.201:8000/api/";
-let BACKEND_SERVER_MEDIA = "http://10.155.43.201:8000";
-
+// let BACKEND_SERVER = "http://10.155.43.201:8000/api/";
+// let BACKEND_SERVER_MEDIA = "http://10.155.43.201:8000";
+let BACKEND_SERVER =
+  process.env.REACT_APP_SNOC_API_URL || "http://10.147.50.100:8000/api";
+let BACKEND_SERVER_MEDIA = process.env.REACT_APP_SNOC_API_URL
+  ? process.env.REACT_APP_SNOC_API_URL.replace("/api", "")
+  : "http://10.147.50.100:8000";
 // Kiểm tra kỹ để tránh ReferenceError nếu process không tồn tại
 
 export const API_SERVER = BACKEND_SERVER;
 export const SERVER_MEDIA = BACKEND_SERVER_MEDIA;
-
-
