@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { mockIPTMonitoringData, DEVICES_LIST, TRIGGER_ALARM_OPTIONS, DEFAULT_TRIGGER_ALARM, DEFAULT_ROLLBACK_TIME } from './mockDataTab3';
 import Tab3Service from 'services/Tab3Service';
 
-const IPTMonitoringTable = ({ data }) => {
+const IPTMonitoringTable = ({ data, onDeleteClick }) => {
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('vi-VN');
@@ -20,7 +20,7 @@ const IPTMonitoringTable = ({ data }) => {
             <th style={{ width: '120px' }}>PRTG_ID</th>
             <th style={{ width: '120px' }}>Capacity</th>
             <th style={{ width: '140px' }}>Day Added</th>
-            <th style={{ width: '120px' }}>Actions</th>
+            <th style={{ width: '100px' }}>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -38,8 +38,13 @@ const IPTMonitoringTable = ({ data }) => {
                 <td className="date-cell">{formatDate(item.dayAdded)}</td>
                 <td className="actions-cell">
                   <div className="action-buttons">
-                    <button className="action-btn edit-btn" title="Edit">✏️</button>
-                    <button className="action-btn delete-btn" title="Delete">🗑️</button>
+                    <button
+                      className="action-btn delete-btn"
+                      title="Delete"
+                      onClick={() => onDeleteClick(item)}
+                    >
+                      🗑️
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -336,6 +341,47 @@ const SetTimeToRollbackModal = ({
   );
 };
 
+const DeleteIPTConfirmModal = ({ ipt, onConfirm, onCancel }) => (
+  <div className="modal-overlay" onClick={onCancel}>
+    <div className="modal-content modal-delete-confirm" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '450px' }}>
+      <div className="modal-header">
+        <h3>Xác nhận xóa IPT</h3>
+        <button className="modal-close" onClick={onCancel}>✕</button>
+      </div>
+
+      <div className="confirm-message" style={{ textAlign: 'center', marginBottom: '20px' }}>
+        <div style={{ fontSize: '32px', marginBottom: '12px', color: '#dc2626' }}>⚠️</div>
+        <p style={{ fontWeight: '500', marginBottom: '8px' }}>Bạn chắc chắn muốn xóa điểm theo dõi IPT này?</p>
+        <p style={{ color: '#6b7280', fontSize: '14px' }}>Hành động này không thể hoàn tác.</p>
+      </div>
+
+      <div className="delete-summary" style={{ backgroundColor: '#fef2f2', padding: '12px', borderRadius: '6px', marginBottom: '16px' }}>
+        <div className="detail-row" style={{ marginBottom: '8px' }}>
+          <span className="label" style={{ fontWeight: '600' }}>Device:</span>
+          <span className="value" style={{ color: '#dc2626', fontWeight: '600' }}>{ipt.device}</span>
+        </div>
+        <div className="detail-row" style={{ marginBottom: '8px' }}>
+          <span className="label" style={{ fontWeight: '600' }}>Interface:</span>
+          <span className="value"><code>{ipt.interface}</code></span>
+        </div>
+        <div className="detail-row" style={{ marginBottom: '8px' }}>
+          <span className="label" style={{ fontWeight: '600' }}>Partner:</span>
+          <span className="value">{ipt.partner}</span>
+        </div>
+        <div className="detail-row">
+          <span className="label" style={{ fontWeight: '600' }}>PRTG_ID:</span>
+          <span className="value" style={{ color: '#7c3aed', fontWeight: '500' }}>{ipt.prtgId}</span>
+        </div>
+      </div>
+
+      <div className="modal-footer">
+        <button className="btn btn-secondary" onClick={onCancel}>Hủy bỏ</button>
+        <button className="btn btn-danger" onClick={onConfirm} style={{ backgroundColor: '#dc2626', borderColor: '#dc2626' }}>Xóa</button>
+      </div>
+    </div>
+  </div>
+);
+
 function Tab3() {
   const [iptData, setIptData] = useState(mockIPTMonitoringData);
   const [modalState, setModalState] = useState('closed');
@@ -343,6 +389,7 @@ function Tab3() {
   const [currentRollbackTime, setCurrentRollbackTime] = useState(DEFAULT_ROLLBACK_TIME);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [showDateFilter, setShowDateFilter] = useState(false);
+  const [deleteConfirmIPT, setDeleteConfirmIPT] = useState(null);
 
   const filteredIptData = iptData.filter(item => {
     if (!showDateFilter) return true;
@@ -367,6 +414,24 @@ function Tab3() {
   const handleSetTimeToRollback = (time) => {
     setCurrentRollbackTime(time);
     setModalState('closed');
+  };
+
+  const handleDeleteClick = (ipt) => {
+    setDeleteConfirmIPT(ipt);
+    setModalState('deleteConfirm');
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteConfirmIPT) {
+      setIptData(iptData.filter(item => item.id !== deleteConfirmIPT.id));
+      setModalState('closed');
+      setDeleteConfirmIPT(null);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setModalState('closed');
+    setDeleteConfirmIPT(null);
   };
 
   return (
@@ -439,7 +504,7 @@ function Tab3() {
           </div>
         )}
 
-        <IPTMonitoringTable data={filteredIptData} />
+        <IPTMonitoringTable data={filteredIptData} onDeleteClick={handleDeleteClick} />
       </div>
 
       {modalState === 'addIPT' && (
@@ -462,6 +527,14 @@ function Tab3() {
           currentTime={currentRollbackTime}
           onApply={handleSetTimeToRollback}
           onCancel={() => setModalState('closed')}
+        />
+      )}
+
+      {modalState === 'deleteConfirm' && deleteConfirmIPT && (
+        <DeleteIPTConfirmModal
+          ipt={deleteConfirmIPT}
+          onConfirm={handleConfirmDelete}
+          onCancel={handleDeleteCancel}
         />
       )}
     </div>
