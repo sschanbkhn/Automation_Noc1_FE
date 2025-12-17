@@ -1,0 +1,667 @@
+[
+  {
+    "rule_id": "2.1.17",
+    "criteria_name": "Cấu hình chính sách 'Deny access to this computer from the network'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Guests Computer Configuration Policies Windows Settings Security Settings Local Policies User Rights Assignment Deny access to this computer from the network ",
+    "actual_result": "N/A",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.1.18",
+    "criteria_name": "Cấu hình chính sách 'Deny log on as a batch job'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Guests Computer Configuration Policies Windows Settings Security Settings Local Policies User Rights Assignment Deny log on as a batch job",
+    "actual_result": "N/A",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.1.19",
+    "criteria_name": "Cấu hình chính sách 'Deny log on as a service'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Guests Computer Configuration Policies Windows Settings Security Settings Local Policies User Rights Assignment Deny log on as a service * Lưu ý: #1: C ấu hình chính sách này không áp d ụng cho tài khoản System, Local Service, ho ặc Network Service. #2: N ếu cấu hình chính sách t ừ chối đăng nh ập với tư cách là người dùng d ịch vụ cho các t ài khoản cụ thể, các d ịch vụ có thể không thể khởi động và x ảy ra từ chối dịch vụ (DoS).\"\"",
+    "actual_result": "N/A",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.1.20",
+    "criteria_name": "Cấu hình chính sách 'Deny log on locally'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Guests Computer Configuration Policies Windows Settings Security Settings Local Policies User Rights Assignment Deny log on locally ",
+    "actual_result": "N/A",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.1.21",
+    "criteria_name": "Cấu hình chính sách 'Deny log on through Remote Desktop Services'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: - Đối với DC: Guests - Đối với MS: Guests , Local account Computer Configuration Policies Windows Settings Security Settings Local Policies User Rights Assignment Deny log on through Re mote Desktop Services\"\"",
+    "actual_result": "N/A",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.1.22",
+    "criteria_name": "Cấu hình chính sách 'Enable computer and user accounts to be trusted",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: - Đối với DC: Administrators - Đối với MS: No One Computer Configuration Policies Windows Settings Security Settings Local Policies User Rights Assignment Enable computer and user accounts to be trusted for delegation ",
+    "actual_result": "N/A",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.1.24",
+    "criteria_name": "Cấu hình chính sách 'Generate security audits'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: LOCAL SERVICE, NETWORK SERVICE Computer Configuration Policies Windows Settings Security Settings Local Policies User Rights Assignment Generate security audits * Lưu ý: #1: Đ ối với Member Server giữ vai tr ò Máy ch ủ Web (IIS) với dịch vụ Web Server Role là ngo ại lệ đối với khuyến nghị này, cho phép các nhóm ứng dụng IIS được tự cấp quy ền. #2: Đ ối với Member Server giữ vai trò Active Directory Federation Services là ngoại lệ đối với khuyến nghị này, cho phép NT SERVICE ADFSSrv và NT SERVICE DRSservices, cũng như tài khoản Active Directory Federation Services liên k ết sẽ được tự cấp quy ền.",
+    "actual_result": "*S-1-5-19 *S-1-5-20 *S-1-5-82-3006700770-424185619-1745488364-794895919-4004696415",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.1.25",
+    "criteria_name": "Cấu hình chính sách 'Impersonate a client after authentication'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: - Administrators, LOCAL SERVICE, NETWORK SERVICE, SERVICE. - IIS_IUSRS (N ếu cài đ ặt Web Server IIS Role với Web Server Role Service). Computer Configuration Policies Windows Settings Security Settings Local Policies User Rights Assignment Impersonate a client after authentication * Lưu ý: - Đối với Member Server được cài đ ặt Microsoft SQL Server và ch ứa thành phần\"\"Integration Services\"\"\"\" là ngo ại lệ đối với khuyến nghị này.\"\"",
+    "actual_result": "*S-1-5-19 *S-1-5-20 *S-1-5-32-544 *S-1-5-32-568 *S-1-5-6",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.1.27",
+    "criteria_name": "Cấu hình chính sách 'Load and unload device drivers'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Administrators, Print Operators Computer Configuration Policies Windows Settings Security Settings Local Policies User Rights Assignment Load and unload device drivers\"\"",
+    "actual_result": "*S-1-5-32-544",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.1.35",
+    "criteria_name": "Cấu hình chính sách 'Replace a process level token'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: LOCAL SERVICE, NETWORK SERVICE Computer Configuration Policies Windows Settings Securit y Settings Local Policies User Rights Assignment Replace a process level token * Lưu ý: #1: Đ ối với Member Server giữ vai trò Máy ch ủ Web (IIS) với dịch vụ Web Server Role là ngo ại lệ đối với khuyến nghị này, cho phép các nhóm ứng dụng IIS được tự cấp. #2: Đối với Member Server được cài đ ặt Microsoft SQL Server là ngo ại lệ đối với khuyến nghị này. #3: Yêu c ầu cấu hình chính sách 'Adjust memory quotas for a process' t ại mục trước đó",
+    "actual_result": "*S-1-5-19 *S-1-5-20 *S-1-5-82-3006700770-424185619-1745488364-794895919-4004696415",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.1.36",
+    "criteria_name": "Cấu hình chính sách 'Restore files and directories'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: ADM INISTRATORS, BACKUP OPERATORS Computer Configuration Policies Windows Settings Security Settings Local Policies User Rights Assignment Restore files and directories * Lưu ý: # Giới hạn quy ền này đ ối với nhóm Qu ản trị viên (Administrators Group). Chỉ định thêm quy ền này cho nhóm Backup Operators n ếu tổ chức yêu c ầu nhóm này cần có.\"\"",
+    "actual_result": "*S-1-5-32-544 *S-1-5-32-551",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.2.1.1",
+    "criteria_name": "Cấu hình trạng thái tài khoản 'Administrator account status'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với trạng thái đề xuất: Disabled Computer Configuration Policies Windows Settings Security Settings Local Policies Security Options Accounts: Administrator account status",
+    "actual_result": "1",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.2.1.2",
+    "criteria_name": "Cấu hình chính sách tài khoản 'Block Microsoft accounts'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với trạng thái đề xuất: Users can't add or log on with Microso ft accounts Computer Configuration Policies Windows Settings Security Settings Local Policies Security Options Accounts: Block Microsoft accounts",
+    "actual_result": "N/A",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.2.1.4",
+    "criteria_name": "Cấu hình chính sách tài khoản 'Limit local account use of blank",
+    "solution": "Cấu hình tham số theo đường dẫn sau với trạng thái đề xuất: Enabled Computer Configuration Policies Windows Settings Security Settings Local Policies Security Options Accounts: Limit l ocal account use of blank passwords to console logon only",
+    "actual_result": "\"Administrator\"",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.2.1.5",
+    "criteria_name": "Cấu hình thay đổi tên mặc định tài khoản quản trị 'Rename",
+    "solution": "Cấu hình theo đường dẫn sau : thay đổi tên tài khoản quản trị mặc định được tạo ra ban đ ầu. Computer Configuration Policies Windows Settings Security Settings Local Policies Security Options Accounts: Rename administrator account",
+    "actual_result": "\"Guest\"",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.2.2.1",
+    "criteria_name": "Cấu hình chính sách 'Audit: Force audit po licy subcategory settings",
+    "solution": "Cấu hình tham số theo đường dẫn sau với trạng thái đề xuất: Enabled Computer Configuration Policies Windows Settings Security Settings Local Policies Security Options Audit: Force audit policy subcategory settings (Windows Vista or later) to override audit policy category settings",
+    "actual_result": "N/A",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "1.1.1",
+    "criteria_name": "Cấu hình tham số 'Enforce password history'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với giá trị khuyến nghị: >= 24 Computer Configuration Policies Windows Settings Security Settings Account Policies Password Policy Enforce password history",
+    "actual_result": "0",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "1.1.3",
+    "criteria_name": "Cấu hình tham số 'Minimum password age'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với giá trị khuyến nghị: >= 1 Computer Configuration Policies Windows Settings Security Settings Account Policies Password Policy Minimum password age",
+    "actual_result": "0",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "1.1.4",
+    "criteria_name": "Cấu hình tham số 'Minimum password length'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với giá trị khuyến nghị: >= 14 Computer Configuration Policies Windows Settings Security Settings Account Policies Password Policy Minimum password length",
+    "actual_result": "0",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "1.2.1",
+    "criteria_name": "Cấu hình tham số 'Account lockout duration'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với giá trị khuyến nghị: >= 15 Computer Configuration Policies Windows Settings Security Settings Account Policies Account Lockout Policy Account lockout duration",
+    "actual_result": "N/A",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "1.2.2",
+    "criteria_name": "Cấu hình tham số 'Account lockout threshold'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với giá trị khuyến nghị: <= 10 (khác 0) Computer Configuration Policies Windows Settings Security Settings Account Policies Account Lockout Policy Account lockout threshold",
+    "actual_result": "0",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "1.2.3",
+    "criteria_name": "Cấu hình tham số 'Reset account lockout counter after'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với giá trị khuyến nghị: >= 15 (phút) Computer Configuration Policies Windows Settings Security Settings Account Policies Account Lockout Policy Reset account lockout counter after ",
+    "actual_result": "N/A",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.1.2",
+    "criteria_name": "Cấu hình chính sách 'Access this computer from the network'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với trạng thái đề xuất: - Đối với DC: Administrators, Authenticated Users, ENTERPRISE DOMAIN CONTROLLERS - Đối với MS: Administrators, Authenticated Users Computer Configuration Policies Windows Settings Security Settings Local Policies User Rights Assignment Access this computer from the network\"\"",
+    "actual_result": "*S-1-1-0 *S-1-5-32-544 *S-1-5-32-545 *S-1-5-32-551",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.1.4",
+    "criteria_name": "Cấu hình chỉ định người dùng được thêm các máy tr ạm vào Domain",
+    "solution": "Cấu hình tham số theo đường dẫn sau với trạng thái đề xuất: Administrators Computer Configuration Policies Windows Settings Security Settings Local Policies User Rights Assignment Add workstations to domain",
+    "actual_result": "N/A",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.1.5",
+    "criteria_name": "Cấu hình chính sách 'Adjust memory quotas for a process'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với trạng thái đề xuất: Administrators, LOCAL SERVICE, NETWORK SERVICE Computer Configuration Policies Windows Settings Security Settings Local Policies User Rights Assignment Adjust memory quotas for a process * Lưu ý: #1: Đ ối với Member Server giữ vai trò Máy ch ủ Web (IIS) với dịch vụ Web Server Role là ngo ại lệ đối với khuyến nghị này, cho phép các nhóm ứng dụng IIS được tự cấp. #2: Đ ối với Member Server được cài đ ặt Microsoft SQL Server là ngo ại lệ đối với khuyến nghị này.\"\"",
+    "actual_result": "*S-1-5-19 *S-1-5-20 *S-1-5-32-544 *S-1-5-82-3006700770-424185619-1745488364-794895919-4004696415",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.1.6",
+    "criteria_name": "Cấu hình chính sách 'Allow log on loca lly'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với trạng thái đề xuất: Administrators Computer Configuration Policies Windows Settings Security Settings Local Policies User Rights Assignment Allow log on locally",
+    "actual_result": "sftpuser *S-1-5-32-544 *S-1-5-32-545 *S-1-5-32-551",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.1.7",
+    "criteria_name": "Cấu hình chính sách 'Allow log on through Remote Desktop Services'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: - Đối với DC: Administrators - Đối với MS: Administrators, Remote Desktop Users Computer Configuration Policies Windows Settings Security Settings Local Policies User Rights Assignment Allow log on through Remote Desktop Services * Lưu ý: - Nếu có danh sách Whitelists người dùng được cho phép s ử dụng dịch vụ truy cập từ xa sẽ là ngo ại lệ đối với khuyến nghị này.\"\"",
+    "actual_result": "sftpuser *S-1-5-32-544 *S-1-5-32-545 *S-1-5-32-551 *S-1-5-32-544 *S-1-5-32-555",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.1.8",
+    "criteria_name": "Cấu hình sao lưu t ệp và thư mục 'Back up files and directories'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Administrators Computer C onfiguration Policies Windows Settings Security Settings Local Policies User Rights Assignment Back up files and directories ",
+    "actual_result": "sftpuser *S-1-5-32-544 *S-1-5-32-545 *S-1-5-32-551 *S-1-5-32-544 *S-1-5-32-555 *S-1-5-32-544 *S-1-5-32-551",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.2.3.1",
+    "criteria_name": "Cấu hình chính sách 'Devices: Allowed to format and eject",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Administrators Computer Configuration Policies Windows Settings Security Settings Local Policies Security Options Devices: Allowed to format and eject removable media",
+    "actual_result": "N/A",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.2.4.1",
+    "criteria_name": "Cấu hình chính sách 'Domain controller: Allow server operators to",
+    "solution": "Cấu hình tham số theo đường dẫn sau với trạng thái đề xuất: Disabl ed Computer Configuration Policies Windows Settings Security Settings Local Policies Security Options Domain controller: Allow server operators to schedule tasks ",
+    "actual_result": "N/A",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.2.4.2",
+    "criteria_name": "Cấu hình chính sách 'Domain controller: Refuse machine account",
+    "solution": "Cấu hình tham số theo đường dẫn sau với trạng thái đề xuất: Disabled Computer Configuration Policies Windows Settings Security Settings Local Policies Security Options Domain controller: Refuse machine account password changes",
+    "actual_result": "N/A",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.2.6.1",
+    "criteria_name": "Thiết lập 'Interactive logon: Do not display last user name'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với trạng thái đề xuất: Enabled Computer Configuration Policies Windows Settings Security Settings Local Policies Security Options Interactive logon: Do not display last user name",
+    "actual_result": "4,0",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.2.6.3",
+    "criteria_name": "Thiết lập 'Interactive logon: Machine inactivity limit'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với trạng thái đề xuất: <= 900 (s) (khác 0) Computer Configuration Policies Windows Settings Security Settings Local Policies Security Options Interactive logon: Machine inactivity limit ",
+    "actual_result": "N/A",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.2.9.3",
+    "criteria_name": "Thiết lập 'Network access: Do not allow anonymous enum eration of",
+    "solution": "Cấu hình tham số theo đường dẫn sau với trạng thái đề xuất: Enabled Computer Configuration Policies Windows Settings Security Settings Local Policies Security Options Network access: Do not allow anonymous enumeration of SAM accounts and shares * Lưu ý: # người dùng truy c ập vào các máy ch ủ tệp và máy in dư ới dạng ẩn danh s ẽ không thể xem được các tài nguyên được chia s ẻ trên các máy ch ủ đó; người dùng s ẽ phải xác th ực trước khi có thể xem danh sách các thư mục và máy in được chia s ẻ.\"",
+    "actual_result": "7,",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.2.9.7",
+    "criteria_name": "Cấu hình 'Network access: Remotely accessible registry paths and",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: System CurrentControlSet Control Print Printers System CurrentControlSet Services Eventlog Software Microsoft OLAP Server Software Microsoft Windows NTCurrentVersion Print Software Microsoft Windows NT CurrentVersion Windows System CurrentControlSet Control ContentIndex System CurrentControlSet Control Terminal Server System CurrentControlSet Control Terminal Server UserConfig System CurrentControlSet Control Terminal Server DefaultUserConfiguration Software Microsoft Windows NT CurrentVersion Perflib System CurrentControlSet Services SysmonLog Computer Configuration Policies Windows Settings Security Settings Local Policies Security Options Network access: Remotely accessible registry paths and sub -paths ",
+    "actual_result": "N/A",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.2.10.3",
+    "criteria_name": "Thiết lập 'Network security: Configure encryption types",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: AES128_HMAC_SHA1, AES256_HMAC_SHA1, Future encryption types Computer Configuration Policies Windows Settings Security Settings Local Policies Security Options Network security: Configure encryption types allowed for Kerberos * Lưu ý: # Windows Server 2008 (non -R2) và các phiên b ản thấp hơn cho phép s ử dụng DES là mặc định dành cho Kerberos, nhưng các phiên b ản mới hơn thì không. # Một số ứng dụng và h ệ điều hành cũ có thể yêu c ầu RC4_HMAC_MD5, khuyến nghị nên ki ểm tra và xác đ ịnh có thể loại bỏ được hay không .\"\"",
+    "actual_result": "N/A",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.2.10.5",
+    "criteria_name": "Thiết lập 'Network security: Force logoff when logon hours",
+    "solution": "Cấu hình tham số theo đường dẫn sau với trạng thái đề xuất: Enabled Computer Configuration Policies Windows Settings Security Settings Local Policies Security Options Network security: Force logoff when logon hours expire * Lưu ý: # Nếu bật chính sách này thì nên b ật thêm chính sách 'Microsoft network server: Disconnect clients when logon hours expire (2. 2.8.2)' ",
+    "actual_result": "0",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.2.13.1",
+    "criteria_name": "Thiết lập 'User Account Control: Admin Approval Mode for  the \nBuilt-in Administrator account'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với trạng thái đề xuất: Enabled Computer Configuration Policies Windows Settings Security Settings Local Policies Security Options User Account Control: Admin Approval Mode for the Built -in Administrator account ",
+    "actual_result": "N/A",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "2.2.13.2",
+    "criteria_name": "Thiết lập 'User Account Control: Behavior of the elevation",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Prompt for consent on the secure desktop Computer Configuration Policies Windows Settings Security Settings Local Policies Security Options User Account Control: Behavior of the elevation prompt for administrators in Admin Approval Mode",
+    "actual_result": "5",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "3.1.1",
+    "criteria_name": "Thiết lập trạng thái 'Windows Firewall: Domain: Firewall state'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với trạng thái đề xuất: On Computer Configuration Policies Windows Settings Security Settings Windows Firewall with Advanced Security Windows Firewall with Advanced Security Windows Firewall Properties Domain Profile Firewall state",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "3.1.2",
+    "criteria_name": "Thiết lập trạng thái 'Windows Firewall: Domain: Inbound connections'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với trạng thái đề xuất: Block Computer Configuration Policies Windows Settings Security Settings Windows Firewall with Advanced Security Windows Firewall with Advanced Security Windows Firewall Properties Domain Profile Inbound connections * Lưu ý: # Đảm bảo chỉ mở các k ết nối cần thiết, không m ở theo d ải IP.\"\"",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "3.1.3",
+    "criteria_name": "Thiết lập trạng thái 'Windows Firewall: Domain: Outbound connections'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với trạng thái đề xuất: Allow Computer Configuration Policies Windows Settings Security Settings Windows Firewall with Advanced Security Windows Firewall with Advanced Security Windows Firewall Properties Domain Profile Outbound connections * Lưu ý: # Đảm bảo chỉ mở các k ết nối cần thiết, không m ở theo d ải IP.\"\"",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "3.1.4",
+    "criteria_name": "Cấu hình v ị trí lưu tr ữ nhật ký 'Windows Firewall: Domain: Logging:",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: %SystemRoot% System32 logfiles firewall domainfw.log Computer Configuration Policies Windows Settings Security Settings Windows Firewall with Advanced Security Windows Firewall with Advanced Security Windows Firewall Properties Domain Profile Logging Customize Name",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "3.1.5",
+    "criteria_name": "Cấu hình kích thư ớc giới hạn 'Windows Firewall: D omain: Logging:",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: >= 16,384 KB Computer Configuration Policies Windows Settings Security Settings Windows Firewall with Advanced Security Windows Firewall with Advanced Security Windows Firewall Properties Domain Profile Logging Customize Size limit (KB) * Lưu ý: # Tệp nhật ký s ẽ bị giới hạn ở kích thư ớc được chỉ định, các s ự kiện cũ s ẽ bị ghi đè b ởi các s ự kiện mới hơn khi đ ạt đến giới hạn.\"\"",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "3.1.6",
+    "criteria_name": "Thiết lập chính sách 'Windows Firewall: Domain: Logging: Log dropped",
+    "solution": "Cấu hình tham số theo đường dẫn sau với thiết lập đề xuất: Yes Computer Configuration Policies Windows Settings Security Settings Windows Firewall with Advanced Security Windows Firewall with Advanced Security Windows Firewall Properties Domain Profile Logging Customize Log dropped packets",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "3.1.7",
+    "criteria_name": "Thiết lập chính sách 'Windows Firewall: Domain: Logging: Log",
+    "solution": "Cấu hình tham số theo đường dẫn sau với thiết lập đề xuất: Yes Computer Configuration Policies Windows Settings Security Settings Windows Firewall with Advanced Security Windows Firewall with Advanced Security Windows Firewall Properties Domain Profile Logging Customize Log successful connections",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "3.2.1",
+    "criteria_name": "Thiết lập trạng thái 'Windows Firewall: Private: Firewall state'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với trạng thái đề xuất: On Computer Configuration Policies Windows Settings Security Settings Windows Firewall with Advanced Security Windows Firewall with Advanced Security Windows Firewall Properties Private Profile Firewall state",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "3.2.2",
+    "criteria_name": "Thiết lập trạng thái 'Windows Firewall: Private: Inbound c onnections'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với trạng thái đề xuất: Block Computer Configuration Policies Windows Settings Security Settings Windows Firewall with Advanced Security Windows Firewall with Advanced Security Windows Firewall Properties Private Profile Inbound connections * Lưu ý: # Đảm bảo chỉ mở các k ết nối cần thiết, không m ở theo d ải IP.\"\"",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "3.2.3",
+    "criteria_name": "Thiết lập trạng thái 'Windows Firewall: Private: Outbound connections'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với trạng thái đề xuất: Allow Computer Configuration Policies Windows Settings Security Settings Windows Firewall with Advanced Security Windows Firewall with Advanced Security Windows Firewall Properties Private Profile Outbound connections * Lưu ý: # Đảm bảo chỉ mở các k ết nối cần thiết, không m ở theo d ải IP. Cấu hình v ị trí lưu tr ữ nhật ký 'Windows Firewall: Private: Logging: Name' Mô tả: Thiết lập vị trí lưu tr ữ nhật ký tư ờng lửa Mục tiêu: Cấu hình tham số theo đường dẫn sau với khuyến nghị: %SystemRoot% System32 logfiles firewall private fw.log Computer Configuration Policies Windows Settings Security Settings Windows Firewall with Advanced Security Windows Firewall with Advanced Security Windows Firewall Properties Private Profile Logging Customize Name\"\"",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "3.2.4",
+    "criteria_name": "Cấu hình kích thư ớc giới hạn 'Windows Firewall: Private: Logging: Size",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: >= 16,384 KB Computer Configuration Policies Windows Settings Security Settings Windows Firewall with Advanced Security Windows Firewall with Advanced Security Windows Firewall Properties Private Profile Logging Customize Size limit (KB) * Lưu ý: # Tệp nhật ký s ẽ bị giới hạn ở kích thư ớc được chỉ định, các s ự kiện cũ s ẽ bị ghi đè b ởi các s ự kiện mới hơn khi đ ạt đến giới hạn.\"\"",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "3.2.5",
+    "criteria_name": "Thiết lập chính sách 'Windows Firewall: Private: Logging: Log dropped",
+    "solution": "Cấu hình tham số theo đường dẫn sau với thiết lập đề xuất: Yes Computer Configuration Policies Windows Settings Security Settings Windows Firewall with Advanced Security Windows Firewall with Advanced Security Windows Firewall Properties Private Profile Logging Customize Log dropped packets",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "3.2.6",
+    "criteria_name": "Thiết lập chính sách 'Windows Firewall: Private: Logging: Log",
+    "solution": "Cấu hình tham số theo đường dẫn sau với thiết lập đề xuất: Yes Computer Configuration Policies Windows Settings Security Settings Windows Firewall with Advanced Security Windows Firewall with Advanced Security Windows Firewall Properties Private Profile Logging Customize Log successful connections",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "3.3.1",
+    "criteria_name": "Thiết lập trạng thái 'Windows Firewall: Public: Firewall state'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với trạng thái đề xuất: On Computer Configuration Policies Windows Settings Security Settings Windows Firewall with Advanced Security Windows Firewall with Advanced Security Windows Firewall Properties Public Profile Firewall state ",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "3.3.2",
+    "criteria_name": "Thiết lập trạng thái 'Windows Firewall: Public: Inbound con nections'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với trạng thái đề xuất: Block Computer Configuration Policies Windows Settings Security Settings Windows Firewall with Advanced Security Windows Firewall with Advanced Security Windows Firewall Properties Public Profile Inbound connections * Lưu ý: # Đảm bảo chỉ mở các k ết nối cần thiết, không m ở theo d ải IP.\"\"",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "3.3.3",
+    "criteria_name": "Thiết lập trạng thái 'Windows Firewall: Public: Outbound connections'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với trạng thái đề xuất: Allow Computer Configuration Policies Windows Settings Security Settings Windows Firewall with Advanced Security Windows Firewall with Advanced Security Windows Firewall Properties Public Profile Outbound connections * Lưu ý: # Đảm bảo chỉ mở các k ết nối cần thiết, không m ở theo d ải IP. Cấu hình v ị trí lưu tr ữ nhật ký 'Windows Firewall: Public: Logging: Name' Mô tả: Thiết lập vị trí lưu tr ữ nhật ký tư ờng lửa Mục tiêu: Cấu hình tham số theo đường dẫn sau với khuyến nghị: %SystemRoot% System32 logfiles firewall public fw.log Computer Configuration Policies Windows Settings Security Settings Windows Firewall with Advanced Security Windows Firewall with Advanced Securi tyWindows Firewall Properties Public Profile Logging Customize Name\"\"",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "3.3.4",
+    "criteria_name": "Cấu hình kích thư ớc giới hạn 'Windows Firewall: Public: Logging: Size",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: >= 16,384 KB Computer Configuration Policies Windows Settings Security Settings Windows Firewall with Advanced Security Windows Firewall with Advanced Security Windows Firewall Properties Public Profile Logging Customize Size limit (KB) * Lưu ý: # Tệp nhật ký s ẽ bị giới hạn ở kích thư ớc được chỉ định, các s ự kiện cũ s ẽ bị ghi đè b ởi các s ự kiện mới hơn khi đ ạt đến giới hạn.\"\"",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "3.3.5",
+    "criteria_name": "Thiết lập chính sách 'Windows Firewall: Public: Logging: Log dropped",
+    "solution": "Cấu hình tham số theo đường dẫn sau với thiết lập đề xuất: Yes Computer Configuration Policies Windows Settings Security Settings Windows Firewall with Advanced Security Windows Firewall with Advanced Security Windows Firewall Properties Public Profile Logging Customize Log dropped packets ",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "3.3.6",
+    "criteria_name": "Thiết lập chính sách 'Windows Firewall: Public: Logging: Log",
+    "solution": "Cấu hình tham số theo đường dẫn sau với thiết lập đề xuất: Yes Computer Configuration Policies Windows Settings Security Settings Windows Firewall with Advanced Security Windows Firewall with Advanced Security Windows Firewall Properties Public Profile Logging Customize Log successful connections ",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "4.1.1",
+    "criteria_name": "Cấu hình chính sách 'Audit Credential Validation'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Success and Failure Computer Configuration Policies Windows Settings Security Settings Advanced Audit Policy Configuration Audit Policies Account Logon Audit Credential Validation",
+    "actual_result": "Credential Validation                   Success",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "4.1.2",
+    "criteria_name": "Cấu hình chính sách 'Audit Kerberos Authentication Service' [chỉ DC]",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Success and Failure Computer Configuration Policies Windows Settings Security Settings Advanced Audit Policy Configuration Audit Policies Account Logon Audit Kerberos Authentication Service",
+    "actual_result": "Kerberos Authentication Service         Success",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "4.1.3",
+    "criteria_name": "Cấu hình chính sách 'Audit Kerberos Service Ticket Operations' [chỉ",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Success and Failure Computer Configuration Policies Windows Settings Security Settings Advanced Audit Policy Configuration Audit Policies Account Logon Audit Kerberos Service Ticket Operations",
+    "actual_result": "Kerberos Service Ticket Operations      Success",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "4.2.1",
+    "criteria_name": "Cấu hình chính sách 'Audit Application Group Management'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Success and Failure Computer Configuration Policies Windows Settings Security Settings Advanced Audit Policy Configuration Audit Policies Accoun t Management Audit Application Group Management",
+    "actual_result": "Application Group Management            No Auditing",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "4.2.3",
+    "criteria_name": "Cấu hình chính sách 'Audit Distribution Group Management' [chỉ DC]",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Success Computer Configuration Policies Windows Settings Security Settings Advanced Audit Policy Configuration Audit Policies Account Management Audit Distribution Group Management",
+    "actual_result": "Distribution Group Management           No Auditing",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "4.2.4",
+    "criteria_name": "Cấu hình chính sách 'Audit Other Account Management Events' [chỉ",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Success Computer Configuration Policies Windows Settings Security Settings Advanced Audit Policy Configuration Audit Policies Account Management Audit Other Account Management Events",
+    "actual_result": "Other Account Management Events         No Auditing",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "4.2.6",
+    "criteria_name": "Cấu hình chính sách 'Audit User Account Management'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Success and Failure Computer Configuration Policies Windows Settings Security Settings Advanced Audit Policy Configuration Audit Policies Account Management Audit User Account Management",
+    "actual_result": "User Account Management                 Success",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "4.3.1",
+    "criteria_name": "Cấu hình chính sách 'Audit Process Creation'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Success Computer Configuration Policies Windows Settings Security Settings Advanced Audit Policy Configuration Audit Policies Detailed Tracking Audit Process Creation ",
+    "actual_result": "Process Creation                        No Auditing",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "4.4.1",
+    "criteria_name": "Cấu hình chính sách 'Audit Directory Service Access' [chỉ DC]",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Success and Failure Computer Configuration Policies Windows Settings Security Settings Advanced Audit Policy Configuration Audit Policies DS Access Audit Directory Service Access",
+    "actual_result": "Directory Service Access                Success",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "4.4.2",
+    "criteria_name": "Cấu hình chính sách 'Audit Directory Service Changes' [chỉ DC]",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Success Computer Configuration Policies Windows Settings Security Settings Advanced Audit Policy Configuration Audit Policies DS Access Audit Directory Service Changes",
+    "actual_result": "Directory Service Changes               No Auditing",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "4.5.1",
+    "criteria_name": "Cấu hình chính sách 'Audit Account Lockout'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Success and Failure Computer Configuration Policies Windows Settings Security Settings Advanced Audit Policy Configuration Audit Policies Logon/Logoff Audit Account Lockout",
+    "actual_result": "Account Lockout                         Success",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "4.5.4",
+    "criteria_name": "Cấu hình chính sách 'Audit Other Logon/Logoff Events'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Success and Failure Computer Configuration Policies Windows Settings Security Settings Advanced Audit Policy Configuration Audit Policies Logon/Logoff Audit Other Logon/Logoff Events",
+    "actual_result": "Other Logon/Logoff Events               No Auditing",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "4.6.1",
+    "criteria_name": "Cấu hình chính sách 'Audit Detailed File Share'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Failure Computer Configuration Policies Windows Settings Security Settings Advanced Audit Policy Configuration Audit Policies Object Access Audit Detailed File Share",
+    "actual_result": "Detailed File Share                     No Auditing",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "4.6.2",
+    "criteria_name": "Cấu hình chính sách 'Audit File Share'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Success and Failure Computer Configuration Policies Windows Settings Security Settings Advanced Audit Policy Configuration Audit Policies Object Access Audit File Share",
+    "actual_result": "File Share                              No Auditing",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "4.6.3",
+    "criteria_name": "Cấu hình chính sách 'Audit Other Object Access Events'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Success and Failure Computer Configuration Policies Windows Settings Security Settings Advanced Audit Policy Configuration Audit Pol iciesObject Access Audit Other Object Access Events",
+    "actual_result": "Other Object Access Events              No Auditing",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "4.6.4",
+    "criteria_name": "Cấu hình chính sách 'Audit Removable Storage'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Success and Failure Computer Configuration Policies Windows Settings Security Settings Advanced Audit Policy Configuration Audit Policies Object Access Audit Removable Storage ",
+    "actual_result": "Removable Storage                       No Auditing",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "4.7.3",
+    "criteria_name": "Cấu hình chính sách 'Audit Authorization Policy Change'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Success Computer Configuration Policies Windows Settings Security Settings Advanced Audit Policy Configuration Audit Policies Policy Change Audit Authorization Policy Change ",
+    "actual_result": "Authorization Policy Change             No Auditing",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "4.7.4",
+    "criteria_name": "Cấu hình chính sách 'Audit MPSSVC Rule -Level Policy Change'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Success and Failure Computer Configuration Policies Windows Settings Security Setting sAdvanced Audit Policy Configuration Audit Policies Policy Change Audit MPSSVC Rule -Level Policy Change",
+    "actual_result": "MPSSVC Rule-Level Policy Change         No Auditing",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "4.7.5",
+    "criteria_name": "Cấu hình chính sách 'Audit Other Policy Change Events'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Failure Computer Configuration Policies Windows Settings Security Settings Advanced Audit Policy Conf iguration Audit Policies Policy Change Audit Other Policy Change Events",
+    "actual_result": "Other Policy Change Events              No Auditing",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "4.8.1",
+    "criteria_name": "Cấu hình chính sách 'Audit Sensitive Privilege Use Events'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Success and Failure Computer Configuration Policies Windows Settings Security Settings Advanced Audit Policy Configuration Audit Policies Privilege UseAudit Sensitive Privilege Use",
+    "actual_result": "Sensitive Privilege Use                 No Auditing",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "4.9.1",
+    "criteria_name": "Cấu hình chính sách 'Audit IPsec Driver'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Success and Failure Computer Configuration Policies Windows Settings Security Settings Advanced Audit Policy Configuration Audit Policies System Audit IPsec Driver",
+    "actual_result": "IPsec Driver                            No Auditing",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "4.9.4",
+    "criteria_name": "Cấu hình chính sách 'Audit Security System Extension'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Success Computer Configuration Policies Windows Settings Security SettingsAdvanced Audit Policy Configuration Audit Policies System Audit Security System Extension",
+    "actual_result": "Security System Extension               No Auditing",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "5.1.1",
+    "criteria_name": "Cấu hình chính sách 'Turn off app notifications on the lock screen'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Enabled Computer Configuration Policies Administrative Templates System Logon Turn off app notifications on the lock screen * Lưu ý: # Đường dẫn Chính sách Nhóm này có thể không t ồn tại, được cung c ấp bởi mẫu Chính sách Nhóm CredentialProvider s.admx/adml bao g ồm trong M ẫu quản trị Microsoft Windows 8.0 & Server 2012 (non -R2) (ho ặc các phiên b ản mới hơn).\"\"",
+    "actual_result": "N/A",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "5.1.2",
+    "criteria_name": "Cấu hình chính sách 'Turn off picture password sign -in'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Enabled Computer Configuration Policies Administrative Templates System Logon Turn off picture password sign -in * Lưu ý: # Đường dẫn Chính sách Nhóm này có thể không t ồn tại, được cung c ấp bởi mẫu Chính sách Nhóm CredentialProviders.admx/adml bao g ồm trong M ẫu quản trị Microsoft Windows 8.0 & Server 2012 (non -R2) (ho ặc các phiên b ản mới hơn).\"\"",
+    "actual_result": "N/A",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "5.2.1",
+    "criteria_name": "Cấu hình chính sách 'Require a password when a computer wakes (on",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Enabled Computer Configuration Policies Administrative Templates System Power Management Sleep Settings Require a password when a computer wakes (on battery) * Lưu ý: # Đường dẫn Chính sách Nhóm này có thể không t ồn tại, được cung c ấp bởi mẫu Chính sách Nhóm Power .admx/adml bao g ồm trong M ẫu quản trị Microsoft Windows 8.0 & Server 2012 (non -R2) (ho ặc các phiên b ản mới hơn).\"\"",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "5.2.2",
+    "criteria_name": "Cấu hình chính sách 'Require a password when a computer wakes",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Enabled Computer Configuration Policies Administrative Templates System Power Management Sleep Settings Require a password when a computer wakes (plug ged in) * Lưu ý: # Đường dẫn Chính sách Nhóm này có thể không t ồn tại, được cung c ấp bởi mẫu Chính sách Nhóm Power.admx/adml bao g ồm trong M ẫu quản trị Microsoft Windows 8.0 & Server 2012 (non -R2) (ho ặc các phiên b ản mới hơn).\"\"",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "5.3.1",
+    "criteria_name": "Cấu hình chính sách 'Disallow Autoplay for non -volume devices'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Enabled Computer Configuration Policies Administrative Templates Windows Components AutoPlay Policies Disallow Autoplay for non -volume devices * Lưu ý: # Đường dẫn Chính sách Nhóm này có thể không t ồn tại, được cung c ấp bởi mẫu Chính sách Nhó m AutoPlay.admx/adml bao g ồm trong M ẫu quản trị Microsoft Windows 8.0 & Server 2012 (non -R2) (ho ặc các phiên b ản mới hơn).\"\"",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "5.3.2",
+    "criteria_name": "Cấu hình chính sách 'Set the default behavior for AutoRun'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Enabled: Do not execute any autorun commands Computer Configuration Policies Administrative Templates Windows Components AutoPlay Policies Set the default behavior for AutoRun * Lưu ý: # Đường dẫn Chính sách Nhóm này có thể không t ồn tại, được cung c ấp bởi mẫu Chính sách Nhóm AutoPlay.admx/adml bao g ồm trong M ẫu quản trị Microsoft Windows 8.0 & Server 2012 (non -R2) (ho ặc các phiên b ản mới hơn).\"\"",
+    "actual_result": "N/A",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "5.3.3",
+    "criteria_name": "Cấu hình chính sách 'Turn off Autoplay'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Enabled: All drives Computer Configuration Policies Administrative Templates Windows Components AutoPlay Policies Turn off Autoplay * Lưu ý: # Đường dẫn Chính sách Nhóm này có thể không t ồn tại, được cung c ấp bởi mẫu Chính sách Nhóm AutoPlay.admx/adml bao g ồm trong M ẫu quản trị Microsoft Windows 8.0 & Server 2012 (non -R2) (ho ặc các phiên b ản mới hơn).\"\"",
+    "actual_result": "N/A",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "5.4.1",
+    "criteria_name": "Thiết lập chính sách 'Application: Control Event Log behavior when the",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Disabled Computer Configuration Policies Administrative Templates Windows Components Event Log Service Application Control Event Log behavior when the log file reaches its maximum size",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "5.4.2",
+    "criteria_name": "Thiết lập chính sách 'Application: Specify the maximum log file size KB)' ",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Enabled: >= 32,768 Computer Configuration Policies Administrative Templates Windows Components Event Log Service Application Specify the maximum log file size (KB) * Lưu ý: # Để giảm thiểu rủi ro m ất dữ liệu khi việc ghi nh ật ký bị đầy, có thể áp dụng các chính sách (data retention) để lựa chọn lưu giữ các s ự kiện cũ nào được ghi đè khi cần. # Hệ quả của việc cấu hình chính sách này là các s ự kiện cũ hơn s ẽ bị xóa khỏi nhật ký. K ẻ tấn công có thể lợi dụng để tạo ra m ột số lượng lớn các s ự kiện không liên quan nh ằm ghi đè lên các b ằng ch ứng về cuộc tấn công. -> Tốt nhất, nên s ử dụng các gi ải pháp giám sát c ụ thể. Nếu tất cả các s ự kiện được gửi đến một máy ch ủ giám sát s ẽ hỗ trợ cho việc thu th ập thông tin và các ho ạt động điều tra về sau.\"\"",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "5.5.1",
+    "criteria_name": "Thiết lập chính sách 'Security: Control Event Log behavior when the log file reaches its maximum size'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Disabled Computer Configuration Policies Administrative Templates Windows Components Event Log Service Security Control Event Log behavior when the log file reaches its maximum size",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "5.5.2",
+    "criteria_name": "Thiết lập chính s ách 'Security: Specify the maximum log file size (KB)'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Enabled: >= 196 ,608 Computer Con figuration Policies Administrative Templates Windows Components Event Log Service  Security Specify the maximum log file size (KB) * Lưu ý: # Để giảm thiểu rủi ro m ất dữ liệu khi việc ghi nh ật ký bị đầy, có thể áp dụng các chính sách (data retention) để lựa chọn lưu giữ các s ự kiện cũ nào được ghi đè khi cần. # Hệ quả của việc cấu hình chính sách này là các s ự kiện cũ hơn s ẽ bị xóa khỏi nhật ký. K ẻ tấn công có thể lợi dụng để tạo ra m ột số lượng lớn các s ự kiện không liên quan nh ằm gh i đè lên các b ằng ch ứng về cuộc tấn công. -> Tốt nhất, nên s ử dụng các gi ải pháp giám sát c ụ thể. Nếu tất cả các s ự kiện được gửi đến một máy ch ủ giám sát s ẽ hỗ trợ cho việc thu th ập thông tin và các ho ạt động điều tra về sau.\"\"",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "5.6.1",
+    "criteria_name": "Thiết lập chính sách 'Setup: Control Event Log behavior when the log file reaches its maximum size' ",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Disabled Computer Configuration Policies Administrative Templates Windows Components Event Log Service Setup Control Event Log behavior when the log file reaches its maximum size ",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "5.6.2",
+    "criteria_name": "Thiết lập chính sác h 'Setup: Specify the maximum log file size (KB)'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Enabled: >= 32,768 Computer Configuration Policies Administrative Templates Windows Components Event Log Service Setup Specify the maximum log file size (KB) * Lưu ý: # Để giảm thiểu rủi ro m ất dữ liệu khi việc ghi nh ật ký bị đầy, có thể áp dụng các chính sách (data retention) để lựa chọn lưu giữ các s ự kiện cũ nào được ghi đè khi cần. # Hệ quả của việc cấu hình chính sách này là các s ự kiện cũ hơn s ẽ bị xóa khỏi nhật ký. K ẻ tấn công có thể lợi dụng để tạo ra m ột số lượng lớn các s ự kiện không liên quan nh ằm ghi đè lên các b ằng ch ứng về cuộc tấn công. -> Tốt nhất, nên s ử dụng các gi ải pháp giám s át cụ thể. Nếu tất cả các s ự kiện được gửi đến một máy ch ủ giám sát s ẽ hỗ trợ cho việc thu th ập thông tin và các ho ạt động điều tra về sau.\"\"",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "5.7.1",
+    "criteria_name": "Thiết lập chính sách 'System: Control Event Log behavior when the log file reaches its maximum size' ",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Disabled Computer Configuration Policies Administrative Templates Windows Components Event Log Service System Control Event Log behavior when the log file reaches its maximum size",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  },
+  {
+    "rule_id": "5.7.2",
+    "criteria_name": "Thiết lập chính sách 'System: Specify the maximum log file size (KB)'",
+    "solution": "Cấu hình tham số theo đường dẫn sau với khuyến nghị: Enabled: >= 32,768 Computer Configuration Policies Administrative Templates Windows Components Event Log Service System Specify the maximum log file size (KB) * Lưu ý: # Để giảm thiểu rủi ro m ất dữ liệu khi việc ghi nh ật ký bị đầy, có thể áp dụng các chính sách (data retention) để lựa chọn lưu giữ các s ự kiện cũ nào được ghi đè khi cần. # Hệ quả của việc cấu hình chính sách này là các s ự kiện cũ hơn s ẽ bị xóa khỏi nhật ký. K ẻ tấn công có thể lợi dụng để tạo ra m ột số lượng lớn các s ự kiện không liên quan nh ằm ghi đè lên các b ằng ch ứng về cuộc tấn công. -> Tốt nhất, nên s ử dụng các gi ải pháp giám sát c ụ thể. Nếu tất cả các s ự kiện được gửi đến một máy ch ủ giám sát s ẽ hỗ trợ cho việc thu th ập thông tin và các ho ạt động điều tra về sau.",
+    "actual_result": "Chưa cấu hình",
+    "hostname": "WIN-DC012J0ESCI"
+  }
+]

@@ -1,0 +1,9 @@
+[
+  {
+    "ip": "10.147.50.110",
+    "os_name": "Microsoft Windows Server 2016 Standard Evaluation",
+    "os_version": "10.0.14393 N/A Build 14393",
+    "total_fail": 97,
+    "hostname": "WIN-DC012J0ESCI"
+  }
+]
