@@ -15,7 +15,7 @@ const ReportsPage: React.FC<UC2Props> = ({ goToTab, filters }) => {
   const [reports, setReports] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch("http://10.155.43.198:5678/webhook/ee325191-920a-49c9-b580-66040987d8ac")
+    fetch("http://10.147.50.118:5678/webhook/ee325191-920a-49c9-b580-66040987d8ac")
       .then((res) => res.json())
       .then((data) => {
         setReports(data);

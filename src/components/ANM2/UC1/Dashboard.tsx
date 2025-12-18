@@ -40,7 +40,7 @@ const Dashboard: React.FC<DashboardProps> = ({ goToTab, setFilters }) => {
     (async () => {
       try {
         const res = await fetch(
-          'http://10.155.43.198:5678/webhook/0ccdc9e0-f2fb-448f-9661-9fd3ef11c049?datamode=device_details'
+          'http://10.147.50.118:5678/webhook/0ccdc9e0-f2fb-448f-9661-9fd3ef11c049?datamode=device_details'
         );
         const apiResp = await res.json();
         const apiData: Device[] = apiResp.data || [];

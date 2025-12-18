@@ -251,8 +251,13 @@
                     "name" : "VN2/MANE",
                     "url": "/link-uc2",
                     "icon": "bi bi-grid"
+                },
+                {
+                    "code": "anm4_uc1",
+                    "name" : "Server",
+                    "url": "/link-uc4",
+                    "icon": "bi bi-grid"
                 }
-                
                
             ]
         },

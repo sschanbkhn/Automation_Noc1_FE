@@ -21,7 +21,7 @@ type TestResult = {
 type ApiResponse = { data: TestResult[] } | TestResult[];
 
 const API_URL =
-  "http://10.155.43.198:5678/webhook/0ccdc9e0-f2fb-448f-9661-9fd3ef11c049?datamode=test_results";
+  "http://10.147.50.118:5678/webhook/0ccdc9e0-f2fb-448f-9661-9fd3ef11c049?datamode=test_results";
 
 const isTrue = (v?: string) => v?.toLowerCase() === "true";
 const lines = (s?: string) => (s ? s.split(/\r?\n/) : []);

@@ -38,7 +38,7 @@ const DeviceUploadDashboard : React.FC<DashboardProps> = ({ goToTab }) => {
     setDevicesSent(0);
 
     try {
-      const response = await fetch(`http://10.155.43.198:5678/webhook/e2500aeb-7466-4b54-8aee-30964a625c5frunvn2mane?folder=${province}`, {
+      const response = await fetch(`http://10.147.50.118:5678/webhook/e2500aeb-7466-4b54-8aee-30964a625c5frunvn2mane?folder=${province}`, {
         method: 'GET',
         
       });

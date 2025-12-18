@@ -15,7 +15,7 @@ const DeviceUploadDashboard : React.FC<DashboardProps> = ({ goToTab }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch('http://10.155.43.198:5678/webhook/0ccdc9e0-f2fb-448f-9661-9fd3ef11c049?datamode=test_results');
+        const res = await fetch('http://10.147.50.118:5678/webhook/0ccdc9e0-f2fb-448f-9661-9fd3ef11c049?datamode=test_results');
         const json = await res.json();
         const array: any[] = Array.isArray(json) ? json : [];
 
@@ -75,7 +75,7 @@ const DeviceUploadDashboard : React.FC<DashboardProps> = ({ goToTab }) => {
         };
 
         try {
-          const res = await fetch('http://10.155.43.198:5678/webhook/423eb42f-6b98-4d8a-99d3-7302fc96c0da', {
+          const res = await fetch('http://10.147.50.118:5678/webhook/423eb42f-6b98-4d8a-99d3-7302fc96c0da', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

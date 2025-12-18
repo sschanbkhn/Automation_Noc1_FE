@@ -98,7 +98,7 @@ const Anm_uc2: React.FC<UC2Props> = ({ goToTab, filters }) => {
         const fetchData = async () => {
             try {
                 const response = await fetch(
-                    "http://10.155.43.198:5678/webhook/7bd100c2-3a64-4242-928a-b5ecda899f60"
+                    "http://10.147.50.118:5678/webhook/7bd100c2-3a64-4242-928a-b5ecda899f60"
                 );
                 const json = await response.json();
                 const array: any[] = Array.isArray(json) ? json : [];
