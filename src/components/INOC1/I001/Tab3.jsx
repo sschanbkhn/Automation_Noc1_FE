@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { mockIPTMonitoringData, DEVICES_LIST, TRIGGER_ALARM_OPTIONS, DEFAULT_TRIGGER_ALARM, DEFAULT_ROLLBACK_TIME } from './mockDataTab3';
 import Tab3Service from 'services/Tab3Service';
 
@@ -33,7 +33,9 @@ const IPTMonitoringTable = ({ data, onDeleteClick }) => {
                 <td className="partner-cell">{item.partner}</td>
                 <td className="prtg-id-cell"><code>{item.prtgId}</code></td>
                 <td className="capacity-cell">
-                  <span className="capacity-badge">{item.capacity}</span>
+                  <span className="capacity-badge">
+                    {typeof item.capacity === 'number' ? `${item.capacity} Gbps` : item.capacity}
+                  </span>
                 </td>
                 <td className="date-cell">{formatDate(item.dayAdded)}</td>
                 <td className="actions-cell">
@@ -149,15 +151,20 @@ const AddIPTModal = ({
           </div>
 
           <div className="form-group">
-            <label htmlFor="capacity-input">Capacity</label>
+            <label htmlFor="capacity-input">Capacity (Gbps)</label>
             <input
               id="capacity-input"
-              type="text"
-              placeholder="e.g., 100 Gbps"
+              type="number"
+              placeholder="e.g., 100"
               value={capacity}
               onChange={(e) => setCapacity(e.target.value)}
               className="form-control text-input"
+              min="0"
+              step="1"
             />
+            <small style={{ color: '#6b7280', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+              Chỉ nhập số (đơn vị: Gbps)
+            </small>
           </div>
 
           <div className="form-group">
@@ -263,10 +270,12 @@ const SetTimeToRollbackModal = ({
     setSelectedTime(`${hours}:${mins}`);
   };
 
-  const [selectedHour, selectedMin] = selectedTime.split(':');
+  const [selectedHour, selectedMin] = (selectedTime || '02:00').split(':');
 
   const handleApply = () => {
-    onApply(selectedTime);
+    if (selectedTime && selectedTime.includes(':')) {
+      onApply(selectedTime);
+    }
   };
 
   return (
@@ -390,30 +399,198 @@ function Tab3() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [showDateFilter, setShowDateFilter] = useState(false);
   const [deleteConfirmIPT, setDeleteConfirmIPT] = useState(null);
+  const [loadingCronSetting, setLoadingCronSetting] = useState(false);
+  const [loadingTriggerAlarm, setLoadingTriggerAlarm] = useState(false);
+  const [loadingIPTData, setLoadingIPTData] = useState(false);
+
+  // Fetch trigger alarm level from database on component mount
+  useEffect(() => {
+    let isMounted = true;
+    const fetchTriggerAlarm = async () => {
+      setLoadingTriggerAlarm(true);
+      try {
+        const response = await Tab3Service.GetTriggerAlarmLevel();
+        if (isMounted && response?.status === 'success' && response.data?.trigger_threshold) {
+          setCurrentTriggerAlarm(response.data.trigger_threshold);
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('Error fetching trigger alarm:', error);
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingTriggerAlarm(false);
+        }
+      }
+    };
+    fetchTriggerAlarm();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Fetch cron setting (rollback time) from database on component mount
+  useEffect(() => {
+    let isMounted = true;
+    const fetchCronSetting = async () => {
+      setLoadingCronSetting(true);
+      try {
+        const response = await Tab3Service.GetCronSetting();
+        if (isMounted && response?.status === 'success' && response.data?.cron_expression) {
+          const cronParts = response.data.cron_expression.split(' ');
+          if (cronParts.length >= 2) {
+            const hours = cronParts[1].padStart(2, '0');
+            const minutes = cronParts[0].padStart(2, '0');
+            setCurrentRollbackTime(`${hours}:${minutes}`);
+          }
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('Error fetching cron setting:', error);
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingCronSetting(false);
+        }
+      }
+    };
+    fetchCronSetting();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Fetch IPT monitoring list from database on component mount
+  useEffect(() => {
+    let isMounted = true;
+    const fetchIPTData = async () => {
+      setLoadingIPTData(true);
+      try {
+        const response = await Tab3Service.GetIPTMonitoringList();
+        if (isMounted && response?.status === 'success' && Array.isArray(response.data)) {
+          // Transform backend data to frontend format
+          const transformedData = response.data.map((item, index) => ({
+            id: item.id,
+            stt: index + 1,
+            device: item.device,
+            interface: item.interface,
+            partner: item.partner,
+            capacity: item.capacity,
+            prtgId: item.prtg_id,
+            dayAdded: item.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
+          }));
+          setIptData(transformedData);
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error('Error fetching IPT data:', error);
+          // Keep mock data on error
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingIPTData(false);
+        }
+      }
+    };
+    fetchIPTData();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const filteredIptData = iptData.filter(item => {
     if (!showDateFilter) return true;
     return item.dayAdded === selectedDate;
   });
 
-  const handleAddIPT = (newIPT) => {
-    const newItem = {
-      ...newIPT,
-      id: Math.max(...iptData.map(item => item.id), 0) + 1,
-      stt: iptData.length + 1
-    };
-    setIptData([...iptData, newItem]);
-    setModalState('closed');
+  const handleAddIPT = async (newIPT) => {
+    try {
+      const response = await Tab3Service.AddIPTMonitoring(
+        newIPT.device,
+        newIPT.interface,
+        newIPT.partner,
+        newIPT.capacity,
+        newIPT.prtgId
+      );
+      
+      if (response?.status === 'success') {
+        setModalState('addIPTResult');
+        
+        // Refresh IPT list from database
+        const listResponse = await Tab3Service.GetIPTMonitoringList();
+        if (listResponse?.status === 'success' && Array.isArray(listResponse.data)) {
+          const transformedData = listResponse.data.map((item, index) => ({
+            id: item.id,
+            stt: index + 1,
+            device: item.device,
+            interface: item.interface,
+            partner: item.partner,
+            capacity: item.capacity,
+            prtgId: item.prtg_id,
+            dayAdded: item.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
+          }));
+          setIptData(transformedData);
+        }
+      } else {
+        setModalState('error');
+      }
+    } catch (error) {
+      console.error('Error adding IPT:', error);
+      setModalState('error');
+    }
   };
 
-  const handleSetTriggerAlarm = (alarmLevel) => {
-    setCurrentTriggerAlarm(alarmLevel);
-    setModalState('closed');
+  const handleSetTriggerAlarm = async (alarmLevel) => {
+    try {
+      const response = await Tab3Service.SetTriggerAlarmLevel(alarmLevel);
+      
+      if (response?.status === 'success') {
+        setCurrentTriggerAlarm(alarmLevel);
+        setModalState('triggerAlarmResult');
+        
+        // Fetch latest data from database to confirm
+        const latestData = await Tab3Service.GetTriggerAlarmLevel();
+        if (latestData?.status === 'success' && latestData.data?.trigger_threshold) {
+          setCurrentTriggerAlarm(latestData.data.trigger_threshold);
+        }
+      } else {
+        setModalState('error');
+      }
+    } catch (error) {
+      console.error('Error updating trigger alarm:', error);
+      setModalState('error');
+    }
   };
 
-  const handleSetTimeToRollback = (time) => {
-    setCurrentRollbackTime(time);
-    setModalState('closed');
+  const handleSetTimeToRollback = async (time) => {
+    try {
+      const response = await Tab3Service.UpdateCronSetting(time);
+      
+      if (response?.status === 'success') {
+        setCurrentRollbackTime(time);
+        setModalState('rollbackTimeResult');
+        
+        // Fetch latest data from database to confirm
+        const latestData = await Tab3Service.GetCronSetting();
+        if (latestData?.status === 'success' && latestData.data?.cron_expression) {
+          const cronParts = latestData.data.cron_expression.split(' ');
+          if (cronParts.length >= 2) {
+            const hours = cronParts[1].padStart(2, '0');
+            const minutes = cronParts[0].padStart(2, '0');
+            const confirmedTime = `${hours}:${minutes}`;
+            setCurrentRollbackTime(confirmedTime);
+          }
+        }
+      } else {
+        setModalState('error');
+      }
+    } catch (error) {
+      console.error('Error updating rollback time:', error);
+      setModalState('error');
+    }
   };
 
   const handleDeleteClick = (ipt) => {
@@ -421,11 +598,37 @@ function Tab3() {
     setModalState('deleteConfirm');
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (deleteConfirmIPT) {
-      setIptData(iptData.filter(item => item.id !== deleteConfirmIPT.id));
-      setModalState('closed');
-      setDeleteConfirmIPT(null);
+      try {
+        const response = await Tab3Service.DeleteIPTMonitoring(deleteConfirmIPT.id);
+        
+        if (response?.status === 'success') {
+          setModalState('deleteIPTResult');
+          setDeleteConfirmIPT(null);
+          
+          // Refresh IPT list from database after delete
+          const listResponse = await Tab3Service.GetIPTMonitoringList();
+          if (listResponse?.status === 'success' && Array.isArray(listResponse.data)) {
+            const transformedData = listResponse.data.map((item, index) => ({
+              id: item.id,
+              stt: index + 1,
+              device: item.device,
+              interface: item.interface,
+              partner: item.partner,
+              capacity: item.capacity,
+              prtgId: item.prtg_id,
+              dayAdded: item.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
+            }));
+            setIptData(transformedData);
+          }
+        } else {
+          setModalState('error');
+        }
+      } catch (error) {
+        console.error('Error deleting IPT:', error);
+        setModalState('error');
+      }
     }
   };
 
@@ -469,18 +672,25 @@ function Tab3() {
       <div className="tab3-alert-boxes">
         <div className="alert-box trigger-alarm-box">
           <div className="alert-label">Ngưỡng Trigger Alarm hiện tại</div>
-          <div className="alert-value">{currentTriggerAlarm}%</div>
+          <div className="alert-value">
+            {loadingTriggerAlarm ? '⏳ Loading...' : `${currentTriggerAlarm}%`}
+          </div>
         </div>
 
         <div className="alert-box rollback-time-box">
-          <div className="alert-label">Thời gian Rollback hệ thống sẽ từng</div>
-          <div className="alert-value">{currentRollbackTime}</div>
+          <div className="alert-label">Thời gian Rollback hệ thống tự động</div>
+          <div className="alert-value">
+            {loadingCronSetting ? '⏳ Loading...' : currentRollbackTime}
+          </div>
         </div>
       </div>
 
       <div className="tab3-table-section">
         <div className="table-header">
-          <h4 className="table-title">Danh sách IPT đang được theo dõi ({filteredIptData.length})</h4>
+          <h4 className="table-title">
+            Danh sách IPT đang được theo dõi ({filteredIptData.length})
+            {loadingIPTData && <span style={{marginLeft: '10px', fontSize: '14px', color: '#6b7280'}}>⏳ Loading...</span>}
+          </h4>
           <button
             className="filter-toggle-btn"
             onClick={() => setShowDateFilter(!showDateFilter)}
@@ -528,6 +738,101 @@ function Tab3() {
           onApply={handleSetTimeToRollback}
           onCancel={() => setModalState('closed')}
         />
+      )}
+
+      {modalState === 'triggerAlarmResult' && (
+        <div className="modal-overlay" onClick={() => setModalState('closed')}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px', textAlign: 'center' }}>
+            <div className="modal-header">
+              <h3>Cập nhật thành công</h3>
+              <button className="modal-close" onClick={() => setModalState('closed')}>✕</button>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
+              <p style={{ fontSize: '16px', marginBottom: '8px', fontWeight: '500' }}>Đã cập nhật ngưỡng trigger alarm</p>
+              <p style={{ fontSize: '14px', color: '#6b7280' }}>Ngưỡng mới: <strong>{currentTriggerAlarm}%</strong></p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={() => setModalState('closed')}>Đóng</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalState === 'rollbackTimeResult' && (
+        <div className="modal-overlay" onClick={() => setModalState('closed')}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px', textAlign: 'center' }}>
+            <div className="modal-header">
+              <h3>Cập nhật thành công</h3>
+              <button className="modal-close" onClick={() => setModalState('closed')}>✕</button>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
+              <p style={{ fontSize: '16px', marginBottom: '8px', fontWeight: '500' }}>Đã cập nhật thời gian rollback</p>
+              <p style={{ fontSize: '14px', color: '#6b7280' }}>Thời gian mới: <strong>{currentRollbackTime}</strong></p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={() => setModalState('closed')}>Đóng</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalState === 'addIPTResult' && (
+        <div className="modal-overlay" onClick={() => setModalState('closed')}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px', textAlign: 'center' }}>
+            <div className="modal-header">
+              <h3>Thêm IPT thành công</h3>
+              <button className="modal-close" onClick={() => setModalState('closed')}>✕</button>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
+              <p style={{ fontSize: '16px', marginBottom: '8px', fontWeight: '500' }}>Đã thêm điểm theo dõi IPT mới</p>
+              <p style={{ fontSize: '14px', color: '#6b7280' }}>Danh sách đã được cập nhật</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={() => setModalState('closed')}>Đóng</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalState === 'deleteIPTResult' && (
+        <div className="modal-overlay" onClick={() => setModalState('closed')}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px', textAlign: 'center' }}>
+            <div className="modal-header">
+              <h3>Xóa IPT thành công</h3>
+              <button className="modal-close" onClick={() => setModalState('closed')}>✕</button>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
+              <p style={{ fontSize: '16px', marginBottom: '8px', fontWeight: '500' }}>Đã xóa điểm theo dõi IPT</p>
+              <p style={{ fontSize: '14px', color: '#6b7280' }}>Danh sách đã được cập nhật</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={() => setModalState('closed')}>Đóng</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalState === 'error' && (
+        <div className="modal-overlay" onClick={() => setModalState('closed')}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px', textAlign: 'center' }}>
+            <div className="modal-header">
+              <h3>Lỗi</h3>
+              <button className="modal-close" onClick={() => setModalState('closed')}>✕</button>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px', color: '#dc2626' }}>❌</div>
+              <p style={{ fontSize: '16px', marginBottom: '8px', fontWeight: '500' }}>Không thể cập nhật thời gian rollback</p>
+              <p style={{ fontSize: '14px', color: '#6b7280' }}>Vui lòng thử lại sau</p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setModalState('closed')}>Đóng</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {modalState === 'deleteConfirm' && deleteConfirmIPT && (

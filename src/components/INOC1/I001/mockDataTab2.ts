@@ -312,9 +312,10 @@ export const generateASNGrowthData = (period: 'week' | 'month' = 'week'): ASNGro
   ];
 
   return baseData.map((item, idx) => {
+    // Fixed growth percentage until API is ready - replace with real data from backend
     const growthPercent = period === 'week'
-      ? Math.floor(Math.random() * 35) + 15  // 15-50% for weekly
-      : Math.floor(Math.random() * 30) + 10; // 10-40% for monthly
+      ? 25  // Fixed 25% for weekly
+      : 15; // Fixed 15% for monthly
 
     return {
       stt: idx + 1,

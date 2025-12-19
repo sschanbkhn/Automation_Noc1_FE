@@ -73,33 +73,79 @@ const TopASNTable = ({ data, expandedASNId, onRowClick }) => (
 // AddCounterModal Component - Modal for adding new ASN counters
 // Features: ASN/Name input → Prefix selection (with isCountered check) → PRTG Group selection (single) → Device selection (6 POPs, all default)
 // ============================================
-const AddCounterModal = ({ asnList, onApply, onCancel }) => {
+const AddCounterModal = ({ asnList, onApply, onCancel, selectedDate }) => {
   const [inputASN, setInputASN] = useState('');
   const [inputASName, setInputASName] = useState('');
   const [selectedPrefixes, setSelectedPrefixes] = useState([]);
   const [selectedPRTGGroup, setSelectedPRTGGroup] = useState('');
   const [selectedDevices, setSelectedDevices] = useState([...DEVICES_LIST]);
+  const [availablePrefixes, setAvailablePrefixes] = useState([]);
+  const [loadingPrefixes, setLoadingPrefixes] = useState(false);
+  const [asnError, setAsnError] = useState('');
 
   const foundASN = useMemo(() => {
     if (!inputASN.trim()) return null;
-    return asnList.find((a) => a.asn.toUpperCase() === inputASN.trim().toUpperCase());
+    return asnList.find((a) => String(a.asn) === inputASN.trim().replace(/^AS/i, ''));
   }, [inputASN, asnList]);
-
-  const availablePrefixes = useMemo(() => {
-    if (!foundASN) return [];
-    return foundASN.prefixes || [];
-  }, [foundASN]);
 
   const isFormValid = inputASN.trim() !== '' && inputASName.trim() !== '' && selectedPrefixes.length > 0 && selectedPRTGGroup !== '' && selectedDevices.length > 0;
 
-  const handleASNChange = (value) => {
+  const handleASNChange = async (value) => {
     setInputASN(value);
     setInputASName('');
     setSelectedPrefixes([]);
     setSelectedPRTGGroup('');
-    const found = asnList.find((a) => a.asn.toUpperCase() === value.toUpperCase());
+    setAvailablePrefixes([]);
+    setAsnError('');
+    
+    // Remove AS prefix and validate
+    const asnNumber = value.trim().replace(/^AS/i, '');
+    
+    if (!asnNumber) return;
+    
+    // Check if ASN exists in current list
+    const found = asnList.find((a) => String(a.asn) === asnNumber);
     if (found) {
       setInputASName(found.asName);
+      // Use cached prefixes if available
+      if (found.prefixes && found.prefixes.length > 0) {
+        setAvailablePrefixes(found.prefixes);
+        return;
+      }
+    }
+    
+    // Fetch prefixes from API for any ASN (even if not in TOP 20)
+    if (asnNumber && /^\d+$/.test(asnNumber)) {
+      setLoadingPrefixes(true);
+      try {
+        console.log('🔍 Fetching prefixes for ASN:', asnNumber, 'Date:', selectedDate);
+        const response = await Tab2Service.GetPrefixFromASN(asnNumber, selectedDate);
+        
+        if (response?.status === 'success' && Array.isArray(response.data)) {
+          if (response.data.length > 0) {
+            const transformedPrefixes = response.data.map(prefix => ({
+              prefix: prefix.prefix || 'Unknown',
+              maxIn: prefix.max_in ? `${parseFloat(prefix.max_in).toFixed(2)} Gbps` : '0.00 Gbps',
+              maxOut: prefix.max_out ? `${parseFloat(prefix.max_out).toFixed(2)} Gbps` : '0.00 Gbps',
+              isCountered: prefix.is_countered || false
+            }));
+            setAvailablePrefixes(transformedPrefixes);
+            setAsnError('');
+          } else {
+            setAvailablePrefixes([]);
+            setAsnError('Không tìm thấy prefix cho ASN này');
+          }
+        } else {
+          setAvailablePrefixes([]);
+          setAsnError('Lỗi khi tải danh sách prefix');
+        }
+      } catch (err) {
+        console.error('❌ Error fetching prefixes:', err);
+        setAvailablePrefixes([]);
+        setAsnError('Không thể kết nối đến server');
+      } finally {
+        setLoadingPrefixes(false);
+      }
     }
   };
 
@@ -182,8 +228,27 @@ const AddCounterModal = ({ asnList, onApply, onCancel }) => {
           </div>
         </div>
 
+        {/* Loading State */}
+        {loadingPrefixes && (
+          <div className="add-counter-section">
+            <div style={{ textAlign: 'center', padding: '20px', color: '#6b7280' }}>
+              <div className="spinner" style={{ display: 'inline-block', width: '20px', height: '20px', border: '3px solid #e5e7eb', borderTopColor: '#2563eb', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+              <p style={{ marginTop: '10px' }}>Đang tải danh sách prefix...</p>
+            </div>
+          </div>
+        )}
+        
+        {/* Error State */}
+        {asnError && !loadingPrefixes && (
+          <div className="add-counter-section">
+            <div style={{ padding: '12px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', color: '#dc2626' }}>
+              ⚠️ {asnError}
+            </div>
+          </div>
+        )}
+
         {/* Prefix Selection Section - Shows after ASN is entered */}
-        {availablePrefixes.length > 0 && (
+        {availablePrefixes.length > 0 && !loadingPrefixes && (
           <div className="add-counter-section">
             <h4 className="section-header">Chọn Prefix (Đã chọn: {selectedPrefixes.length})</h4>
             <div className="prefix-selection-list" style={{ maxHeight: '200px', overflowY: 'auto', paddingRight: '8px' }}>
@@ -659,8 +724,10 @@ const ASNGrowthTable = ({ data, period, sortBy, onSortChange, onPeriodChange, on
 // Tab2 Main Component - IPT Counter Management with 2 tables and Add Counter flow
 // ============================================
 function Tab2() {
-  const [asnData] = useState(mockTab2ASNData);
+  const [asnData, setAsnData] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [expandedASNId, setExpandedASNId] = useState(null);
+  const [prefixData, setPrefixData] = useState({}); // Store prefixes by ASN ID
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [modalState, setModalState] = useState('closed');
   const [addCounterData, setAddCounterData] = useState(null);
@@ -671,8 +738,109 @@ function Tab2() {
   const [dateRange, setDateRange] = useState({ from: '', to: '' });
   const growthItemsPerPage = 10;
 
-  const handleASNRowClick = (row) => {
-    setExpandedASNId(expandedASNId === row.id ? null : row.id);
+  // Fetch TOP 20 ASN data from API when component mounts or date changes
+  React.useEffect(() => {
+    const fetchTopASNData = async () => {
+      setLoading(true);
+      try {
+        console.log('🔄 Fetching TOP 20 ASN data for date:', selectedDate);
+        const response = await Tab2Service.GetArborASTraffic(selectedDate);
+        
+        if (response?.status === 'success' && Array.isArray(response.data) && response.data.length > 0) {
+          console.log('✅ GetArborASTraffic SUCCESS - Data count:', response.data.length);
+          
+          // Sort by max_in descending and take TOP 20
+          const sortedData = [...response.data].sort((a, b) => {
+            const aMaxIn = parseFloat(a.max_in) || 0;
+            const bMaxIn = parseFloat(b.max_in) || 0;
+            return bMaxIn - aMaxIn;
+          });
+          
+          const top20 = sortedData.slice(0, 20);
+          console.log('✅ TOP 20 ASN extracted');
+          
+          // Transform to component format
+          const transformedData = top20.map((item, index) => ({
+            id: item.id || `asn-${index}`,
+            stt: index + 1,
+            asn: item.asn || `AS${item.as_number || 'Unknown'}`,
+            asName: item.as_name || 'Unknown AS',
+            maxIn: item.max_in ? `${parseFloat(item.max_in).toFixed(2)} Gbps` : '0.00 Gbps',
+            maxOut: item.max_out ? `${parseFloat(item.max_out).toFixed(2)} Gbps` : '0.00 Gbps',
+            prefixes: [] // Will be loaded when expanded
+          }));
+          
+          console.log('✅ Transformed TOP 20 ASN data:', transformedData.slice(0, 3));
+          setAsnData(transformedData);
+        } else {
+          console.warn('⚠️ GetArborASTraffic failed or no data');
+          setAsnData([]);
+        }
+      } catch (err) {
+        console.error('❌ Fetch TOP ASN error:', err);
+        setAsnData([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchTopASNData();
+  }, [selectedDate]);
+
+  // Handle ASN row click - fetch prefixes when expanding
+  const handleASNRowClick = async (row) => {
+    const newExpandedId = expandedASNId === row.id ? null : row.id;
+    setExpandedASNId(newExpandedId);
+    
+    // If expanding and prefixes not loaded yet, fetch from API
+    if (newExpandedId && !prefixData[row.id]) {
+      try {
+        console.log('🔄 Fetching prefixes for ASN:', row.asn, 'date:', selectedDate);
+        const response = await Tab2Service.GetPrefixFromASN(row.asn, selectedDate);
+        
+        if (response?.status === 'success' && Array.isArray(response.data) && response.data.length > 0) {
+          console.log('✅ GetPrefixFromASN SUCCESS - Prefix count:', response.data.length);
+          
+          // Transform prefix data
+          const transformedPrefixes = response.data.map(prefix => ({
+            prefix: prefix.prefix || prefix.prefix_name || 'Unknown',
+            maxIn: prefix.max_in ? `${parseFloat(prefix.max_in).toFixed(2)} Gbps` : '0.00 Gbps',
+            maxOut: prefix.max_out ? `${parseFloat(prefix.max_out).toFixed(2)} Gbps` : '0.00 Gbps',
+            isCountered: prefix.is_countered || false
+          }));
+          
+          console.log('✅ Transformed prefix data:', transformedPrefixes.slice(0, 3));
+          
+          // Store prefixes for this ASN
+          setPrefixData(prev => ({
+            ...prev,
+            [row.id]: transformedPrefixes
+          }));
+          
+          // Update asnData with prefixes
+          setAsnData(prevData => 
+            prevData.map(asn => 
+              asn.id === row.id 
+                ? { ...asn, prefixes: transformedPrefixes }
+                : asn
+            )
+          );
+        } else {
+          console.warn('⚠️ GetPrefixFromASN failed or no data for ASN:', row.asn);
+          // Set empty prefixes
+          setPrefixData(prev => ({
+            ...prev,
+            [row.id]: []
+          }));
+        }
+      } catch (err) {
+        console.error('❌ Fetch prefix error:', err);
+        setPrefixData(prev => ({
+          ...prev,
+          [row.id]: []
+        }));
+      }
+    }
   };
 
   const handleAddCounterClick = () => {
@@ -689,24 +857,51 @@ function Tab2() {
     setAddCounterData(null);
   };
 
-  const handleConfirmApply = () => {
+  const handleConfirmAddCounter = async () => {
     if (!addCounterData) return;
-    setModalState('closed');
-    // Mock N8n response
-    const result = {
-      timestamp: new Date().toLocaleString('vi-VN'),
-      asn: addCounterData.asn,
-      asName: addCounterData.asName,
-      prefixes: addCounterData.selectedPrefixes,
-      devices: addCounterData.selectedDevices,
-      results: addCounterData.selectedDevices.map((device) => ({
-        device,
-        status: Math.random() > 0.15 ? 'success' : 'failed',
-        message: Math.random() > 0.15 ? 'Cấu hình thành công' : 'Cấu hình thất bại'
-      }))
-    };
-    setResultData(result);
-    setModalState('result');
+    try {
+      // Call API to add counter configuration
+      const apiRes = await Tab2Service.AddCounter(
+        addCounterData.asn,
+        addCounterData.asName,
+        addCounterData.selectedPrefixes,
+        addCounterData.selectedDevices
+      );
+
+      // Process API response
+      const result = {
+        timestamp: new Date().toLocaleString('vi-VN'),
+        asn: addCounterData.asn,
+        asName: addCounterData.asName,
+        prefixes: addCounterData.selectedPrefixes,
+        devices: addCounterData.selectedDevices,
+        results: apiRes?.data?.results || addCounterData.selectedDevices.map((device) => ({
+          device,
+          status: 'success',
+          message: 'Đã gửi lệnh cấu hình'
+        }))
+      };
+      
+      setResultData(result);
+      setModalState('result');
+    } catch (err) {
+      console.error('AddCounter error:', err);
+      // Show error result
+      const result = {
+        timestamp: new Date().toLocaleString('vi-VN'),
+        asn: addCounterData.asn,
+        asName: addCounterData.asName,
+        prefixes: addCounterData.selectedPrefixes,
+        devices: addCounterData.selectedDevices,
+        results: addCounterData.selectedDevices.map((device) => ({
+          device,
+          status: 'failed',
+          message: err.message || 'Lỗi kết nối API'
+        }))
+      };
+      setResultData(result);
+      setModalState('result');
+    }
   };
 
   const handleConfirmCancel = () => {
@@ -771,7 +966,8 @@ function Tab2() {
         <TopASNTable data={asnData} expandedASNId={expandedASNId} onRowClick={handleASNRowClick} />
       </div>
 
-      {/* Table 2: ASN Growth Data */}
+      {/* Table 2: ASN Grow
+          selectedDate={selectedDate}h Data */}
       <div className="tab2-growth-section">
         <ASNGrowthTable
           data={paginatedGrowthData}
@@ -790,7 +986,8 @@ function Tab2() {
       {/* Modal: Add Counter */}
       {modalState === 'addCounter' && (
         <AddCounterModal 
-          asnList={asnData} 
+          asnList={asnData}
+          selectedDate={selectedDate}
           onApply={handleAddCounterApply} 
           onCancel={handleAddCounterCancel} 
         />

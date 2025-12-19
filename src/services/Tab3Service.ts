@@ -1,4 +1,5 @@
 import request from "helpers/request"
+import axios from 'axios'
 
 /**
  * Tab3Service - API service for Tab 3: Admin Work - IPT Monitoring Management
@@ -9,18 +10,33 @@ const I001_TAB3 = "I001_TAB3";
 const Tab3Service = {
   /**
    * Get list of all current IPT monitoring points
-   * @returns Promise with monitoring items
+   * Endpoint: GET /api/GetIPTMonitoringList
+   * @returns Promise with { status, data: [{ id, device, interface, partner, capacity, prtg_id, created_at }] }
    */
   GetIPTMonitoringList: async () => {
-    let res: any = await request({
-      url: `/${I001_TAB3}/GetIPTMonitoringList`,
-      method: 'get'
-    });
-    return res
+    try {
+      const response = await axios.get('/api/GetIPTMonitoringList', {
+        timeout: 5000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      return {
+        status: 'success',
+        data: (response.data?.data || response.data || []) as any[]
+      };
+    } catch (error: any) {
+      return {
+        status: 'error',
+        data: [] as any[],
+        message: error?.message || 'Failed to fetch IPT monitoring list'
+      };
+    }
   },
 
   /**
-   * Add new IPT monitoring point via N8n
+   * Add new IPT monitoring point
+   * Endpoint: POST /api/AddIPTMonitoring
    * @param device - Target device
    * @param interfaceName - Network interface
    * @param partner - ISP/Partner name
@@ -35,46 +51,127 @@ const Tab3Service = {
     capacity: string,
     prtgId: string
   ) => {
-    let res: any = await request({
-      url: `/${I001_TAB3}/AddIPTMonitoring`,
-      method: 'post',
-      data: {
+    try {
+      if (!device || !interfaceName || !partner || !capacity || !prtgId) {
+        throw new Error('All fields are required');
+      }
+
+      const response = await axios.post('/api/AddIPTMonitoring', {
         device,
         interface: interfaceName,
         partner,
         capacity,
-        prtgId
-      }
-    });
-    return res
+        prtg_id: prtgId
+      }, {
+        timeout: 5000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      return {
+        status: 'success',
+        message: response.data?.message || 'IPT monitoring added successfully',
+        data: response.data
+      };
+    } catch (error: any) {
+      return {
+        status: 'error',
+        message: error?.response?.data?.message || error?.message || 'Failed to add IPT monitoring'
+      };
+    }
   },
 
   /**
-   * Get current trigger alarm threshold
-   * @returns Promise with current alarm percentage
+   * Delete IPT monitoring point from database
+   * Endpoint: DELETE /api/DeleteIPTMonitoring/:id
+   * @param id - IPT monitoring ID to delete
+   * @returns Promise with result { status, message }
+   */
+  DeleteIPTMonitoring: async (id: number) => {
+    try {
+      if (!id) {
+        throw new Error('IPT ID is required');
+      }
+
+      const response = await axios.delete(`/api/DeleteIPTMonitoring/${id}`, {
+        timeout: 5000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      return {
+        status: 'success',
+        message: response.data?.message || 'IPT monitoring deleted successfully',
+        data: response.data
+      };
+    } catch (error: any) {
+      return {
+        status: 'error',
+        message: error?.response?.data?.message || error?.message || 'Failed to delete IPT monitoring'
+      };
+    }
+  },
+
+  /**
+   * Get current trigger alarm threshold from database
+   * Endpoint: GET /api/GetTriggerAlarmLevel
+   * @returns Promise with { status, data: { id, trigger_threshold, user_updated, updated_at }, timestamp }
    */
   GetTriggerAlarmLevel: async () => {
-    let res: any = await request({
-      url: `/${I001_TAB3}/GetTriggerAlarmLevel`,
-      method: 'get'
-    });
-    return res
+    try {
+      const response = await axios.get('/api/GetTriggerAlarmLevel', {
+        timeout: 5000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      return response.data;
+    } catch (error: any) {
+      return {
+        status: 'error',
+        data: {
+          trigger_threshold: 70
+        },
+        message: error?.message || 'Failed to fetch trigger alarm level'
+      };
+    }
   },
 
   /**
-   * Set trigger alarm threshold via N8n
+   * Set trigger alarm threshold in database
+   * Endpoint: POST /api/SetTriggerAlarmLevel
    * @param alarmLevel - Alarm threshold percentage (70-100)
-   * @returns Promise with result of setting alarm
+   * @returns Promise with result { status, message }
    */
   SetTriggerAlarmLevel: async (alarmLevel: number) => {
-    let res: any = await request({
-      url: `/${I001_TAB3}/SetTriggerAlarmLevel`,
-      method: 'post',
-      data: {
-        alarmLevel
+    try {
+      if (!alarmLevel || alarmLevel < 0 || alarmLevel > 100) {
+        throw new Error('Invalid alarm level. Must be between 0-100');
       }
-    });
-    return res
+      
+      const response = await axios.post('/api/SetTriggerAlarmLevel', {
+        trigger_threshold: alarmLevel,
+        user_updated: 'frontend_user'
+      }, {
+        timeout: 5000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      return {
+        status: 'success',
+        message: 'Trigger alarm level updated successfully',
+        data: response.data
+      };
+    } catch (error: any) {
+      return {
+        status: 'error',
+        message: error?.response?.data?.message || error?.message || 'Failed to update trigger alarm level'
+      };
+    }
   },
 
   /**
@@ -103,6 +200,106 @@ const Tab3Service = {
       }
     });
     return res
+  },
+
+  /**
+   * Get cron setting from database (rollback time)
+   * Endpoint: GET /api/cron-setting
+   * @returns Promise with cron configuration array [{ id, cron, user_updated, updated_at }]
+   */
+  GetCronSetting: async () => {
+    try {
+      const response = await axios.get('/api/cron-setting', {
+        timeout: 5000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      let cronList = [];
+      if (response.data?.value && Array.isArray(response.data.value)) {
+        cronList = response.data.value;
+      } else if (Array.isArray(response.data)) {
+        cronList = response.data;
+      }
+      
+      if (cronList.length > 0) {
+        const sortedList = cronList.sort((a: any, b: any) => {
+          return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+        });
+        
+        const latestSetting = sortedList[0];
+        
+        return {
+          status: 'success',
+          data: {
+            cron_expression: latestSetting.cron,
+            description: `Updated by ${latestSetting.user_updated}`,
+            last_updated: latestSetting.updated_at
+          }
+        };
+      }
+      
+      return {
+        status: 'success',
+        data: {
+          cron_expression: '0 2 * * *',
+          description: 'Default rollback time'
+        }
+      };
+    } catch (error: any) {
+      return {
+        status: 'error',
+        data: {
+          cron_expression: '0 2 * * *',
+          description: 'Default fallback time'
+        },
+        message: error?.message || 'Failed to fetch cron setting'
+      };
+    }
+  },
+
+  /**
+   * Update cron setting in database (rollback time)
+   * Endpoint: POST /api/cron-setting
+   * @param time - Rollback time in HH:MM format (24-hour)
+   * @returns Promise with result { status, message }
+   */
+  UpdateCronSetting: async (time: string) => {
+    try {
+      if (!time || !time.includes(':')) {
+        throw new Error('Invalid time format. Expected HH:MM');
+      }
+      
+      const [hours, minutes] = time.split(':');
+      
+      if (!hours || !minutes || isNaN(parseInt(hours)) || isNaN(parseInt(minutes))) {
+        throw new Error('Invalid time values');
+      }
+      
+      const cronExpression = `${minutes} ${hours} * * *`;
+      
+      const response = await axios.post('/api/cron-setting', {
+        cron: cronExpression,
+        user_updated: 'web_user'
+      }, {
+        timeout: 5000,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      return {
+        status: 'success',
+        message: response.data.message || 'Cron setting updated successfully',
+        data: response.data
+      };
+    } catch (error: any) {
+      return {
+        status: 'error',
+        message: error?.response?.data?.message || error?.message || 'Failed to update cron setting'
+      };
+    }
   }
 }
 
