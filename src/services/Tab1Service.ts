@@ -6,6 +6,7 @@ import axios from 'axios'
  * Handles all API calls related to ASN configuration, policer management, and monitoring
  */
 const I001_TAB1 = "I001_TAB1";
+const API_BASE_URL = 'http://10.155.43.196:3000';
 
 const Tab1Service = {
   /**
@@ -41,14 +42,23 @@ const Tab1Service = {
    */
   GetThresholdConfig: async () => {
     try {
-      const response = await axios.get('/api/set-threshold', {
-        timeout: 5000,
+      console.log('🔄 Calling /api/set-threshold...');
+      const response = await axios.get(`${API_BASE_URL}/api/set-threshold`, {
+        timeout: 30000,
         headers: {
           'Content-Type': 'application/json'
         }
       });
+      console.log('✅ GetThresholdConfig response:', response);
+      console.log('✅ Status:', response.status);
+      console.log('✅ Data:', response.data);
       return response.data;
     } catch (err: any) {
+      console.error('❌ GetThresholdConfig error:', err);
+      console.error('❌ Error response:', err?.response);
+      console.error('❌ Status code:', err?.response?.status);
+      console.error('❌ Error data:', err?.response?.data);
+      console.error('❌ Error message:', err?.message);
       return { 
         status: 'error', 
         data: null, 
@@ -64,14 +74,23 @@ const Tab1Service = {
    */
   GetLastWarning: async () => {
     try {
-      const response = await axios.get('/api/last-warning', {
-        timeout: 5000,
+      console.log('🔄 Calling /api/last-warning...');
+      const response = await axios.get(`${API_BASE_URL}/api/last-warning`, {
+        timeout: 30000,
         headers: {
           'Content-Type': 'application/json'
         }
       });
+      console.log('✅ GetLastWarning response:', response);
+      console.log('✅ Status:', response.status);
+      console.log('✅ Data:', response.data);
       return response.data;
     } catch (err: any) {
+      console.error('❌ GetLastWarning error:', err);
+      console.error('❌ Error response:', err?.response);
+      console.error('❌ Status code:', err?.response?.status);
+      console.error('❌ Error data:', err?.response?.data);
+      console.error('❌ Error message:', err?.message);
       return { 
         status: 'error', 
         data: null, 
@@ -120,7 +139,7 @@ const Tab1Service = {
    */
   GetTrafficData: async (startDate?: string, endDate?: string) => {
     try {
-      let url = '/api/traffic';
+      let url = `${API_BASE_URL}/api/traffic`;
       const params = new URLSearchParams();
       
       if (startDate) params.append('startDate', startDate);
@@ -149,7 +168,7 @@ const Tab1Service = {
    */
   GetASNShortlist: async () => {
     try {
-      const response = await axios.get('/api/shortlist', {
+      const response = await axios.get(`${API_BASE_URL}/api/shortlist`, {
         timeout: 30000,
         headers: {
           'Content-Type': 'application/json'
@@ -163,70 +182,6 @@ const Tab1Service = {
         data: [], 
         message: err?.message || 'Network error',
         totalRecords: 0
-      };
-    }
-  },
-
-  /**
-   * Get last config policer information
-   * @returns Promise with latest policer config data from external API
-   * Endpoint: GET /api/Lasted-config-policer (proxied)
-   */
-  GetLastedConfigPolicer: async () => {
-    try {
-      console.log('🔄 Calling /api/Lasted-config-policer...');
-      const response = await axios.get('/api/Lasted-config-policer', {
-        timeout: 30000,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      console.log('✅ GetLastedConfigPolicer response:', response);
-      console.log('✅ Status:', response.status);
-      console.log('✅ Data:', response.data);
-      return response.data;
-    } catch (err: any) {
-      console.error('❌ GetLastedConfigPolicer error:', err);
-      console.error('❌ Error response:', err?.response);
-      console.error('❌ Status code:', err?.response?.status);
-      console.error('❌ Error data:', err?.response?.data);
-      console.error('❌ Error message:', err?.message);
-      return { 
-        status: 'error', 
-        data: null, 
-        message: err?.message || 'Network error'
-      };
-    }
-  },
-
-  /**
-   * Delete ASN from shortlist
-   * @param asnId - ASN ID to delete
-   * @returns Promise with deletion result
-   * Endpoint: DELETE /api/shortlist/:id (proxied)
-   */
-  DeleteASN: async (asnId: number) => {
-    try {
-      console.log('🔄 Calling DELETE /api/shortlist/' + asnId);
-      const response = await axios.delete(`/api/shortlist/${asnId}`, {
-        timeout: 30000,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      console.log('✅ DeleteASN response:', response);
-      console.log('✅ Status:', response.status);
-      console.log('✅ Data:', response.data);
-      return response.data;
-    } catch (err: any) {
-      console.error('❌ DeleteASN error:', err);
-      console.error('❌ Error response:', err?.response);
-      console.error('❌ Status code:', err?.response?.status);
-      console.error('❌ Error data:', err?.response?.data);
-      console.error('❌ Error message:', err?.message);
-      return { 
-        success: false, 
-        message: err?.message || 'Network error'
       };
     }
   },

@@ -6,6 +6,7 @@ import axios from 'axios'
  * Handles all API calls related to adding traffic counters to ASNs and their prefixes
  */
 const I001_TAB2 = "I001_TAB2";
+const API_BASE_URL = 'http://10.155.43.196:3000';
 
 const Tab2Service = {
   /**
@@ -16,7 +17,7 @@ const Tab2Service = {
    */
   GetArborASTraffic: async (date: string) => {
     try {
-      const response = await axios.get('/api/get-arbor-as-traffic', {
+      const response = await axios.get(`${API_BASE_URL}/api/get-arbor-as-traffic`, {
         params: { date },
         timeout: 5000,
         headers: {
@@ -42,7 +43,7 @@ const Tab2Service = {
    */
   GetPrefixFromASN: async (asn: string, date: string) => {
     try {
-      const response = await axios.get('/api/get-prefix-fromASN', {
+      const response = await axios.get(`${API_BASE_URL}/api/get-prefix-fromASN`, {
         params: { asn, date },
         timeout: 5000,
         headers: {

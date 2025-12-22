@@ -6,6 +6,7 @@ import axios from 'axios'
  * Handles all API calls related to managing IPT monitoring points and system settings
  */
 const I001_TAB3 = "I001_TAB3";
+const API_BASE_URL = 'http://10.155.43.196:3000';
 
 const Tab3Service = {
   /**
@@ -15,7 +16,7 @@ const Tab3Service = {
    */
   GetIPTMonitoringList: async () => {
     try {
-      const response = await axios.get('/api/GetIPTMonitoringList', {
+      const response = await axios.get(`${API_BASE_URL}/api/GetIPTMonitoringList`, {
         timeout: 5000,
         headers: {
           'Content-Type': 'application/json'
@@ -56,7 +57,7 @@ const Tab3Service = {
         throw new Error('All fields are required');
       }
 
-      const response = await axios.post('/api/AddIPTMonitoring', {
+      const response = await axios.post(`${API_BASE_URL}/api/AddIPTMonitoring`, {
         device,
         interface: interfaceName,
         partner,
@@ -94,7 +95,7 @@ const Tab3Service = {
         throw new Error('IPT ID is required');
       }
 
-      const response = await axios.delete(`/api/DeleteIPTMonitoring/${id}`, {
+      const response = await axios.delete(`${API_BASE_URL}/api/DeleteIPTMonitoring/${id}`, {
         timeout: 5000,
         headers: {
           'Content-Type': 'application/json'
@@ -121,7 +122,7 @@ const Tab3Service = {
    */
   GetTriggerAlarmLevel: async () => {
     try {
-      const response = await axios.get('/api/GetTriggerAlarmLevel', {
+      const response = await axios.get(`${API_BASE_URL}/api/GetTriggerAlarmLevel`, {
         timeout: 5000,
         headers: {
           'Content-Type': 'application/json'
@@ -151,7 +152,7 @@ const Tab3Service = {
         throw new Error('Invalid alarm level. Must be between 0-100');
       }
       
-      const response = await axios.post('/api/SetTriggerAlarmLevel', {
+      const response = await axios.post(`${API_BASE_URL}/api/SetTriggerAlarmLevel`, {
         trigger_threshold: alarmLevel,
         user_updated: 'frontend_user'
       }, {
@@ -209,7 +210,7 @@ const Tab3Service = {
    */
   GetCronSetting: async () => {
     try {
-      const response = await axios.get('/api/cron-setting', {
+      const response = await axios.get(`${API_BASE_URL}/api/cron-setting`, {
         timeout: 5000,
         headers: {
           'Content-Type': 'application/json'
@@ -279,7 +280,7 @@ const Tab3Service = {
       
       const cronExpression = `${minutes} ${hours} * * *`;
       
-      const response = await axios.post('/api/cron-setting', {
+      const response = await axios.post(`${API_BASE_URL}/api/cron-setting`, {
         cron: cronExpression,
         user_updated: 'web_user'
       }, {
