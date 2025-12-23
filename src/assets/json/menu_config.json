@@ -134,16 +134,16 @@
           "icon": "bi bi-grid"
         },
         {
-          "code": "DashboardR006",
-          "name": "Công cụ tiết kiệm điện",
-          "url": "/dashboardrnoc6",
-          "icon": "bi bi-grid"
-        },
-        {
           "code": "DashboardR007",
           "name": "Quản lý cấu hình vô tuyến",
           "url": "/dashboardrnoc7",
           "icon": "bi bi-grid"
+        },
+        {
+          "code": "DashboardR008",
+          "name": "R008 - Tiết kiệm điện tự động",
+          "url": "/r008-power-saving",
+          "icon": "bi bi-lightning-charge-fill"
         }
       ]
     },

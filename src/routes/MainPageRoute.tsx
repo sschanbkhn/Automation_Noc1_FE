@@ -53,6 +53,7 @@ import ConfigReport from "components/RNOC1/R009";
 
 import DashboardAudit from "components/RNOC1/R001";
 import DashboardR007 from "components/RNOC1/R009"
+import DashboardPowerSaving from "components/RNOC1/R008";
 // snoc start
 import UserGroupDeptManager from "components/SNOC/Admin/UserGroupDeptManager";
 import NornirPlatformView from "components/SNOC/components/NornirPlatformView";
@@ -180,6 +181,8 @@ const MainPageRoute = (props: Props) => {
               return <DashboardAudit />; // Tạm thời dùng DashboardAudit, sau này thay bằng component thực tế
             case "DashboardR007":
               return <DashboardR007 />;
+            case "DashboardR008":
+              return <DashboardPowerSaving />;
 
               // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
             case "ScheduleTriggerForm":
