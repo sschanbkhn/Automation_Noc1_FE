@@ -39,6 +39,7 @@ import ScheduleTriggerForm from "components/RNOC1/R009";
 import Ucppoe from "components/INOC1/I003";
 import I004_1List from "components/I004_1";
 import Hardware_Alarm from "components/INOC1/I002/index";
+import IPTPolicerAndASNCounter from "components/INOC1/I001";
 
 import PSCoreTable from "components/SNOC/views/tables/health/PSCoreTable";
 import CsTable from "components/SNOC/views/tables/health/CsTable";
@@ -189,6 +190,8 @@ const MainPageRoute = (props: Props) => {
                 return <Ucppoe />;
             case "i004_1":
                 return <I004_1List />;
+            case "IPTPolicerAndASNCounter":
+                return <IPTPolicerAndASNCounter />;
             // snoc start
             case "hc-dashboard":
                 return <DashOrigin />;

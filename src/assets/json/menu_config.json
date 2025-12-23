@@ -192,9 +192,9 @@
           "icon": "bi bi-grid"
         },
         {
-          "code": "CableManagement",
-          "name": "Giới hạn kiểm soát lưu lượng",
-          "url": "/cable-management",
+          "code": "IPTPolicerAndASNCounter",
+          "name": "Tự động Policer IPT và ASN Counter",
+          "url": "/IPTPolicerAndASNCounter",
           "icon": "bi bi-grid"
         },
         {
