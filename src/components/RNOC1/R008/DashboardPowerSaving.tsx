@@ -303,9 +303,12 @@ const DashboardPowerSaving = (props: Props) => {
             <h4 style={{marginBottom: '20px', color: '#409EFF'}}>Tổng số giờ đã thực hiện</h4>
             <div>
               <h1 style={{fontSize: '3em', color: '#9C27B0', marginBottom: '10px'}}>
-                {Math.abs(dashboardData.TotalExecutionHours).toFixed(2)}
+                {Math.floor(Math.abs(dashboardData.TotalExecutionHours))}
               </h1>
               <p style={{fontSize: '1.2em', color: '#606266', marginTop: '10px'}}>giờ</p>
+              <p style={{color: '#909399', marginTop: '5px'}}>
+                / {dashboardData.CellsExecuted} cell thực hiện
+              </p>
               <p style={{color: '#909399', marginTop: '10px'}}>
                 (Từ lúc OFF đến lúc ON)
               </p>
