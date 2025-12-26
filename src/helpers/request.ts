@@ -4,14 +4,17 @@ import { Cookie } from './cookie'
 
 // create an axios instance
 const service = axios.create({
-  baseURL: process.env.API_URL || 'http://localhost:5001/api',// url = base url + request url  
+  // Uses API_URL from .env (VNPT domain) or fallback to localhost for development
+  baseURL: process.env.API_URL || 'http://localhost:3000/api',
+  // url = base url + request url  
   // withCredentials: true, // send cookies when cross-domain requests
   timeout: 60000 // request timeout - increased to 60s for large bandwidth queries
 })
 
 // Debug: Log the actual base URL being used
-//console.log('🌐 Axios baseURL:', service.defaults.baseURL);
-//console.log('🌐 process.env.API_URL:', process.env.API_URL);
+console.log('🌐 Axios baseURL:', service.defaults.baseURL);
+console.log('🌐 process.env.API_URL:', process.env.API_URL);
+console.log('🌐 window.location.origin:', window.location.origin);
 
 // request interceptor
 service.interceptors.request.use(
