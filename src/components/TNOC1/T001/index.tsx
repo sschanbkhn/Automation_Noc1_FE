@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Tabs } from 'antd';
 import { 
   WarningOutlined, 
@@ -23,6 +23,16 @@ const T001 = () => {
   const [showDetailDrawer, setShowDetailDrawer] = useState(false);
   const [showMCPAuth, setShowMCPAuth] = useState(false);
 
+  // Giữ callback ổn định để tránh remount con khi đổi tab
+  const handleSelectAlarm = useCallback((id: string) => {
+    setSelectedAlarmId(id);
+    setShowDetailDrawer(true);
+  }, []);
+
+  const handleRequireAuth = useCallback(() => {
+    setShowMCPAuth(true);
+  }, []);
+
   const items = [
     {
       key: '1',
@@ -32,10 +42,7 @@ const T001 = () => {
           Cảnh báo hệ thống
         </span>
       ),
-      children: <ActiveAlarms onSelectAlarm={(id: string) => {
-        setSelectedAlarmId(id);
-        setShowDetailDrawer(true);
-      }} />,
+      children: <ActiveAlarms onSelectAlarm={handleSelectAlarm} />,
     },
     {
       key: '2',
@@ -110,11 +117,8 @@ const T001 = () => {
             ...item,
             children: item.key === '1' ? (
               <ActiveAlarms 
-                onSelectAlarm={(id: string) => {
-                  setSelectedAlarmId(id);
-                  setShowDetailDrawer(true);
-                }}
-                onRequireAuth={() => setShowMCPAuth(true)}
+                onSelectAlarm={handleSelectAlarm}
+                onRequireAuth={handleRequireAuth}
               />
             ) : item.children
           }))}

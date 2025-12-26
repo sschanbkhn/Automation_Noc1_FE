@@ -211,14 +211,14 @@ const ActiveAlarms: React.FC<ActiveAlarmsProps> = ({ onSelectAlarm, onRequireAut
     };
 
     alarmItems.forEach(item => {
-      const severity = item.condition_severity?.trim();
-      if (severity === 'Critical') {
+      const severity = item.condition_severity?.trim()?.toLowerCase();
+      if (severity === 'critical') {
         stats.Critical++;
-      } else if (severity === 'MAJOR' || severity === 'Major') {
+      } else if (severity === 'major') {
         stats.Major++;
-      } else if (severity === 'MINOR' || severity === 'Minor') {
+      } else if (severity === 'minor') {
         stats.Minor++;
-      } else if (severity === 'Warning' || severity === 'WARNING') {
+      } else if (severity === 'warning') {
         stats.Warning++;
       }
     });
@@ -352,16 +352,16 @@ const ActiveAlarms: React.FC<ActiveAlarmsProps> = ({ onSelectAlarm, onRequireAut
       dataIndex: 'condition_severity',
       key: 'condition_severity',
       render: (text: string) => {
-        const severity = text?.trim();
+        const severity = text?.trim()?.toLowerCase();
         let color = '#999';
         
-        if (severity === 'Critical') {
+        if (severity === 'critical') {
           color = '#ff4d4f'; // Đỏ
-        } else if (severity === 'MAJOR' || severity === 'Major') {
+        } else if (severity === 'major') {
           color = '#faad14'; // Vàng
-        } else if (severity === 'MINOR' || severity === 'Minor') {
+        } else if (severity === 'minor') {
           color = '#1890ff'; // Xanh dương
-        } else if (severity === 'Warning' || severity === 'WARNING') {
+        } else if (severity === 'warning') {
           color = '#8c8c8c'; // Xám
         }
         
