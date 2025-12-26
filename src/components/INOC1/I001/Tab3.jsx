@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { mockIPTMonitoringData, DEVICES_LIST, TRIGGER_ALARM_OPTIONS, DEFAULT_TRIGGER_ALARM, DEFAULT_ROLLBACK_TIME } from './mockDataTab3';
+// import { mockIPTMonitoringData } from './mockDataTab3'; // Không dùng mockdata nữa - chỉ dùng API thật
+import { DEVICES_LIST, TRIGGER_ALARM_OPTIONS, DEFAULT_TRIGGER_ALARM, DEFAULT_ROLLBACK_TIME } from './mockDataTab3';
 import Tab3Service from 'services/Tab3Service';
 
 const IPTMonitoringTable = ({ data, onDeleteClick }) => {
@@ -392,7 +393,8 @@ const DeleteIPTConfirmModal = ({ ipt, onConfirm, onCancel }) => (
 );
 
 function Tab3() {
-  const [iptData, setIptData] = useState(mockIPTMonitoringData);
+  // State khởi tạo với empty array - dữ liệu sẽ được load từ API
+  const [iptData, setIptData] = useState([]);
   const [modalState, setModalState] = useState('closed');
   const [currentTriggerAlarm, setCurrentTriggerAlarm] = useState(DEFAULT_TRIGGER_ALARM);
   const [currentRollbackTime, setCurrentRollbackTime] = useState(DEFAULT_ROLLBACK_TIME);
@@ -486,7 +488,8 @@ function Tab3() {
       } catch (error) {
         if (isMounted) {
           console.error('Error fetching IPT data:', error);
-          // Keep mock data on error
+          // Không set mockdata nữa - để empty array khi có lỗi
+          setIptData([]);
         }
       } finally {
         if (isMounted) {

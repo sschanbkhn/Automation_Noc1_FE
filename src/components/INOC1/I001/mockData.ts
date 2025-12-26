@@ -49,12 +49,12 @@ const generateChartData = () => {
     const time = subtractMinutes(now, i * 15);
     const timeStr = formatTime(time, 'HH:mm');
 
-    // Simulate realistic traffic patterns
-    // Base throughput: 60-100 Gbps
-    // Capacity should be higher than throughput: +20-40 Gbps
+    // Fixed traffic pattern for fallback mock data (use real API data when available)
+    // Base throughput: ~80 Gbps
+    // Capacity: ~110 Gbps  
     // Efficiency: throughput/capacity percentage
-    const baseThrough = 60 + Math.random() * 40;
-    const baseCapa = baseThrough + 20 + Math.random() * 20;
+    const baseThrough = 75 + (i % 10) * 2; // Varies between 75-95 Gbps
+    const baseCapa = 110;
     const efficiency = (baseThrough / baseCapa) * 100;
 
     data.push({

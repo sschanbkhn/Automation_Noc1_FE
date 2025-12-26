@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { mockTab2ASNData, DEVICES_LIST, PRTG_GROUPS, mockASNGrowthWeekly, mockASNGrowthMonthly } from './mockDataTab2';
+import { mockTab2ASNData, PRTG_GROUPS, mockASNGrowthWeekly, mockASNGrowthMonthly } from './mockDataTab2';
 import Tab2Service from 'services/Tab2Service';
+import { Cookie } from 'helpers/cookie';
 
 // ============================================
 // TopASNTable Component - Display TOP 20 ASN with expandable prefix details
@@ -73,22 +74,28 @@ const TopASNTable = ({ data, expandedASNId, onRowClick }) => (
 // AddCounterModal Component - Modal for adding new ASN counters
 // Features: ASN/Name input → Prefix selection (with isCountered check) → PRTG Group selection (single) → Device selection (6 POPs, all default)
 // ============================================
-const AddCounterModal = ({ asnList, onApply, onCancel, selectedDate }) => {
+const AddCounterModal = ({ asnList, onApply, onCancel, selectedDate, usedPRTGGroupIds = [] }) => {
   const [inputASN, setInputASN] = useState('');
   const [inputASName, setInputASName] = useState('');
   const [selectedPrefixes, setSelectedPrefixes] = useState([]);
   const [selectedPRTGGroup, setSelectedPRTGGroup] = useState('');
-  const [selectedDevices, setSelectedDevices] = useState([...DEVICES_LIST]);
+  const [asnAlreadyCountered, setAsnAlreadyCountered] = useState(false);
+  const [checkingAsn, setCheckingAsn] = useState(false);
   const [availablePrefixes, setAvailablePrefixes] = useState([]);
   const [loadingPrefixes, setLoadingPrefixes] = useState(false);
   const [asnError, setAsnError] = useState('');
 
   const foundASN = useMemo(() => {
     if (!inputASN.trim()) return null;
-    return asnList.find((a) => String(a.asn) === inputASN.trim().replace(/^AS/i, ''));
+    const normalize = (v) => String(v || '').replace(/^AS/i, '').trim();
+    return asnList.find((a) => normalize(a.asn) === normalize(inputASN));
   }, [inputASN, asnList]);
 
-  const isFormValid = inputASN.trim() !== '' && inputASName.trim() !== '' && selectedPrefixes.length > 0 && selectedPRTGGroup !== '' && selectedDevices.length > 0;
+  const isFormValid = inputASN.trim() !== '' && inputASName.trim() !== '' && selectedPrefixes.length > 0 && selectedPRTGGroup !== '';
+
+  React.useEffect(() => {
+    console.debug('AddCounterModal - usedPRTGGroupIds:', usedPRTGGroupIds);
+  }, [usedPRTGGroupIds]);
 
   const handleASNChange = async (value) => {
     setInputASN(value);
@@ -97,6 +104,8 @@ const AddCounterModal = ({ asnList, onApply, onCancel, selectedDate }) => {
     setSelectedPRTGGroup('');
     setAvailablePrefixes([]);
     setAsnError('');
+    setAsnAlreadyCountered(false);
+    setCheckingAsn(false);
     
     // Remove AS prefix and validate
     const asnNumber = value.trim().replace(/^AS/i, '');
@@ -105,12 +114,13 @@ const AddCounterModal = ({ asnList, onApply, onCancel, selectedDate }) => {
     
     // Check if ASN exists in current list
     const found = asnList.find((a) => String(a.asn) === asnNumber);
+    let usedCache = false;
     if (found) {
       setInputASName(found.asName);
-      // Use cached prefixes if available
+      // Use cached prefixes if available (but still proceed to check counter status)
       if (found.prefixes && found.prefixes.length > 0) {
         setAvailablePrefixes(found.prefixes);
-        return;
+        usedCache = true;
       }
     }
     
@@ -118,26 +128,38 @@ const AddCounterModal = ({ asnList, onApply, onCancel, selectedDate }) => {
     if (asnNumber && /^\d+$/.test(asnNumber)) {
       setLoadingPrefixes(true);
       try {
-        console.log('🔍 Fetching prefixes for ASN:', asnNumber, 'Date:', selectedDate);
-        const response = await Tab2Service.GetPrefixFromASN(asnNumber, selectedDate);
-        
-        if (response?.status === 'success' && Array.isArray(response.data)) {
-          if (response.data.length > 0) {
-            const transformedPrefixes = response.data.map(prefix => ({
-              prefix: prefix.prefix || 'Unknown',
-              maxIn: prefix.max_in ? `${parseFloat(prefix.max_in).toFixed(2)} Gbps` : '0.00 Gbps',
-              maxOut: prefix.max_out ? `${parseFloat(prefix.max_out).toFixed(2)} Gbps` : '0.00 Gbps',
-              isCountered: prefix.is_countered || false
-            }));
-            setAvailablePrefixes(transformedPrefixes);
-            setAsnError('');
+        if (!usedCache) {
+          console.log('🔍 Fetching prefixes for ASN:', asnNumber, 'Date:', selectedDate);
+          const response = await Tab2Service.GetPrefixFromASN(asnNumber, selectedDate);
+          if (response?.status === 'success' && Array.isArray(response.data)) {
+            if (response.data.length > 0) {
+              const transformedPrefixes = response.data.map(prefix => ({
+                prefix: prefix.prefix || 'Unknown',
+                maxIn: prefix.max_in ? `${parseFloat(prefix.max_in).toFixed(2)} Gbps` : '0.00 Gbps',
+                maxOut: prefix.max_out ? `${parseFloat(prefix.max_out).toFixed(2)} Gbps` : '0.00 Gbps',
+                isCountered: prefix.is_countered || false
+              }));
+              // check which prefixes are already countered via API and merge
+              try {
+                console.debug('Calling CheckPrefixesUsed for ASN (add-modal):', asnNumber);
+                const prefRes = await Tab2Service.CheckPrefixesUsed(asnNumber);
+                console.debug('CheckPrefixesUsed response for ASN (add-modal):', asnNumber, prefRes);
+                const usedSet = (prefRes?.status === 'success' && Array.isArray(prefRes.data)) ? new Set(prefRes.data.map(p => String(p).trim())) : new Set();
+                const merged = transformedPrefixes.map(tp => ({ ...tp, isCountered: !!tp.isCountered || usedSet.has(String(tp.prefix).trim()) }));
+                setAvailablePrefixes(merged);
+              } catch (e) {
+                console.debug('Failed to check prefixes used for ASN', asnNumber, e);
+                setAvailablePrefixes(transformedPrefixes);
+              }
+              setAsnError('');
+            } else {
+              setAvailablePrefixes([]);
+              setAsnError('Không tìm thấy prefix cho ASN này');
+            }
           } else {
             setAvailablePrefixes([]);
-            setAsnError('Không tìm thấy prefix cho ASN này');
+            setAsnError('Lỗi khi tải danh sách prefix');
           }
-        } else {
-          setAvailablePrefixes([]);
-          setAsnError('Lỗi khi tải danh sách prefix');
         }
       } catch (err) {
         console.error('❌ Error fetching prefixes:', err);
@@ -146,34 +168,49 @@ const AddCounterModal = ({ asnList, onApply, onCancel, selectedDate }) => {
       } finally {
         setLoadingPrefixes(false);
       }
+      // Check whether ASN is already countered
+      setCheckingAsn(true);
+      try {
+        const chk = await Tab2Service.CheckASNCounter(asnNumber);
+        // backend may return boolean OR { status, data } where data can be boolean, object, or array
+        if (typeof chk === 'boolean') {
+          setAsnAlreadyCountered(!!chk);
+        } else if (chk?.status === 'success') {
+          // If backend returns an array of records => exists when length > 0
+          if (Array.isArray(chk.data)) {
+            // ensure returned records actually match requested ASN
+            const match = chk.data.some(item => String(item.asn) === String(asnNumber) || String(item.asn) === String('AS' + asnNumber));
+            setAsnAlreadyCountered(!!match);
+          } else if (typeof chk.data === 'boolean') {
+            setAsnAlreadyCountered(!!chk.data);
+          } else if (typeof chk.data === 'object' && chk.data !== null) {
+            // support { isCountered: true } or similar
+            setAsnAlreadyCountered(!!(chk.data.isCountered ?? chk.data.exists ?? false));
+          } else {
+            setAsnAlreadyCountered(false);
+          }
+        } else {
+          setAsnAlreadyCountered(false);
+        }
+      } catch (e) {
+        console.error('Error checking ASN counter state', e);
+        setAsnAlreadyCountered(false);
+      } finally {
+        setCheckingAsn(false);
+      }
     }
   };
 
   const handlePrefixChange = (prefix, checked) => {
-    if (checked) {
-      setSelectedPrefixes([...selectedPrefixes, prefix]);
-    } else {
-      setSelectedPrefixes(selectedPrefixes.filter((p) => p !== prefix));
-    }
+    setSelectedPrefixes((prev) => {
+      if (checked) {
+        return prev.includes(prefix) ? prev : [...prev, prefix];
+      }
+      return prev.filter((p) => p !== prefix);
+    });
   };
 
-  const handleDeviceChange = (device, checked) => {
-    if (checked) {
-      setSelectedDevices([...selectedDevices, device]);
-    } else {
-      setSelectedDevices(selectedDevices.filter((d) => d !== device));
-    }
-  };
-
-  const handleSelectAllDevices = (checked) => {
-    if (checked) {
-      setSelectedDevices([...DEVICES_LIST]);
-    } else {
-      setSelectedDevices([]);
-    }
-  };
-
-  const isAllDevicesSelected = selectedDevices.length === DEVICES_LIST.length;
+  // Device selection removed — devices will no longer be selected in this modal
 
   const handleApply = () => {
     if (isFormValid) {
@@ -182,7 +219,7 @@ const AddCounterModal = ({ asnList, onApply, onCancel, selectedDate }) => {
         asName: inputASName.trim(),
         selectedPrefixes,
         selectedPRTGGroup: parseInt(selectedPRTGGroup),
-        selectedDevices
+        isAlreadyCountered: asnAlreadyCountered
       });
     }
   };
@@ -212,6 +249,15 @@ const AddCounterModal = ({ asnList, onApply, onCancel, selectedDate }) => {
                 onChange={(e) => handleASNChange(e.target.value)} 
                 className="form-input" 
               />
+                <div style={{ marginTop: '6px', fontSize: '13px' }}>
+                  {checkingAsn ? (
+                    <span style={{ color: '#6b7280' }}>Checking counter status...</span>
+                  ) : (
+                    <span style={{ color: asnAlreadyCountered ? '#f59e0b' : '#10b981', fontWeight: 600 }}>
+                      {asnAlreadyCountered ? 'Đã được counter' : 'Chưa được counter'}
+                    </span>
+                  )}
+                </div>
             </div>
             <div className="input-field">
               <label htmlFor="asname-input">AS Name</label>
@@ -287,75 +333,39 @@ const AddCounterModal = ({ asnList, onApply, onCancel, selectedDate }) => {
         <div className="add-counter-section">
           <h4 className="section-header">Chọn PRTG-ID Group (Chọn 1)</h4>
           <div className="prtg-group-selection" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
-            {PRTG_GROUPS.map((group) => (
-              <label 
-                key={group.id} 
-                className="prtg-group-radio"
-                style={{
-                  padding: '10px',
-                  border: selectedPRTGGroup === group.id.toString() ? '2px solid #2563eb' : '1px solid #e5e7eb',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  textAlign: 'center',
-                  backgroundColor: selectedPRTGGroup === group.id.toString() ? '#dbeafe' : '#f9fafb'
-                }}
-              >
-                <input 
-                  type="radio" 
-                  name="prtg-group" 
-                  value={group.id} 
-                  checked={selectedPRTGGroup === group.id.toString()} 
-                  onChange={(e) => setSelectedPRTGGroup(e.target.value)} 
-                  style={{ marginRight: '6px' }}
-                />
-                <span className="group-label" style={{ fontWeight: '500' }}>{group.name}</span>
-              </label>
-            ))}
+            {PRTG_GROUPS.map((group) => {
+              const disabled = usedPRTGGroupIds.includes(Number(group.id));
+              return (
+                <label 
+                  key={group.id} 
+                  className="prtg-group-radio"
+                  style={{
+                    padding: '10px',
+                    border: selectedPRTGGroup === group.id.toString() ? '2px solid #2563eb' : '1px solid #e5e7eb',
+                    borderRadius: '6px',
+                    cursor: disabled ? 'not-allowed' : 'pointer',
+                    textAlign: 'center',
+                    backgroundColor: selectedPRTGGroup === group.id.toString() ? '#dbeafe' : '#f9fafb',
+                    opacity: disabled ? 0.6 : 1
+                  }}
+                >
+                  <input 
+                    type="radio" 
+                    name="prtg-group" 
+                    value={group.id} 
+                    disabled={disabled}
+                    checked={selectedPRTGGroup === group.id.toString()} 
+                    onChange={(e) => setSelectedPRTGGroup(e.target.value)} 
+                    style={{ marginRight: '6px' }}
+                  />
+                  <span className="group-label" style={{ fontWeight: '500' }}>{group.name}{disabled ? ' (used)' : ''}</span>
+                </label>
+              );
+            })}
           </div>
         </div>
 
-        {/* Device Selection Section - 6 POPs, all selected by default */}
-        <div className="add-counter-section">
-          <div className="device-header-group">
-            <h4 className="section-header">Chọn thiết bị POP/Peering (6 thiết bị)</h4>
-          </div>
-          <div className="select-all-control" style={{ marginBottom: '12px' }}>
-            <label className="checkbox-label">
-              <input 
-                type="checkbox" 
-                checked={isAllDevicesSelected} 
-                onChange={(e) => handleSelectAllDevices(e.target.checked)} 
-              />
-              <span className="select-all-text" style={{ fontWeight: '500' }}>Chọn tất cả thiết bị</span>
-            </label>
-            <span className="device-count" style={{ marginLeft: '16px', color: '#6b7280' }}>Đã chọn: {selectedDevices.length}/{DEVICES_LIST.length}</span>
-          </div>
-          <div className="device-grid-tab2" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-            {DEVICES_LIST.map((device) => (
-              <label 
-                key={device} 
-                className="device-checkbox-item"
-                style={{
-                  padding: '10px 12px',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  backgroundColor: selectedDevices.includes(device) ? '#dbeafe' : '#f9fafb',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                <input 
-                  type="checkbox" 
-                  checked={selectedDevices.includes(device)} 
-                  onChange={(e) => handleDeviceChange(device, e.target.checked)} 
-                />
-                <span className="device-label-text" style={{ fontWeight: '500' }}>{device}</span>
-              </label>
-            ))}
-          </div>
-        </div>
+        {/* Device selection removed — devices are not chosen from this modal anymore */}
 
         <div className="modal-footer">
           <button className="btn btn-secondary" onClick={onCancel}>Hủy bỏ</button>
@@ -369,7 +379,7 @@ const AddCounterModal = ({ asnList, onApply, onCancel, selectedDate }) => {
 // ============================================
 // ConfirmApplyModal Component - Confirmation before applying config to devices
 // ============================================
-const ConfirmApplyModal = ({ asn, asName, prefixes, prtgGroup, devices, onApply, onCancel }) => (
+const ConfirmApplyModal = ({ asn, asName, prefixes, prtgGroup, isAlreadyCountered, onApply, onCancel }) => (
   <div className="modal-overlay" onClick={onCancel}>
     <div className="modal-content modal-confirm-apply" onClick={(e) => e.stopPropagation()}>
       <div className="modal-header">
@@ -378,14 +388,15 @@ const ConfirmApplyModal = ({ asn, asName, prefixes, prtgGroup, devices, onApply,
       </div>
       <div className="confirm-message-section">
         <div className="confirm-icon">✓</div>
-        <p>Bạn có chắc muốn thêm counter cho ASN này vào các thiết bị đã chọn?</p>
+        <p>Bạn có chắc muốn thêm counter cho ASN này?</p>
       </div>
       <div className="confirm-summary-section">
         <div className="summary-row"><span className="summary-label">ASN:</span><span className="summary-value">{asn}</span></div>
         <div className="summary-row"><span className="summary-label">AS Name:</span><span className="summary-value">{asName}</span></div>
         <div className="summary-row"><span className="summary-label">PRTG Group:</span><span className="summary-value">Group{prtgGroup}</span></div>
         <div className="summary-row"><span className="summary-label">Số Prefix:</span><span className="summary-value">{prefixes.length}</span></div>
-        <div className="summary-row"><span className="summary-label">Số thiết bị:</span><span className="summary-value">{devices.length}</span></div>
+        <div className="summary-row"><span className="summary-label">Đã counter:</span><span className="summary-value">{isAlreadyCountered ? 'True' : 'False'}</span></div>
+        {/* devices removed from summary */}
       </div>
       <div className="confirm-details-section">
         <h4 className="details-header">Danh sách Prefix:</h4>
@@ -398,17 +409,7 @@ const ConfirmApplyModal = ({ asn, asName, prefixes, prtgGroup, devices, onApply,
           ))}
         </div>
       </div>
-      <div className="confirm-details-section">
-        <h4 className="details-header">Danh sách thiết bị:</h4>
-        <div className="devices-list-confirm">
-          {devices.map((device, idx) => (
-            <div key={idx} className="device-item-confirm">
-              <span className="device-icon">●</span>
-              <span className="device-text">{device}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* devices list removed */}
       <div className="modal-footer">
         <button className="btn btn-secondary" onClick={onCancel}>Hủy bỏ</button>
         <button className="btn btn-primary" onClick={onApply}>Đồng ý</button>
@@ -732,10 +733,13 @@ function Tab2() {
   const [modalState, setModalState] = useState('closed');
   const [addCounterData, setAddCounterData] = useState(null);
   const [resultData, setResultData] = useState(null);
+  const [loadingMessage, setLoadingMessage] = useState('');
+  const [loadingSubMessage, setLoadingSubMessage] = useState('');
   const [growthPeriod, setGrowthPeriod] = useState('week');
   const [growthSortBy, setGrowthSortBy] = useState('maxIn');
   const [growthPage, setGrowthPage] = useState(1);
   const [dateRange, setDateRange] = useState({ from: '', to: '' });
+  const [usedPRTGGroupIds, setUsedPRTGGroupIds] = useState([]);
   const growthItemsPerPage = 10;
 
   // Fetch TOP 20 ASN data from API when component mounts or date changes
@@ -795,8 +799,9 @@ function Tab2() {
     // If expanding and prefixes not loaded yet, fetch from API
     if (newExpandedId && !prefixData[row.id]) {
       try {
-        console.log('🔄 Fetching prefixes for ASN:', row.asn, 'date:', selectedDate);
-        const response = await Tab2Service.GetPrefixFromASN(row.asn, selectedDate);
+        const normalizedAsn = String(row.asn || '').replace(/^AS/i, '').trim();
+        console.log('🔄 Fetching prefixes for ASN:', row.asn, 'normalized:', normalizedAsn, 'date:', selectedDate);
+        const response = await Tab2Service.GetPrefixFromASN(normalizedAsn, selectedDate);
         
         if (response?.status === 'success' && Array.isArray(response.data) && response.data.length > 0) {
           console.log('✅ GetPrefixFromASN SUCCESS - Prefix count:', response.data.length);
@@ -808,23 +813,35 @@ function Tab2() {
             maxOut: prefix.max_out ? `${parseFloat(prefix.max_out).toFixed(2)} Gbps` : '0.00 Gbps',
             isCountered: prefix.is_countered || false
           }));
-          
           console.log('✅ Transformed prefix data:', transformedPrefixes.slice(0, 3));
-          
-          // Store prefixes for this ASN
-          setPrefixData(prev => ({
-            ...prev,
-            [row.id]: transformedPrefixes
-          }));
-          
-          // Update asnData with prefixes
-          setAsnData(prevData => 
-            prevData.map(asn => 
-              asn.id === row.id 
-                ? { ...asn, prefixes: transformedPrefixes }
-                : asn
-            )
-          );
+
+          // Check which prefixes are already used and merge
+          try {
+            console.debug('Calling CheckPrefixesUsed for ASN (expand-row):', normalizedAsn);
+            const prefRes = await Tab2Service.CheckPrefixesUsed(String(normalizedAsn));
+            console.debug('CheckPrefixesUsed response for ASN (expand-row):', normalizedAsn, prefRes);
+            const usedSet = (prefRes?.status === 'success' && Array.isArray(prefRes.data)) ? new Set(prefRes.data.map(p => String(p).trim())) : new Set();
+            const merged = transformedPrefixes.map(tp => ({ ...tp, isCountered: !!tp.isCountered || usedSet.has(String(tp.prefix).trim()) }));
+
+            // Store prefixes for this ASN
+            setPrefixData(prev => ({
+              ...prev,
+              [row.id]: merged
+            }));
+
+            // Update asnData with prefixes
+            setAsnData(prevData => 
+              prevData.map(asn => 
+                asn.id === row.id 
+                  ? { ...asn, prefixes: merged }
+                  : asn
+              )
+            );
+          } catch (e) {
+            console.debug('Failed to check prefixes used for ASN in expansion', normalizedAsn, e);
+            setPrefixData(prev => ({ ...prev, [row.id]: transformedPrefixes }));
+            setAsnData(prevData => prevData.map(asn => asn.id === row.id ? { ...asn, prefixes: transformedPrefixes } : asn));
+          }
         } else {
           console.warn('⚠️ GetPrefixFromASN failed or no data for ASN:', row.asn);
           // Set empty prefixes
@@ -843,7 +860,20 @@ function Tab2() {
     }
   };
 
-  const handleAddCounterClick = () => {
+  const handleAddCounterClick = async () => {
+    // fetch used PRTG group ids before opening modal so modal can disable them
+    try {
+      const resp = await Tab2Service.CheckPRTGGroupUsed();
+      console.debug('CheckPRTGGroupUsed response:', resp);
+      if (resp?.status === 'success' && Array.isArray(resp.data)) {
+        setUsedPRTGGroupIds(resp.data.map((n) => Number(n)));
+      } else {
+        setUsedPRTGGroupIds([]);
+      }
+    } catch (err) {
+      console.debug('Failed to fetch used PRTG groups', err);
+      setUsedPRTGGroupIds([]);
+    }
     setModalState('addCounter');
   };
 
@@ -860,47 +890,130 @@ function Tab2() {
   const handleConfirmAddCounter = async () => {
     if (!addCounterData) return;
     try {
-      // Call API to add counter configuration
-      const apiRes = await Tab2Service.AddCounter(
+      // Start loading modal to block user actions
+      setLoadingMessage('Đang gửi lệnh đến N8N...');
+      setLoadingSubMessage('Vui lòng không thao tác trong khi hệ thống gửi lệnh.');
+      setModalState('loading');
+
+      // Post Add-ASN-Counter to backend (which forwards to N8N)
+      // Get current user from cookie (set at login). Fall back to env or empty string if not available.
+      let userUpdate = '';
+      try {
+        const u = Cookie.getCookie('UserInfo');
+        if (u) {
+          const parsed = JSON.parse(u);
+          userUpdate = parsed?.UserName || parsed?.UserName || '';
+        }
+      } catch (e) {
+        console.warn('Unable to parse UserInfo cookie', e);
+      }
+      userUpdate = userUpdate || process.env.REACT_APP_USER_UPDATE || '';
+
+      const postRes = await Tab2Service.PostAddASNCounterToN8(
         addCounterData.asn,
         addCounterData.asName,
         addCounterData.selectedPrefixes,
-        addCounterData.selectedDevices
+        addCounterData.selectedPRTGGroup,
+        !!addCounterData.isAlreadyCountered,
+        userUpdate
       );
 
-      // Process API response
-      const result = {
-        timestamp: new Date().toLocaleString('vi-VN'),
-        asn: addCounterData.asn,
-        asName: addCounterData.asName,
-        prefixes: addCounterData.selectedPrefixes,
-        devices: addCounterData.selectedDevices,
-        results: apiRes?.data?.results || addCounterData.selectedDevices.map((device) => ({
-          device,
-          status: 'success',
-          message: 'Đã gửi lệnh cấu hình'
-        }))
+      if (postRes?.status !== 'success') {
+        throw new Error(postRes?.message || 'Lỗi khi gửi lệnh đến N8N');
+      }
+
+      // Let N8N process (short wait), update messages
+      setLoadingMessage('N8N đang xử lý lệnh...');
+      setLoadingSubMessage('Hệ thống đang áp dụng cấu hình. Đang chờ kết quả...');
+      await new Promise(r => setTimeout(r, 2000));
+
+      // Fetch result from backend Config-Counter-result (support multiple response shapes)
+      setLoadingMessage('Đang lấy kết quả cấu hình...');
+      setLoadingSubMessage('Kiểm tra trạng thái áp dụng trên từng thiết bị...');
+      const resultRes = await Tab2Service.GetConfigCounterResult();
+
+      // Normalize device results from several possible backend shapes
+      const extractDeviceResults = (res) => {
+        // res may be: { status, latest_sample: { data, updated_at }, ... }
+        // or: { status, data: { data: { device: {...} }, updated_at }, ... }
+        // or: { status, data: { device: {...} }, ... }
+        let container = null;
+        let updatedAt = null;
+
+        if (!res) return { map: {}, updatedAt: null };
+
+        if (res.latest_sample && res.latest_sample.data) {
+          container = res.latest_sample.data;
+          updatedAt = res.latest_sample.updated_at || res.latest_sample.timestamp || res.updated_at;
+        } else if (res.data && res.data.data) {
+          container = res.data.data;
+          updatedAt = res.data.updated_at || res.data.timestamp || res.updated_at;
+        } else if (res.data && typeof res.data === 'object') {
+          // maybe res.data is directly the device map
+          container = res.data;
+          updatedAt = res.updated_at || res.data.updated_at || null;
+        } else if (res.raw_result && res.raw_result.data) {
+          container = res.raw_result.data;
+          updatedAt = res.updated_at || null;
+        }
+
+        if (!container) return { map: {}, updatedAt };
+
+        const map = {};
+        Object.keys(container).forEach(deviceName => {
+          const d = container[deviceName];
+          // d may contain { status, message, data: {...} }
+          let status = d?.status || (d?.data && d.data.status) || 'failed';
+          let message = d?.message || d?.data?.message || '';
+          // if no explicit status but diff exists, assume success
+          if (!status && d?.data && Object.keys(d.data).length > 0) status = 'success';
+          map[deviceName] = { status, message };
+        });
+
+        return { map, updatedAt };
       };
-      
-      setResultData(result);
-      setModalState('result');
+
+      if (resultRes?.status === 'success') {
+        const { map: deviceResultsRaw, updatedAt } = extractDeviceResults(resultRes);
+        const deviceResults = [];
+        let successCount = 0;
+        let failedCount = 0;
+
+        Object.keys(deviceResultsRaw).forEach(deviceName => {
+          const deviceData = deviceResultsRaw[deviceName];
+          const isSuccess = String(deviceData.status).toLowerCase() === 'success';
+          if (isSuccess) {
+            successCount++;
+            deviceResults.push({ device: deviceName, status: 'success', message: deviceData.message || 'Cấu hình thành công' });
+          } else {
+            failedCount++;
+            deviceResults.push({ device: deviceName, status: 'failed', message: deviceData.message || 'Lỗi không xác định' });
+          }
+        });
+
+        const result = {
+          timestamp: new Date(updatedAt || Date.now()).toLocaleString('vi-VN'),
+          asn: addCounterData.asn,
+          asName: addCounterData.asName,
+          prefixes: addCounterData.selectedPrefixes,
+          results: deviceResults
+        };
+
+        setResultData(result);
+        setModalState('result');
+
+        // If not all devices succeeded, show an additional alert
+        const total = successCount + failedCount;
+        if (total > 0 && successCount < total) {
+          alert(`Kết quả: ${successCount}/${total} thiết bị áp dụng thành công. Vui lòng kiểm tra chi tiết.`);
+        }
+      } else {
+        throw new Error(resultRes?.message || 'Không thể lấy kết quả cấu hình');
+      }
     } catch (err) {
-      console.error('AddCounter error:', err);
-      // Show error result
-      const result = {
-        timestamp: new Date().toLocaleString('vi-VN'),
-        asn: addCounterData.asn,
-        asName: addCounterData.asName,
-        prefixes: addCounterData.selectedPrefixes,
-        devices: addCounterData.selectedDevices,
-        results: addCounterData.selectedDevices.map((device) => ({
-          device,
-          status: 'failed',
-          message: err.message || 'Lỗi kết nối API'
-        }))
-      };
-      setResultData(result);
-      setModalState('result');
+      console.error('AddCounter flow error:', err);
+      setModalState('closed');
+      alert(`❌ Lỗi khi áp dụng cấu hình:\n\n${err.message || err}\n\nVui lòng thử lại hoặc liên hệ quản trị viên.`);
     }
   };
 
@@ -988,6 +1101,7 @@ function Tab2() {
         <AddCounterModal 
           asnList={asnData}
           selectedDate={selectedDate}
+          usedPRTGGroupIds={usedPRTGGroupIds}
           onApply={handleAddCounterApply} 
           onCancel={handleAddCounterCancel} 
         />
@@ -1000,8 +1114,8 @@ function Tab2() {
           asName={addCounterData.asName} 
           prefixes={addCounterData.selectedPrefixes} 
           prtgGroup={addCounterData.selectedPRTGGroup} 
-          devices={addCounterData.selectedDevices} 
-          onApply={handleConfirmApply} 
+          isAlreadyCountered={!!addCounterData.isAlreadyCountered}
+          onApply={handleConfirmAddCounter} 
           onCancel={handleConfirmCancel} 
         />
       )}
@@ -1009,6 +1123,19 @@ function Tab2() {
       {/* Modal: Result Display */}
       {modalState === 'result' && resultData && (
         <ResultDisplayModal result={resultData} onClose={handleResultClose} />
+      )}
+      {/* Modal: Loading / Sending to N8N (blocks UI) */}
+      {modalState === 'loading' && (
+        <div className="modal-overlay" onClick={() => {}}>
+          <div className="modal-content modal-loading" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px', textAlign: 'center' }}>
+            <div style={{ fontSize: '28px', marginBottom: '8px' }}>⏳</div>
+            <h3 style={{ marginBottom: '6px' }}>{loadingMessage}</h3>
+            <p style={{ color: '#6b7280', marginBottom: '16px' }}>{loadingSubMessage}</p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+              <div className="spinner" style={{ width: '28px', height: '28px', border: '4px solid #e5e7eb', borderTopColor: '#2563eb', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
