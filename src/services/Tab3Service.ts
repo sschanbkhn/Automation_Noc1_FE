@@ -6,7 +6,10 @@ import axios from 'axios'
  * Handles all API calls related to managing IPT monitoring points and system settings
  */
 const I001_TAB3 = "I001_TAB3";
-const API_BASE_URL = 'http://10.155.43.196:3000';
+// Production server
+ const API_BASE_URL = 'http://10.155.43.196:3000';
+// Local development
+// const API_BASE_URL = 'http://localhost:3000';
 
 const Tab3Service = {
   /**

@@ -61,7 +61,7 @@ export const DEVICES_LIST = [
   'SGP-EQX-POP01', 'SGP-GLS-POP01'
 ];
 
-export const TRIGGER_ALARM_OPTIONS = [70, 75, 80, 85, 90, 95, 100];
+export const TRIGGER_ALARM_OPTIONS = [40, 50, 70, 75, 80, 85, 90, 95, 100];
 
 export const DEFAULT_TRIGGER_ALARM = 80; // Default trigger alarm level
 export const DEFAULT_ROLLBACK_TIME = '02:00'; // Default rollback time (24-hour format)

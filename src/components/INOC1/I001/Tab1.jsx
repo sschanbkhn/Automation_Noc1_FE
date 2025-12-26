@@ -304,11 +304,34 @@ const ASNTable = ({ data, expandedASNId, onRowClick, onDeleteClick }) => {
 };
 
 // ApiMonitorBox Component - Displays API/Performance monitoring with alert status
-// Features: Alert when status >= 80%, flashing red animation, progress bar visualization, clickable for config
+// Features: Alert when status >= threshold, flashing red animation, progress bar visualization, clickable for config
 const ApiMonitorBox = ({ data, onClick }) => {
-  const isAlert = data.status >= data.threshold;
+  const status = Number(data.status) || 0;
+  const threshold = Number(data.threshold) || 80;
+  const isAlert = status >= threshold;
+  
+  // Click handler - always open modal when clicked
+  const handleBoxClick = (e) => {
+    console.log('🖱️ ApiMonitorBox CLICKED! Event:', e);
+    console.log('🖱️ Event target:', e.target);
+    console.log('🖱️ Current target:', e.currentTarget);
+    onClick();
+  };
+  
+  const handleMouseDown = (e) => {
+    console.log('🐭 MOUSE DOWN on ApiMonitorBox');
+  };
+  
   return (
-    <div className={`api-monitor-box ${isAlert ? 'alert-mode blink' : ''}`} onClick={onClick} style={{ cursor: isAlert ? 'pointer' : 'default' }}>
+    <div 
+      className={`api-monitor-box ${isAlert ? 'alert-mode' : ''}`}
+      onClick={handleBoxClick}
+      onMouseDown={handleMouseDown}
+      style={{ 
+        cursor: 'pointer',
+        pointerEvents: 'auto'
+      }}
+    >
       <div className="monitor-header">
         <div className="monitor-title-group">
           <span className="monitor-icon">⚠️</span>
@@ -337,9 +360,31 @@ const ApiMonitorBox = ({ data, onClick }) => {
         <span className="value">{data.threshold}%</span>
       </div>
       <div className="monitor-footer">
-        <span className="timestamp">{data.timestamp}</span>
+        <div style={{ marginBottom: '8px' }}>
+          <span className="timestamp" style={{ fontSize: '13px' }}>⏱️ Traffic Updated: {data.timestamp}</span>
+        </div>
         <span className="note">{data.note}</span>
       </div>
+      {data.configUpdatedAt && (
+        <div className="monitor-config-time" style={{ padding: '8px 12px', backgroundColor: '#f3f4f6', borderTop: '1px solid #e5e7eb', fontSize: '12px', color: '#6b7280' }}>
+          <span style={{ fontWeight: '500' }}>⚙️ Config Updated At:</span>
+          <span style={{ marginLeft: '8px' }}>{data.configUpdatedAt}</span>
+        </div>
+      )}
+      {data.asn && data.asn !== 'N/A' && (
+        <div style={{ padding: '8px 12px', backgroundColor: '#eff6ff', borderTop: '1px solid #dbeafe', fontSize: '12px', color: '#1e40af' }}>
+          <div style={{ marginBottom: '4px' }}>
+            <span style={{ fontWeight: '500' }}>🎯 ASN:</span>
+            <span style={{ marginLeft: '8px' }}>{data.asn}</span>
+          </div>
+          {data.configCommand && data.configCommand !== 'N/A' && (
+            <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
+              <span style={{ fontWeight: '500' }}>📝 Config:</span>
+              <code style={{ marginLeft: '8px', backgroundColor: 'white', padding: '2px 4px', borderRadius: '2px', fontSize: '10px' }}>{data.configCommand}</code>
+            </div>
+          )}
+        </div>
+      )}
       {isAlert && <div className="alert-message">⚠️ Hiệu suất vượt ngưỡng! Nhấp để cấu hình.</div>}
     </div>
   );
@@ -505,10 +550,17 @@ const LastPolicerDetailModal = ({ data, onClose }) => (
 );
 
 // ConfigPolicerModal Component - Modal for configuring policer on selected devices
-// Features: Shows recommended config command, device selection (6 POPs), select all checkbox, Apply/Cancel buttons
+// Features: Shows recommended config command, device selection (6 POPs with IPs), select all checkbox, Apply/Cancel buttons
 const ConfigPolicerModal = ({ asn, bandwidth, selectedDevices, onDeviceChange, onSelectAll, onApply, onCancel }) => {
-  const allDevices = ['HKG-EQX-POP01', 'HKG-EQX-POP02', 'HKG-MEGA-POP01', 'HKG-MEGA-POP02', 'SGP-EQX-POP01', 'SGP-GLS-POP01'];
-  const isAllSelected = selectedDevices.length === allDevices.length;
+  const allDevicesWithIP = [
+    { name: 'HKG-EQX-POP01', ip: '123.29.4.95' },
+    { name: 'HKG-EQX-POP02', ip: '123.29.4.96' },
+    { name: 'HKG-MEGA-POP01', ip: '123.29.4.75' },
+    { name: 'HKG-MEGA-POP02', ip: '123.29.4.76' },
+    { name: 'SGN-GLS-POP01', ip: '123.29.4.155' },
+    { name: 'SGP-EQX-POP01', ip: '123.29.4.125' }
+  ];
+  const isAllSelected = selectedDevices.length === allDevicesWithIP.length;
   const configCommand = `set firewall filter Protect-VN2-from-Upstream-Transit term Policer-${asn} then policer ${bandwidth}`;
 
   return (
@@ -538,13 +590,16 @@ const ConfigPolicerModal = ({ asn, bandwidth, selectedDevices, onDeviceChange, o
               <input type="checkbox" checked={isAllSelected} onChange={(e) => onSelectAll(e.target.checked)} />
               <span className="select-all-text">Chọn tất cả thiết bị</span>
             </label>
-            <span className="device-count">Đã chọn {selectedDevices.length}/{allDevices.length} thiết bị</span>
+            <span className="device-count">Đã chọn {selectedDevices.length}/{allDevicesWithIP.length} thiết bị</span>
           </div>
           <div className="device-grid">
-            {allDevices.map((device) => (
-              <label key={device} className="device-checkbox">
-                <input type="checkbox" checked={selectedDevices.includes(device)} onChange={(e) => onDeviceChange(device, e.target.checked)} />
-                <span className="device-name">{device}</span>
+            {allDevicesWithIP.map((device) => (
+              <label key={device.name} className="device-checkbox" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '4px', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                  <input type="checkbox" checked={selectedDevices.includes(device.name)} onChange={(e) => onDeviceChange(device.name, e.target.checked)} />
+                  <span className="device-name" style={{ fontWeight: '500', marginLeft: '8px' }}>{device.name}</span>
+                </div>
+                <span style={{ fontSize: '12px', color: '#6b7280', marginLeft: '24px' }}>IP: {device.ip}</span>
               </label>
             ))}
           </div>
@@ -560,49 +615,63 @@ const ConfigPolicerModal = ({ asn, bandwidth, selectedDevices, onDeviceChange, o
 };
 
 // ConfirmModal Component - Confirmation dialog before applying configuration to devices
-// Features: Shows ASN/Bandwidth/Device count summary, lists selected devices, warning message, Apply/Cancel
-const ConfirmModal = ({ devices, configDetail, onApply, onCancel }) => (
-  <div className="modal-overlay" onClick={onCancel}>
-    <div className="modal-content modal-confirm" onClick={(e) => e.stopPropagation()}>
-      <div className="modal-header">
-        <h3>Xác nhận cấu hình</h3>
-        <button className="modal-close" onClick={onCancel}>✕</button>
-      </div>
+// Features: Shows ASN/Bandwidth/Device count summary, lists selected devices with IPs, warning message, Apply/Cancel
+const ConfirmModal = ({ devices, configDetail, onApply, onCancel }) => {
+  const DEVICE_IP_MAP = {
+    'HKG-EQX-POP01': '123.29.4.95',
+    'HKG-EQX-POP02': '123.29.4.96',
+    'HKG-MEGA-POP01': '123.29.4.75',
+    'HKG-MEGA-POP02': '123.29.4.76',
+    'SGN-GLS-POP01': '123.29.4.155',
+    'SGP-EQX-POP01': '123.29.4.125'
+  };
 
-      <div className="confirm-message">
-        <p>Bạn có chắc muốn áp dụng cấu hình này vào {devices.length} thiết bị đã chọn không?</p>
-      </div>
+  return (
+    <div className="modal-overlay" onClick={onCancel}>
+      <div className="modal-content modal-confirm" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Xác nhận cấu hình</h3>
+          <button className="modal-close" onClick={onCancel}>✕</button>
+        </div>
 
-      <div className="confirm-summary">
-        <div className="summary-item"><span className="label">ASN:</span><span className="value">{configDetail.as}</span></div>
-        <div className="summary-item"><span className="label">Bandwidth:</span><span className="value">{configDetail.bandwidth}</span></div>
-        <div className="summary-item"><span className="label">Số thiết bị:</span><span className="value">{devices.length}</span></div>
-      </div>
+        <div className="confirm-message">
+          <p>Bạn có chắc muốn áp dụng cấu hình này vào {devices.length} thiết bị đã chọn không?</p>
+        </div>
 
-      <div className="selected-devices">
-        <div className="devices-title">Danh sách thiết bị được chọn:</div>
-        <div className="devices-list">
-          {devices.map((device) => (
-            <div key={device} className="device-item">
-              <span className="device-icon">●</span>
-              <span className="device-text">{device}</span>
-            </div>
-          ))}
+        <div className="confirm-summary">
+          <div className="summary-item"><span className="label">ASN:</span><span className="value">{configDetail.as}</span></div>
+          <div className="summary-item"><span className="label">Bandwidth:</span><span className="value">{configDetail.bandwidth}</span></div>
+          <div className="summary-item"><span className="label">Số thiết bị:</span><span className="value">{devices.length}</span></div>
+        </div>
+
+        <div className="selected-devices">
+          <div className="devices-title">Danh sách thiết bị được chọn:</div>
+          <div className="devices-list">
+            {devices.map((device) => (
+              <div key={device} className="device-item" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '8px 12px', backgroundColor: '#f9fafb', borderRadius: '4px', marginBottom: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <span className="device-icon">●</span>
+                  <span className="device-text" style={{ fontWeight: '500' }}>{device}</span>
+                </div>
+                <span style={{ fontSize: '12px', color: '#6b7280', marginLeft: '20px' }}>IP: {DEVICE_IP_MAP[device]}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="confirm-warning">
+          <strong>⚠️ Lưu ý quan trọng</strong>
+          <p>Cấu hình sẽ được áp dụng ngay lập tức trên các thiết bị. Không thể hoàn tác sau khi xác nhận.</p>
+        </div>
+
+        <div className="modal-footer">
+          <button className="btn btn-secondary" onClick={onCancel}>Hủy bỏ</button>
+          <button className="btn btn-primary" onClick={onApply}>Xác nhận áp dụng</button>
         </div>
       </div>
-
-      <div className="confirm-warning">
-        <strong>⚠️ Lưu ý quan trọng</strong>
-        <p>Cấu hình sẽ được áp dụng ngay lập tức trên các thiết bị. Không thể hoàn tác sau khi xác nhận.</p>
-      </div>
-
-      <div className="modal-footer">
-        <button className="btn btn-secondary" onClick={onCancel}>Hủy bỏ</button>
-        <button className="btn btn-primary" onClick={onApply}>Xác nhận áp dụng</button>
-      </div>
     </div>
-  </div>
-);
+  );
+};
 
 // DeleteConfirmModal Component - Confirmation dialog before deleting an ASN counter
 // Features: Shows ASN/Name/Group ID to be deleted, warning message, Confirm/Cancel buttons
@@ -644,42 +713,72 @@ const DeleteConfirmModal = ({ asn, onConfirm, onCancel }) => (
 );
 
 // ResultModal Component - Displays configuration results showing success/failure per device
-// Features: Summary cards (success/failed/total counts), config details, per-device status details
+// Features: Summary cards (success/failed/total counts), config details, per-device status details from API
 const ResultModal = ({ result, onClose }) => {
-  const successCount = result.results.filter(r => r.status === 'success').length;
-  const failedCount = result.results.filter(r => r.status === 'failed').length;
+  const DEVICE_IP_MAP = {
+    'HKG-EQX-POP01': '123.29.4.95',
+    'HKG-EQX-POP02': '123.29.4.96',
+    'HKG-MEGA-POP01': '123.29.4.75',
+    'HKG-MEGA-POP02': '123.29.4.76',
+    'SGN-GLS-POP01': '123.29.4.155',
+    'SGP-EQX-POP01': '123.29.4.125'
+  };
+
+  // Use successCount/failedCount from result if available, otherwise calculate
+  const successCount = result.successCount !== undefined ? result.successCount : result.results.filter(r => r.status === 'success').length;
+  const failedCount = result.failedCount !== undefined ? result.failedCount : result.results.filter(r => r.status === 'failed').length;
+  const totalDevices = result.totalDevices || result.selectedDevices.length;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content modal-result" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>Kết quả cấu hình</h3>
+          <div>
+            <h3>Kết quả cấu hình Policer</h3>
+            <p className="modal-subtitle" style={{ fontSize: '13px', color: '#6b7280', marginTop: '4px' }}>
+              {successCount === totalDevices ? '✅ Tất cả thiết bị đã được cấu hình thành công' : 
+               failedCount === totalDevices ? '❌ Không có thiết bị nào được cấu hình thành công' :
+               `⚠️ ${successCount}/${totalDevices} thiết bị thành công`}
+            </p>
+          </div>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
 
         <div className="result-summary">
-          <div className="summary-card success"><div className="summary-number">{successCount}</div><div className="summary-label">Thành công</div></div>
-          <div className="summary-card failed"><div className="summary-number">{failedCount}</div><div className="summary-label">Thất bại</div></div>
-          <div className="summary-card total"><div className="summary-number">{result.selectedDevices.length}</div><div className="summary-label">Tổng cộng</div></div>
+          <div className="summary-card success" style={{ borderLeft: '4px solid #10b981' }}>
+            <div className="summary-number" style={{ color: '#10b981' }}>{successCount}</div>
+            <div className="summary-label">Thành công</div>
+          </div>
+          <div className="summary-card failed" style={{ borderLeft: '4px solid #dc2626' }}>
+            <div className="summary-number" style={{ color: '#dc2626' }}>{failedCount}</div>
+            <div className="summary-label">Thất bại</div>
+          </div>
+          <div className="summary-card total" style={{ borderLeft: '4px solid #3b82f6' }}>
+            <div className="summary-number" style={{ color: '#3b82f6' }}>{totalDevices}</div>
+            <div className="summary-label">Tổng cộng</div>
+          </div>
         </div>
 
-        <div className="result-config">
-          <div className="config-row"><span className="label">ASN:</span><span className="value">{result.configDetail.as}</span></div>
-          <div className="config-row"><span className="label">Bandwidth:</span><span className="value">{result.configDetail.bandwidth}</span></div>
-          <div className="config-row"><span className="label">Thời gian thực hiện:</span><span className="value">{result.timestamp}</span></div>
+        <div className="result-config" style={{ backgroundColor: '#f9fafb', padding: '16px', borderRadius: '8px', marginBottom: '16px' }}>
+          <div className="config-row" style={{ marginBottom: '8px' }}><span className="label" style={{ fontWeight: '500' }}>ASN:</span><span className="value" style={{ fontWeight: '600', color: '#1e40af' }}>{result.configDetail.as}</span></div>
+          <div className="config-row" style={{ marginBottom: '8px' }}><span className="label" style={{ fontWeight: '500' }}>Bandwidth:</span><span className="value" style={{ fontWeight: '600', color: '#7c3aed' }}>{result.configDetail.bandwidth}</span></div>
+          <div className="config-row"><span className="label" style={{ fontWeight: '500' }}>Thời gian thực hiện:</span><span className="value" style={{ color: '#6b7280' }}>{result.timestamp}</span></div>
         </div>
 
         <div className="result-details">
-          <h4>Chi tiết cấu hình từng thiết bị:</h4>
+          <h4 style={{ marginBottom: '12px', fontSize: '15px', fontWeight: '600' }}>Chi tiết cấu hình từng thiết bị ({result.results.length}):</h4>
           <div className="result-list">
             {result.results.map((item, idx) => (
-              <div key={idx} className={`result-item ${item.status}`}>
-                <div className="result-icon">{item.status === 'success' ? '✓' : '✗'}</div>
-                <div className="result-info">
-                  <div className="result-device">{item.device}</div>
-                  <div className="result-message">{item.message}</div>
+              <div key={idx} className={`result-item ${item.status}`} style={{ display: 'flex', alignItems: 'flex-start', padding: '12px', backgroundColor: item.status === 'success' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${item.status === 'success' ? '#86efac' : '#fca5a5'}`, borderRadius: '6px', marginBottom: '8px' }}>
+                <div className="result-icon" style={{ fontSize: '20px', marginRight: '12px', color: item.status === 'success' ? '#10b981' : '#dc2626', fontWeight: 'bold' }}>{item.status === 'success' ? '✓' : '✗'}</div>
+                <div className="result-info" style={{ flex: 1 }}>
+                  <div className="result-device" style={{ fontWeight: '600', marginBottom: '4px', color: '#1f2937' }}>{item.device}</div>
+                  <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}>IP: {DEVICE_IP_MAP[item.device]}</div>
+                  <div className="result-message" style={{ fontSize: '13px', color: item.status === 'success' ? '#059669' : '#dc2626' }}>{item.message}</div>
                 </div>
-                <div className="result-status">{item.status === 'success' ? 'Thành công' : 'Thất bại'}</div>
+                <div className="result-status" style={{ padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '500', backgroundColor: item.status === 'success' ? '#10b981' : '#dc2626', color: 'white' }}>
+                  {item.status === 'success' ? 'Thành công' : 'Thất bại'}
+                </div>
               </div>
             ))}
           </div>
@@ -693,6 +792,37 @@ const ResultModal = ({ result, onClose }) => {
   );
 };
 
+// LoadingModal Component - Shows loading state while posting config to N8N and waiting for result
+const LoadingModal = ({ message, subMessage }) => (
+  <div className="modal-overlay" style={{ zIndex: 9999 }}>
+    <div className="modal-content modal-loading" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px', textAlign: 'center' }}>
+      <div className="loading-content" style={{ padding: '40px 20px' }}>
+        <div className="loading-spinner" style={{ fontSize: '48px', marginBottom: '20px', animation: 'spin 1s linear infinite' }}>
+          ⏳
+        </div>
+        <h3 style={{ marginBottom: '12px', color: '#1f2937' }}>{message || 'Đang xử lý...'}</h3>
+        <p style={{ color: '#6b7280', fontSize: '14px', lineHeight: '1.6' }}>
+          {subMessage || 'Vui lòng chờ trong giây lát...'}
+        </p>
+        <div className="progress-bar" style={{ marginTop: '24px', height: '4px', backgroundColor: '#e5e7eb', borderRadius: '2px', overflow: 'hidden' }}>
+          <div style={{ height: '100%', backgroundColor: '#3b82f6', width: '100%', animation: 'progress 2s ease-in-out infinite' }}></div>
+        </div>
+      </div>
+    </div>
+    <style>{`
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      @keyframes progress {
+        0% { transform: translateX(-100%); }
+        50% { transform: translateX(0%); }
+        100% { transform: translateX(100%); }
+      }
+    `}</style>
+  </div>
+);
+
 // Tab1 Component - Main IPT Policer Dashboard with monitoring and configuration
 // Features:
 //   - LineChart: 3-line traffic monitoring (Throughput/Capacity/Efficiency) with time period selector
@@ -702,6 +832,18 @@ const ResultModal = ({ result, onClose }) => {
 //   - Last Policer Box: Shows most recent policer applied, clickable to view detailed device status
 //   - Config Flow: Alert click → Config modal → Confirm modal → Result modal
 function Tab1() {
+  // Cookie helper for reading current user
+  const { Cookie } = require('helpers/cookie');
+  // Device IP mapping for all POPs
+  const DEVICE_IP_MAP = {
+    'HKG-EQX-POP01': '123.29.4.95',
+    'HKG-EQX-POP02': '123.29.4.96',
+    'HKG-MEGA-POP01': '123.29.4.75',
+    'HKG-MEGA-POP02': '123.29.4.76',
+    'SGN-GLS-POP01': '123.29.4.155',
+    'SGP-EQX-POP01': '123.29.4.125'
+  };
+
   // State management for chart data and ASN list
   const [chartData, setChartData] = useState(mockChartData);
   const [asnData, setAsnData] = useState([]);
@@ -718,11 +860,15 @@ function Tab1() {
   const [modalState, setModalState] = useState('closed'); // Track modal state: 'closed', 'config', 'confirm', 'result', 'deleteConfirm', 'policerDetail'
   const [selectedASN, setSelectedASN] = useState(null);
   const [selectedDevices, setSelectedDevices] = useState([]); // Array of selected device names
-  const [configDetail, setConfigDetail] = useState(null); // {as: string, bandwidth: string}
+  const [configDetail, setConfigDetail] = useState(null); // {as: string, bandwidth: string, template: string}
   const [confirmDevices, setConfirmDevices] = useState([]); // Copy of selectedDevices for confirmation
   const [resultData, setResultData] = useState(null); // Result data from N8n call
   const [deleteConfirmASN, setDeleteConfirmASN] = useState(null); // ASN to be deleted
   const [showPolicerDetail, setShowPolicerDetail] = useState(false); // Track if policer detail modal is open
+  const [configToPolicerData, setConfigToPolicerData] = useState(null); // Store config to policer data from API
+  // Thêm state cho loading modal
+  const [loadingMessage, setLoadingMessage] = useState("");
+  const [loadingSubMessage, setLoadingSubMessage] = useState("");
 
   // Fetch traffic data with optional date range
   const fetchTrafficData = async (startDate, endDate) => {
@@ -881,8 +1027,12 @@ function Tab1() {
 
         if (!mounted) return;
 
-        // STEP 2: Fetch traffic data - default load all data (no date filter)
-        await fetchTrafficData();
+        // STEP 2: Fetch traffic data - default load LATEST 24 hours (1 day)
+        const step2Time = new Date();
+        const step2EndDate = step2Time.toISOString().split('T')[0];
+        const step2StartDate = new Date(step2Time.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        console.log('🔄 Fetching LATEST 24h traffic data:', { start: step2StartDate, end: step2EndDate });
+        await fetchTrafficData(step2StartDate, step2EndDate);
         
         if (!mounted) return;
 
@@ -926,23 +1076,23 @@ function Tab1() {
           console.error('Check - data is array:', Array.isArray(asnRes?.data));
           console.error('Check - data length:', asnRes?.data?.length);
           console.warn('⚠️ Keeping empty asnData to show error state');
-          // Don't set mockData - keep empty [] to show no data message
+          // Don't set mockData - keep empty [] to show error state
         }
 
         // Fetch warning data (separate API for LastWarningBox)
         console.log('🔄 Fetching Last Warning from API...');
-        const warningRes = await Tab1Service.GetLastWarning();
-        console.log('📦 GetLastWarning response:', warningRes);
+        const step3WarningRes = await Tab1Service.GetLastWarning();
+        console.log('📦 GetLastWarning response:', step3WarningRes);
         
-        if (warningRes?.status === 'success' && warningRes.data) {
+        if (step3WarningRes?.status === 'success' && step3WarningRes.data) {
           console.log('✅ GetLastWarning SUCCESS');
           
           // Check if API has old format (with policer data) for LastWarningBox
-          if (warningRes.data.max_as_shortlist_traffic) {
+          if (step3WarningRes.data.max_as_shortlist_traffic) {
             // Transform API response to LastWarningBox format
             // API returns: {id, max_as_shortlist_traffic, total_traffic_ipt, total_capacity, policer_bw, policer_template, updated_at, as_shortlist}
             // Component expects: {lastWarningTime, message, asn, bandwidth, recommendation}
-            const date = new Date(warningRes.data.updated_at);
+            const date = new Date(step3WarningRes.data.updated_at);
             const day = String(date.getDate()).padStart(2, '0');
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const year = date.getFullYear();
@@ -951,14 +1101,14 @@ function Tab1() {
             const formattedTime = `${day}/${month}/${year} ${hours}:${minutes}`;
             
             // Calculate utilization percentage
-            const utilizationPercent = ((warningRes.data.total_traffic_ipt / warningRes.data.total_capacity) * 100).toFixed(2);
+            const utilizationPercent = ((step3WarningRes.data.total_traffic_ipt / step3WarningRes.data.total_capacity) * 100).toFixed(2);
             
             const transformedWarning = {
               lastWarningTime: formattedTime,
-              message: `Traffic IPT đạt ${warningRes.data.total_traffic_ipt} Gbps (${utilizationPercent}% capacity)`,
-              asn: `AS${warningRes.data.as_shortlist}`,
-              bandwidth: `${warningRes.data.policer_bw}g`,
-              recommendation: warningRes.data.policer_template
+              message: `Traffic IPT đạt ${step3WarningRes.data.total_traffic_ipt} Gbps (${utilizationPercent}% capacity)`,
+              asn: `AS${step3WarningRes.data.as_shortlist}`,
+              bandwidth: `${step3WarningRes.data.policer_bw}g`,
+              recommendation: step3WarningRes.data.policer_template
             };
             
             console.log('✅ Transformed warning data:', transformedWarning);
@@ -968,33 +1118,63 @@ function Tab1() {
             setWarningData(null);
           }
         } else {
-          console.warn('⚠️ GetLastWarning failed:', warningRes?.message || 'No data');
+          console.warn('⚠️ GetLastWarning failed:', step3WarningRes?.message || 'No data');
           console.warn('⚠️ Setting warningData to null to show error state');
           setWarningData(null);
         }
 
-        // STEP 4: Fetch API monitor status from traffic API (real-time utilization)
-        // NOTE: This uses fetchedThreshold (local variable) to avoid React state delay
-        console.log('🔄 Fetching API Monitor data from /api/traffic...');
-        const monitorRes = await Tab1Service.GetTrafficData();
-        if (monitorRes?.success && Array.isArray(monitorRes.data) && monitorRes.data.length > 0) {
-          // Get latest traffic data (last item in array)
-          const latestTraffic = monitorRes.data[monitorRes.data.length - 1];
+        // STEP 4: Fetch API monitor status - Sử dụng 2 API riêng biệt
+        // API Monitor = GetTrafficAPIMonitorBox (hiệu suất/capacity/throughput - 1 mẫu mới nhất) + GetConfigToPolicer (AS/config)
+        console.log('🔄 Fetching API Monitor data from /api/Traffic-APIMonitoBox and /api/get-config-toPolicer...');
+        
+        // 4.1: Lấy dữ liệu traffic (hiệu suất sử dụng) - CHIỂU 1 MẪU MỚI NHẤT
+        const step4TrafficRes = await Tab1Service.GetTrafficAPIMonitorBox();
+        console.log('📦 GetTrafficAPIMonitorBox response:', step4TrafficRes);
+        
+        // 4.2: Lấy dữ liệu config to policer (AS/config command/bandwidth)
+        const step4ConfigRes = await Tab1Service.GetConfigToPolicer();
+        console.log('📦 GetConfigToPolicer response:', step4ConfigRes);
+        
+        // 4.3: Kết hợp 2 nguồn dữ liệu
+        if (step4TrafficRes?.success && step4TrafficRes.data) {
+          // API trả về 1 object duy nhất (latest record), KHÔNG phải array
+          const latestTraffic = step4TrafficRes.data;
           const utilizationPercent = Number(latestTraffic.utilizationPercent) || 0;
+          const trafficDate = new Date(latestTraffic.updatedAt);
+          const trafficTime = trafficDate.toLocaleString('vi-VN');
           
-          // Transform to ApiMonitorBox format
-          const date = new Date(latestTraffic.updatedAt);
-          const formattedTime = date.toLocaleString('vi-VN');
+          // Thông tin từ get-config-toPolicer (AS/config command/bandwidth)
+          let asn = 'N/A';
+          let configCommand = 'N/A';
+          let configUpdatedAt = 'N/A';
+          let bandwidth = 'N/A';
+          
+          if (step4ConfigRes?.success && step4ConfigRes.data) {
+            // Backend returns camelCase: asShortlist, policerBw, policerTemplate, updatedAt
+            asn = `AS${step4ConfigRes.data.asShortlist || step4ConfigRes.data.asn || 'N/A'}`;
+            bandwidth = `${step4ConfigRes.data.policerBw || step4ConfigRes.data.policer_bw || 'N/A'}g`;
+            configCommand = step4ConfigRes.data.policerTemplate || step4ConfigRes.data.config_commands?.[0] || 
+                           `set firewall filter Protect-VN2-from-Upstream-Transit term Policer-${asn} then policer ${bandwidth}`;
+            
+            if (step4ConfigRes.data.updatedAt || step4ConfigRes.data.updated_at) {
+              const configDate = new Date(step4ConfigRes.data.updatedAt || step4ConfigRes.data.updated_at);
+              configUpdatedAt = configDate.toLocaleString('vi-VN');
+            }
+          }
           
           const transformedMonitorData = {
-            status: Number(utilizationPercent.toFixed(2)), // Keep 2 decimal places
-            threshold: fetchedThreshold, // Use fetchedThreshold from STEP 1 (not state)
-            timestamp: formattedTime,
-            note: `Traffic: ${latestTraffic.trafficInTotal} Gbps / ${latestTraffic.capacityTotal} Gbps`
+            status: Number(utilizationPercent.toFixed(2)),
+            threshold: fetchedThreshold,
+            timestamp: trafficTime, // Thời gian update lưu lượng
+            note: `Traffic: ${latestTraffic.trafficInTotal} Gbps / ${latestTraffic.capacityTotal} Gbps`,
+            // Thông tin từ get-config-toPolicer API
+            asn: asn,
+            bandwidth: bandwidth,
+            configCommand: configCommand,
+            configUpdatedAt: configUpdatedAt // Thời gian config update từ get-config-toPolicer
           };
           
-          console.log('✅ API Monitor data created with threshold:', fetchedThreshold);
-          console.log('✅ API Monitor data:', transformedMonitorData);
+          console.log('✅ API Monitor data combined from 2 APIs (latest sample):', transformedMonitorData);
           setApiMonitorData(transformedMonitorData);
         } else {
           console.warn('⚠️ Failed to fetch API Monitor data from traffic API');
@@ -1006,7 +1186,7 @@ function Tab1() {
         const policerRes = await Tab1Service.GetLastedConfigPolicer();
         console.log('📦 GetLastedConfigPolicer response:', policerRes);
         
-        if (policerRes?.status === 'success' && policerRes.data) {
+        //if (policerRes?.status === 'success' && policerRes.data) {
           console.log('✅ GetLastedConfigPolicer SUCCESS');
           
           // Transform API response to LastPolicerBox format
@@ -1066,11 +1246,11 @@ function Tab1() {
           
           console.log('✅ Transformed policer data:', transformedPolicerData);
           setLastPolicerData(transformedPolicerData);
-        } else {
-          console.warn('⚠️ GetLastedConfigPolicer failed:', policerRes?.message || 'No data');
-          console.warn('⚠️ Using mockLastPolicerData as fallback');
-          setLastPolicerData(mockLastPolicerData);
-        }
+        // } else {
+        //   console.warn('⚠️ GetLastedConfigPolicer failed:', policerRes?.message || 'No data');
+        //   console.warn('⚠️ Using mockLastPolicerData as fallback');
+        //   setLastPolicerData(mockLastPolicerData);
+        // }
       } catch (err) {
         console.error('❌ Fetch data ERROR:', err);
         console.error('Error message:', err?.message);
@@ -1127,49 +1307,103 @@ function Tab1() {
     };
   }, [currentPeriod]);
 
-  // Auto-refresh API Monitor data every 60 seconds (always active for real-time monitoring)
+  // Auto-refresh API Monitor data every 5 minutes (always active for monitoring)
+  // Sử dụng 3 API: GetThresholdConfig, GetTrafficAPIMonitorBox, GetConfigToPolicer
   React.useEffect(() => {
-    console.log('🔄 Auto-refresh ENABLED for API Monitor (every 60s)');
-    
+    console.log('🔄 Auto-refresh ENABLED for API Monitor (every 5 minutes, with threshold refresh)');
+
     const fetchApiMonitorData = async () => {
       try {
-        console.log('🔄 Auto-refreshing API Monitor data...');
-        const monitorRes = await Tab1Service.GetTrafficData();
-        
-        if (monitorRes?.success && Array.isArray(monitorRes.data) && monitorRes.data.length > 0) {
-          const latestTraffic = monitorRes.data[monitorRes.data.length - 1];
+        console.log('🔄 Auto-refreshing API Monitor data (with threshold)...');
+
+        // 1. Fetch threshold from DB
+        let fetchedThreshold = 80;
+        const thresholdRes = await Tab1Service.GetThresholdConfig();
+        if (thresholdRes?.status === 'success' && thresholdRes.data) {
+          if (thresholdRes.data.cdn_traffic_trigger_threshold) {
+            const rawValue = thresholdRes.data.cdn_traffic_trigger_threshold;
+            if (typeof rawValue === 'string' && rawValue.startsWith('(') && rawValue.endsWith(')')) {
+              const cleaned = rawValue.slice(1, -1);
+              const parts = cleaned.split(',');
+              if (parts.length >= 2) {
+                const thresholdStr = parts[1].trim();
+                const parsedThreshold = Number(thresholdStr);
+                if (!isNaN(parsedThreshold) && parsedThreshold > 0 && parsedThreshold <= 100) {
+                  fetchedThreshold = parsedThreshold;
+                  setAlertThreshold(parsedThreshold);
+                  console.log('✅ [Auto-refresh] Alert threshold parsed from tuple:', parsedThreshold);
+                } else {
+                  console.warn('⚠️ [Auto-refresh] Invalid threshold value in tuple:', thresholdStr);
+                }
+              }
+            } else if (typeof rawValue === 'number') {
+              fetchedThreshold = Number(rawValue);
+              setAlertThreshold(fetchedThreshold);
+              console.log('✅ [Auto-refresh] Alert threshold (direct number):', fetchedThreshold);
+            }
+          }
+        } else {
+          console.warn('⚠️ [Auto-refresh] GetThresholdConfig failed, using default threshold: 80');
+        }
+
+        // 2. Fetch traffic data (hiệu suất) - CHIỂU 1 MẪU MỚI NHẤT
+        const trafficRes = await Tab1Service.GetTrafficAPIMonitorBox();
+        // 3. Fetch config to policer
+        const configRes = await Tab1Service.GetConfigToPolicer();
+
+        if (trafficRes?.success && trafficRes.data) {
+          const latestTraffic = trafficRes.data;
           const utilizationPercent = Number(latestTraffic.utilizationPercent) || 0;
-          
-          const date = new Date(latestTraffic.updatedAt);
-          const formattedTime = date.toLocaleString('vi-VN');
-          
+          const trafficDate = new Date(latestTraffic.updatedAt);
+          const trafficTime = trafficDate.toLocaleString('vi-VN');
+
+          let asn = 'N/A';
+          let configCommand = 'N/A';
+          let configUpdatedAt = 'N/A';
+          let bandwidth = 'N/A';
+
+          if (configRes?.success && configRes.data) {
+            asn = `AS${configRes.data.asShortlist || configRes.data.asn || 'N/A'}`;
+            bandwidth = `${configRes.data.policerBw || configRes.data.policer_bw || 'N/A'}g`;
+            configCommand = configRes.data.policerTemplate || configRes.data.config_commands?.[0] || 
+                           `set firewall filter Protect-VN2-from-Upstream-Transit term Policer-${asn} then policer ${bandwidth}`;
+            if (configRes.data.updatedAt || configRes.data.updated_at) {
+              const configDate = new Date(configRes.data.updatedAt || configRes.data.updated_at);
+              configUpdatedAt = configDate.toLocaleString('vi-VN');
+            }
+          }
+
           const transformedMonitorData = {
-            status: Number(utilizationPercent.toFixed(2)), // Keep 2 decimal places
-            threshold: alertThreshold, // Use threshold from state (fetched from API)
-            timestamp: formattedTime,
-            note: `Traffic: ${latestTraffic.trafficInTotal} Gbps / ${latestTraffic.capacityTotal} Gbps`
+            status: Number(utilizationPercent.toFixed(2)),
+            threshold: fetchedThreshold,
+            timestamp: trafficTime,
+            note: `Traffic: ${latestTraffic.trafficInTotal} Gbps / ${latestTraffic.capacityTotal} Gbps`,
+            asn: asn,
+            bandwidth: bandwidth,
+            configCommand: configCommand,
+            configUpdatedAt: configUpdatedAt
           };
-          
-          console.log('✅ API Monitor auto-refresh updated:', transformedMonitorData);
+
+          console.log('✅ API Monitor auto-refresh updated (latest sample, threshold from DB):', transformedMonitorData);
           setApiMonitorData(transformedMonitorData);
         }
       } catch (err) {
         console.error('❌ Auto-refresh API Monitor error:', err);
       }
     };
-    
+
     // Fetch immediately on mount (don't wait for interval)
     fetchApiMonitorData();
-    
-    // Set up interval to refresh every 60 seconds
-    const intervalId = setInterval(fetchApiMonitorData, 60000);
-    
+
+    // Set up interval to refresh every 5 minutes
+    const intervalId = setInterval(fetchApiMonitorData, 300000); // 5 minutes (300 seconds)
+
     // Cleanup interval on unmount
     return () => {
       console.log('🛑 Clearing API Monitor auto-refresh interval');
       clearInterval(intervalId);
     };
-  }, [alertThreshold]);
+  }, []); // Empty dependency array - interval runs independently
 
   // Handler: Period change from LineChart component
   const handlePeriodChange = async (startDate, endDate, period) => {
@@ -1193,19 +1427,48 @@ function Tab1() {
 
   // Handler: Open config modal when API Monitor alert is clicked
   // Only opens if status >= threshold (alert condition from API)
-  const handleApiMonitorClick = () => {
-    if (apiMonitorData && apiMonitorData.status >= apiMonitorData.threshold) {
+  // Fetches latest config from GetConfigToPolicer API
+  const handleApiMonitorClick = async () => {
+    if (apiMonitorData && parseFloat(apiMonitorData.status) >= parseFloat(apiMonitorData.threshold)) {
       console.log('⚠️ Alert clicked! Status:', apiMonitorData.status, 'Threshold:', apiMonitorData.threshold);
       
-      if (!asnData || asnData.length === 0) {
-        alert('Không có dữ liệu ASN để cấu hình');
-        return;
+      // Fetch latest config from API
+      try {
+        const configRes = await Tab1Service.GetConfigToPolicer();
+        console.log('📦 GetConfigToPolicer response for modal:', configRes);
+        console.log('📦 configRes.success:', configRes.success);
+        console.log('📦 configRes.data:', configRes.data);
+        
+        if (configRes?.success && configRes.data) {
+          // Backend returns camelCase: asShortlist, policerBw, policerTemplate
+          const asnNumber = configRes.data.asShortlist || configRes.data.asn;
+          const asn = `AS${asnNumber}`;
+          const policerBw = configRes.data.policerBw || configRes.data.policer_bw;
+          const bandwidth = `${policerBw}g`;
+          const template = configRes.data.policerTemplate || configRes.data.config_commands?.[0] || 
+                          `set firewall filter Protect-VN2-from-Upstream-Transit term Policer-${asn} then policer ${bandwidth}`;
+          
+          console.log('✅ Setting modal state to config with:', { asn, bandwidth, template });
+          setConfigToPolicerData(configRes.data); // Store full API data
+          setSelectedASN(asn); // Set selectedASN for modal condition
+          setConfigDetail({ 
+            as: asn, 
+            bandwidth: bandwidth,
+            template: template,
+            asnNumber: asnNumber, // Pure number without "AS" prefix
+            policerBw: policerBw // Pure number for API
+          });
+          setSelectedDevices([]);
+          setModalState('config');
+          console.log('✅ Modal state set to config!');
+        } else {
+          console.error('❌ Invalid response structure:', configRes);
+          alert('Không thể lấy dữ liệu cấu hình. Vui lòng thử lại.');
+        }
+      } catch (err) {
+        console.error('❌ Error fetching config:', err);
+        alert('Lỗi khi lấy cấu hình. Vui lòng thử lại.');
       }
-      
-      setSelectedASN(asnData[0]);
-      setConfigDetail({ as: asnData[0].asn, bandwidth: '29 Gbps' });
-      setSelectedDevices([]);
-      setModalState('config');
     } else {
       console.log('ℹ️ API Monitor clicked but not in alert state. Status:', apiMonitorData?.status, 'Threshold:', apiMonitorData?.threshold);
     }
@@ -1219,38 +1482,172 @@ function Tab1() {
 
   // Handler: Confirm deletion of ASN from the table
   const handleConfirmDelete = async () => {
-    if (deleteConfirmASN) {
-      console.log('🗑️ Deleting ASN:', deleteConfirmASN);
-      
+    if (!deleteConfirmASN) return;
+
+    try {
+      // Read current user for logging
+      let _logUser = '';
       try {
-        // Call API to delete ASN from database
-        const result = await Tab1Service.DeleteASN(deleteConfirmASN.id);
-        
-        if (result?.success) {
-          console.log('✅ ASN deleted successfully from database');
-          // Remove from UI state after successful deletion
-          setAsnData(asnData.filter(row => row.id !== deleteConfirmASN.id));
-          setModalState('closed');
+        const u = Cookie.getCookie('UserInfo');
+        if (u) {
+          const parsed = JSON.parse(u);
+          _logUser = parsed?.UserName || parsed?.username || parsed?.user || '';
+        }
+      } catch (e) {
+        console.debug('Unable to parse UserInfo cookie for delete logging', e);
+      }
+      // Log user action: clicked Delete Confirm
+      Tab1Service.PostLogActionIptPolicerFE({ user: _logUser || '', log_action: `clicked Delete Confirm for ASN ${deleteConfirmASN?.asn || ''}` })
+        .catch((e) => console.debug('PostLogActionIptPolicerFE error (pre-delete):', e));
+
+      // Start loading modal to block user actions
+      setLoadingMessage('Đang gửi lệnh xóa đến N8N...');
+      setLoadingSubMessage('Vui lòng không thao tác trong khi hệ thống gửi lệnh.');
+      setModalState('loading');
+
+      // Post delete request to backend (which forwards to N8N)
+      const asnToDelete = deleteConfirmASN.asn || deleteConfirmASN.asnNumber || deleteConfirmASN.id || deleteConfirmASN;
+      const postRes = await Tab1Service.PostDeleteASNCounter(asnToDelete);
+
+      if (postRes?.status !== 'success') {
+        throw new Error(postRes?.message || 'Lỗi khi gửi lệnh xóa đến N8N');
+      }
+
+      // Let N8N process briefly
+      setLoadingMessage('N8N đang xử lý lệnh xóa...');
+      setLoadingSubMessage('Hệ thống đang thực hiện xóa. Đang chờ kết quả...');
+      await new Promise(r => setTimeout(r, 2000));
+
+      // Prefer using N8N response returned by the POST call (postRes.n8n_response)
+      // Backend returns postRes which may include n8n_response.data mapping device->result
+      const n8nResp = postRes?.n8n_response ?? postRes?.data?.n8n_response ?? postRes?.n8nResponse;
+      if (postRes?.status === 'success' && n8nResp) {
+        let container = n8nResp.data ?? n8nResp;
+        if (typeof container === 'string') {
+          try { container = JSON.parse(container); } catch (e) { /* ignore */ }
+        }
+
+        if (!container || typeof container !== 'object') {
+          throw new Error('Kết quả N8N không hợp lệ');
+        }
+
+        const deviceResults = [];
+        let successCount = 0;
+        let failedCount = 0;
+
+        Object.keys(container).forEach((k) => {
+          const d = container[k] || {};
+          const payload = d.data ?? d.result ?? d;
+          // Determine success by checking outer status first, then nested payload
+          const ok = (d.status === 'success') || (d.success === true) || (payload && (payload.status === 'success' || payload.success === true));
+          const status = ok ? 'success' : 'failed';
+          if (status === 'success') successCount++; else failedCount++;
+          const message = payload?.commit_result ?? payload?.message ?? payload?.error ?? d?.message ?? '';
+          deviceResults.push({ device: k, status, message });
+        });
+
+        const finalResult = {
+          timestamp: new Date(postRes.timestamp || postRes.updatedAt || new Date().toISOString()).toLocaleString('vi-VN'),
+          selectedDevices: deviceResults.map(r => r.device),
+          configDetail: { as: `AS${asnToDelete}` },
+          results: deviceResults,
+          successCount,
+          failedCount,
+          totalDevices: deviceResults.length
+        };
+        // Log completion of delete action
+        Tab1Service.PostLogActionIptPolicerFE({ user: _logUser || '', log_action: `delete ASN ${asnToDelete} executed` })
+          .catch((e) => console.debug('PostLogActionIptPolicerFE error (post-delete):', e));
+
+        setResultData(finalResult);
+        setModalState('result');
+        setAsnData(asnData.filter(row => String(row.asn) !== String(asnToDelete)));
+        setDeleteConfirmASN(null);
+      } else {
+        // Fallback: if n8n response not present, try the previous result endpoint
+        setLoadingMessage('Đang lấy kết quả xóa...');
+        setLoadingSubMessage('Kiểm tra trạng thái xóa trên từng thực thể...');
+        const resultRes = await Tab1Service.GetDeleteASNCounterResult();
+
+        if (resultRes?.status === 'success' && resultRes.data) {
+          // Prefer raw_result for more accurate device-wise results
+          let container = null;
+          if (resultRes.data && resultRes.data.raw_result) container = resultRes.data.raw_result;
+          else if (resultRes.raw_result) container = resultRes.raw_result;
+          else container = resultRes.data;
+
+          if (typeof container === 'string') {
+            try { container = JSON.parse(container); } catch (e) { /* keep as string */ }
+          }
+
+          if (!container || typeof container !== 'object') {
+            throw new Error('Kết quả xóa không hợp lệ');
+          }
+
+          const deviceResults = [];
+          let successCount = 0;
+          let failedCount = 0;
+          Object.keys(container).forEach((k) => {
+            const d = container[k] || {};
+            const payload = d.data ?? d.result ?? d;
+            const ok = (d.status === 'success') || (d.success === true) || (payload && (payload.status === 'success' || payload.success === true));
+            const status = ok ? 'success' : 'failed';
+            if (status === 'success') successCount++; else failedCount++;
+            const message = payload?.commit_result ?? payload?.message ?? payload?.error ?? d?.message ?? '';
+            deviceResults.push({ device: k, status, message });
+          });
+
+          const finalResult = {
+            timestamp: new Date(resultRes.updatedAt || resultRes.data?.updated_at || new Date().toISOString()).toLocaleString('vi-VN'),
+            selectedDevices: deviceResults.map(r => r.device),
+            configDetail: { as: `AS${asnToDelete}` },
+            results: deviceResults,
+            successCount,
+            failedCount,
+            totalDevices: deviceResults.length
+          };
+
+          setResultData(finalResult);
+          setModalState('result');
+          setAsnData(asnData.filter(row => String(row.asn) !== String(asnToDelete)));
           setDeleteConfirmASN(null);
         } else {
-          console.error('❌ Delete ASN failed:', result?.message);
-          alert('Lỗi khi xóa ASN: ' + (result?.message || 'Không thể xóa ASN khỏi database'));
-          setModalState('closed');
-          setDeleteConfirmASN(null);
+          throw new Error(resultRes?.message || 'Không thể lấy kết quả xóa');
         }
-      } catch (err) {
-        console.error('❌ Delete ASN error:', err);
-        alert('Lỗi khi xóa ASN: ' + err.message);
-        setModalState('closed');
-        setDeleteConfirmASN(null);
       }
+    } catch (err) {
+      console.error('❌ Delete ASN error:', err);
+      setModalState('closed');
+      setDeleteConfirmASN(null);
+      alert(`❌ Lỗi khi xóa ASN:\n\n${err?.message || err}`);
     }
   };
 
   // Handler: Cancel deletion and close modal
   const handleDeleteCancel = () => {
-    setModalState('closed');
-    setDeleteConfirmASN(null);
+    (async () => {
+      try {
+        // Read current user from cookie
+        let userName = '';
+        try {
+          const u = Cookie.getCookie('UserInfo');
+          if (u) {
+            const parsed = JSON.parse(u);
+            userName = parsed?.UserName || parsed?.username || parsed?.user || '';
+          }
+        } catch (e) {
+          console.debug('Unable to parse UserInfo cookie for logging', e);
+        }
+
+        // send log (fire-and-forget style)
+        await Tab1Service.PostLogActionIptPolicerFE({ user: userName || '', log_action: 'clicked Delete Cancel' });
+      } catch (e) {
+        console.debug('Error sending frontend action log', e);
+      } finally {
+        setModalState('closed');
+        setDeleteConfirmASN(null);
+      }
+    })();
   };
 
   // Handler: Toggle ASN row expansion to show/hide prefix details
@@ -1266,7 +1663,7 @@ function Tab1() {
   // Handler: Select all or deselect all devices (6 POPs)
   const handleSelectAllDevices = (checked) => {
     if (checked) {
-      setSelectedDevices(['HKG-EQX-POP01', 'HKG-EQX-POP02', 'HKG-MEGA-POP01', 'HKG-MEGA-POP02', 'SGP-EQX-POP01', 'SGP-GLS-POP01']);
+      setSelectedDevices(['HKG-EQX-POP01', 'HKG-EQX-POP02', 'HKG-MEGA-POP01', 'HKG-MEGA-POP02', 'SGN-GLS-POP01', 'SGP-EQX-POP01']);
     } else {
       setSelectedDevices([]);
     }
@@ -1289,53 +1686,111 @@ function Tab1() {
     setSelectedDevices([]);
   };
 
-  // Handler: Confirm and apply configuration - Calls API to apply policer config
-  // Sends request to backend with ASN, bandwidth, and selected devices
+  // Handler: Confirm and apply configuration - Calls POST API to send config to N8N
+  // Sends request with policer_template, device_list, asn, policer_bw
   const handleConfirmApply = async () => {
-    setModalState('closed');
     try {
-      // Call real API to apply policer configuration
-      const res = await Tab1Service.ApplyPolicerConfig(
-        configDetail.as,
-        configDetail.bandwidth,
-        confirmDevices
+      setLoadingMessage('Đang gửi cấu hình đến N8N...');
+      setLoadingSubMessage(`Đang áp dụng policer cho ${confirmDevices.length} thiết bị. Vui lòng không đóng trình duyệt.`);
+      setModalState('loading');
+      
+      // Build device list with hostname and name
+      const deviceList = confirmDevices.map(deviceName => ({
+        hostname: DEVICE_IP_MAP[deviceName],
+        name: deviceName
+      }));
+      
+      console.log('📦 Device list:', deviceList);
+      console.log('📦 ASN:', configDetail.asnNumber);
+      console.log('📦 Bandwidth:', configDetail.policerBw);
+      console.log('📦 Template:', configDetail.template);
+      
+      // POST to N8N via backend
+      const postRes = await Tab1Service.PostPolicerConfigToN8(
+        configDetail.template,
+        deviceList,
+        configDetail.asnNumber,
+        configDetail.policerBw
       );
+      
+      console.log('📦 POST response:', postRes);
+      
+      // Check if POST was successful
+      if (postRes?.status === 'success') {
+        console.log('✅ POST thành công! N8N đã nhận lệnh cấu hình.');
+        console.log('✅ Response data:', postRes.data);
+        
+        // Verify POST response has expected data
+        if (postRes.data) {
+          console.log('✅ Xác nhận: N8N đã xử lý request');
+          console.log('📋 POST details:', {
+            asn: postRes.data.asn || configDetail.asnNumber,
+            bandwidth: postRes.data.policer_bw || configDetail.policerBw,
+            devices: postRes.data.device_list?.length || deviceList.length,
+            timestamp: postRes.data.updated_at || new Date().toISOString()
+          });
+        } else {
+          console.warn('⚠️ POST response không có data, nhưng status = success');
+        }
+        
+        setLoadingMessage('N8N đang xử lý cấu hình...');
+        setLoadingSubMessage('Hệ thống đang áp dụng cấu hình lên các thiết bị. Vui lòng chờ...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        setLoadingMessage('Đang lấy kết quả cấu hình...');
+        setLoadingSubMessage('Kiểm tra trạng thái áp dụng trên từng thiết bị...');
+        
+        // Fetch result from API
+        const resultRes = await Tab1Service.GetPolicerConfigResult();
+        console.log('📦 Full resultRes:', JSON.stringify(resultRes, null, 2));
 
-      // Process API response
-      let resultData;
-      if (res?.success && res.data?.results && Array.isArray(res.data.results)) {
-        // Backend returned detailed results for each device
-        resultData = {
-          timestamp: new Date().toLocaleString('vi-VN'),
-          selectedDevices: confirmDevices,
-          configDetail: configDetail,
-          results: res.data.results
-        };
-      } else if (res?.success) {
-        // Backend returned success but no detailed results
-        // Show success for all devices (data from API, not random)
-        resultData = {
-          timestamp: new Date().toLocaleString('vi-VN'),
-          selectedDevices: confirmDevices,
-          configDetail: configDetail,
-          results: confirmDevices.map(device => ({
-            device,
-            status: 'success',
-            message: 'Cấu hình thành công'
-          }))
-        };
+        if (resultRes?.success && resultRes.data?.status === 'success' && resultRes.data?.data) {
+          const deviceResultsRaw = resultRes.data.data;
+          const deviceResults = [];
+          let successCount = 0;
+          let failedCount = 0;
+
+          Object.keys(deviceResultsRaw).forEach(deviceName => {
+            const deviceData = deviceResultsRaw[deviceName];
+            const isSuccess = deviceData.status === 'success' || deviceData.success === true;
+            if (isSuccess) {
+              successCount++;
+              deviceResults.push({
+                device: deviceName,
+                status: 'success',
+                message: 'Cấu hình thành công'
+              });
+            } else {
+              failedCount++;
+              deviceResults.push({
+                device: deviceName,
+                status: 'failed',
+                message: deviceData.message || deviceData.error || 'Lỗi không xác định'
+              });
+            }
+          });
+
+          const resultData = {
+            timestamp: new Date(resultRes.data.updatedAt).toLocaleString('vi-VN'),
+            selectedDevices: confirmDevices,
+            configDetail: configDetail,
+            results: deviceResults,
+            successCount: successCount,
+            failedCount: failedCount,
+            totalDevices: confirmDevices.length
+          };
+
+          setResultData(resultData);
+          setModalState('result');
+        } else {
+          throw new Error('Không thể lấy kết quả cấu hình');
+        }
       } else {
-        // API returned error or unexpected response
-        const errorMsg = res?.message || 'Không thể áp dụng cấu hình';
-        alert('Lỗi: ' + errorMsg);
-        return;
+        throw new Error(postRes?.message || 'Lỗi khi gửi cấu hình đến N8N');
       }
-
-      setResultData(resultData);
-      setModalState('result');
     } catch (err) {
-      console.error('ApplyPolicerConfig error:', err);
-      alert('Lỗi khi áp dụng cấu hình: ' + err.message);
+      setModalState('closed');
+      alert(`❌ Lỗi khi áp dụng cấu hình:\n\n${err.message}\n\nVui lòng thử lại hoặc liên hệ quản trị viên.`);
     }
   };
 
@@ -1460,6 +1915,11 @@ function Tab1() {
           data={lastPolicerData}
           onClose={handlePolicerDetailClose}
         />
+      )}
+
+      {/* Modal: Loading */}
+      {modalState === 'loading' && (
+        <LoadingModal message={loadingMessage} subMessage={loadingSubMessage} />
       )}
     </div>
   );
