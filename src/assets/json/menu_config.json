@@ -6,12 +6,6 @@
       "url": "/",
       "icon": "bi bi-grid"
     },
-     {
-      "code": "support",
-      "name": "Hỗ trợ",
-      "url": "/support",
-      "icon": "bi bi-grid"
-    },
     {
       "code": "User",
       "name": "Người dùng",
@@ -108,11 +102,16 @@
           "url": "/dashboardrnoc",
           "icon": "bi bi-grid"
         },
-
         {
-          "code": "audit-cau-hinh-vo-tuyen",
-          "name": "Audit cấu hình vô tuyến",
-          "url": "/audit-cau-hinh-vo-tuyen",
+          "code": "DashboardRnocRoom",
+          "name": "Dashboard detail",
+          "url": "/dashboardrnocroom",
+          "icon": "bi bi-grid"
+        },
+        {
+          "code": "DashboardR001",
+          "name": "Tự động đánh giá cấu hình Vô tuyến",
+          "url": "/tu-dong-danh-gia-cau-hinh-vo-tuyen",
           "icon": "bi bi-bar-chart"
         },
         {
@@ -128,9 +127,9 @@
           "icon": "bi bi-grid"
         },
         {
-          "code": "DashboardR004",
+          "code": "CurenAlarm",
           "name": "Phát hiện bất thường site 0",
-          "url": "/dashboardrnoc4",
+          "url": "/curen-alarm",
           "icon": "bi bi-grid"
         },
         {
@@ -140,31 +139,25 @@
           "icon": "bi bi-grid"
         },
         {
-          "code": "DashboardR007",
-          "name": "Quản lý cấu hình vô tuyến",
-          "url": "/dashboardrnoc7",
+          "code": "DevicePorts",
+          "name": "Công cụ tiết kiệm điện",
+          "url": "/device-ports",
           "icon": "bi bi-grid"
         },
         {
-          "code": "DashboardR008",
-          "name": "R008 - Tiết kiệm điện tự động",
-          "url": "/r008-power-saving",
-          "icon": "bi bi-lightning-charge-fill"
+          "code": "ConfigReport",
+          "name": "Công cụ tự động báo cáo cấu hình",
+          "url": "/config-report",
+          "icon": "bi bi-grid"
         }
       ]
     },
-      {
+    {
       "code": "NetworkSnoc",
       "name": "AU Chuyển mạch",
       "url": "/user",
       "icon": "bi bi-cpu",
       "subMenu": [
-        {
-          "code": "hc-snoc-admin-dashboard",
-          "name": "User Admin Snoc",
-          "url": "/app/snoc/admin",
-          "icon": "bi bi-cpu"
-        },
         {
           "code": "hc-dashboard",
           "name": "Healthcheck Automation",
@@ -185,6 +178,7 @@
         }
       ]
     },
+
     {
       "code": "NetworkInoc",
       "name": "AU IP",
@@ -192,81 +186,60 @@
       "icon": "bi bi-globe",
       "subMenu": [
         {
-          "code": "ClearThuebaoDaphien",
-          "name": "Kiểm soát các phiên PPPoE",
-          "url": "/ClearThuebaoDaphien",
+          "code": "LinksMaps",
+          "name": "Cân chỉnh internet quốc tế ",
+          "url": "/link-cabman",
           "icon": "bi bi-grid"
         },
         {
-          "code": "IPTPolicerAndASNCounter",
-          "name": "Tự động Policer IPT và ASN Counter",
-          "url": "/IPTPolicerAndASNCounter",
+          "code": "CableManagement",
+          "name": "Giới hạn kiểm soát lưu lượng",
+          "url": "/cable-management",
           "icon": "bi bi-grid"
         },
         {
-            "code": "LspQuocte",
-          "name": "Kiểm soát LSP quốc tế",
-          "url": "/LspQuocte",
+          "code": "ucppoe",
+          "name": "Kiểm soát số phiên pppoe",
+          "url": "/ucppoe",
           "icon": "bi bi-grid"
-
-            },
+        },
         {
-          "code": "Hardware_Alarm",
+          "code": "ConfigurationLogs",
           "name": "Xử lý cảnh báo phần cứng",
-          "url": "/hardware-alarm",
+          "url": "/configuration-logs",
           "icon": "bi bi-grid"
         }
       ]
     },
 
-   {
+    {
       "code": "NetworkTnoc",
       "name": "AU truyền dẫn",
       "url": "/user",
       "icon": "bi bi-tools",
       "subMenu": [
         {
-          "code": "tnoc1-t001",
-          "name": "T001 Ciena 6500",
-          "url": "/tnoc1-t001",
+          "code": "LinksMaps",
+          "name": "Reset xử lý lỗi phần cứng",
+          "url": "/link-cabman",
           "icon": "bi bi-grid"
         }
       ]
     },
-     
     {
-            "code": "Anm",
-            "name" : "AU ANM",
-            "url": "/user",
-            "icon": "bi bi-tools",
-            "subMenu": [
-                {
-                    "code": "anm_uc1",
-                    "name" : "GPON - OLT",
-                    "url": "/OLT",
-                    "icon": "bi bi-grid"
-                },
-                {
-                    "code": "anm3_uc1",
-                    "name" : "GPON - ONU",
-                    "url": "/link-uc3",
-                    "icon": "bi bi-grid"
-                },
-                {
-                    "code": "anm2_uc1",
-                    "name" : "VN2/MANE",
-                    "url": "/link-uc2",
-                    "icon": "bi bi-grid"
-                },
-                {
-                    "code": "anm4_uc1",
-                    "name" : "Server",
-                    "url": "/link-uc4",
-                    "icon": "bi bi-grid"
-                }
-               
-            ]
-        },
+      "code": "Anm",
+      "name": "AU ANM",
+      "url": "/user",
+      "icon": "bi bi-tools",
+      "subMenu": [
+        {
+          "code": "anm_uc1",
+          "name": "Demo Uc1",
+          "url": "/link-uc1",
+          "icon": "bi bi-grid"
+        }
+      ]
+    },
     {
       "code": "SOC1",
       "name": "AU SOC1",
@@ -282,13 +255,19 @@
         {
           "code": "S002SipTrunk",
           "name": "S002-SipTrunk",
-          "url": "/s002-SipTrunk",
+          "url": "/s002-Siptrunk",
           "icon": "bi bi-grid"
         },
                 {
           "code": "soc1_uc3",
           "name": "S003 18001900",
           "url": "/SOC-18001900",
+          "icon": "bi bi-grid"
+        },
+        {
+          "code": "soc1_uc4",
+          "name": "S004 SMPP",
+          "url": "/SOC-SMPP",
           "icon": "bi bi-grid"
         }
       ]

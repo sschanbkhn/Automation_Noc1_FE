@@ -37,6 +37,15 @@ export interface SiteData {
   beamset1: string;
   beamset2: string;
   beamset3: string;
+
+  // Location & Management (used in case 4)
+  province?: string;
+  district?: string;
+  fbbManager?: string;
+  managementCell?: string;
+  bandSm?: string;
+  channelBw?: number | string;
+
   // Validation
   validationStatus: "valid" | "invalid" | "warning";
   validationErrors: string[];
@@ -100,6 +109,7 @@ export interface JobResult {
   };
 }
 
+/*
 // Generator state
 export interface GeneratorState {
   currentStep: number;
@@ -110,4 +120,51 @@ export interface GeneratorState {
   generationProgress: GenerationProgress | null;
   jobResult: JobResult | null;
   error: string | null;
+  templates: TemplateFile[]; // ← THÊM DÒNG NÀY
+  currentJobId: string | null; // ← THÊM để lưu jobId
+  currentExecutionId: string | null; // ← THÊM để truyền sang Step 6
+}
+*/
+
+export interface TemplateFile {
+  id: string;
+  fileName: string;
+  type?: string;
+}
+
+
+export interface GeneratedFileResult {
+  siteId: string;
+  fileName: string;
+  status: "success" | "failed";
+  error: string | null;
+}
+
+export interface StepTimestamp {
+  startTime: Date | null;
+  endTime: Date | null;
+}
+
+export interface ExecutionTimestamps {
+  generateXML: StepTimestamp;
+  uploadOSS: StepTimestamp;
+  executeCommissioning: StepTimestamp;
+}
+
+export interface GeneratorState {
+  currentStep: number;
+  commissionType: CommissionType;
+  uploadedFile: File | null;
+  sites: SiteData[];
+  selectedSites: string[];
+  error: string | null;
+  templates: TemplateFile[];
+  generationProgress: GenerationProgress | null;
+  executionId: string | null;  // ← THÊM DÒNG NÀY
+  jobResult: JobResult | null;
+   generatedResults: GeneratedFileResult[]; // ← THÊM field này
+   executionTimestamps: ExecutionTimestamps; // ← THÊM
+
+  currentJobId: string | null; // ← THÊM để lưu jobId
+  currentExecutionId: string | null; // ← THÊM để truyền sang Step 6
 }

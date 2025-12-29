@@ -22,9 +22,14 @@ try {
 
 try {
   Generator = require("../Generator/R007Generator").default;
-} catch {
+  console.log("✅ Generator loaded successfully!");
+} catch (error) {  // ← THÊM (error)
+  console.error("❌ Generator load failed:", error);
   Generator = null;
 }
+
+console.log("🧪 Generator loaded?", Generator);
+console.log("🧪 Generator type:", typeof Generator);
 
 try {
   Configuration = require("../Configuration/R007Configuration").default;

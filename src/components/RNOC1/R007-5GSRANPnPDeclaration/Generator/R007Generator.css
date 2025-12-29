@@ -109,6 +109,16 @@
   min-height: 400px;
 }
 
+.r007-type-card {
+  background: #f9f9f9;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 30px;
+  cursor: pointer;
+  transition: all 0.3s ease; /* ← ĐÃ CÓ, giữ nguyên */
+  text-align: center;
+}
+
 .r007-step-content h2 {
   font-size: 24px;
   font-weight: 600;
@@ -144,6 +154,7 @@
   margin-top: 30px;
 }
 
+/*
 .r007-type-card {
   background: #f9f9f9;
   border: 2px solid #e0e0e0;
@@ -153,6 +164,8 @@
   transition: all 0.3s;
   text-align: center;
 }
+
+*/
 
 .r007-type-card:hover {
   border-color: #1976d2;
@@ -415,6 +428,16 @@
     grid-template-columns: 1fr;
   }
 
+/* Case 4 - Compact Table Rows */
+.r007-case4-table tbody tr {
+  height: 40px !important;
+}
+
+.r007-case4-table tbody td {
+  padding: 0 10px !important;
+  vertical-align: middle !important;
+}
+
   .r007-steps-indicator {
     overflow-x: auto;
   }
@@ -422,4 +445,9 @@
   .r007-step-label {
     font-size: 11px;
   }
+
+
+
+
+
 }
