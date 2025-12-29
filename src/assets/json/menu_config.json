@@ -6,6 +6,12 @@
       "url": "/",
       "icon": "bi bi-grid"
     },
+     {
+      "code": "support",
+      "name": "Hỗ trợ",
+      "url": "/support",
+      "icon": "bi bi-grid"
+    },
     {
       "code": "User",
       "name": "Người dùng",

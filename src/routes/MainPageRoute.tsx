@@ -157,6 +157,8 @@ const MainPageRoute = (props: Props) => {
                 return <DevicePorts />;
             case "Devices":
                 return <Devices />;
+            case "support":
+                return <Support />;
             case "DeviceTypes":
                 return <DeviceTypes />;
             case "Manufacturers":

@@ -125,6 +125,7 @@ const Header = (props: Props) => {
       navigate('/setting');
     }
     const GoToPageSupport = () => {
+      console.log('Navigating to /support');
       navigate('/support'); 
     }
     // let userInfo:IUserInfo = JSON.parse(Cookie.getCookie("UserInfo"));    
