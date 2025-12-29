@@ -62,7 +62,8 @@ import Home5GSRANPnPDeclaration from "components/RNOC1/R007-5GSRANPnPDeclaration
 import VPN3G4G from "components/SOC1/S001-VPN3G4G/SOC001VPN3G4G";
 import SIPTRUNK from "components/SOC1/S002-Siptrunk/SOC002SIPTRUNK";
 
-
+import DV18001900 from "components/SOC1/S003-18001900/SOC003DV18001900";
+import SMPP from "components/SOC1/S004-SMPP/SOC004SMPP";
 
 
 
@@ -187,6 +188,11 @@ const MainPageRoute = (props: Props) => {
 
       case "S002SipTrunk": // ← Match với code trong menu
         return <SIPTRUNK />;
+
+              case "soc1_uc3":  // ← Match với code trong menu
+         return <DV18001900/>;
+      case "soc1_uc4":  // ← Match với code trong menu
+         return <SMPP/>;
 // ket thuc SOC1
       //========================================================================
       //========================================================================
@@ -287,6 +293,13 @@ const MainPageRoute = (props: Props) => {
              
       <Route path="/s001-vpn3G4G" element={<VPN3G4G />} />
       <Route path="/s002-siptrunk" element={<SIPTRUNK />} />
+
+<Route path="/18001900" element={<DV18001900 />} />
+<Route path="/smpp" element={<SMPP />} />
+
+
+
+
     </Routes>
   );
 };

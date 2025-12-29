@@ -257,6 +257,18 @@
           "name": "S002-SipTrunk",
           "url": "/s002-Siptrunk",
           "icon": "bi bi-grid"
+        },
+                {
+          "code": "soc1_uc3",
+          "name": "S003 18001900",
+          "url": "/SOC-18001900",
+          "icon": "bi bi-grid"
+        },
+        {
+          "code": "soc1_uc4",
+          "name": "S004 SMPP",
+          "url": "/SOC-SMPP",
+          "icon": "bi bi-grid"
         }
       ]
     }
