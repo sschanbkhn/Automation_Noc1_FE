@@ -88,11 +88,13 @@
 }
 .text_display_tren{
   font-family: Arial, sans-serif;
-  font-size: 18px;
   font-weight: bold;
   color: hsl(234, 100%, 50%);
   text-align: left;
   padding: 15px 10px;
+  /* 👇 chữ co giãn theo cả chiều ngang & dọc */
+  font-size: clamp(6px, 2vmin, 18px);
+  white-space: nowrap;  /* 👈 không cho xuống dòng */
 }
 .box_list{
   font-family: Arial, sans-serif;
