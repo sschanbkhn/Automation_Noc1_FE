@@ -13,7 +13,7 @@
  
 }
 .box-status_1{
-  background-color: 	rgb(209, 247, 221);
+  background-color: 	rgb(148, 184, 250);
   border-radius: 20px;
   cursor: pointer;
   font-family: Arial, sans-serif;
@@ -133,19 +133,63 @@
   word-wrap: break-word;
   white-space: normal;
 }
-.box_trai_zone2_aaa{
-  background-color: hsl(69, 83%, 77%);
+.box_trai_zone1_18001900{
+  background-color: hsl(307, 38%, 91%);
+  border-radius: 15px;
+  margin-left: 10px;
+  cursor: pointer;
+}
+.box_trai_zone2_18001900{
+  background-color: hsl(307, 38%, 91%);
   justify-content: center;   /* Căn giữa theo chiều dọc */
   align-items: center;       /* Căn giữa theo chiều ngang */
   border: 1px solid rgba(0, 0, 0, 0.1); /* Viền mờ nhẹ */
   border-radius: 10px;
   cursor: pointer;
 }
+.box_trai_zone1_smpp{
+  background-color: hsl(198, 62%, 85%);
+  border-radius: 15px;
+  margin-left: 10px;
+  cursor: pointer;
+}
+.box_trai_zone1_ussd{
+  background-color: hsl(54, 86%, 78%);
+  border-radius: 15px;
+  margin-left: 10px;
+  cursor: pointer;
+}
+.box_trai_zone2_smpp{
+  background-color: hsl(198, 62%, 85%);
+  justify-content: center;   /* Căn giữa theo chiều dọc */
+  align-items: center;       /* Căn giữa theo chiều ngang */
+  border: 1px solid rgba(0, 0, 0, 0.1); /* Viền mờ nhẹ */
+  border-radius: 10px;
+  cursor: pointer;
+}
+.box_trai_zone2_ussd{
+  background-color: hsl(54, 86%, 78%);
+  justify-content: center;   /* Căn giữa theo chiều dọc */
+  align-items: center;       /* Căn giữa theo chiều ngang */
+  border: 1px solid rgba(0, 0, 0, 0.1); /* Viền mờ nhẹ */
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.box_trai_zone2_aaa{
+  background-color: hsl(69, 78%, 79%);
+  justify-content: center;   /* Căn giữa theo chiều dọc */
+  align-items: center;       /* Căn giữa theo chiều ngang */
+  border: 1px solid rgba(0, 0, 0, 0.1); /* Viền mờ nhẹ */
+  border-radius: 10px;
+  cursor: pointer;
+}
+
 /* .box_trai_zone2:hover{
   background-color: hsl(185, 50%, 91%);
 } */
 .box_trai_zone2_ims{
-  background-color: hsl(69, 82%, 78%);
+  background-color: hsl(69, 78%, 79%);
   justify-content: center;   /* Căn giữa theo chiều dọc */
   align-items: center;       /* Căn giữa theo chiều ngang */
   border: 1px solid rgba(0, 0, 0, 0.1); /* Viền mờ nhẹ */
@@ -154,7 +198,7 @@
 }
 
 .box_phai_zone2_aa{
-  background-color: hsl(173, 67%, 86%);
+  background-color: hsl(108, 91%, 78%);
   border-radius: 10px;
   cursor: pointer;
 }
@@ -189,8 +233,8 @@
 }
 .text-type{
   font-weight: bold;
-  color: #0c0c7a;
-  font-size: 12px;
+  color: #1507e0;
+  font-size: 13px;
   line-height: 1.2;
   padding: 5px 5px;
 }
@@ -209,7 +253,7 @@
 .so_chinh_1{
   font-size: 42px;
   text-align: center;
-  color: rgb(168, 43, 226);
+  color: rgb(29, 26, 240);
   margin-left: 15px;
   /* margin-top: 10px; */
 }
@@ -257,12 +301,6 @@
   margin-left: 10px;
   cursor: pointer;
 }
-.box_trai_zone1_aaa{
-  background-color: hsl(69, 78%, 79%);
-  border-radius: 15px;
-  margin-left: 10px;
-  cursor: pointer;
-}
 .cell_spec{
     transition: all 0.3s ease; /* <-- thêm dòng này */
     cursor: pointer;
@@ -272,17 +310,44 @@
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
 }
 .box_phai_zone1{
-  background-color: hsl(173, 67%, 86%);
+  background-color: hsl(108, 91%, 78%);
   border-radius: 15px;
   margin-left: 10px;
   cursor: pointer;
 }
-/* .box_trai_zone1:hover{
-  background-color: hsla(300, 57%, 87%, 0.938);
+.box_phai_zone1_aaa{
+  background-color: hsl(190, 77%, 86%);
+  border-radius: 15px;
+  margin-left: 10px;
+  cursor: pointer;
 }
-.box_phai_zone1:hover{
-  background-color: hsla(300, 57%, 87%, 0.938);
-} */
+.box_phai_zone2_aaa{
+  background-color: hsl(190, 77%, 86%);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.box_phai_zone_1_smpp{
+  background-color: hsl(306, 54%, 93%);
+  border-radius: 15px;
+  margin-left: 10px;
+  cursor: pointer;
+}
+.box_phai_zone_1_ussd{
+  background-color: hsl(198, 62%, 85%);
+  border-radius: 15px;
+  margin-left: 10px;
+  cursor: pointer;
+}
+.box_phai_zone_2_smpp{
+  background-color: hsl(306, 54%, 93%);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.box_phai_zone_2_ussd{
+  background-color: hsl(198, 62%, 85%);
+  border-radius: 10px;
+  cursor: pointer;
+}
 .container mt-4{
   border: #9999db;
 }
