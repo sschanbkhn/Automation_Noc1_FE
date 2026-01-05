@@ -296,6 +296,12 @@
           "name": "S004 SMPP",
           "url": "/SOC-SMPP",
           "icon": "bi bi-grid"
+        },
+                 {
+          "code": "soc1_uc5",
+          "name": "S005 USSD",
+          "url": "/SOC-USSD",
+          "icon": "bi bi-grid"
         }
       ]
     }
