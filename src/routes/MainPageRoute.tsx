@@ -46,6 +46,8 @@ import CsTable from "components/SNOC/views/tables/health/CsTable";
 import SignalTable from "components/SNOC/views/tables/health/SignalTable";
 import OcsTable from "components/SNOC/views/tables/health/OcsTable";
 
+// INOC start
+import HardwareAlarms from "components/INOC1/I002";
 import ClearThuebaoDaphien from "components/INOC1/I003";
 import LspQuocte from "components/INOC1/I004";
 import DataLspQuocte from "components/INOC1/I004_1";
@@ -147,8 +149,10 @@ const MainPageRoute = (props: Props) => {
                 return <DashboardAudit />;
             case "CableManagement":
                 return <CableManagement />;
-            case "Hardware_Alarm":
-                return <Hardware_Alarm />;
+            case "ConfigurationLogs":
+                return <ConfigurationLogs />;
+            case "HardwareAlarms":
+                return <HardwareAlarms />;
             case "CurenAlarm":
                 return <CurenAlarm />;
             case "HistoryCurenAlarm":

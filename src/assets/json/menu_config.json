@@ -211,9 +211,9 @@
 
             },
         {
-          "code": "Hardware_Alarm",
+          "code": "HardwareAlarms",
           "name": "Xử lý cảnh báo phần cứng",
-          "url": "/hardware-alarm",
+          "url": "/HardwareAlarms",
           "icon": "bi bi-grid"
         }
       ]
