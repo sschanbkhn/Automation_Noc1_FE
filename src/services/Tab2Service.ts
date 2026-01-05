@@ -1,4 +1,3 @@
-import request from "helpers/request"
 import axios from 'axios'
 
 /**
@@ -6,9 +5,9 @@ import axios from 'axios'
  * Handles all API calls related to adding traffic counters to ASNs and their prefixes
  */
 const I001_TAB2 = "I001_TAB2";
-// Production server
- const API_BASE_URL = 'http://10.155.43.196:3000';
-// Local development
+// Production server - ACTIVE
+const API_BASE_URL = 'http://10.155.43.196:3000';
+// Local development (comment production above, uncomment this for local dev)
 // const API_BASE_URL = 'http://localhost:3000';
 
 const Tab2Service = {
@@ -216,18 +215,22 @@ const Tab2Service = {
    * @returns Promise with operation result for each device
    */
   AddCounter: async (asn: string, asName: string, prefixes: string[], devices: string[] = [], isAlreadyCountered: boolean = false) => {
-    let res: any = await request({
-      url: `/${I001_TAB2}/AddCounter`,
-      method: 'post',
-      data: {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/${I001_TAB2}/AddCounter`, {
         asn,
         asName,
         prefixes,
         devices,
         isAlreadyCountered
-      }
-    });
-    return res
+      }, {
+        timeout: 60000,
+        headers: { 'Content-Type': 'application/json' }
+      });
+      return response.data;
+    } catch (err: any) {
+      console.error('AddCounter error:', err);
+      return { status: 'error', data: null, message: err?.message || 'Network error' };
+    }
   }
 }
 

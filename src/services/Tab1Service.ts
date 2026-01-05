@@ -1,4 +1,3 @@
-import request from "helpers/request"
 import axios from 'axios'
 
 /**
@@ -6,9 +5,9 @@ import axios from 'axios'
  * Handles all API calls related to ASN configuration, policer management, and monitoring
  */
 const I001_TAB1 = "I001_TAB1";
-// Production server
+// Production server - ACTIVE
 const API_BASE_URL = 'http://10.155.43.196:3000';
-// Local development
+// Local development (comment production above, uncomment this for local dev)
 // const API_BASE_URL = 'http://localhost:3000';
 
 console.log('🔧 Tab1Service API_BASE_URL:', API_BASE_URL);
@@ -21,11 +20,16 @@ const Tab1Service = {
    * @returns Promise with ASN data
    */
   GetASNList: async (page: number = 1, pageSize: number = 1000) => {
-    let res: any = await request({
-      url: `/${I001_TAB1}/GetASNList?page=${page}&pageSize=${pageSize}`,
-      method: 'get'
-    });
-    return res
+    try {
+      const response = await axios.get(`${API_BASE_URL}/${I001_TAB1}/GetASNList`, {
+        params: { page, pageSize },
+        timeout: 10000
+      });
+      return response.data;
+    } catch (err: any) {
+      console.error('GetASNList error:', err);
+      return { status: 'error', data: [], message: err?.message || 'Network error' };
+    }
   },
 
   /**
@@ -33,11 +37,13 @@ const Tab1Service = {
    * @returns Promise with API usage percentage and threshold
    */
   GetAPIMonitorStatus: async () => {
-    let res: any = await request({
-      url: `/${I001_TAB1}/GetAPIMonitorStatus`,
-      method: 'get'
-    });
-    return res
+    try {
+      const response = await axios.get(`${API_BASE_URL}/${I001_TAB1}/GetAPIMonitorStatus`, { timeout: 10000 });
+      return response.data;
+    } catch (err: any) {
+      console.error('GetAPIMonitorStatus error:', err);
+      return { status: 'error', data: null, message: err?.message || 'Network error' };
+    }
   },
 
   /**
@@ -111,16 +117,16 @@ const Tab1Service = {
    * @returns Promise with chart data array containing time, throughput, capacity, efficiency
    */
   GetIPTChart: async (from?: string, to?: string) => {
-    const params = [];
-    if (from) params.push(`from=${encodeURIComponent(from)}`);
-    if (to) params.push(`to=${encodeURIComponent(to)}`);
-    const qs = params.length ? `?${params.join('&')}` : '';
-
-    let res: any = await request({
-      url: `/${I001_TAB1}/GetIPTChart${qs}`,
-      method: 'get'
-    });
-    return res;
+    try {
+      const response = await axios.get(`${API_BASE_URL}/${I001_TAB1}/GetIPTChart`, {
+        params: { from, to },
+        timeout: 15000
+      });
+      return response.data;
+    } catch (err: any) {
+      console.error('GetIPTChart error:', err);
+      return { status: 'error', data: [], message: err?.message || 'Network error' };
+    }
   },
 
   /**
@@ -128,11 +134,13 @@ const Tab1Service = {
    * @returns Promise with last policer data including ASN, bandwidth, devices, status
    */
   GetLastPolicerData: async () => {
-    let res: any = await request({
-      url: `/${I001_TAB1}/GetLastPolicerData`,
-      method: 'get'
-    });
-    return res
+    try {
+      const response = await axios.get(`${API_BASE_URL}/${I001_TAB1}/GetLastPolicerData`, { timeout: 10000 });
+      return response.data;
+    } catch (err: any) {
+      console.error('GetLastPolicerData error:', err);
+      return { status: 'error', data: null, message: err?.message || 'Network error' };
+    }
   },
 
   /**
@@ -220,16 +228,20 @@ const Tab1Service = {
    * @returns Promise with configuration result
    */
   ApplyPolicerConfig: async (asn: string, bandwidth: string, devices: string[]) => {
-    let res: any = await request({
-      url: `/${I001_TAB1}/ApplyPolicerConfig`,
-      method: 'post',
-      data: {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/${I001_TAB1}/ApplyPolicerConfig`, {
         asn,
         bandwidth,
         devices
-      }
-    });
-    return res
+      }, {
+        timeout: 60000,
+        headers: { 'Content-Type': 'application/json' }
+      });
+      return response.data;
+    } catch (err: any) {
+      console.error('ApplyPolicerConfig error:', err);
+      return { status: 'error', data: null, message: err?.message || 'Network error' };
+    }
   },
 
   /**

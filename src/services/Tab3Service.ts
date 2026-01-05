@@ -1,4 +1,3 @@
-import request from "helpers/request"
 import axios from 'axios'
 
 /**
@@ -6,9 +5,9 @@ import axios from 'axios'
  * Handles all API calls related to managing IPT monitoring points and system settings
  */
 const I001_TAB3 = "I001_TAB3";
-// Production server
- const API_BASE_URL = 'http://10.155.43.196:3000';
-// Local development
+// Production server - ACTIVE
+const API_BASE_URL = 'http://10.155.43.196:3000';
+// Local development (comment production above, uncomment this for local dev)
 // const API_BASE_URL = 'http://localhost:3000';
 
 const Tab3Service = {
@@ -183,11 +182,13 @@ const Tab3Service = {
    * @returns Promise with current rollback time (HH:MM format)
    */
   GetRollbackTime: async () => {
-    let res: any = await request({
-      url: `/${I001_TAB3}/GetRollbackTime`,
-      method: 'get'
-    });
-    return res
+    try {
+      const response = await axios.get(`${API_BASE_URL}/${I001_TAB3}/GetRollbackTime`, { timeout: 10000 });
+      return response.data;
+    } catch (err: any) {
+      console.error('GetRollbackTime error:', err);
+      return { status: 'error', data: null, message: err?.message || 'Network error' };
+    }
   },
 
   /**
@@ -196,14 +197,16 @@ const Tab3Service = {
    * @returns Promise with result of setting rollback time
    */
   SetRollbackTime: async (time: string) => {
-    let res: any = await request({
-      url: `/${I001_TAB3}/SetRollbackTime`,
-      method: 'post',
-      data: {
-        time
-      }
-    });
-    return res
+    try {
+      const response = await axios.post(`${API_BASE_URL}/${I001_TAB3}/SetRollbackTime`, { time }, {
+        timeout: 10000,
+        headers: { 'Content-Type': 'application/json' }
+      });
+      return response.data;
+    } catch (err: any) {
+      console.error('SetRollbackTime error:', err);
+      return { status: 'error', data: null, message: err?.message || 'Network error' };
+    }
   },
 
   /**

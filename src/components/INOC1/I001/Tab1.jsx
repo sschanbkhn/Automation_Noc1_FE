@@ -1496,9 +1496,13 @@ function Tab1() {
       } catch (e) {
         console.debug('Unable to parse UserInfo cookie for delete logging', e);
       }
-      // Log user action: clicked Delete Confirm
-      Tab1Service.PostLogActionIptPolicerFE({ user: _logUser || '', log_action: `clicked Delete Confirm for ASN ${deleteConfirmASN?.asn || ''}` })
-        .catch((e) => console.debug('PostLogActionIptPolicerFE error (pre-delete):', e));
+      // Log user action: clicked Delete Confirm (guarded to avoid runtime crash if logger missing)
+      if (Tab1Service && typeof Tab1Service.PostLogActionIptPolicerFE === 'function') {
+        Tab1Service.PostLogActionIptPolicerFE({ user: _logUser || '', log_action: `clicked Delete Confirm for ASN ${deleteConfirmASN?.asn || ''}` })
+          .catch((e) => console.debug('PostLogActionIptPolicerFE error (pre-delete):', e));
+      } else {
+        console.warn('PostLogActionIptPolicerFE not available (pre-delete)');
+      }
 
       // Start loading modal to block user actions
       setLoadingMessage('Đang gửi lệnh xóa đến N8N...');
@@ -1555,9 +1559,13 @@ function Tab1() {
           failedCount,
           totalDevices: deviceResults.length
         };
-        // Log completion of delete action
-        Tab1Service.PostLogActionIptPolicerFE({ user: _logUser || '', log_action: `delete ASN ${asnToDelete} executed` })
-          .catch((e) => console.debug('PostLogActionIptPolicerFE error (post-delete):', e));
+        // Log completion of delete action (guarded)
+        if (Tab1Service && typeof Tab1Service.PostLogActionIptPolicerFE === 'function') {
+          Tab1Service.PostLogActionIptPolicerFE({ user: _logUser || '', log_action: `delete ASN ${asnToDelete} executed` })
+            .catch((e) => console.debug('PostLogActionIptPolicerFE error (post-delete):', e));
+        } else {
+          console.warn('PostLogActionIptPolicerFE not available (post-delete)');
+        }
 
         setResultData(finalResult);
         setModalState('result');
@@ -1639,8 +1647,16 @@ function Tab1() {
           console.debug('Unable to parse UserInfo cookie for logging', e);
         }
 
-        // send log (fire-and-forget style)
-        await Tab1Service.PostLogActionIptPolicerFE({ user: userName || '', log_action: 'clicked Delete Cancel' });
+        // send log (fire-and-forget style) - guarded
+        if (Tab1Service && typeof Tab1Service.PostLogActionIptPolicerFE === 'function') {
+          try {
+            await Tab1Service.PostLogActionIptPolicerFE({ user: userName || '', log_action: 'clicked Delete Cancel' });
+          } catch (e) {
+            console.debug('PostLogActionIptPolicerFE error (cancel):', e);
+          }
+        } else {
+          console.warn('PostLogActionIptPolicerFE not available (cancel)');
+        }
       } catch (e) {
         console.debug('Error sending frontend action log', e);
       } finally {
