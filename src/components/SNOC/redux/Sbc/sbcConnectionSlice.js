@@ -167,6 +167,26 @@ const sanitizeRoutingRulePayload = (obj = {}) => {
 
 // ===== THÊM VÀO ĐẦU FILE (sau các import cũ) =====
 
+// Lịch sử request SBC
+export const fetchRequestHistory = createAsyncThunk(
+  "sbcConnection/fetchRequestHistory",
+  async (_, { rejectWithValue, dispatch }) => {
+    try {
+      const res = await snocApi.get("/nornirps/sbc/request-history/");
+      const data = Array.isArray(res.data?.results)
+        ? res.data.results
+        : res.data;
+
+      return data;
+    } catch (error) {
+      const msg =
+        error?.response?.data?.detail || "Không thể tải lịch sử yêu cầu SBC";
+      dispatch(showTemporaryAlert({ message: msg, type: "error" }));
+      return rejectWithValue(msg);
+    }
+  }
+);
+
 export const addCountryDestinationQuick = createAsyncThunk(
   "sbcConnection/addCountryDestinationQuick",
   async ({ country_name, destination_code }, { rejectWithValue, dispatch }) => {
@@ -951,6 +971,9 @@ const sbcConnectionSlice = createSlice({
     routingRules: [], // 🔥 THÊM
     loadingRouting: false, // 🔥 THÊM
 
+    requestHistory: [],
+    loadingRequestHistory: false,
+
     submitting: false,
     partnerGroups: [],
     partners: [],
@@ -1172,6 +1195,18 @@ const sbcConnectionSlice = createSlice({
       })
       .addCase(deleteRoutingRule.rejected, (state) => {
         state.submitting = false;
+      });
+    // ===== REQUEST HISTORY =====
+    builder
+      .addCase(fetchRequestHistory.pending, (state) => {
+        state.loadingRequestHistory = true;
+      })
+      .addCase(fetchRequestHistory.fulfilled, (state, action) => {
+        state.loadingRequestHistory = false;
+        state.requestHistory = action.payload || [];
+      })
+      .addCase(fetchRequestHistory.rejected, (state) => {
+        state.loadingRequestHistory = false;
       });
   },
 });

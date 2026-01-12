@@ -363,8 +363,8 @@ const DeclareNumberForm = () => {
               <>
                 <div className="table-responsive">
                   <Table hover className="mb-0 align-middle">
-                    <thead className="bg-primary text-white">
-                      <tr>
+                    <thead className="table-dark text-white text-center">
+                      <tr style={{ fontWeight: 600, fontSize: "0.85rem" }}>
                         <th className="text-center">ID</th>
                         <th>Đối tác / Realm</th>
                         <th>Service</th>

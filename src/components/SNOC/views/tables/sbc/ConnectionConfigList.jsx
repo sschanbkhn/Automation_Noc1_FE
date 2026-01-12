@@ -4,7 +4,7 @@ import {
   Alert,
   Badge,
   Button,
-  Card, // ⬅️ THÊM
+  Card,
   Col,
   Container,
   Form,
@@ -17,11 +17,19 @@ import {
   Tooltip,
 } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom"; // THÊM DÒNG NÀY
 import CreatableSelect from "react-select/creatable";
+
 import {
+  addConnectionConfig,
+  addConnectionTypeQuick,
+  addNodeQuick,
   addPartnerGroupQuick,
   addPartnerQuick,
+  addPrefixReceiveQuick,
+  addPrefixSendQuick,
+  addRealmQuick,
+  addServiceQuick,
+  addTgrpQuick,
   assignPartnerPairs,
   deleteConnectionConfig,
   fetchConnectionConfigs,
@@ -36,6 +44,7 @@ import TopNavbar from "../../dashboard/DashOrigin/TopNavbarSbc";
 const findLabel = (list = [], id, key = "id", label = "name") =>
   list.find((x) => x[key] == id)?.[label] || "";
 
+// Build template từ config (đang có)
 const buildTemplate = (cfg, options = {}) => {
   const {
     realms = [],
@@ -127,7 +136,6 @@ const buildTemplate = (cfg, options = {}) => {
 
 const ConnectionConfigList = () => {
   const dispatch = useDispatch();
-  const navigate = useNavigate(); // THÊM DÒNG NÀY ĐỂ CHUYỂN TRANG EDIT
 
   const {
     configs = [],
@@ -151,7 +159,7 @@ const ConnectionConfigList = () => {
     direction: "desc",
   });
 
-  // Modal Template
+  // Modal Template (cho bản ghi)
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [templateText, setTemplateText] = useState("");
   const [selectedConfig, setSelectedConfig] = useState(null);
@@ -161,7 +169,7 @@ const ConnectionConfigList = () => {
   const [selectedConfigId, setSelectedConfigId] = useState(null);
   const [selectedPairs, setSelectedPairs] = useState([]);
 
-  // 🔧 Modal Edit
+  // Modal Edit
   const [showEditModal, setShowEditModal] = useState(false);
   const [editConfigId, setEditConfigId] = useState(null);
   const [editForm, setEditForm] = useState({
@@ -174,6 +182,35 @@ const ConnectionConfigList = () => {
     prefix_send: "",
     prefix_receive: "",
     session_agents_payload: [],
+  });
+
+  // 🔥 Modal Create (đã gộp logic từ CreateConnectionForm)
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [creating, setCreating] = useState(false);
+
+  // Template modal cho form create
+  const [showCreateTemplateModal, setShowCreateTemplateModal] = useState(false);
+  const [createTemplateText, setCreateTemplateText] = useState("");
+
+  const [createForm, setCreateForm] = useState({
+    partner: "",
+    realm: "",
+    service: "",
+    connection_type: "",
+    node: "",
+    tgrp: "",
+    prefix_send: "",
+    prefix_receive: "",
+    // mỗi SA có nhiều RTP ranges
+    sessionAgentsList: [
+      {
+        hostname: "",
+        ip_sip: "",
+        subnet_sip: "",
+        max_sessions: "",
+        rtp_ranges: [{ ip_rtp: "", subnet_rtp: "" }],
+      },
+    ],
   });
 
   const pageSize = 15;
@@ -240,7 +277,7 @@ const ConnectionConfigList = () => {
   const totalSessions = (agents) =>
     (agents || []).reduce((s, a) => s + (Number(a.max_sessions) || 0), 0);
 
-  // MỞ MODAL GÁN VIP
+  // ===== VIP PAIR =====
   const openPairModal = (configId, currentPairs = []) => {
     setSelectedConfigId(configId);
     setSelectedPairs(
@@ -254,7 +291,6 @@ const ConnectionConfigList = () => {
     setShowPairModal(true);
   };
 
-  // LƯU GÁN VIP – ĐÃ SỬA LẠI ĐÚNG ENDPOINT (giả sử backend dùng PUT hoặc POST đúng)
   const handleSavePairs = async () => {
     if (selectedPairs.length === 0) return alert("Chọn ít nhất 1 cặp!");
 
@@ -275,6 +311,8 @@ const ConnectionConfigList = () => {
       alert("Lỗi: " + (result.payload || "Không thể gán"));
     }
   };
+
+  // ===== TEMPLATE (record) =====
   const openTemplate = (cfg) => {
     setTemplateText(
       buildTemplate(cfg, { realms, services, connectionTypes, tgrps })
@@ -289,7 +327,7 @@ const ConnectionConfigList = () => {
     }
   };
 
-  // 🔧 MỞ MODAL EDIT
+  // ===== EDIT =====
   const handleEdit = (cfg) => {
     setEditConfigId(cfg.id);
 
@@ -302,6 +340,7 @@ const ConnectionConfigList = () => {
       tgrp: cfg.tgrp || "",
       prefix_send: cfg.prefix_send || "",
       prefix_receive: cfg.prefix_receive || "",
+      // Edit vẫn giữ 1 RTP range như code hiện tại (nếu muốn nâng cấp multi RTP thì mình sẽ nâng tiếp)
       session_agents_payload: (cfg.session_agents || []).map((sa) => {
         const firstRtp = sa.rtp_ranges?.[0] || {};
         return {
@@ -319,19 +358,13 @@ const ConnectionConfigList = () => {
   };
 
   const handleEditFieldChange = (field, value) => {
-    setEditForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setEditForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleEditSaChange = (index, field, value) => {
     setEditForm((prev) => {
       const arr = [...(prev.session_agents_payload || [])];
-      arr[index] = {
-        ...arr[index],
-        [field]: value,
-      };
+      arr[index] = { ...arr[index], [field]: value };
       return { ...prev, session_agents_payload: arr };
     });
   };
@@ -365,12 +398,8 @@ const ConnectionConfigList = () => {
     if (!editConfigId) return;
 
     const result = await dispatch(
-      updateConnectionConfig({
-        id: editConfigId,
-        data: editForm,
-      })
+      updateConnectionConfig({ id: editConfigId, data: editForm })
     );
-
     if (updateConnectionConfig.fulfilled.match(result)) {
       setShowEditModal(false);
     } else {
@@ -378,9 +407,401 @@ const ConnectionConfigList = () => {
     }
   };
 
+  // ===== CREATE: options =====
+  const realmOptions = realms.map((r) => ({ value: r.id, label: r.name }));
+  const connectionTypeOptions = connectionTypes.map((t) => ({
+    value: t.id,
+    label: t.name,
+  }));
+  const serviceOptions = services.map((s) => ({ value: s.id, label: s.name }));
+  const nodeOptions = nodes.map((n) => ({ value: n.id, label: n.name }));
+  const tgrpOptions = tgrps.map((t) => ({ value: t.id, label: t.name }));
+  const prefixSendOptions = prefixSends.map((p) => ({
+    value: p.id,
+    label: p.value,
+  }));
+  const prefixReceiveOptions = prefixReceives.map((p) => ({
+    value: p.id,
+    label: p.value,
+  }));
+
+  const handleCreateChange = (e) => {
+    const { name, value } = e.target;
+    setCreateForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleCreateRealmChange = (option) => {
+    if (!option) return setCreateForm((p) => ({ ...p, realm: "" }));
+    if (option.__isNew__) {
+      dispatch(addRealmQuick(option.label))
+        .unwrap()
+        .then((created) =>
+          setCreateForm((p) => ({ ...p, realm: String(created.id) }))
+        )
+        .catch(() => {});
+    } else setCreateForm((p) => ({ ...p, realm: String(option.value) }));
+  };
+
+  const handleCreateServiceChange = (option) => {
+    if (!option) return setCreateForm((p) => ({ ...p, service: "" }));
+    if (option.__isNew__) {
+      dispatch(addServiceQuick(option.label))
+        .unwrap()
+        .then((created) =>
+          setCreateForm((p) => ({ ...p, service: String(created.id) }))
+        )
+        .catch(() => {});
+    } else setCreateForm((p) => ({ ...p, service: String(option.value) }));
+  };
+
+  const handleCreateConnectionTypeChange = (option) => {
+    if (!option) return setCreateForm((p) => ({ ...p, connection_type: "" }));
+    if (option.__isNew__) {
+      dispatch(addConnectionTypeQuick(option.label))
+        .unwrap()
+        .then((created) =>
+          setCreateForm((p) => ({ ...p, connection_type: String(created.id) }))
+        )
+        .catch(() => {});
+    } else
+      setCreateForm((p) => ({ ...p, connection_type: String(option.value) }));
+  };
+
+  const handleCreateNodeChange = (option) => {
+    if (!option) return setCreateForm((p) => ({ ...p, node: "" }));
+    if (option.__isNew__) {
+      dispatch(addNodeQuick(option.label))
+        .unwrap()
+        .then((created) =>
+          setCreateForm((p) => ({ ...p, node: String(created.id) }))
+        )
+        .catch(() => {});
+    } else setCreateForm((p) => ({ ...p, node: String(option.value) }));
+  };
+
+  const handleCreateTgrpChange = (option) => {
+    if (!option) return setCreateForm((p) => ({ ...p, tgrp: "" }));
+    if (option.__isNew__) {
+      dispatch(addTgrpQuick(option.label))
+        .unwrap()
+        .then((created) =>
+          setCreateForm((p) => ({ ...p, tgrp: String(created.id) }))
+        )
+        .catch(() => {});
+    } else setCreateForm((p) => ({ ...p, tgrp: String(option.value) }));
+  };
+
+  const handleCreatePrefixSendChange = (option) => {
+    if (!option) return setCreateForm((p) => ({ ...p, prefix_send: "" }));
+    if (option.__isNew__) {
+      dispatch(addPrefixSendQuick(option.label))
+        .unwrap()
+        .then((created) =>
+          setCreateForm((p) => ({ ...p, prefix_send: String(created.id) }))
+        )
+        .catch(() => {});
+    } else setCreateForm((p) => ({ ...p, prefix_send: String(option.value) }));
+  };
+
+  const handleCreatePrefixReceiveChange = (option) => {
+    if (!option) return setCreateForm((p) => ({ ...p, prefix_receive: "" }));
+    if (option.__isNew__) {
+      dispatch(addPrefixReceiveQuick(option.label))
+        .unwrap()
+        .then((created) =>
+          setCreateForm((p) => ({ ...p, prefix_receive: String(created.id) }))
+        )
+        .catch(() => {});
+    } else
+      setCreateForm((p) => ({ ...p, prefix_receive: String(option.value) }));
+  };
+
+  // ===== CREATE: SA handlers (gộp multi RTP) =====
+  const handleCreateAgentChange = (index, field, value) => {
+    setCreateForm((prev) => {
+      const clone = [...prev.sessionAgentsList];
+      clone[index] = { ...clone[index], [field]: value };
+      return { ...prev, sessionAgentsList: clone };
+    });
+  };
+
+  const addCreateAgentRow = () => {
+    setCreateForm((prev) => ({
+      ...prev,
+      sessionAgentsList: [
+        ...prev.sessionAgentsList,
+        {
+          hostname: "",
+          ip_sip: "",
+          subnet_sip: "",
+          max_sessions: "",
+          rtp_ranges: [{ ip_rtp: "", subnet_rtp: "" }],
+        },
+      ],
+    }));
+  };
+
+  const removeCreateAgentRow = (index) => {
+    setCreateForm((prev) => {
+      const clone = [...prev.sessionAgentsList];
+      if (clone.length <= 1) return prev;
+      clone.splice(index, 1);
+      return { ...prev, sessionAgentsList: clone };
+    });
+  };
+
+  const handleCreateRtpChange = (saIndex, rIndex, field, value) => {
+    setCreateForm((prev) => {
+      const agents = [...prev.sessionAgentsList];
+      const sa = { ...agents[saIndex] };
+      const ranges = [...(sa.rtp_ranges || [])];
+      ranges[rIndex] = { ...ranges[rIndex], [field]: value };
+      sa.rtp_ranges = ranges;
+      agents[saIndex] = sa;
+      return { ...prev, sessionAgentsList: agents };
+    });
+  };
+
+  const addCreateRtpRange = (saIndex) => {
+    setCreateForm((prev) => {
+      const agents = [...prev.sessionAgentsList];
+      const sa = { ...agents[saIndex] };
+      sa.rtp_ranges = [
+        ...(sa.rtp_ranges || []),
+        { ip_rtp: "", subnet_rtp: "" },
+      ];
+      agents[saIndex] = sa;
+      return { ...prev, sessionAgentsList: agents };
+    });
+  };
+
+  const removeCreateRtpRange = (saIndex, rIndex) => {
+    setCreateForm((prev) => {
+      const agents = [...prev.sessionAgentsList];
+      const sa = { ...agents[saIndex] };
+      if ((sa.rtp_ranges || []).length <= 1) return prev;
+      sa.rtp_ranges = sa.rtp_ranges.filter((_, i) => i !== rIndex);
+      agents[saIndex] = sa;
+      return { ...prev, sessionAgentsList: agents };
+    });
+  };
+
+  const resetCreateForm = () => {
+    setCreateForm({
+      partner: "",
+      realm: "",
+      service: "",
+      connection_type: "",
+      node: "",
+      tgrp: "",
+      prefix_send: "",
+      prefix_receive: "",
+      sessionAgentsList: [
+        {
+          hostname: "",
+          ip_sip: "",
+          subnet_sip: "",
+          max_sessions: "",
+          rtp_ranges: [{ ip_rtp: "", subnet_rtp: "" }],
+        },
+      ],
+    });
+    setCreateTemplateText("");
+    setShowCreateTemplateModal(false);
+  };
+
+  // ===== CREATE: generate template from form =====
+  const buildTemplateFromCreateForm = () => {
+    const partner = (createForm.partner || "").trim();
+    const realmName = findLabel(realms, createForm.realm, "id", "name");
+    const serviceName = findLabel(services, createForm.service, "id", "name");
+    const ctName = findLabel(
+      connectionTypes,
+      createForm.connection_type,
+      "id",
+      "name"
+    );
+    const tgrpName = findLabel(tgrps, createForm.tgrp, "id", "name");
+
+    const description = [partner, realmName, serviceName, ctName]
+      .filter(Boolean)
+      .join("---");
+
+    const agentsClean = (createForm.sessionAgentsList || [])
+      .map((a) => ({
+        hostname: (a.hostname || "").trim(),
+        ip_sip: (a.ip_sip || "").trim(),
+        subnet_sip: (a.subnet_sip || "").trim(),
+        max_sessions: (a.max_sessions || "").trim(),
+      }))
+      .filter((a) => a.hostname);
+
+    if (!agentsClean.length) return "# Chưa nhập Session-Agent nào.";
+
+    const allLines = [];
+
+    agentsClean.forEach((ag, idx) => {
+      if (idx > 0) allLines.push("");
+      allLines.push(
+        "conf t",
+        "session-router",
+        "session-agent",
+        "",
+        `hostname ${ag.hostname}`,
+        `ip-address ${ag.ip_sip}`,
+        realmName && `realm-id ${realmName}`,
+        description && `description "${description}"`,
+        ag.max_sessions && `max-sessions ${ag.max_sessions}`,
+        "",
+        "ping-method OPTIONS",
+        "ping-interval 20",
+        "options ping-failure-count=3",
+        "stop-recurse 486-487",
+        "ping-response enabled",
+        "in-manipulationid SIP_IN",
+        "out-manipulationid SIP_TMG_OUT",
+        tgrpName && `trunk-group ${tgrpName}`,
+        "trigger-oos-alarm enabled",
+        "",
+        "done",
+        "exit",
+        "exit",
+        "exit",
+        "",
+        "verify-config",
+        "save-config",
+        "activate-config"
+      );
+    });
+
+    const saNames = agentsClean.map((a) => a.hostname);
+    const destValue = saNames.length ? `(${saNames.join(" ")})` : "()";
+
+    allLines.push(
+      "",
+      "conf t",
+      "session-router",
+      "session-group",
+      "",
+      tgrpName && `group-name ${tgrpName}`,
+      description && `description "${description}"`,
+      "strategy RoundRobin",
+      `dest ${destValue}`,
+      tgrpName && `trunk-group ${tgrpName}`,
+      "sag-recursion enabled",
+      "",
+      "done",
+      "exit",
+      "exit",
+      "exit",
+      "",
+      "verify",
+      "save-config",
+      "activate-config"
+    );
+
+    return allLines.filter(Boolean).join("\n");
+  };
+
+  const handleGenerateCreateTemplate = () => {
+    const tpl = buildTemplateFromCreateForm();
+    setCreateTemplateText(tpl);
+    setShowCreateTemplateModal(true);
+  };
+
+  // ===== CREATE: submit =====
+  const handleSubmitCreate = async (e) => {
+    e.preventDefault();
+
+    if (
+      !createForm.connection_type ||
+      !createForm.realm ||
+      !createForm.service
+    ) {
+      alert("Vui lòng chọn Connection Type, Realm và Service");
+      return;
+    }
+
+    const session_agents_payload = (createForm.sessionAgentsList || [])
+      .map((a) => {
+        const hostname = (a.hostname || "").trim();
+        const ip_sip = (a.ip_sip || "").trim();
+        const subnet_sip = (a.subnet_sip || "").trim();
+        const max_sessions =
+          a.max_sessions !== undefined &&
+          a.max_sessions !== null &&
+          String(a.max_sessions).trim() !== ""
+            ? Number(a.max_sessions)
+            : null;
+
+        const rtp_ranges_payload = (a.rtp_ranges || [])
+          .map((r) => {
+            const ip_rtp = (r.ip_rtp || "").trim();
+            const subnet_rtp = (r.subnet_rtp || "").trim();
+            if (!ip_rtp || !subnet_rtp) return null;
+            return { ip_rtp, subnet_rtp };
+          })
+          .filter(Boolean);
+
+        return {
+          hostname,
+          ip_sip,
+          subnet_sip,
+          max_sessions,
+          rtp_ranges_payload,
+        };
+      })
+      .filter(
+        (a) =>
+          a.hostname &&
+          a.ip_sip &&
+          a.subnet_sip &&
+          a.max_sessions !== null &&
+          !Number.isNaN(a.max_sessions)
+      );
+
+    if (!session_agents_payload.length) {
+      alert("Vui lòng nhập ít nhất 1 Session-Agent đầy đủ thông tin");
+      return;
+    }
+
+    const payload = {
+      partner_name: createForm.partner,
+      connection_type: createForm.connection_type
+        ? Number(createForm.connection_type)
+        : null,
+      realm: createForm.realm ? Number(createForm.realm) : null,
+      service: createForm.service ? Number(createForm.service) : null,
+      node: createForm.node ? Number(createForm.node) : null,
+      tgrp: createForm.tgrp ? Number(createForm.tgrp) : null,
+      prefix_send: createForm.prefix_send
+        ? Number(createForm.prefix_send)
+        : null,
+      prefix_receive: createForm.prefix_receive
+        ? Number(createForm.prefix_receive)
+        : null,
+      session_agents_payload,
+    };
+
+    try {
+      setCreating(true);
+      await dispatch(addConnectionConfig(payload)).unwrap();
+      alert("Tạo kết nối thành công!");
+      resetCreateForm();
+      setShowCreateModal(false);
+      dispatch(fetchConnectionConfigs());
+    } catch (err) {
+      console.error(err);
+      alert("Lỗi tạo kết nối: " + (err?.detail || err?.message || "UNKNOWN"));
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <>
       <TopNavbar />
+
       <Container fluid className="px-4 py-4">
         <Card className="shadow-lg border-0">
           <Card.Header className="bg-gradient bg-primary text-white d-flex justify-content-between align-items-center">
@@ -398,7 +819,7 @@ const ConnectionConfigList = () => {
               />
               <Button
                 variant="warning"
-                onClick={() => navigate("/sbc/CreateConnectionForm")}
+                onClick={() => setShowCreateModal(true)}
               >
                 Tạo Mới
               </Button>
@@ -419,14 +840,9 @@ const ConnectionConfigList = () => {
                 <h5>Không tìm thấy kết nối nào</h5>
               </div>
             ) : (
-              <Table
-                hover
-                responsive
-                bordered
-                className="mb-0 table-sm align-middle"
-              >
+              <Table hover className="mb-0 align-middle">
                 <thead className="table-dark text-white text-center">
-                  <tr>
+                  <tr style={{ fontWeight: 600, fontSize: "0.85rem" }}>
                     <th>ID</th>
                     <th>Đối Tác</th>
                     <th>Cặp VIP - Nhà mạng</th>
@@ -471,6 +887,7 @@ const ConnectionConfigList = () => {
                       <td>{cfg.connection_type_name || "—"}</td>
                       <td>{cfg.node_name || "—"}</td>
                       <td>{cfg.tgrp_name || "—"}</td>
+
                       <td>
                         {findLabel(
                           prefixSends,
@@ -491,14 +908,13 @@ const ConnectionConfigList = () => {
                           cfg.prefix_receive ||
                           "—"}
                       </td>
+
                       <td>
                         {cfg.session_agents?.length > 0 ? (
                           <div className="d-flex flex-column gap-2">
                             {cfg.session_agents.map((sa, i) => {
-                              // Lấy danh sách dải RTP từ backend (rtp_ranges hoặc rtp_ranges_payload)
                               const rtpRanges =
                                 sa.rtp_ranges || sa.rtp_ranges_payload || [];
-
                               return (
                                 <OverlayTrigger
                                   key={i}
@@ -533,12 +949,10 @@ const ConnectionConfigList = () => {
                                     <div className="fw-bold text-primary">
                                       {sa.hostname}
                                     </div>
-
                                     <div>
                                       <span className="me-1">SIP:</span>
                                       <code>{sa.ip_sip}</code>
                                     </div>
-
                                     <div className="mt-1">
                                       <span className="me-1">RTP:</span>
                                       {rtpRanges.length > 0 ? (
@@ -558,7 +972,6 @@ const ConnectionConfigList = () => {
                                         </small>
                                       )}
                                     </div>
-
                                     <Badge
                                       className="mt-1"
                                       bg={
@@ -662,7 +1075,7 @@ const ConnectionConfigList = () => {
         </Card>
       </Container>
 
-      {/* Modal Gán VIP – đã thêm xử lý lỗi */}
+      {/* ===================== MODAL GÁN VIP ===================== */}
       <Modal
         show={showPairModal}
         onHide={() => setShowPairModal(false)}
@@ -795,7 +1208,7 @@ const ConnectionConfigList = () => {
         </Modal.Footer>
       </Modal>
 
-      {/* Modal Template */}
+      {/* ===================== MODAL TEMPLATE (record) ===================== */}
       <Modal
         show={showTemplateModal}
         onHide={() => setShowTemplateModal(false)}
@@ -835,7 +1248,7 @@ const ConnectionConfigList = () => {
         </Modal.Body>
       </Modal>
 
-      {/* Modal Edit ConnectionConfig */}
+      {/* ===================== MODAL EDIT (giữ nguyên) ===================== */}
       <Modal
         show={showEditModal}
         onHide={() => setShowEditModal(false)}
@@ -1115,6 +1528,409 @@ const ConnectionConfigList = () => {
             Lưu thay đổi
           </Button>
         </Modal.Footer>
+      </Modal>
+
+      {/* ===================== MODAL CREATE (đã gộp) ===================== */}
+      <Modal
+        show={showCreateModal}
+        onHide={() => {
+          resetCreateForm();
+          setShowCreateModal(false);
+        }}
+        size="xl"
+        scrollable
+      >
+        <Modal.Header closeButton className="bg-primary text-white">
+          <Modal.Title>Tạo Kết Nối Với Đối Tác Nước Ngoài</Modal.Title>
+        </Modal.Header>
+
+        <Modal.Body>
+          <Form onSubmit={handleSubmitCreate}>
+            <Row className="mb-3">
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>
+                    Đối tác: <span className="text-danger">*</span>
+                  </Form.Label>
+                  <Form.Control
+                    name="partner"
+                    value={createForm.partner}
+                    onChange={handleCreateChange}
+                    required
+                  />
+                </Form.Group>
+              </Col>
+
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>
+                    REALM: <span className="text-danger">*</span>
+                  </Form.Label>
+                  <CreatableSelect
+                    isClearable
+                    placeholder="Chọn hoặc nhập Realm..."
+                    value={
+                      realmOptions.find(
+                        (o) => String(o.value) === createForm.realm
+                      ) || null
+                    }
+                    options={realmOptions}
+                    onChange={handleCreateRealmChange}
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+
+            <Row className="mb-3">
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>
+                    Service: <span className="text-danger">*</span>
+                  </Form.Label>
+                  <CreatableSelect
+                    isClearable
+                    placeholder="Chọn hoặc nhập Service..."
+                    value={
+                      serviceOptions.find(
+                        (o) => String(o.value) === createForm.service
+                      ) || null
+                    }
+                    options={serviceOptions}
+                    onChange={handleCreateServiceChange}
+                  />
+                </Form.Group>
+              </Col>
+
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>Connection Type:</Form.Label>
+                  <CreatableSelect
+                    isClearable
+                    placeholder="Chọn hoặc nhập Connection Type..."
+                    value={
+                      connectionTypeOptions.find(
+                        (o) => String(o.value) === createForm.connection_type
+                      ) || null
+                    }
+                    options={connectionTypeOptions}
+                    onChange={handleCreateConnectionTypeChange}
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+
+            <Row className="mb-3">
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>Node SBC:</Form.Label>
+                  <CreatableSelect
+                    isClearable
+                    placeholder="Chọn hoặc nhập Node..."
+                    value={
+                      nodeOptions.find(
+                        (o) => String(o.value) === createForm.node
+                      ) || null
+                    }
+                    options={nodeOptions}
+                    onChange={handleCreateNodeChange}
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6} />
+            </Row>
+
+            <Row className="mb-3">
+              <Col md={4}>
+                <Form.Group>
+                  <Form.Label>TGRP (10 digit):</Form.Label>
+                  <CreatableSelect
+                    isClearable
+                    placeholder="VD: SIPEZNIDDI"
+                    value={
+                      tgrpOptions.find(
+                        (o) => String(o.value) === createForm.tgrp
+                      ) || null
+                    }
+                    options={tgrpOptions}
+                    onChange={handleCreateTgrpChange}
+                  />
+                </Form.Group>
+              </Col>
+
+              <Col md={4}>
+                <Form.Group>
+                  <Form.Label>Prefix gửi đối tác:</Form.Label>
+                  <CreatableSelect
+                    isClearable
+                    placeholder="VD: +CC+AC+SUB"
+                    value={
+                      prefixSendOptions.find(
+                        (o) => String(o.value) === createForm.prefix_send
+                      ) || null
+                    }
+                    options={prefixSendOptions}
+                    onChange={handleCreatePrefixSendChange}
+                  />
+                </Form.Group>
+              </Col>
+
+              <Col md={4}>
+                <Form.Group>
+                  <Form.Label>Prefix đối tác gửi:</Form.Label>
+                  <CreatableSelect
+                    isClearable
+                    placeholder="VD: +CC+AC+SUB"
+                    value={
+                      prefixReceiveOptions.find(
+                        (o) => String(o.value) === createForm.prefix_receive
+                      ) || null
+                    }
+                    options={prefixReceiveOptions}
+                    onChange={handleCreatePrefixReceiveChange}
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+
+            <hr />
+
+            <div className="d-flex justify-content-between align-items-center">
+              <h5 className="mb-0">Danh sách Session-Agent</h5>
+              <Button
+                variant="outline-success"
+                size="sm"
+                onClick={addCreateAgentRow}
+              >
+                ➕ Thêm Session-Agent
+              </Button>
+            </div>
+
+            <div className="mt-3">
+              {createForm.sessionAgentsList.map((sa, idx) => (
+                <div key={idx} className="border rounded p-3 mb-3">
+                  <Row className="mb-2">
+                    <Col md={3}>
+                      <Form.Group>
+                        <Form.Label>Session Agent</Form.Label>
+                        <Form.Control
+                          value={sa.hostname}
+                          onChange={(e) =>
+                            handleCreateAgentChange(
+                              idx,
+                              "hostname",
+                              e.target.value
+                            )
+                          }
+                          placeholder="VD: OREIDDBP21"
+                        />
+                      </Form.Group>
+                    </Col>
+
+                    <Col md={3}>
+                      <Form.Group>
+                        <Form.Label>IP SIP</Form.Label>
+                        <Form.Control
+                          value={sa.ip_sip}
+                          onChange={(e) =>
+                            handleCreateAgentChange(
+                              idx,
+                              "ip_sip",
+                              e.target.value
+                            )
+                          }
+                          placeholder="VD: 193.251.159.33"
+                        />
+                      </Form.Group>
+                    </Col>
+
+                    <Col md={3}>
+                      <Form.Group>
+                        <Form.Label>Subnet SIP</Form.Label>
+                        <Form.Control
+                          value={sa.subnet_sip}
+                          onChange={(e) =>
+                            handleCreateAgentChange(
+                              idx,
+                              "subnet_sip",
+                              e.target.value
+                            )
+                          }
+                          placeholder="VD: 255.255.255.255"
+                        />
+                      </Form.Group>
+                    </Col>
+
+                    <Col md={2}>
+                      <Form.Group>
+                        <Form.Label>Max sess</Form.Label>
+                        <Form.Control
+                          type="number"
+                          min={1}
+                          value={sa.max_sessions}
+                          onChange={(e) =>
+                            handleCreateAgentChange(
+                              idx,
+                              "max_sessions",
+                              e.target.value
+                            )
+                          }
+                          placeholder="VD: 90"
+                        />
+                      </Form.Group>
+                    </Col>
+
+                    <Col
+                      md={1}
+                      className="d-flex align-items-end justify-content-center"
+                    >
+                      <Button
+                        variant="outline-danger"
+                        size="sm"
+                        onClick={() => removeCreateAgentRow(idx)}
+                        disabled={createForm.sessionAgentsList.length <= 1}
+                      >
+                        ✕
+                      </Button>
+                    </Col>
+                  </Row>
+
+                  <Row className="mb-2">
+                    <Col
+                      md={12}
+                      className="d-flex justify-content-between align-items-center"
+                    >
+                      <strong>Dải RTP</strong>
+                      <Button
+                        variant="outline-success"
+                        size="sm"
+                        onClick={() => addCreateRtpRange(idx)}
+                      >
+                        ➕ Thêm dải RTP
+                      </Button>
+                    </Col>
+                  </Row>
+
+                  {(sa.rtp_ranges || []).map((r, rIndex) => (
+                    <Row className="mb-2" key={rIndex}>
+                      <Col md={4}>
+                        <Form.Group>
+                          <Form.Label>IP RTP</Form.Label>
+                          <Form.Control
+                            value={r.ip_rtp}
+                            onChange={(e) =>
+                              handleCreateRtpChange(
+                                idx,
+                                rIndex,
+                                "ip_rtp",
+                                e.target.value
+                              )
+                            }
+                            placeholder="VD: 193.251.159.34"
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={4}>
+                        <Form.Group>
+                          <Form.Label>Subnet RTP</Form.Label>
+                          <Form.Control
+                            value={r.subnet_rtp}
+                            onChange={(e) =>
+                              handleCreateRtpChange(
+                                idx,
+                                rIndex,
+                                "subnet_rtp",
+                                e.target.value
+                              )
+                            }
+                            placeholder="VD: 255.255.255.255"
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col
+                        md={2}
+                        className="d-flex align-items-end justify-content-start"
+                      >
+                        <Button
+                          variant="outline-danger"
+                          size="sm"
+                          onClick={() => removeCreateRtpRange(idx, rIndex)}
+                          disabled={(sa.rtp_ranges || []).length <= 1}
+                        >
+                          ✕
+                        </Button>
+                      </Col>
+                    </Row>
+                  ))}
+                </div>
+              ))}
+            </div>
+
+            <div className="text-end mt-4 d-flex justify-content-end gap-2">
+              <Button
+                type="button"
+                variant="outline-secondary"
+                onClick={handleGenerateCreateTemplate}
+              >
+                📝 Generate Template
+              </Button>
+
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  resetCreateForm();
+                  setShowCreateModal(false);
+                }}
+              >
+                Hủy
+              </Button>
+
+              <Button type="submit" variant="primary" disabled={creating}>
+                {creating ? (
+                  <>
+                    <Spinner animation="border" size="sm" className="me-2" />
+                    Đang tạo kết nối...
+                  </>
+                ) : (
+                  "Tạo Kết Nối"
+                )}
+              </Button>
+            </div>
+          </Form>
+        </Modal.Body>
+      </Modal>
+
+      {/* ===================== MODAL TEMPLATE (create form) ===================== */}
+      <Modal
+        show={showCreateTemplateModal}
+        onHide={() => setShowCreateTemplateModal(false)}
+        size="lg"
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Template cấu hình SBC (từ form tạo mới)</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group>
+            <Form.Label>Câu lệnh</Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={24}
+              value={createTemplateText}
+              readOnly
+              style={{ fontFamily: "monospace" }}
+            />
+          </Form.Group>
+          <Button
+            className="mt-3"
+            onClick={() => {
+              if (navigator.clipboard && createTemplateText) {
+                navigator.clipboard.writeText(createTemplateText);
+                alert("Đã copy template vào clipboard");
+              }
+            }}
+          >
+            📋 Copy Template
+          </Button>
+        </Modal.Body>
       </Modal>
     </>
   );
