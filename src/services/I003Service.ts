@@ -80,6 +80,15 @@ const I003Service = {
             params: { fromDate, toDate }
         });
         return res
+    },
+
+    GetBNGDailyDataByLocation: async (location: string, reportDate?: string) => {        
+        let res: any = await request({
+            url: `/${I003_BNG}/GetBNGDailyDataByLocation`,
+            method: 'get',
+            params: { location, reportDate }
+        });
+        return res
     }
 }
 
