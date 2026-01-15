@@ -153,7 +153,7 @@
         }
       ]
     },
-      {
+    {
       "code": "NetworkSnoc",
       "name": "AU Chuyển mạch",
       "url": "/user",
@@ -204,12 +204,11 @@
           "icon": "bi bi-grid"
         },
         {
-            "code": "LspQuocte",
+          "code": "LspQuocte",
           "name": "Kiểm soát LSP quốc tế",
           "url": "/LspQuocte",
           "icon": "bi bi-grid"
-
-            },
+        },
         {
           "code": "HardwareAlarms",
           "name": "Xử lý cảnh báo phần cứng",

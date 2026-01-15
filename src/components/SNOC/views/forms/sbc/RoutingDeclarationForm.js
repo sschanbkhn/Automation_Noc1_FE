@@ -704,15 +704,15 @@ const RoutingDeclarationForm = () => {
               <>
                 <div className="table-responsive">
                   <Table hover className="mb-0 align-middle">
-                    <thead className="bg-primary text-white">
-                      <tr>
-                        <th className="text-center">ID</th>
-                        <th>Nguồn</th>
-                        <th>Service</th>
-                        <th>Country / Dest</th>
-                        <th>Lựa chọn (ratio & TGRP)</th>
-                        <th>Note</th>
-                        <th className="text-center">Thao tác</th>
+                    <thead className="table-dark text-white text-center">
+                      <tr style={{ fontWeight: 600, fontSize: "0.85rem" }}>
+                        <th className="py-2">ID</th>
+                        <th className="py-2">Nguồn</th>
+                        <th className="py-2">Service</th>
+                        <th className="py-2">Country / Dest</th>
+                        <th className="py-2">Lựa chọn (ratio &amp; TGRP)</th>
+                        <th className="py-2">Note</th>
+                        <th className="py-2">Thao tác</th>
                       </tr>
                     </thead>
                     <tbody>
