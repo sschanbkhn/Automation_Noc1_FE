@@ -75,10 +75,13 @@ import RequireSnocAuthInline from "components/SNOC/auth/RequireSnocAuthInline";
 import RequireSuperUserInline from "components/SNOC/auth/RequireSuperUserInline";
 import SnocLoginInline from "components/SNOC/auth/SnocLoginInline";
 import SnocSubApp from "components/SNOC/SnocSubApp";
+import OutputIgnoreRules from "components/SNOC/views/forms/health/OutputIgnoreRules";
 import HostConfigPanel from "components/SNOC/views/forms/hosts/HostConfigPanel";
 import KPIChartDashboard from "components/SNOC/views/forms/kpi/KPIChartDashboard";
 import KPISelectorPage from "components/SNOC/views/forms/kpi/KPISelectorPage";
 import ScheduleGeneric from "components/SNOC/views/forms/kpi/ScheduleCausecode";
+
+
 import ConnectionConfigList from "components/SNOC/views/tables/sbc/ConnectionConfigList";
 ///snoc end
 // ANM
@@ -373,6 +376,11 @@ const MainPageRoute = (props: Props) => {
           <Route path="/healthcheck/devices" element={<HostConfigPanel />} />
           <Route path="/healthcheck/schedule" element={<Schedule />} />
           <Route path="/healthcheck/checks" element={<Healthcheck />} />
+          <Route
+            path="/healthcheck/OutputIgnoreRules"
+            element={<OutputIgnoreRules />}
+          />
+
           <Route
             path="/healthcheck/history"
             element={<HistoricalReporting />}

@@ -18,6 +18,7 @@ import accountReducer, {
 
 // ✅ Unauthorized hook (401) từ API
 import { getSnocToken, onSnocUnauthorized } from "../api/snocApiWithAutoToken";
+import outputIgnoreReducer from "../redux/Healthcheck/outputIgnoreSlice";
 import kpiPinnedReducer from "../redux/KPI/kpiPinnedSlice";
 import pinnedReducer from "../redux/KPI/pinnedKpisSlice";
 import sbcConnectionReducer from "./../redux/Sbc/sbcConnectionSlice"; // 👈 slice mới
@@ -41,6 +42,8 @@ const snocStore = configureStore({
     kpiPinned: kpiPinnedReducer,
     pinned: pinnedReducer,
     sbcConnection: sbcConnectionReducer,
+    // ✅ NEW: output ignore rules
+    outputIgnore: outputIgnoreReducer,
   },
 });
 

@@ -180,6 +180,40 @@ export const updateHealthcheckSchedule = createAsyncThunk(
   }
 );
 
+// export const fetchPSCoreStatus = createAsyncThunk(
+//   "pscore/fetchPSCoreStatus",
+//   async (
+//     { host, page = 1, platform = [], option = "", storeKey, hours, page_size },
+//     { rejectWithValue, dispatch }
+//   ) => {
+//     try {
+//       const params = new URLSearchParams();
+//       if (host) params.append("host", host);
+//       if (option) params.append("option", option);
+//       params.append("page", String(page));
+//       platform.forEach((p) => params.append("platform", p));
+
+//       const hasHours =
+//         hours !== undefined && hours !== null && `${hours}` !== "";
+//       if (hasHours) params.append("hours", String(hours));
+//       if (page_size) params.append("page_size", String(page_size));
+
+//       // có hours -> KHÔNG gửi notes; không có hours -> gửi notes
+//       if (!hasHours) params.append("include_notes", "1");
+
+//       const response = await snocApi.get(
+//         `/nornirps/healthcheck/history/?${params.toString()}`
+//       );
+//       return response.data;
+//     } catch (error) {
+//       const msg =
+//         error?.response?.data?.detail || "Không thể tải dữ liệu PS Core";
+//       dispatch(showTemporaryAlert({ message: msg, type: "error" }));
+//       return rejectWithValue(error?.response?.data);
+//     }
+//   }
+// );
+
 export const fetchPSCoreStatus = createAsyncThunk(
   "pscore/fetchPSCoreStatus",
   async (
@@ -190,7 +224,8 @@ export const fetchPSCoreStatus = createAsyncThunk(
       const params = new URLSearchParams();
       if (host) params.append("host", host);
       if (option) params.append("option", option);
-      params.append("page", String(page));
+
+      // NOTE: page sẽ set trong loop, không set cố định ở đây nữa
       platform.forEach((p) => params.append("platform", p));
 
       const hasHours =
@@ -201,10 +236,64 @@ export const fetchPSCoreStatus = createAsyncThunk(
       // có hours -> KHÔNG gửi notes; không có hours -> gửi notes
       if (!hasHours) params.append("include_notes", "1");
 
-      const response = await snocApi.get(
-        `/nornirps/healthcheck/history/?${params.toString()}`
+      const baseUrl = `/nornirps/healthcheck/history/?${params.toString()}`;
+
+      // ---- Nếu không phải chart/history dài thì giữ nguyên gọi 1 page ----
+      // (Bạn có thể bỏ nhánh này nếu muốn ALWAYS fetch all)
+      const shouldFetchAllPages =
+        !!hasHours ||
+        storeKey === "hourly" ||
+        (storeKey || "").startsWith("hourly_");
+
+      if (!shouldFetchAllPages) {
+        const response = await snocApi.get(`${baseUrl}&page=${page}`);
+        return response.data;
+      }
+
+      // ---- Fetch ALL pages để tránh rụng ----
+      const MAX_PAGES = 80; // chặn an toàn, tránh loop vô hạn
+      let curPage = page || 1;
+
+      let mergedResults = [];
+      let firstMeta = null;
+
+      for (let i = 0; i < MAX_PAGES; i++) {
+        const response = await snocApi.get(`${baseUrl}&page=${curPage}`);
+        const data = response.data || {};
+
+        if (!firstMeta) firstMeta = data;
+
+        const results = Array.isArray(data?.results) ? data.results : [];
+        if (results.length) mergedResults.push(...results);
+
+        // DRF PageNumberPagination: next=null khi hết
+        if (!data?.next) {
+          return {
+            count: data?.count ?? firstMeta?.count ?? mergedResults.length,
+            next: null,
+            previous: firstMeta?.previous ?? null,
+            results: mergedResults,
+          };
+        }
+
+        curPage += 1;
+      }
+
+      // Nếu vượt MAX_PAGES, vẫn trả phần đã có + cảnh báo nhẹ (không throw)
+      dispatch(
+        showTemporaryAlert({
+          message:
+            "Dữ liệu history quá nhiều, đã tải một phần (vượt giới hạn trang).",
+          type: "warning",
+        })
       );
-      return response.data;
+
+      return {
+        count: firstMeta?.count ?? mergedResults.length,
+        next: null,
+        previous: firstMeta?.previous ?? null,
+        results: mergedResults,
+      };
     } catch (error) {
       const msg =
         error?.response?.data?.detail || "Không thể tải dữ liệu PS Core";

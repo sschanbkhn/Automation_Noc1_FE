@@ -78,6 +78,12 @@ const TopNavbar = () => {
             <NavLink to="/healthcheck/kpischedule" className={getLinkClass}>
               KPI Schedule
             </NavLink>
+            <NavLink
+              to="/healthcheck/OutputIgnoreRules"
+              className={getLinkClass}
+            >
+              Healthcheck Ignore Rules
+            </NavLink>
           </Nav>
 
           {/* === Phải: Đồng hồ + Logout === */}
