@@ -6,13 +6,12 @@ import { showTemporaryAlert } from "../Alert/alertSlice";
 /* =========================
  * Helpers (không export)
  * ========================= */
-function _minuteKeyISO(starttime) {
+function _hourKeyISO(starttime) {
   const d = new Date(starttime);
   if (Number.isNaN(d.getTime())) return null;
-  d.setSeconds(0, 0); // Chỉ cắt bỏ giây và mili-giây, GIỮ NGUYÊN PHÚT
+  d.setMinutes(0, 0, 0);
   return d.toISOString();
 }
-
 function _pruneCutoff(hours = 24) {
   return Date.now() - (hours || 24) * 60 * 60 * 1000;
 }
@@ -37,13 +36,7 @@ export const toggleDeviceExcluded = createAsyncThunk(
             excluded ? "đã loại trừ" : "bỏ loại trừ"
           } khỏi cảnh báo`,
           type: "success",
-        }),
-      );
-      // 🔥 THÊM ĐOẠN NÀY: Bắn tín hiệu cho các Tab khác biết!
-      // Dùng Date.now() để tạo timestamp, đảm bảo sự kiện luôn được trigger kể cả khi toggle cùng 1 thiết bị nhiều lần
-      localStorage.setItem(
-        "cross_tab_sync_exclude",
-        JSON.stringify({ host, excluded, _ts: Date.now() }),
+        })
       );
       return { host, excluded };
     } catch (error) {
@@ -53,7 +46,7 @@ export const toggleDeviceExcluded = createAsyncThunk(
       dispatch(showTemporaryAlert({ message: msg, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
-  },
+  }
 );
 
 /* =========================
@@ -68,7 +61,7 @@ export const fetchPlatformGroupSchema = createAsyncThunk(
     } catch (err) {
       return rejectWithValue(err.response?.data || {});
     }
-  },
+  }
 );
 
 export const fetchHealthcheckSchedules = createAsyncThunk(
@@ -84,14 +77,14 @@ export const fetchHealthcheckSchedules = createAsyncThunk(
       dispatch(showTemporaryAlert({ message, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
-  },
+  }
 );
 
 export const createHealthcheckSchedule = createAsyncThunk(
   "pscore/createHealthcheckSchedule",
   async (
     { name, platform, node_names, cron, start_time },
-    { dispatch, rejectWithValue },
+    { dispatch, rejectWithValue }
   ) => {
     try {
       const response = await snocApi.post("/nornirps/schedulerhealth/", {
@@ -102,10 +95,7 @@ export const createHealthcheckSchedule = createAsyncThunk(
         start_time,
       });
       dispatch(
-        showTemporaryAlert({
-          message: "Đặt lịch thành công!",
-          type: "success",
-        }),
+        showTemporaryAlert({ message: "Đặt lịch thành công!", type: "success" })
       );
       return response.data;
     } catch (error) {
@@ -113,7 +103,7 @@ export const createHealthcheckSchedule = createAsyncThunk(
       dispatch(showTemporaryAlert({ message, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
-  },
+  }
 );
 
 export const toggleScheduleEnabled = createAsyncThunk(
@@ -128,7 +118,7 @@ export const toggleScheduleEnabled = createAsyncThunk(
         showTemporaryAlert({
           message: `Đã ${enabled ? "bật" : "tắt"} lịch thành công`,
           type: "success",
-        }),
+        })
       );
       return { id, enabled };
     } catch (error) {
@@ -136,7 +126,7 @@ export const toggleScheduleEnabled = createAsyncThunk(
       dispatch(showTemporaryAlert({ message, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
-  },
+  }
 );
 
 export const deleteHealthcheckSchedule = createAsyncThunk(
@@ -149,7 +139,7 @@ export const deleteHealthcheckSchedule = createAsyncThunk(
         showTemporaryAlert({
           message: "Đã xóa lịch thành công",
           type: "success",
-        }),
+        })
       );
       return id;
     } catch (error) {
@@ -157,14 +147,14 @@ export const deleteHealthcheckSchedule = createAsyncThunk(
       dispatch(showTemporaryAlert({ message, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
-  },
+  }
 );
 
 export const updateHealthcheckSchedule = createAsyncThunk(
   "pscore/updateHealthcheckSchedule",
   async (
     { id, name, platform, node_names, cron, start_time },
-    { dispatch, rejectWithValue },
+    { dispatch, rejectWithValue }
   ) => {
     try {
       await snocApi.put(`/nornirps/schedulerhealth/${id}/update/`, {
@@ -179,7 +169,7 @@ export const updateHealthcheckSchedule = createAsyncThunk(
         showTemporaryAlert({
           message: "Đã cập nhật lịch thành công",
           type: "success",
-        }),
+        })
       );
       return id;
     } catch (error) {
@@ -187,7 +177,7 @@ export const updateHealthcheckSchedule = createAsyncThunk(
       dispatch(showTemporaryAlert({ message, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
-  },
+  }
 );
 
 // export const fetchPSCoreStatus = createAsyncThunk(
@@ -228,7 +218,7 @@ export const fetchPSCoreStatus = createAsyncThunk(
   "pscore/fetchPSCoreStatus",
   async (
     { host, page = 1, platform = [], option = "", storeKey, hours, page_size },
-    { rejectWithValue, dispatch },
+    { rejectWithValue, dispatch }
   ) => {
     try {
       const params = new URLSearchParams();
@@ -260,71 +250,48 @@ export const fetchPSCoreStatus = createAsyncThunk(
         return response.data;
       }
 
-      // ---- Fetch ALL pages bằng Promise.all (Tối ưu tốc độ) ----
-      const MAX_PAGES = 80;
-      const curPage = page || 1;
+      // ---- Fetch ALL pages để tránh rụng ----
+      const MAX_PAGES = 80; // chặn an toàn, tránh loop vô hạn
+      let curPage = page || 1;
 
-      // 1. Fetch trang đầu tiên để lấy meta (tổng số count, next)
-      const firstResponse = await snocApi.get(`${baseUrl}&page=${curPage}`);
-      const firstData = firstResponse.data || {};
-      const mergedResults = Array.isArray(firstData.results)
-        ? [...firstData.results]
-        : [];
+      let mergedResults = [];
+      let firstMeta = null;
 
-      // Nếu không có trang tiếp theo (next = null), trả về luôn
-      if (!firstData.next) {
-        return {
-          count: firstData.count ?? mergedResults.length,
-          next: null,
-          previous: firstData.previous ?? null,
-          results: mergedResults,
-        };
+      for (let i = 0; i < MAX_PAGES; i++) {
+        const response = await snocApi.get(`${baseUrl}&page=${curPage}`);
+        const data = response.data || {};
+
+        if (!firstMeta) firstMeta = data;
+
+        const results = Array.isArray(data?.results) ? data.results : [];
+        if (results.length) mergedResults.push(...results);
+
+        // DRF PageNumberPagination: next=null khi hết
+        if (!data?.next) {
+          return {
+            count: data?.count ?? firstMeta?.count ?? mergedResults.length,
+            next: null,
+            previous: firstMeta?.previous ?? null,
+            results: mergedResults,
+          };
+        }
+
+        curPage += 1;
       }
 
-      // 2. Tính toán số trang cần gọi API
-      const totalCount = firstData.count || 0;
-      const itemsPerPage = mergedResults.length || 50; // Dự phòng fallback chia cho 50
-      const totalPagesToFetch = Math.ceil(totalCount / itemsPerPage);
-
-      const maxPagesLimit = Math.min(totalPagesToFetch, MAX_PAGES);
-      const promises = [];
-
-      // Tạo mảng Promise cho các trang còn lại (từ trang 2 đến limit)
-      for (let i = curPage + 1; i <= maxPagesLimit; i++) {
-        promises.push(
-          snocApi.get(`${baseUrl}&page=${i}`).catch((err) => {
-            // Bọc catch để nếu 1 trang lỗi mạng, nó không làm sập toàn bộ các trang khác
-            console.warn(`Lỗi khi tải trang ${i}:`, err);
-            return null;
-          }),
-        );
-      }
-
-      // 3. Tải song song tất cả các trang cùng lúc
-      if (promises.length > 0) {
-        const responses = await Promise.all(promises);
-        responses.forEach((res) => {
-          if (res?.data?.results && Array.isArray(res.data.results)) {
-            mergedResults.push(...res.data.results);
-          }
-        });
-      }
-
-      // Cảnh báo nếu dữ liệu gốc vượt quá 80 trang (MAX_PAGES)
-      if (totalPagesToFetch > MAX_PAGES) {
-        dispatch(
-          showTemporaryAlert({
-            message:
-              "Dữ liệu history quá nhiều, đã tải song song một phần (vượt giới hạn trang).",
-            type: "warning",
-          }),
-        );
-      }
+      // Nếu vượt MAX_PAGES, vẫn trả phần đã có + cảnh báo nhẹ (không throw)
+      dispatch(
+        showTemporaryAlert({
+          message:
+            "Dữ liệu history quá nhiều, đã tải một phần (vượt giới hạn trang).",
+          type: "warning",
+        })
+      );
 
       return {
-        count: firstData.count ?? mergedResults.length,
+        count: firstMeta?.count ?? mergedResults.length,
         next: null,
-        previous: firstData.previous ?? null,
+        previous: firstMeta?.previous ?? null,
         results: mergedResults,
       };
     } catch (error) {
@@ -333,7 +300,33 @@ export const fetchPSCoreStatus = createAsyncThunk(
       dispatch(showTemporaryAlert({ message: msg, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
-  },
+  }
+);
+
+export const fetchHealthcheckSnapshots = createAsyncThunk(
+  "pscore/fetchHealthcheckSnapshots",
+  async (
+    { group, subsystem, hours = 24, storeKey }, // storeKey để reuse cho group/subsystem/detail/modal
+    { rejectWithValue, dispatch }
+  ) => {
+    try {
+      const params = new URLSearchParams();
+      params.append("group", group);
+      params.append("subsystem", subsystem);
+      params.append("hours", String(hours));
+
+      const res = await snocApi.get(
+        `/nornirps/healthcheck/snapshots/?${params.toString()}`
+      );
+
+      return { storeKey, data: res.data };
+    } catch (error) {
+      const msg =
+        error?.response?.data?.detail || "Không thể tải snapshot healthcheck";
+      dispatch(showTemporaryAlert({ message: msg, type: "error" }));
+      return rejectWithValue({ storeKey, error: error?.response?.data });
+    }
+  }
 );
 
 export const fetchLatestHealthcheckView = createAsyncThunk(
@@ -341,7 +334,7 @@ export const fetchLatestHealthcheckView = createAsyncThunk(
   async (
     // { host, page = 1, platform = [], option = "" },
     { host, platform = [], option = "" },
-    { rejectWithValue, dispatch },
+    { rejectWithValue, dispatch }
   ) => {
     try {
       const params = new URLSearchParams();
@@ -351,7 +344,7 @@ export const fetchLatestHealthcheckView = createAsyncThunk(
       platform.forEach((p) => params.append("platform", p));
 
       const response = await snocApi.get(
-        `/nornirps/healthcheck/latest/?${params.toString()}`,
+        `/nornirps/healthcheck/latest/?${params.toString()}`
       );
       return response.data;
     } catch (error) {
@@ -360,7 +353,7 @@ export const fetchLatestHealthcheckView = createAsyncThunk(
       dispatch(showTemporaryAlert({ message: msg, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
-  },
+  }
 );
 
 export const fetchSystemStatus = createAsyncThunk(
@@ -372,7 +365,7 @@ export const fetchSystemStatus = createAsyncThunk(
         showTemporaryAlert({
           message: "Get System health successfully!",
           type: "success",
-        }),
+        })
       );
       return response.data;
     } catch (error) {
@@ -381,7 +374,7 @@ export const fetchSystemStatus = createAsyncThunk(
       dispatch(showTemporaryAlert({ message: msg, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
-  },
+  }
 );
 
 export const fetchSystemStatusByGroup = createAsyncThunk(
@@ -396,7 +389,7 @@ export const fetchSystemStatusByGroup = createAsyncThunk(
       dispatch(showTemporaryAlert({ message: msg, type: "error" }));
       return rejectWithValue({ group, error: error?.response?.data });
     }
-  },
+  }
 );
 
 export const fetchSystemStatusBySubsystem = createAsyncThunk(
@@ -404,7 +397,7 @@ export const fetchSystemStatusBySubsystem = createAsyncThunk(
   async ({ group, subsystem }, { rejectWithValue, dispatch }) => {
     try {
       const response = await snocApi.get(
-        `/nornirps/systemhealth/${group}/${subsystem}/`,
+        `/nornirps/systemhealth/${group}/${subsystem}/`
       );
       return { group, subsystem, data: response.data };
     } catch (error) {
@@ -418,14 +411,14 @@ export const fetchSystemStatusBySubsystem = createAsyncThunk(
         error: error?.response?.data,
       });
     }
-  },
+  }
 );
 
 export const GenericHealthCheckView = createAsyncThunk(
   "healthcheck/GenericHealthCheckView",
   async (
     { selectedPlatform, selectedDevice },
-    { rejectWithValue, dispatch },
+    { rejectWithValue, dispatch }
   ) => {
     try {
       const response = await snocApi.post(
@@ -440,14 +433,14 @@ export const GenericHealthCheckView = createAsyncThunk(
           timeoutErrorMessage: "Healthcheck timed out after 2 minutes.",
           // (an toàn) vô hiệu cancel token cũ nếu có (axios<1) — không bắt buộc
           cancelToken: undefined,
-        },
+        }
       );
 
       dispatch(
         showTemporaryAlert({
           message: "Nodes is healthcheck successfully!",
           type: "success",
-        }),
+        })
       );
       return response.data;
     } catch (error) {
@@ -461,13 +454,13 @@ export const GenericHealthCheckView = createAsyncThunk(
       const errorMessage = isCanceled
         ? "Healthcheck request was canceled."
         : isTimeout
-          ? "Healthcheck timed out after 2 minutes."
-          : error?.response?.data?.detail || "Failed to healthcheck nodes.";
+        ? "Healthcheck timed out after 2 minutes."
+        : error?.response?.data?.detail || "Failed to healthcheck nodes.";
 
       dispatch(showTemporaryAlert({ message: errorMessage, type: "error" }));
       return rejectWithValue(error?.response?.data ?? { detail: errorMessage });
     }
-  },
+  }
 );
 
 /* =========================
@@ -516,7 +509,8 @@ const psCoreSlice = createSlice({
     hourlyLoadingByKey: {}, // { [storeKey]: boolean }
     hourlyByPlatform: {}, // { [platform]: HourlyItem[] }
     hourPruneHours: 24,
-    globalLatestItems: [], // <- 🔥 THÊM MỚI: Độc quyền cho Dashboard (không bị ghi đè)
+    snapshotByKey: {}, // { [storeKey]: [{ts, ok, nok, ...}] }
+    snapshotLoadingByKey: {}, // { [storeKey]: boolean }
   },
   reducers: {
     wsMergeHourlyItems: (state, action) => {
@@ -535,20 +529,19 @@ const psCoreSlice = createSlice({
       // merge từng platform
       for (const [p, arr] of Object.entries(grouped)) {
         const existing = byPlat[p] || [];
-        const map = new Map();
+        const map = new Map(); // key = platform|host|hourISO
 
-        // nạp sẵn existing để dedup (Sửa từ hourISO thành minuteISO)
+        // nạp sẵn existing để dedup
         for (const it of existing) {
-          const minuteISO = _minuteKeyISO(it.starttime);
-          if (!minuteISO) continue;
-          map.set(`${p}|${it.host}|${minuteISO}`, it);
+          const hourISO = _hourKeyISO(it.starttime);
+          if (!hourISO) continue;
+          map.set(`${p}|${it.host}|${hourISO}`, it);
         }
-
         // add/update new items
         for (const it of arr) {
-          const minuteISO = _minuteKeyISO(it.starttime);
-          if (!minuteISO) continue;
-          map.set(`${p}|${it.host}|${minuteISO}`, it);
+          const hourISO = _hourKeyISO(it.starttime);
+          if (!hourISO) continue;
+          map.set(`${p}|${it.host}|${hourISO}`, it);
         }
 
         // prune và sort
@@ -562,6 +555,7 @@ const psCoreSlice = createSlice({
         byPlat[p] = merged;
       }
     },
+
     updateLastRunAt: (state, action) => {
       const { name, last_run_at, status } = action.payload;
       const task = state.scheduledTasks.find((t) => t.name === name);
@@ -623,77 +617,39 @@ const psCoreSlice = createSlice({
 
       const plat = _normPlatform(payload?.platform || payload?.platform_name);
 
+      // tìm theo host + platform (không chỉ host)
+      const arr = state.lastestitems || (state.lastestitems = []);
+      const idx = arr.findIndex(
+        (x) => x.host === host && _normPlatform(x.platform) === plat
+      );
+
       // notes: đảm bảo luôn là string để render ổn
       const notesStr = Array.isArray(payload?.notes)
         ? payload.notes.map((n) => n?.note ?? "").join(" | ")
-        : (payload?.notes ?? "");
+        : payload?.notes ?? "";
 
-      // 🔥 BƯỚC 1: TÌM TRẠNG THÁI EXCLUDED CHUẨN XÁC NHẤT TỪ STATE
-      // Ưu tiên quét trong mảng global (vì nó chứa full), sau đó mới tới mảng table
-      const findItem = (arr) =>
-        (arr || []).find(
-          (x) => x.host === host && _normPlatform(x.platform) === plat,
-        );
-
-      const existingGlobal = findItem(state.globalLatestItems);
-      const existingTable = findItem(state.lastestitems);
-
-      // Chốt cờ excluded (Ưu tiên lấy từ Global -> Table -> Payload gửi từ WS)
-      let preservedExcluded = payload?.excluded;
-      if (existingGlobal && existingGlobal.hasOwnProperty("excluded")) {
-        preservedExcluded = existingGlobal.excluded;
-      } else if (existingTable && existingTable.hasOwnProperty("excluded")) {
-        preservedExcluded = existingTable.excluded;
-      }
-
-      // ====== HELPER NỘI BỘ: Tối ưu UI Lag & Memory Leak ======
-      const updateArray = (targetArray, isTable = false) => {
-        const arr = targetArray || [];
-        const idx = arr.findIndex(
-          (x) => x.host === host && _normPlatform(x.platform) === plat,
-        );
-
-        const currentObj = idx >= 0 ? arr[idx] : {};
-
-        const merged = {
-          ...currentObj,
-          ...payload,
-          host,
-          platform: plat,
-          notes: notesStr,
-          excluded: preservedExcluded, // 🔥 Ép cứng cờ excluded đã được bảo vệ kỹ lưỡng
-        };
-
-        if (idx >= 0) {
-          // Rút phần tử cũ ra khỏi mảng (O(N) thay vì O(N log N) của sort)
-          arr.splice(idx, 1);
-        } else if (isTable) {
-          state.countlastest = (state.countlastest || 0) + 1;
-        }
-
-        // Cắm bản ghi mới cập nhật lên ĐẦU mảng.
-        arr.unshift(merged);
-
-        // 🔥 CHỐNG TRÀN RAM: Giới hạn mảng tối đa 5000 bản ghi
-        const MAX_ITEMS = 5000;
-        if (arr.length > MAX_ITEMS) {
-          arr.length = MAX_ITEMS;
-        }
-
-        return arr;
+      const merged = {
+        ...(idx >= 0 ? arr[idx] : {}),
+        ...payload,
+        host,
+        platform: plat, // luôn set platform đã chuẩn hoá
+        notes: notesStr,
       };
 
-      // 1. Cập nhật mảng Dashboard (Global)
-      if (state.globalLatestItems) {
-        state.globalLatestItems = updateArray(state.globalLatestItems, false);
+      if (idx >= 0) {
+        arr[idx] = merged;
+      } else {
+        arr.unshift(merged);
+        state.countlastest = (state.countlastest || 0) + 1;
       }
 
-      // 2. Cập nhật mảng Table
-      state.lastestitems = updateArray(state.lastestitems, true);
+      // sắp theo thời gian mới nhất (giảm dần) cho dễ nhìn
+      arr.sort((a, b) => new Date(b.starttime) - new Date(a.starttime));
+      state.lastestitems = arr;
 
-      // 3. Đẩy vào chart 24h nếu NOK/Error (Bỏ qua hoàn toàn nếu đang bị exclude)
+      // (tuỳ chọn) đẩy vào chart 24h nếu NOK/Error
       const st = payload?.status;
-      if ((st === "NOK" || st === "Error") && !preservedExcluded) {
+      if (st === "NOK" || st === "Error") {
         state.hourlyItems = [
           {
             host,
@@ -704,24 +660,6 @@ const psCoreSlice = createSlice({
           },
           ...(state.hourlyItems || []),
         ];
-      }
-    },
-    // 🔥 THÊM REDUCER MỚI NÀY ĐỂ NHẬN LỆNH ĐỒNG BỘ TỪ TAB KHÁC
-    syncDeviceExcluded: (state, action) => {
-      const { host, excluded } = action.payload;
-
-      // Cập nhật mảng Table
-      if (state.lastestitems) {
-        state.lastestitems = state.lastestitems.map((item) =>
-          item.host === host ? { ...item, excluded } : item,
-        );
-      }
-
-      // Cập nhật mảng Dashboard (Chart & Count sẽ tự động re-render theo)
-      if (state.globalLatestItems) {
-        state.globalLatestItems = state.globalLatestItems.map((item) =>
-          item.host === host ? { ...item, excluded } : item,
-        );
       }
     },
   },
@@ -789,20 +727,13 @@ const psCoreSlice = createSlice({
       })
       .addCase(fetchLatestHealthcheckView.fulfilled, (state, action) => {
         state.loading = false;
-
+        // state.lastestitems = action.payload.results || [];
+        // state.countlastest = action.payload.count || 0;
         const results = action.payload?.results || [];
         state.lastestitems = results;
         state.countlastest = results.length; // dùng length, vì không paginate nữa
-        state.nextlastest = action.payload?.next;
-        state.previouslastest = action.payload?.previous;
-
-        // 🔥 THÊM ĐOẠN NÀY ĐỂ BẮT DỮ LIỆU CHO DASHBOARD
-        // Nhận diện: Dashboard gọi API sẽ có page_size rất lớn (ví dụ 5000) và không filter platform cụ thể.
-        // Còn Table trong Modal thường sẽ truyền platform = ['cs_mss']...
-        const args = action.meta.arg || {};
-        if (!args.platform && args.page_size >= 1000) {
-          state.globalLatestItems = results;
-        }
+        state.nextlastest = action.payload.next;
+        state.previouslastest = action.payload.previous;
       })
       .addCase(fetchLatestHealthcheckView.rejected, (state) => {
         state.loading = false;
@@ -916,18 +847,30 @@ const psCoreSlice = createSlice({
       /* toggle excluded */
       .addCase(toggleDeviceExcluded.fulfilled, (state, action) => {
         const { host, excluded } = action.payload;
-
-        // 1. Cập nhật cho Bảng (Table) đang mở
         state.lastestitems = state.lastestitems.map((item) =>
-          item.host === host ? { ...item, excluded } : item,
+          item.host === host ? { ...item, excluded } : item
         );
+      })
 
-        // 2. 🔥 Cập nhật luôn cho Data tổng của Dashboard chạy ngầm
-        if (state.globalLatestItems) {
-          state.globalLatestItems = state.globalLatestItems.map((item) =>
-            item.host === host ? { ...item, excluded } : item,
-          );
-        }
+      /* snapshots */
+      .addCase(fetchHealthcheckSnapshots.pending, (state, action) => {
+        const key = action.meta?.arg?.storeKey;
+        if (key) state.snapshotLoadingByKey[key] = true;
+      })
+      .addCase(fetchHealthcheckSnapshots.fulfilled, (state, action) => {
+        const { storeKey, data } = action.payload || {};
+        if (!storeKey) return;
+        state.snapshotLoadingByKey[storeKey] = false;
+
+        // data.results là list 288 points
+        const results = Array.isArray(data?.results) ? data.results : [];
+        state.snapshotByKey[storeKey] = results;
+      })
+      .addCase(fetchHealthcheckSnapshots.rejected, (state, action) => {
+        const key = action.meta?.arg?.storeKey;
+        if (!key) return;
+        state.snapshotLoadingByKey[key] = false;
+        state.snapshotByKey[key] = [];
       });
   },
 });
@@ -938,7 +881,6 @@ export const {
   updateSystemStatusPatch,
   wsMergeHourlyItems,
   upsertLatestFromClient,
-  syncDeviceExcluded,
 } = psCoreSlice.actions;
 
 export default psCoreSlice.reducer;

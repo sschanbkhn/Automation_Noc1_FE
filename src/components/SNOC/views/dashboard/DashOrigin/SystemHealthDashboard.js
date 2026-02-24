@@ -9,30 +9,36 @@ import Alert from "../../../components/Alert/Alert";
 import WebSocketStatusBanner from "../../../components/WebSocketStatusBanner";
 import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
 import {
+  fetchHealthcheckSchedules,
+  fetchLatestHealthcheckView,
   fetchPlatformGroupSchema,
   fetchPSCoreStatus,
   fetchSystemStatus,
-  fetchSystemStatusByGroup, // 🔄 refresh group
+  fetchSystemStatusByGroup,
+  syncDeviceExcluded,
 } from "../../../redux/Healthcheck/healthcheckSlice";
 import HealthcheckTable from "../../tables/health/HealthcheckTable";
 import styles from "./../../../styles/SystemHealth.module.scss";
 import TopNavbarHealth from "./TopNavbarHealth";
 
-// ====== HẰNG SỐ / SELECTOR ỔN ĐỊNH ======
-const NOK_BAR_COLOR = "#dc3545"; // bootstrap danger red
+import {
+  Brush,
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
+// ====== HẰNG SỐ / SELECTOR ỔN ĐỊNH ======
 const statusColorClass = {
   Normal: "success",
   Warning: "warning",
   Error: "danger",
   Unknown: "secondary",
-};
-
-const statusIcon = {
-  Normal: <span className={`${styles.dot} ${styles.successDot}`} />,
-  Warning: <span className={`${styles.dot} ${styles.warningDot}`} />,
-  Error: <span className={`${styles.dot} ${styles.dangerDot}`} />,
-  Unknown: <span className={`${styles.dot} ${styles.secondaryDot}`} />,
 };
 
 const cardClassMapping = {
@@ -43,6 +49,16 @@ const cardClassMapping = {
   "IMS Core": styles.cardIms,
   "UDC Core": styles.cardUdc,
 };
+
+const LINE_COLORS = [
+  "#8884d8",
+  "#82ca9d",
+  "#ffc658",
+  "#ff7300",
+  "#0088FE",
+  "#00C49F",
+  "#AA336A",
+];
 
 const EMPTY_OBJ = Object.freeze({});
 
@@ -57,7 +73,6 @@ const selectSystemLastUpdated = (s) =>
 const slug = (s = "") =>
   s.toString().trim().replace(/\s+/g, "_").replace(/[^\w]/g, "");
 
-// Drag helpers (Group)
 const LS_ORDER_KEY = "hc_group_order";
 const normalizeOrder = (stored, names) => {
   const set = new Set(names);
@@ -66,8 +81,7 @@ const normalizeOrder = (stored, names) => {
   return [...base, ...missing];
 };
 
-// Drag helpers (Subsystem)
-const LS_SUB_ORDER_PREFIX = "hc_sub_order:"; // + slug(group)
+const LS_SUB_ORDER_PREFIX = "hc_sub_order:";
 const getSubOrderKey = (groupName) =>
   `${LS_SUB_ORDER_PREFIX}${slug(groupName)}`;
 const normalizeSubOrder = (stored, subNames) => {
@@ -77,189 +91,6 @@ const normalizeSubOrder = (stored, subNames) => {
   return [...base, ...missing];
 };
 
-// Build series NOK theo giờ (24h)
-const buildHourlySeries = (items) => {
-  const now = new Date();
-  const hours = [];
-  for (let i = 23; i >= 0; i--) {
-    const d = new Date(now.getTime() - i * 60 * 60 * 1000);
-    d.setMinutes(0, 0, 0);
-    hours.push(d);
-  }
-  const key = (d) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-      d.getDate()
-    ).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:00`;
-
-  const bucket = new Map(hours.map((d) => [key(d), 0]));
-
-  (items || []).forEach((it) => {
-    if (!it?.starttime) return;
-    const t = new Date(it.starttime);
-    if (isNaN(t.getTime())) return;
-    const h = new Date(t);
-    h.setMinutes(0, 0, 0);
-    const k = key(h);
-    const isNok = it.status === "NOK" || it.status === "Error";
-    if (isNok && bucket.has(k)) bucket.set(k, bucket.get(k) + 1);
-  });
-
-  return hours.map((d) => ({
-    hour: key(d).slice(11, 16), // HH:00
-    nok: bucket.get(key(d)) || 0,
-  }));
-};
-
-// ====== Chart ngoài dashboard (theo group) ======
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-const GroupNokChart = ({
-  platformList = [],
-  storeKey,
-  height = 160,
-  title,
-}) => {
-  const dispatch = useDispatch();
-
-  const byKeyItems = useSelector((s) => s.pscore?.hourlyByKey?.[storeKey]);
-  const byKeyLoading = useSelector(
-    (s) => s.pscore?.hourlyLoadingByKey?.[storeKey]
-  );
-
-  const byPlatform = useSelector((s) => s.pscore?.hourlyByPlatform || {});
-
-  const platformKey = useMemo(() => {
-    const set = new Set(platformList || []);
-    return JSON.stringify(Array.from(set).sort());
-  }, [platformList]);
-
-  useEffect(() => {
-    if (!platformList || platformList.length === 0 || !storeKey) return;
-    dispatch(
-      fetchPSCoreStatus({
-        platform: platformList,
-        page: 1,
-        page_size: 1000,
-        hours: 24,
-        option: "",
-        storeKey, // backfill 1 lần, realtime từ WS sẽ merge thêm
-      })
-    );
-  }, [dispatch, platformKey, storeKey, platformList]);
-
-  const items = useMemo(() => {
-    const out = [];
-    (platformList || []).forEach((p) => {
-      const arr = byPlatform[p] || [];
-      if (arr.length) out.push(...arr);
-    });
-    if (byKeyItems?.length) out.push(...byKeyItems);
-
-    const seen = new Set();
-    const dedup = [];
-    for (const it of out) {
-      if (!it?.starttime) continue;
-      const d = new Date(it.starttime);
-      if (isNaN(d.getTime())) continue;
-      d.setMinutes(0, 0, 0); // bucket theo giờ
-      const k = `${it.platform}|${it.host}|${d.toISOString()}`;
-      if (!seen.has(k)) {
-        seen.add(k);
-        dedup.push(it);
-      }
-    }
-    return dedup;
-  }, [platformList, byPlatform, byKeyItems]);
-
-  const hourlySeries = useMemo(() => buildHourlySeries(items), [items]);
-
-  const hourIndex = useMemo(() => {
-    const m = new Map();
-    (items || []).forEach((it) => {
-      if (!it?.starttime) return;
-      const t = new Date(it.starttime);
-      if (isNaN(t.getTime())) return;
-      const h = new Date(t);
-      h.setMinutes(0, 0, 0);
-      const label = String(h.getHours()).padStart(2, "0") + ":00";
-      const isNok = it.status === "NOK" || it.status === "Error";
-      if (!isNok) return;
-      if (!m.has(label)) m.set(label, []);
-      m.get(label).push(it);
-    });
-    return m;
-  }, [items]);
-
-  const loading = !!byKeyLoading;
-
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (!active || !payload || !payload.length) return null;
-    const arr = hourIndex.get(label) || [];
-    const uniqHosts = Array.from(new Set(arr.map((x) => x.host)));
-    const top = uniqHosts.slice(0, 6);
-    const more = uniqHosts.length - top.length;
-
-    return (
-      <div className="p-2 bg-white border rounded shadow-sm">
-        <div>
-          <strong>{label}</strong>
-        </div>
-        <div>NOK: {payload[0]?.value ?? 0}</div>
-        {top.map((h) => (
-          <div key={h} style={{ fontSize: "0.85rem" }}>
-            • {h}
-          </div>
-        ))}
-        {more > 0 && (
-          <div style={{ fontSize: "0.85rem" }}>+{more} node nữa…</div>
-        )}
-      </div>
-    );
-  };
-
-  return (
-    <div className="mb-2">
-      <div className="d-flex justify-content-between align-items-center mb-1">
-        <small className="text-muted">
-          {title || "NOK theo giờ (24h gần nhất)"}
-        </small>
-        {loading && <Spinner animation="border" size="sm" />}
-      </div>
-      <div style={{ width: "100%", height }}>
-        <ResponsiveContainer>
-          <LineChart
-            data={hourlySeries}
-            margin={{ top: 4, right: 8, bottom: 12, left: 12 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="hour" />
-            <YAxis allowDecimals={false} domain={[0, "dataMax + 1"]} />
-            <Tooltip content={<CustomTooltip />} />
-            <Line
-              dataKey="nok"
-              name="NOK"
-              stroke={NOK_BAR_COLOR} // tận dụng màu sẵn có
-              strokeWidth={2}
-              dot={{ r: 3 }} // chấm tại mỗi điểm
-              activeDot={{ r: 5 }} // chấm to hơn khi hover
-              // type="linear"           // (tuỳ chọn) giữ đường thẳng; bỏ thì mặc định cũng linear
-              // connectNulls            // (tuỳ chọn) nối qua điểm null
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-    </div>
-  );
-};
-
-// 🔹 Format ngày ngắn gọn dd/mm/yy
 const formatDateShort = (dateObj) => {
   const dd = String(dateObj.getDate()).padStart(2, "0");
   const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
@@ -267,21 +98,14 @@ const formatDateShort = (dateObj) => {
   return `${dd}/${mm}/${yy}`;
 };
 
-// 🔹 1 dòng cho tổng thể & group
 const renderLastUpdatedOneLine = (dateStr, small = false) => {
   if (!dateStr) return null;
   const dateObj = new Date(dateStr);
   const now = new Date();
   const diffHours = (now - dateObj) / (1000 * 60 * 60);
-
-  const display = `${formatDateShort(dateObj)} ${dateObj.toLocaleTimeString(
-    [],
-    { hour: "2-digit", minute: "2-digit" }
-  )}`;
-
+  const display = `${formatDateShort(dateObj)} ${dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
   const textColor = diffHours > 24 ? "text-danger" : "text-muted";
   const fontSize = small ? "0.75rem" : "0.85rem";
-
   return (
     <span className={textColor} style={{ fontSize }}>
       {display}
@@ -289,29 +113,573 @@ const renderLastUpdatedOneLine = (dateStr, small = false) => {
   );
 };
 
-// 🔹 2 dòng cho subsystem
-const renderLastUpdatedTwoLines = (dateStr, small = false) => {
-  if (!dateStr) return null;
-  const dateObj = new Date(dateStr);
-  const now = new Date();
-  const diffHours = (now - dateObj) / (1000 * 60 * 60);
+// ====== HELPER: Xử lý dữ liệu chi tiết từng PHÚT (Hỗ trợ biến thiên số giờ) ======
+const buildMinuteSeries = (
+  items,
+  platformList,
+  excludedHostsSet,
+  hours = 24,
+) => {
+  const safePlatforms = Array.isArray(platformList) ? platformList : [];
 
-  const textColor = diffHours > 24 ? "text-danger" : "text-muted";
-  const fontSize = small ? "0.75rem" : "0.85rem";
+  const now = new Date();
+  now.setHours(now.getHours() + 2); // Bù giờ server
+
+  const points = [];
+  const totalMinutes = hours * 60; // Tính tổng số phút dựa trên biến hours
+
+  for (let i = totalMinutes - 1; i >= 0; i--) {
+    const d = new Date(now.getTime() - i * 60 * 1000);
+    d.setSeconds(0, 0);
+    points.push(d);
+  }
+
+  const key = (d) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+      d.getDate(),
+    ).padStart(
+      2,
+      "0",
+    )} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+
+  const bucket = new Map(
+    points.map((d) => [
+      key(d),
+      {
+        totalSet: new Set(),
+        platformSets: safePlatforms.reduce(
+          (acc, p) => ({ ...acc, [p]: new Set() }),
+          {},
+        ),
+      },
+    ]),
+  );
+
+  (items || []).forEach((it) => {
+    if (!it?.starttime || !it?.host) return;
+
+    const t = new Date(it.starttime);
+    if (isNaN(t.getTime())) return;
+
+    const m = new Date(t);
+    m.setSeconds(0, 0);
+    const k = key(m);
+
+    // 🔥 Đảm bảo thiết bị đó không bị excluded
+    const hostKey = (it.host || "").toString().trim().toLowerCase();
+    const isExcluded =
+      it.excluded === true ||
+      (excludedHostsSet && excludedHostsSet.has(hostKey));
+
+    const isNok = (it.status === "NOK" || it.status === "Error") && !isExcluded;
+
+    if (!isNok) return;
+
+    if (bucket.has(k)) {
+      const entry = bucket.get(k);
+      if (entry) {
+        entry.totalSet.add(it.host);
+        const pKey = (it.platform || "").toString().trim();
+        if (entry.platformSets[pKey]) {
+          entry.platformSets[pKey].add(it.host);
+        }
+      }
+    }
+  });
+
+  return points.map((d) => {
+    const k = key(d);
+    const entry = bucket.get(k);
+    const row = {
+      time: k.slice(11, 16),
+      Total: entry ? entry.totalSet.size : 0,
+    };
+    safePlatforms.forEach((p) => {
+      row[p] = entry && entry.platformSets[p] ? entry.platformSets[p].size : 0;
+    });
+    return row;
+  });
+};
+
+// ====== COMPONENT: BIỂU ĐỒ ======
+const GroupNokChart = ({
+  platformList = [],
+  storeKey,
+  height = 130, // Chiều cao mặc định ban đầu từ prop
+  title,
+  excludedHostsSet,
+  onExpand,
+}) => {
+  const dispatch = useDispatch();
+  const [hiddenKeys, setHiddenKeys] = useState(new Set());
+
+  // Quản lý khoảng thời gian xem biểu đồ (Mặc định 24h)
+  const [timeRange, setTimeRange] = useState(24);
+
+  // Quản lý co giãn trục Y (Bắt đầu từ 0 hoặc Tự động cắt đáy)
+  const [yAxisScale, setYAxisScale] = useState("zero");
+
+  // 🔥 STATE MỚI: Quản lý kích thước (chiều cao vật lý) của biểu đồ
+  const [chartHeight, setChartHeight] = useState(height);
+
+  // Đồng bộ lại chiều cao nếu component cha truyền prop mới (VD: Mở Modal)
+  useEffect(() => {
+    setChartHeight(height);
+  }, [height]);
+
+  const byKeyItems = useSelector((s) => s.pscore?.hourlyByKey?.[storeKey]);
+  const byKeyLoading = useSelector(
+    (s) => s.pscore?.hourlyLoadingByKey?.[storeKey],
+  );
+  const byPlatform = useSelector((s) => s.pscore?.hourlyByPlatform || {});
+
+  const safePlatformList = useMemo(
+    () => (Array.isArray(platformList) ? platformList : []),
+    [platformList],
+  );
+
+  const items = useMemo(() => {
+    const out = [];
+    safePlatformList.forEach((p) => {
+      const arr = byPlatform[p] || [];
+      if (arr.length) out.push(...arr);
+    });
+    if (byKeyItems?.length) out.push(...byKeyItems);
+    return out;
+  }, [safePlatformList, byPlatform, byKeyItems]);
+
+  const chartData = useMemo(
+    () =>
+      buildMinuteSeries(items, safePlatformList, excludedHostsSet, timeRange),
+    [items, safePlatformList, excludedHostsSet, timeRange],
+  );
+
+  const platformKey = useMemo(
+    () => JSON.stringify(safePlatformList.slice().sort()),
+    [safePlatformList],
+  );
+
+  useEffect(() => {
+    if (!safePlatformList.length || !storeKey) return;
+    dispatch(
+      fetchPSCoreStatus({
+        platform: safePlatformList,
+        page: 1,
+        page_size: 2000,
+        hours: 24,
+        option: "",
+        storeKey,
+      }),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch, platformKey, storeKey]);
+
+  const loading = !!byKeyLoading;
+
+  const handleLegendClick = (e) => {
+    const { dataKey } = e;
+    setHiddenKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(dataKey)) next.delete(dataKey);
+      else next.add(dataKey);
+      return next;
+    });
+  };
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (!active || !payload || !payload.length) return null;
+    const visiblePayload = payload.filter((p) => !hiddenKeys.has(p.dataKey));
+    if (visiblePayload.length === 0) return null;
+    const hasError = visiblePayload.some((p) => p.value > 0);
+    if (!hasError) return null;
+
+    return (
+      <div
+        className="p-2 bg-white border rounded shadow-sm"
+        style={{ fontSize: "0.75rem", minWidth: "120px", zIndex: 1000 }}
+      >
+        <div className="fw-bold mb-1 border-bottom pb-1">{label}</div>
+        {visiblePayload.map((entry) => {
+          if (entry.name !== "Total" && entry.value === 0) return null;
+          return (
+            <div
+              key={entry.name}
+              style={{
+                color: entry.color,
+                display: "flex",
+                justifyContent: "space-between",
+              }}
+            >
+              <span>{entry.name}:</span>
+              <span className="fw-bold ms-2">{entry.value}</span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const tickInterval = timeRange === 3 ? 29 : timeRange === 6 ? 59 : 119;
 
   return (
-    <div
-      className={`d-flex flex-column ${textColor}`}
-      style={{ fontSize, lineHeight: "1.1rem" }}
-    >
-      <span>{formatDateShort(dateObj)}</span>
-      <span>
-        {dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-      </span>
+    <div className="mb-0 w-100">
+      <div className="d-flex justify-content-between align-items-center mb-1">
+        <small className="text-muted fw-bold" style={{ fontSize: "0.75rem" }}>
+          {title || ""}
+        </small>
+
+        {/* THANH CÔNG CỤ TỔNG HỢP */}
+        <div className="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+          {loading && (
+            <Spinner
+              animation="border"
+              size="sm"
+              variant="primary"
+              style={{ width: "0.8rem", height: "0.8rem" }}
+            />
+          )}
+
+          {/* 🔥 NHÓM NÚT [+] VÀ [-] ĐỂ THAY ĐỔI CHIỀU CAO BIỂU ĐỒ */}
+          <div className="btn-group shadow-sm" role="group">
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold"
+              style={{ fontSize: "0.75rem" }}
+              title="Giảm chiều cao biểu đồ"
+              onClick={(e) => {
+                e.stopPropagation();
+                // Giới hạn chiều cao tối thiểu là 100px để không bị méo mất đồ thị
+                setChartHeight((prev) => Math.max(100, prev - 40));
+              }}
+            >
+              -
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-secondary py-0 px-2 fw-bold"
+              style={{ fontSize: "0.75rem" }}
+              title="Tăng chiều cao biểu đồ"
+              onClick={(e) => {
+                e.stopPropagation();
+                setChartHeight((prev) => prev + 40);
+              }}
+            >
+              +
+            </button>
+          </div>
+
+          <button
+            type="button"
+            className={`btn btn-sm py-0 px-2 ${
+              yAxisScale === "auto"
+                ? "btn-info text-white fw-bold"
+                : "btn-outline-secondary"
+            }`}
+            style={{ fontSize: "0.65rem" }}
+            title={
+              yAxisScale === "auto"
+                ? "Trục Y đang tự động co giãn"
+                : "Trục Y bắt đầu từ 0"
+            }
+            onClick={(e) => {
+              e.stopPropagation();
+              setYAxisScale(yAxisScale === "auto" ? "zero" : "auto");
+            }}
+          >
+            ↕ Y-Zoom
+          </button>
+
+          <div className="btn-group shadow-sm" role="group">
+            {[3, 6, 12, 24].map((hr) => (
+              <button
+                key={hr}
+                type="button"
+                className={`btn btn-sm py-0 px-2 ${
+                  timeRange === hr
+                    ? "btn-primary fw-bold"
+                    : "btn-outline-secondary"
+                }`}
+                style={{ fontSize: "0.65rem" }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setTimeRange(hr);
+                }}
+              >
+                {hr}h
+              </button>
+            ))}
+          </div>
+
+          {onExpand && (
+            <button
+              type="button"
+              className="btn btn-sm btn-light border py-0 px-1 text-secondary"
+              title="Phóng to biểu đồ"
+              style={{ lineHeight: 1 }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onExpand();
+              }}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="currentColor"
+              >
+                <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 🔥 Thay đổi height từ prop sang state chartHeight */}
+      <div
+        style={{
+          width: "100%",
+          height: chartHeight,
+          transition: "height 0.2s ease-in-out",
+        }}
+      >
+        <ResponsiveContainer>
+          <LineChart
+            data={chartData}
+            margin={{
+              top: 5,
+              right: 10,
+              bottom: chartHeight > 150 ? 5 : 0,
+              left: -25,
+            }}
+          >
+            <CartesianGrid
+              strokeDasharray="3 3"
+              vertical={false}
+              stroke="#f0f0f0"
+            />
+            <XAxis
+              dataKey="time"
+              tick={{ fontSize: 9 }}
+              interval={tickInterval}
+              minTickGap={15}
+              tickLine={false}
+              axisLine={false}
+            />
+            <YAxis
+              allowDecimals={false}
+              tick={{ fontSize: 9 }}
+              domain={yAxisScale === "auto" ? ["dataMin", "auto"] : [0, "auto"]}
+              tickLine={false}
+              axisLine={false}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend
+              iconType="circle"
+              iconSize={8}
+              height={20}
+              onClick={handleLegendClick}
+              wrapperStyle={{
+                fontSize: "10px",
+                paddingTop: "0px",
+                cursor: "pointer",
+                userSelect: "none",
+              }}
+              formatter={(value, entry) => (
+                <span
+                  style={{
+                    color: hiddenKeys.has(entry.dataKey) ? "#ccc" : "#333",
+                    textDecoration: hiddenKeys.has(entry.dataKey)
+                      ? "line-through"
+                      : "none",
+                  }}
+                >
+                  {value}
+                </span>
+              )}
+            />
+            <Line
+              type="monotone"
+              dataKey="Total"
+              stroke="#dc3545"
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4 }}
+              name="Total"
+              isAnimationActive={false}
+              hide={hiddenKeys.has("Total")}
+            />
+            {safePlatformList.map((p, idx) => (
+              <Line
+                key={p}
+                type="monotone"
+                dataKey={p}
+                stroke={LINE_COLORS[idx % LINE_COLORS.length]}
+                strokeWidth={1.5}
+                dot={false}
+                activeDot={{ r: 3 }}
+                name={p}
+                connectNulls
+                isAnimationActive={false}
+                hide={hiddenKeys.has(p)}
+              />
+            ))}
+
+            {/* Thanh kéo ngang tự động hiển thị khi chiều cao lớn hơn 150 */}
+            {chartHeight > 150 && (
+              <Brush
+                dataKey="time"
+                height={15}
+                stroke="#0d6efd"
+                fill="#f8f9fa"
+                tickFormatter={() => ""}
+              />
+            )}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 };
 
+// ====== COMPONENT CON: Thẻ Subsystem (Tối ưu Re-render & Flash) ======
+const SubsystemChip = React.memo(
+  ({
+    subsystemLabel,
+    groupName,
+    childData,
+    updatedTimestamp,
+    onSubDragStart,
+    onSubDragEnd,
+    onSubDragOver,
+    onSubDrop,
+    handleSubsystemClick,
+    openSubsystemDetailInNewTab,
+    subsFromSchema,
+  }) => {
+    const [isFlashing, setIsFlashing] = useState(false);
+
+    // Lắng nghe sự thay đổi của timestamp để kích hoạt chớp sáng, sau 3s tự tắt
+    useEffect(() => {
+      if (!updatedTimestamp) return;
+      setIsFlashing(true);
+      const timer = setTimeout(() => {
+        setIsFlashing(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }, [updatedTimestamp]);
+
+    const rawStatus = childData.status || "Unknown";
+    const statusKey = rawStatus.toLowerCase();
+
+    const isNok = statusKey === "error" || statusKey === "nok";
+    const isWarning = statusKey === "warning";
+    const isNormal = statusKey === "normal" || statusKey === "ok";
+
+    // Giữ nguyên dải màu chuẩn theo trạng thái
+    let bgColor = "#f8f9fa",
+      borderColor = "#dee2e6",
+      textColor = "#6c757d",
+      dotColor = "#6c757d";
+    if (isNok) {
+      bgColor = "#fee2e2";
+      borderColor = "#dc3545";
+      textColor = "#b02a37";
+      dotColor = "#dc3545";
+    } else if (isWarning) {
+      bgColor = "#fff7e6";
+      borderColor = "#ffca2c";
+      textColor = "#997404";
+      dotColor = "#ffca2c";
+    } else if (isNormal) {
+      bgColor = "#f0fff4";
+      borderColor = "#d1e7dd";
+      textColor = "#0f5132";
+      dotColor = "#198754";
+    }
+
+    // Nếu đang flash, ta làm hiệu ứng pulse (nhấn mạnh màu viền/bóng) thay vì đổi hẳn sang màu Vàng
+    const flashStyle = isFlashing
+      ? {
+          boxShadow: `0 0 8px ${borderColor}`,
+          transform: "scale(1.02)",
+          fontWeight: "bold",
+          filter: "brightness(0.95)",
+        }
+      : {};
+
+    return (
+      <div
+        className="d-flex align-items-center border rounded px-1 shadow-sm"
+        style={{
+          backgroundColor: bgColor,
+          borderColor: borderColor,
+          color: textColor,
+          cursor: "pointer",
+          fontSize: "0.75rem",
+          transition: "all 0.3s ease",
+          borderWidth: "1px",
+          ...flashStyle, // Áp dụng hiệu ứng chớp
+        }}
+        draggable
+        onDragStart={(e) => onSubDragStart(groupName, subsystemLabel, e)}
+        onDragEnd={onSubDragEnd}
+        onDragOver={(e) => onSubDragOver(groupName, subsystemLabel, e)}
+        onDrop={(e) => onSubDrop(groupName, subsystemLabel, e)}
+        onClick={() =>
+          handleSubsystemClick(
+            groupName,
+            subsystemLabel,
+            subsFromSchema[subsystemLabel] || [],
+          )
+        }
+        title={`Status: ${rawStatus} | OK: ${childData.ok_count || 0} | NOK: ${childData.nok_count || 0} | Exc: ${childData.excluded_count || 0}`}
+      >
+        <span
+          className="me-1"
+          style={{
+            width: "8px",
+            height: "8px",
+            borderRadius: "50%",
+            backgroundColor: isFlashing ? "transparent" : dotColor, // Chớp tắt dấu chấm
+            border: isFlashing ? `2px solid ${dotColor}` : "none",
+            display: "inline-block",
+          }}
+        ></span>
+        <span className="fw-semibold">{subsystemLabel}</span>
+
+        {childData.nok_count > 0 && (
+          <span
+            className="badge ms-1 py-0 px-1"
+            style={{
+              fontSize: "0.65em",
+              backgroundColor: "#dc3545",
+              color: "white",
+            }}
+          >
+            {childData.nok_count}
+          </span>
+        )}
+
+        <span
+          role="button"
+          className="ms-2 ps-1 border-start border-secondary opacity-50 hover-opacity-100"
+          title="Open Subsystem in New Tab"
+          onClick={(e) => {
+            e.stopPropagation();
+            openSubsystemDetailInNewTab(groupName, subsystemLabel);
+          }}
+          style={{ lineHeight: 0, cursor: "pointer" }}
+        >
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+            <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z" />
+          </svg>
+        </span>
+      </div>
+    );
+  },
+);
+
+// ====== COMPONENT CHÍNH ======
 const SystemHealth = () => {
   useScheduleWebSocket();
   const dispatch = useDispatch();
@@ -324,36 +692,259 @@ const SystemHealth = () => {
   const recentlyUpdated = useSelector(selectRecentlyUpdated);
   const systemLastUpdated = useSelector(selectSystemLastUpdated);
 
+  const scheduledTasks = useSelector((s) => s.pscore?.scheduledTasks || []);
+  // Dòng cũ:
+  // const latestItems = useSelector((s) => s.pscore?.lastestitems || []);
+
+  // Dòng mới:
+  const latestItems = useSelector((s) => s.pscore?.globalLatestItems || []);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedSubsystem, setSelectedSubsystem] = useState(null);
-
-  // group/subsystem hidden (chỉ trên trang hiện tại)
   const [hiddenGroups, setHiddenGroups] = useState(() => new Set());
-  const [hiddenSubsMap, setHiddenSubsMap] = useState({}); // { [group]: Set<string> }
-
-  // order group
+  const [hiddenSubsMap, setHiddenSubsMap] = useState({});
   const [groupOrder, setGroupOrder] = useState([]);
   const [draggingGroup, setDraggingGroup] = useState(null);
   const [dragOverGroup, setDragOverGroup] = useState(null);
-
-  // order subsystem
-  const [subOrderMap, setSubOrderMap] = useState({}); // { [group]: string[] }
-  const [draggingSub, setDraggingSub] = useState(null); // { group, sub }
-  const [dragOverSub, setDragOverSub] = useState(null); // { group, sub }
+  const [subOrderMap, setSubOrderMap] = useState({});
+  const [draggingSub, setDraggingSub] = useState(null);
+  const [dragOverSub, setDragOverSub] = useState(null);
 
   useEffect(() => {
     dispatch(fetchPlatformGroupSchema());
     dispatch(fetchSystemStatus());
+    dispatch(fetchHealthcheckSchedules());
+    dispatch(
+      fetchLatestHealthcheckView({
+        page_size: 5000,
+        option: "latest-per-host",
+      }),
+    );
   }, [dispatch]);
 
-  // Danh sách group từ data
+  // 🔥 THÊM USE-EFFECT NÀY VÀO BẤT KỲ ĐÂU BÊN TRONG COMPONENT
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      // Nếu có tab nào đó thay đổi biến 'cross_tab_sync_exclude'
+      if (e.key === "cross_tab_sync_exclude" && e.newValue) {
+        try {
+          const data = JSON.parse(e.newValue);
+          if (data && data.host) {
+            // Cập nhật Redux của Tab Này ngay lập tức!
+            dispatch(
+              syncDeviceExcluded({ host: data.host, excluded: data.excluded }),
+            );
+          }
+        } catch (err) {
+          console.error("Lỗi đồng bộ tab:", err);
+        }
+      }
+    };
+
+    // Đăng ký lắng nghe sự kiện Storage của trình duyệt
+    window.addEventListener("storage", handleStorageChange);
+
+    // Dọn dẹp khi đóng tab
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [dispatch]);
+
+  // Tạo tập hợp Excluded Hosts để truyền cho Chart (Ép viết thường để đồng bộ)
+  const excludedHostsSet = useMemo(() => {
+    const set = new Set();
+    (latestItems || []).forEach((it) => {
+      if (it.excluded && it.host) {
+        set.add(it.host.trim().toLowerCase());
+      }
+    });
+    return set;
+  }, [latestItems]);
+
+  // 🔥 4. MEMO CALCULATIONS (ĐÃ FIX: LẤY SCHEDULE LÀM GỐC)
+  const calculatedSystemStatus = useMemo(() => {
+    const safeTasks = Array.isArray(scheduledTasks) ? scheduledTasks : [];
+    const safeItems = Array.isArray(latestItems) ? latestItems : [];
+
+    // Trả về dữ liệu gốc nếu chưa load xong
+    if (!systemStatus || Object.keys(systemStatus).length === 0) {
+      return systemStatus || {};
+    }
+
+    const newStatus = JSON.parse(JSON.stringify(systemStatus));
+
+    // A. Reset các biến đếm an toàn
+    Object.keys(newStatus).forEach((gName) => {
+      if (!newStatus[gName] || typeof newStatus[gName] !== "object") return;
+
+      newStatus[gName]._original_status = newStatus[gName].status; // Lưu lại phòng hờ
+      newStatus[gName].ok_count = 0;
+      newStatus[gName].nok_count = 0;
+      newStatus[gName].excluded_count = 0;
+      newStatus[gName].total_devices = 0;
+
+      if (
+        newStatus[gName].children &&
+        typeof newStatus[gName].children === "object"
+      ) {
+        Object.keys(newStatus[gName].children).forEach((sName) => {
+          const sub = newStatus[gName].children[sName];
+          if (!sub || typeof sub !== "object") return;
+
+          sub._original_status = sub.status;
+          sub.ok_count = 0;
+          sub.nok_count = 0;
+          sub.excluded_count = 0;
+          sub.total_devices = 0;
+          sub.status = "Unknown"; // Tạm để Unknown
+        });
+      }
+    });
+
+    // B. Tạo TỪ ĐIỂN kết quả Healthcheck để tra cứu siêu tốc O(1)
+    const itemsMap = {};
+    safeItems.forEach((item) => {
+      if (item && item.host) {
+        // Lowercase để chống lỗi do hoa/thường (VD: SBCO1A vs sbco1a)
+        itemsMap[item.host.trim().toLowerCase()] = item;
+      }
+    });
+
+    // C. Dịch ngược Schema: cs_mss -> CS Core / MSS
+    const reverseMap = {};
+    if (platformSchema) {
+      Object.keys(platformSchema).forEach((gName) => {
+        const subs = platformSchema[gName];
+        if (subs) {
+          Object.keys(subs).forEach((sName) => {
+            const plats = subs[sName];
+            if (Array.isArray(plats)) {
+              plats.forEach((p) => {
+                reverseMap[p.trim().toLowerCase()] = {
+                  group: gName,
+                  sub: sName,
+                };
+              });
+            }
+          });
+        }
+      });
+    }
+
+    // D. QUÉT QUA SCHEDULE (LẤY LỊCH LÀM GỐC CHUẨN)
+    safeTasks.forEach((task) => {
+      if (!task.enabled || !Array.isArray(task.node_names) || !task.platform)
+        return;
+
+      const platformKey = task.platform.trim().toLowerCase();
+      let mapping = reverseMap[platformKey];
+
+      // Fallback: Tìm trực tiếp trong newStatus nếu Schema chưa map
+      if (!mapping) {
+        for (const gKey of Object.keys(newStatus)) {
+          if (
+            newStatus[gKey]?.children &&
+            typeof newStatus[gKey].children === "object"
+          ) {
+            const foundSub = Object.keys(newStatus[gKey].children).find(
+              (k) => k.toLowerCase() === platformKey,
+            );
+            if (foundSub) {
+              mapping = { group: gKey, sub: foundSub };
+              break;
+            }
+          }
+        }
+      }
+
+      // NẾU TÌM THẤY CHỖ ĐỂ ĐIỀN DỮ LIỆU
+      if (mapping) {
+        const groupObj = newStatus[mapping.group];
+        const subObj = groupObj?.children?.[mapping.sub];
+
+        if (
+          groupObj &&
+          typeof groupObj === "object" &&
+          subObj &&
+          typeof subObj === "object"
+        ) {
+          task.node_names.forEach((nodeName) => {
+            if (!nodeName) return;
+
+            // 1. CHẮC CHẮN CỘNG TOTAL DEVICES VÌ NÓ NẰM TRONG SCHEDULE
+            subObj.total_devices += 1;
+            groupObj.total_devices += 1;
+
+            // 2. Tra cứu trong Từ điển Healthcheck xem kết quả là gì
+            const hostKey = nodeName.trim().toLowerCase();
+            const record = itemsMap[hostKey];
+
+            if (record) {
+              if (record.excluded === true) {
+                subObj.excluded_count += 1;
+                groupObj.excluded_count += 1;
+              } else if (record.status === "OK" || record.status === "Normal") {
+                subObj.ok_count += 1;
+                groupObj.ok_count += 1;
+              } else {
+                // Các trạng thái NOK, Error, Warning, Timeout...
+                subObj.nok_count += 1;
+                groupObj.nok_count += 1;
+              }
+            }
+            // (Nếu không có record -> Node này được lên lịch nhưng chưa chạy bao giờ -> Kệ, chỉ tính vào Total)
+          });
+        }
+      }
+    });
+
+    // E. CẬP NHẬT LẠI TRẠNG THÁI (STATUS) SAU KHI CỘNG DỒN
+    Object.keys(newStatus).forEach((gName) => {
+      const g = newStatus[gName];
+      if (!g || typeof g !== "object") return;
+
+      // Tính cho Group
+      if (g.total_devices > 0) {
+        // Nếu có NOK -> Warning. Nếu ko có NOK, nhưng có OK/Exclude -> Normal. Cả 3 bằng 0 -> Unknown
+        g.status =
+          g.nok_count > 0
+            ? "Warning"
+            : g.ok_count > 0 || g.excluded_count > 0
+              ? "Normal"
+              : "Unknown";
+      } else {
+        // Không có thiết bị nào trong Schedule -> Trả về gốc
+        g.status = g._original_status || "Unknown";
+      }
+
+      // Tính cho Subsystem
+      if (g.children && typeof g.children === "object") {
+        Object.keys(g.children).forEach((sName) => {
+          const s = g.children[sName];
+          if (s && typeof s === "object") {
+            if (s.total_devices > 0) {
+              s.status =
+                s.nok_count > 0
+                  ? "Error"
+                  : s.ok_count > 0 || s.excluded_count > 0
+                    ? "Normal"
+                    : "Unknown";
+            } else {
+              s.status = s._original_status || "Unknown";
+            }
+          }
+        });
+      }
+    });
+
+    return newStatus;
+  }, [scheduledTasks, latestItems, systemStatus, platformSchema]);
+
+  const displayData = calculatedSystemStatus;
+
   const groupNames = useMemo(() => {
     const ks = Object.keys(platformSchema || {});
     if (ks.length) return ks;
     return Object.keys(systemStatus || {});
   }, [platformSchema, systemStatus]);
 
-  // ===== Khởi tạo/đồng bộ thứ tự group từ localStorage
   useEffect(() => {
     try {
       const raw = localStorage.getItem(LS_ORDER_KEY);
@@ -366,7 +957,6 @@ const SystemHealth = () => {
     }
   }, [groupNames]);
 
-  // Lưu thứ tự group khi đổi
   useEffect(() => {
     try {
       if (groupOrder?.length)
@@ -374,7 +964,6 @@ const SystemHealth = () => {
     } catch {}
   }, [groupOrder]);
 
-  // ===== Tính map group -> danh sách subsystem hiện có
   const groupSubNamesMap = useMemo(() => {
     const out = {};
     for (const groupName of groupNames) {
@@ -389,7 +978,6 @@ const SystemHealth = () => {
     return out;
   }, [groupNames, platformSchema, systemStatus]);
 
-  // ===== Khởi tạo/đồng bộ thứ tự subsystem theo group
   useEffect(() => {
     try {
       const next = {};
@@ -426,7 +1014,6 @@ const SystemHealth = () => {
     dispatch(fetchSystemStatus());
   };
 
-  // 🔗 Solo group/subsystem: ưu tiên param, fallback query
   const soloGroup = useMemo(() => {
     const fromParam = groupParam ? decodeURIComponent(groupParam) : null;
     const fromQuery = new URLSearchParams(location.search).get("group");
@@ -445,7 +1032,6 @@ const SystemHealth = () => {
     return base.filter((g) => !hiddenGroups.has(g));
   }, [groupNames, soloGroup, hiddenGroups]);
 
-  // Áp thứ tự kéo-thả lên danh sách hiển thị
   const orderedVisibleGroups = useMemo(() => {
     const set = new Set(visibleGroupNames);
     const ordered = groupOrder.filter((g) => set.has(g));
@@ -453,7 +1039,6 @@ const SystemHealth = () => {
     return [...ordered, ...missing];
   }, [groupOrder, visibleGroupNames]);
 
-  // 🔗 Mở tab mới (group)
   const openGroupInNewTab = (groupName) => {
     const encoded = encodeURIComponent(groupName);
     const targetPath = `/healthcheck/${encoded}`;
@@ -466,23 +1051,19 @@ const SystemHealth = () => {
     window.open(absoluteUrl, "_blank", "noopener,noreferrer");
   };
 
-  // 🔗 Mở tab mới (subsystem) hiển thị trang chi tiết như modal
   const openSubsystemDetailInNewTab = (groupName, subsystemLabel) => {
     const g = encodeURIComponent(groupName);
     const s = encodeURIComponent(subsystemLabel);
     const targetPath = `/healthcheck/${g}/${s}?detail=1`;
-
     const origin = window.location.origin;
     const basePath = window.location.pathname.replace(/\/$/, "");
     const isHashRouter = (window.location.hash || "").startsWith("#/");
-
     const absoluteUrl = isHashRouter
       ? `${origin}${basePath}#${targetPath}`
       : `${origin}${targetPath}`;
     window.open(absoluteUrl, "_blank", "noopener,noreferrer");
   };
 
-  // 🔄 Refresh nhanh 1 group (summary + chart 24h)
   const refreshGroup = (groupName) => {
     dispatch(fetchSystemStatusByGroup(groupName));
     const platforms = groupPlatformsMap[groupName] || [];
@@ -495,12 +1076,11 @@ const SystemHealth = () => {
           hours: 24,
           option: "",
           storeKey: `hourly_${slug(groupName)}_group`,
-        })
+        }),
       );
     }
   };
 
-  // ✖ Ẩn 1 group
   const hideGroup = (groupName) => {
     setHiddenGroups((prev) => {
       const next = new Set(prev);
@@ -509,7 +1089,6 @@ const SystemHealth = () => {
     });
   };
 
-  // ✖ Ẩn 1 subsystem
   const hideSubsystem = (groupName, subsystem) => {
     setHiddenSubsMap((prev) => {
       const next = { ...prev };
@@ -520,7 +1099,6 @@ const SystemHealth = () => {
     });
   };
 
-  // ====== Drag & Drop (Group)
   const onDragStart = (group, e) => {
     setDraggingGroup(group);
     try {
@@ -559,7 +1137,6 @@ const SystemHealth = () => {
     setDraggingGroup(null);
   };
 
-  // ====== Drag & Drop (Subsystem)
   const onSubDragStart = (group, sub, e) => {
     setDraggingSub({ group, sub });
     try {
@@ -618,7 +1195,6 @@ const SystemHealth = () => {
     setDraggingSub(null);
   };
 
-  // ===== Detail mode: khi có ?detail=1 → render trang chi tiết thay vì danh sách
   const isSubDetail = useMemo(() => {
     const qp = new URLSearchParams(location.search);
     return !!(soloGroup && soloSubsystem && qp.get("detail") === "1");
@@ -628,6 +1204,7 @@ const SystemHealth = () => {
     return platformSchema?.[soloGroup]?.[soloSubsystem] || [];
   }, [platformSchema, soloGroup, soloSubsystem]);
 
+  // RENDER DETAIL TAB
   if (isSubDetail) {
     return (
       <>
@@ -650,11 +1227,10 @@ const SystemHealth = () => {
           {detailPlatforms.length > 0 && (
             <GroupNokChart
               platformList={detailPlatforms}
-              storeKey={`hourly_${slug(soloGroup)}_${slug(
-                soloSubsystem
-              )}_detail`}
+              storeKey={`hourly_${slug(soloGroup)}_${slug(soloSubsystem)}_detail`}
               height={220}
               title={`NOK theo giờ (24h): ${soloGroup} / ${soloSubsystem}`}
+              excludedHostsSet={excludedHostsSet} // Truyền cờ exclude
             />
           )}
 
@@ -669,9 +1245,7 @@ const SystemHealth = () => {
     );
   }
 
-  // icon buttons: icon-only, không viền, KHÔNG màu (đã dùng styles.iconBtn)
-  const iconBtnClass = "p-1 border-0 bg-transparent text-decoration-none"; // (không còn dùng, nhưng giữ nếu nơi khác còn dùng)
-
+  // RENDER DASHBOARD
   return (
     <>
       <TopNavbarHealth />
@@ -681,7 +1255,6 @@ const SystemHealth = () => {
       <div className={styles.container}>
         <Row>
           <Col md={12}>
-            {/* ✅ Tổng thể 1 dòng */}
             {systemLastUpdated && (
               <div className="text-end mb-2" style={{ fontSize: "0.9rem" }}>
                 Last updated: {renderLastUpdatedOneLine(systemLastUpdated)}
@@ -700,7 +1273,7 @@ const SystemHealth = () => {
 
             <Row>
               {orderedVisibleGroups.map((groupName) => {
-                const groupData = systemStatus[groupName] || {};
+                const groupData = displayData[groupName] || {};
                 const groupStatus = groupData.status || "Unknown";
                 const groupChildren = groupData.children || {};
                 const cardClass = cardClassMapping[groupName] || "";
@@ -708,426 +1281,244 @@ const SystemHealth = () => {
                 const subsFromSchema = platformSchema[groupName] || {};
                 const subsystems =
                   Object.keys(subsFromSchema).length > 0
-                    ? subsFromSchema // { subsystem: [platforms] }
-                    : groupChildren; // { subsystem: {status, ...} }
-
+                    ? subsFromSchema
+                    : groupChildren;
                 const groupPlatforms = groupPlatformsMap[groupName] || [];
-                const colMd = soloGroup ? 12 : 6;
 
-                const highlightStyle =
-                  dragOverGroup === groupName
-                    ? { boxShadow: "inset 0 0 0 2px #0d6efd" }
-                    : {};
-
-                // ===== Subsystem ordering + filtering (hidden + solo)
                 const rawSubNames = Object.keys(subsystems);
                 const hiddenSet = hiddenSubsMap[groupName] || new Set();
                 const subNamesVisible = rawSubNames.filter(
                   (s) =>
                     !hiddenSet.has(s) &&
                     (!(soloSubsystem && soloGroup === groupName) ||
-                      s === soloSubsystem)
+                      s === soloSubsystem),
                 );
                 const subOrder = subOrderMap[groupName] || rawSubNames;
                 const orderedSubs = (() => {
                   const set = new Set(subNamesVisible);
                   const base = subOrder.filter((s) => set.has(s));
                   const missing = subNamesVisible.filter(
-                    (s) => !base.includes(s)
+                    (s) => !base.includes(s),
                   );
                   return [...base, ...missing];
                 })();
 
+                const highlightStyle =
+                  dragOverGroup === groupName
+                    ? { boxShadow: "inset 0 0 0 2px #0d6efd" }
+                    : {};
+                const gridProps = soloGroup
+                  ? { md: 12, lg: 12, xl: 12 }
+                  : { md: 12, lg: 6, xl: 6 };
+
                 return (
-                  <Col md={colMd} key={groupName} className="mb-4">
+                  <Col {...gridProps} key={groupName} className="mb-3">
                     <Card
-                      className={`shadow ${styles.cardCommon} ${cardClass}`}
-                      style={highlightStyle}
+                      className={`shadow-sm ${styles.cardCommon} ${cardClass}`}
+                      style={{ ...highlightStyle, border: "1px solid #dee2e6" }}
                       onDragOver={(e) => onDragOver(groupName, e)}
                       onDrop={(e) => onDrop(groupName, e)}
                       onDragEnter={(e) => onDragOver(groupName, e)}
                     >
-                      <Card.Body className="p-4">
-                        <div className="d-flex align-items-center justify-content-between mb-3">
-                          <div className="d-flex align-items-center gap-2">
-                            <h5 className="mb-0 fw-bold fs-4">{groupName}</h5>
-                            {/* Drag handle (Group) */}
+                      <Card.Body className="p-2 d-flex flex-column h-100">
+                        {/* HEADER */}
+                        <div className="d-flex align-items-center justify-content-between mb-2">
+                          <div className="d-flex align-items-center gap-2 overflow-hidden">
                             {!soloGroup && (
                               <span
                                 role="button"
-                                title="Kéo để đổi vị trí group"
                                 draggable
                                 onDragStart={(e) => onDragStart(groupName, e)}
                                 onDragEnd={onDragEnd}
-                                style={{
-                                  cursor: "grab",
-                                  userSelect: "none",
-                                  fontSize: "1.1rem",
-                                  lineHeight: 1,
-                                }}
+                                className="text-muted cursor-grab"
+                                style={{ fontSize: "1.1rem", lineHeight: 1 }}
                               >
                                 ⠿
                               </span>
                             )}
+                            <h6
+                              className="mb-0 fw-bold text-truncate text-dark"
+                              style={{ fontSize: "1rem" }}
+                              title={`${groupName} (Status: ${groupStatus})`}
+                            >
+                              {groupName}
+                            </h6>
+                            {!loading && (
+                              <span
+                                className={`badge rounded-pill ${
+                                  groupStatus === "Normal"
+                                    ? "bg-success"
+                                    : groupStatus === "Warning"
+                                      ? "bg-warning text-dark"
+                                      : groupStatus === "Error"
+                                        ? "bg-danger"
+                                        : "bg-secondary"
+                                }`}
+                                style={{
+                                  fontSize: "0.65rem",
+                                  fontWeight: "normal",
+                                }}
+                              >
+                                {groupStatus}
+                              </span>
+                            )}
                           </div>
 
-                          {/* ==== ICON BUTTONS nhóm: 🔄 ↗ ✖ (màu ghi) ==== */}
                           <div className="d-flex align-items-center gap-1">
+                            {loading && (
+                              <Spinner
+                                animation="border"
+                                size="sm"
+                                style={{ width: "1rem", height: "1rem" }}
+                                className="me-1"
+                              />
+                            )}
                             <Button
                               size="sm"
-                              className={styles.iconBtn}
+                              variant="link"
+                              className="p-0 text-muted"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 refreshGroup(groupName);
                               }}
-                              title="Làm mới group này"
+                              title="Refresh"
                             >
                               <svg
                                 viewBox="0 0 24 24"
-                                width="18"
-                                height="18"
-                                aria-hidden="true"
+                                width="16"
+                                height="16"
+                                fill="currentColor"
                               >
-                                <path d="M21 12a9 9 0 1 1-2.64-6.36l.71-.7a1 1 0 0 1 1.41 1.41l-2.83 2.83a1 1 0 0 1-1.7-.71V5.5a1 1 0 0 1 2 0v1.1A7 7 0 1 0 19 12h2Z" />
+                                <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z" />
                               </svg>
                             </Button>
-
                             <Button
                               size="sm"
-                              className={styles.iconBtn}
+                              variant="link"
+                              className="p-0 text-muted"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 openGroupInNewTab(groupName);
                               }}
-                              title="Mở group trong tab mới"
+                              title="Open Group Tab"
                             >
                               <svg
                                 viewBox="0 0 24 24"
-                                width="18"
-                                height="18"
-                                aria-hidden="true"
+                                width="16"
+                                height="16"
+                                fill="currentColor"
                               >
-                                <path d="M7 17a1 1 0 0 1 0-2h8.59L6.29 5.71A1 1 0 0 1 7.71 4.29L17 13.59V5a1 1 0 0 1 2 0v12a1 1 0 0 1-1 1H7Z" />
+                                <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z" />
                               </svg>
                             </Button>
-
-                            <Button
-                              size="sm"
-                              className={styles.iconBtn}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                hideGroup(groupName);
-                              }}
-                              title="Ẩn group này"
-                            >
-                              <svg
-                                viewBox="0 0 24 24"
-                                width="18"
-                                height="18"
-                                aria-hidden="true"
-                              >
-                                <path d="M6.7 5.3a1 1 0 0 1 1.4 0L12 9.17l3.9-3.88a1 1 0 1 1 1.41 1.41L13.41 10.6l3.9 3.9a1 1 0 0 1-1.41 1.41L12 12l-3.9 3.9a1 1 0 1 1-1.41-1.41l3.88-3.9-3.88-3.9a1 1 0 0 1 0-1.39Z" />
-                              </svg>
-                            </Button>
-
-                            {loading ? (
-                              <Spinner animation="border" size="sm" />
-                            ) : (
-                              <span
-                                className={`${styles.statusBadge} ${
-                                  styles[statusColorClass[groupStatus]]
-                                }`}
-                              >
-                                {statusIcon[groupStatus]} {groupStatus}
-                              </span>
-                            )}
                           </div>
                         </div>
 
-                        {/* ✅ Group 1 dòng */}
-                        {groupData.last_updated && (
-                          <div className="mb-2">
-                            Updated:{" "}
-                            {renderLastUpdatedOneLine(groupData.last_updated)}
+                        {/* === STATS BAR === */}
+                        {!loading && (
+                          <div
+                            className="d-flex align-items-center gap-3 bg-light rounded px-2 py-1 mb-2 border"
+                            style={{ fontSize: "0.75rem" }}
+                          >
+                            {/* NOK */}
+                            <span
+                              className={
+                                groupData.nok_count > 0
+                                  ? "text-danger fw-bold"
+                                  : "text-secondary"
+                              }
+                            >
+                              NOK: {groupData.nok_count || 0}
+                            </span>
+                            {/* OK */}
+                            <span
+                              className={
+                                groupData.ok_count > 0
+                                  ? "text-success fw-bold"
+                                  : "text-secondary"
+                              }
+                            >
+                              OK: {groupData.ok_count || 0}
+                            </span>
+                            {/* 🔥 EXCLUDED */}
+                            <span
+                              className={
+                                groupData.excluded_count > 0
+                                  ? "text-warning fw-bold"
+                                  : "text-secondary"
+                              }
+                              title="Thiết bị được bỏ qua cảnh báo"
+                            >
+                              Exc: {groupData.excluded_count || 0}
+                            </span>
+                            {/* TOTAL */}
+                            <span className="text-dark fw-bold border-start border-2 ps-2">
+                              Total: {groupData.total_devices || 0}
+                            </span>
+
+                            <span className="text-muted ms-auto">
+                              Updated:{" "}
+                              {groupData.last_updated
+                                ? renderLastUpdatedOneLine(
+                                    groupData.last_updated,
+                                    true,
+                                  )
+                                : "--"}
+                            </span>
                           </div>
                         )}
 
-                        {/* ✅ Bố cục 2 cột: Trái = Subsystems + Stats, Phải = Chart */}
-                        <Row className="g-3 align-items-stretch">
-                          {/* LEFT: Subsystems + Stats */}
-                          <Col md={9} className="d-flex flex-column">
-                            {/* ✅ Danh sách subsystem (kéo-thả + icon NewTab + ✖) */}
-                            {!loading && orderedSubs.length > 0 && (
-                              <div className="d-flex flex-wrap gap-3 mt-2">
-                                {orderedSubs.map((subsystemLabel) => {
-                                  const childData =
-                                    groupChildren[subsystemLabel] || {};
-                                  const childStatus =
-                                    childData.status || "Unknown";
+                        {/* === SUBSYSTEMS LIST (Chips) === */}
+                        <div
+                          className="flex-grow-1 mb-2"
+                          style={{ maxHeight: "120px", overflowY: "auto" }}
+                        >
+                          {!loading && orderedSubs.length > 0 && (
+                            <div className="d-flex flex-wrap gap-1">
+                              {orderedSubs.map((subsystemLabel) => {
+                                // 👇 Code mới chỉ ngắn gọn thế này thôi 👇
+                                const childData =
+                                  groupChildren[subsystemLabel] || {};
+                                const ts =
+                                  recentlyUpdated?.[groupName]?.[
+                                    subsystemLabel
+                                  ]; // Lấy timestamp để flash
 
-                                  const updatedRecently =
-                                    recentlyUpdated?.[groupName]?.[
-                                      subsystemLabel
-                                    ] &&
-                                    Date.now() -
-                                      recentlyUpdated[groupName][
-                                        subsystemLabel
-                                      ] <
-                                      3000;
+                                return (
+                                  <SubsystemChip
+                                    key={subsystemLabel}
+                                    subsystemLabel={subsystemLabel}
+                                    groupName={groupName}
+                                    childData={childData}
+                                    updatedTimestamp={ts}
+                                    onSubDragStart={onSubDragStart}
+                                    onSubDragEnd={onSubDragEnd}
+                                    onSubDragOver={onSubDragOver}
+                                    onSubDrop={onSubDrop}
+                                    handleSubsystemClick={handleSubsystemClick}
+                                    openSubsystemDetailInNewTab={
+                                      openSubsystemDetailInNewTab
+                                    }
+                                    subsFromSchema={subsFromSchema}
+                                  />
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
 
-                                  const dynamicClass = updatedRecently
-                                    ? styles.updated
-                                    : "";
-
-                                  const platforms =
-                                    subsFromSchema[subsystemLabel] || [];
-
-                                  const subHighlight =
-                                    dragOverSub &&
-                                    dragOverSub.group === groupName &&
-                                    dragOverSub.sub === subsystemLabel
-                                      ? {
-                                          boxShadow:
-                                            "inset 0 0 0 2px rgba(13,110,253,.6)",
-                                          borderRadius: 8,
-                                        }
-                                      : {};
-
-                                  return (
-                                    <div
-                                      key={subsystemLabel}
-                                      className={`${styles.subItem} ${dynamicClass}`}
-                                      style={subHighlight}
-                                      onClick={() =>
-                                        handleSubsystemClick(
-                                          groupName,
-                                          subsystemLabel,
-                                          platforms
-                                        )
-                                      }
-                                      onDragOver={(e) =>
-                                        onSubDragOver(
-                                          groupName,
-                                          subsystemLabel,
-                                          e
-                                        )
-                                      }
-                                      onDrop={(e) =>
-                                        onSubDrop(groupName, subsystemLabel, e)
-                                      }
-                                      onDragEnter={(e) =>
-                                        onSubDragOver(
-                                          groupName,
-                                          subsystemLabel,
-                                          e
-                                        )
-                                      }
-                                    >
-                                      {/* === SubItem content gọn: Header (label + newtab + hide) / Footer (time + drag + counters) === */}
-                                      <div className="w-100">
-                                        {/* Header: tên subsystem + nút NewTab + nút Ẩn */}
-                                        <div className="d-flex align-items-center justify-content-between mb-1">
-                                          <div className="d-flex align-items-center gap-1">
-                                            {statusIcon[childStatus]}
-                                            <span className="fw-semibold fs-6">
-                                              {subsystemLabel}
-                                            </span>
-                                          </div>
-
-                                          <div className="d-flex align-items-center gap-1">
-                                            {/* New Tab (subsystem) */}
-                                            <Button
-                                              size="sm"
-                                              className={styles.iconBtn}
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                openSubsystemDetailInNewTab(
-                                                  groupName,
-                                                  subsystemLabel
-                                                );
-                                              }}
-                                              title="Mở subsystem trong tab mới"
-                                            >
-                                              <svg
-                                                viewBox="0 0 24 24"
-                                                width="18"
-                                                height="18"
-                                                aria-hidden="true"
-                                              >
-                                                <path d="M7 17a1 1 0 0 1 0-2h8.59L6.29 5.71A1 1 0 0 1 7.71 4.29L17 13.59V5a1 1 0 0 1 2 0v12a1 1 0 0 1-1 1H7Z" />
-                                              </svg>
-                                            </Button>
-
-                                            {/* Hide (sub) */}
-                                            <Button
-                                              size="sm"
-                                              className={styles.iconBtn}
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                hideSubsystem(
-                                                  groupName,
-                                                  subsystemLabel
-                                                );
-                                              }}
-                                              title="Ẩn subsystem này"
-                                            >
-                                              <svg
-                                                viewBox="0 0 24 24"
-                                                width="18"
-                                                height="18"
-                                                aria-hidden="true"
-                                              >
-                                                <path d="M6.7 5.3a1 1 0 0 1 1.4 0L12 9.17l3.9-3.88a1 1 0 1 1 1.41 1.41L13.41 10.6l3.9 3.9a1 1 0 0 1-1.41 1.41L12 12l-3.9 3.9a1 1 0 1 1-1.41-1.41l3.88-3.9-3.88-3.9a1 1 0 0 1 0-1.39Z" />
-                                              </svg>
-                                            </Button>
-                                          </div>
-                                        </div>
-
-                                        {/* Footer: thời gian (2 dòng) + nút kéo (SVG) + counters */}
-                                        <div className={styles.subFooter}>
-                                          {/* Trái: ngày (2 dòng) + grip kéo, bám đáy tuyệt đối */}
-                                          <div className={styles.timeAndDrag}>
-                                            <div className={styles.twoLineTime}>
-                                              {childData.last_updated &&
-                                                renderLastUpdatedTwoLines(
-                                                  childData.last_updated,
-                                                  true
-                                                )}
-                                            </div>
-
-                                            <button
-                                              type="button"
-                                              aria-label="Kéo để đổi vị trí subsystem"
-                                              className={styles.dragBtn}
-                                              draggable
-                                              onClick={(e) =>
-                                                e.stopPropagation()
-                                              }
-                                              onDragStart={(e) =>
-                                                onSubDragStart(
-                                                  groupName,
-                                                  subsystemLabel,
-                                                  e
-                                                )
-                                              }
-                                              onDragEnd={onSubDragEnd}
-                                              title="Kéo để đổi vị trí subsystem"
-                                            >
-                                              <svg
-                                                viewBox="0 0 20 20"
-                                                width="20"
-                                                height="20"
-                                                aria-hidden="true"
-                                              >
-                                                <circle
-                                                  cx="6"
-                                                  cy="6"
-                                                  r="1.6"
-                                                ></circle>
-                                                <circle
-                                                  cx="6"
-                                                  cy="10"
-                                                  r="1.6"
-                                                ></circle>
-                                                <circle
-                                                  cx="6"
-                                                  cy="14"
-                                                  r="1.6"
-                                                ></circle>
-                                                <circle
-                                                  cx="12"
-                                                  cy="6"
-                                                  r="1.6"
-                                                ></circle>
-                                                <circle
-                                                  cx="12"
-                                                  cy="10"
-                                                  r="1.6"
-                                                ></circle>
-                                                <circle
-                                                  cx="12"
-                                                  cy="14"
-                                                  r="1.6"
-                                                ></circle>
-                                              </svg>
-                                            </button>
-                                          </div>
-
-                                          {/* Phải: counters giữ nguyên */}
-                                          <div className="d-flex gap-2">
-                                            <span
-                                              className={
-                                                childData.ok_count > 0
-                                                  ? styles.ok
-                                                  : styles.total
-                                              }
-                                            >
-                                              {childData.ok_count || 0}
-                                            </span>
-                                            <span
-                                              className={
-                                                childData.nok_count > 0
-                                                  ? styles.nok
-                                                  : styles.total
-                                              }
-                                            >
-                                              {childData.nok_count || 0}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-
-                            {/* ✅ Stats row */}
-                            {!loading && (
-                              <div className={`${styles.statRow} mt-auto`}>
-                                <div
-                                  className={
-                                    groupData.ok_count > 0
-                                      ? styles.ok
-                                      : styles.total
-                                  }
-                                >
-                                  {groupData.ok_count > 0 ? "🟢" : "⚪"} OK:{" "}
-                                  <strong>{groupData.ok_count || 0}</strong>
-                                </div>
-                                <div
-                                  className={
-                                    groupData.nok_count > 0
-                                      ? styles.nok
-                                      : styles.total
-                                  }
-                                >
-                                  {groupData.nok_count > 0 ? "🔴" : "⚪"} NOK:{" "}
-                                  <strong>{groupData.nok_count || 0}</strong>
-                                </div>
-                                <div className={styles.total}>
-                                  {groupData.total_devices > 0 ? "📦" : "⚪"}{" "}
-                                  Total:{" "}
-                                  <strong>
-                                    {groupData.total_devices || 0}
-                                  </strong>
-                                </div>
-                              </div>
-                            )}
-                          </Col>
-
-                          {/* RIGHT: Chart — chỉ hiện khi có danh sách platform từ schema */}
-                          <Col md={3}>
-                            {groupPlatforms.length > 0 && (
-                              <GroupNokChart
-                                platformList={groupPlatforms}
-                                storeKey={`hourly_${slug(groupName)}_group`}
-                                height={180}
-                                title={`NOK theo giờ (24h) — ${groupName}`}
-                              />
-                            )}
-                          </Col>
-                        </Row>
+                        {/* CHART */}
+                        <div className="mt-auto border-top pt-2">
+                          {groupPlatforms.length > 0 && (
+                            <GroupNokChart
+                              platformList={groupPlatforms}
+                              storeKey={`hourly_${slug(groupName)}_group`}
+                              height={110}
+                              title={null}
+                              excludedHostsSet={excludedHostsSet} // Truyền cờ exclude xuống chart
+                            />
+                          )}
+                        </div>
                       </Card.Body>
                     </Card>
                   </Col>
@@ -1136,7 +1527,7 @@ const SystemHealth = () => {
             </Row>
           </Col>
         </Row>
-        {/* KPI Explorer cho trang Group: chỉ hiện khi đang ở /healthcheck/:group */}
+
         {soloGroup && !isSubDetail && (
           <Card className="mb-3">
             <Card.Body>
@@ -1144,20 +1535,19 @@ const SystemHealth = () => {
                 <h5 className="mb-0 fw-bold">KPI Explorer — {soloGroup}</h5>
               </div>
               <KPIExplorerCore
-                hideChrome // ẩn header/banner bên trong KPIExplorer
-                disableRealtime // tắt WS causecode để khỏi spam & quay tít
+                hideChrome
+                disableRealtime
                 defaultGroup={soloGroup}
               />
-              
             </Card.Body>
           </Card>
         )}
-        {/* ✅ Modal: Chart + Table */}
+
+        {/* MODAL */}
         {modalVisible && selectedSubsystem && (
           <Modal
             show={modalVisible}
             onHide={handleCloseModal}
-            size="xl"
             centered
             dialogClassName={styles.modalWide}
           >
@@ -1170,14 +1560,12 @@ const SystemHealth = () => {
               {selectedSubsystem.platform?.length > 0 && (
                 <GroupNokChart
                   platformList={selectedSubsystem.platform}
-                  storeKey={`hourly_${slug(selectedSubsystem.group)}_${slug(
-                    selectedSubsystem.subsystem
-                  )}_modal`}
+                  storeKey={`hourly_${slug(selectedSubsystem.group)}_${slug(selectedSubsystem.subsystem)}_modal`}
                   height={220}
-                  title={`NOK theo giờ (24h): ${selectedSubsystem.group} / ${selectedSubsystem.subsystem}`}
+                  title={`NOK trend (24h): ${selectedSubsystem.group} / ${selectedSubsystem.subsystem}`}
+                  excludedHostsSet={excludedHostsSet}
                 />
               )}
-
               <HealthcheckTable
                 group={selectedSubsystem.group}
                 subsystem={selectedSubsystem.subsystem}
