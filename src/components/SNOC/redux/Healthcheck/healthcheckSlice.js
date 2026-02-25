@@ -244,7 +244,7 @@ export const fetchPSCoreStatus = createAsyncThunk(
       if (page_size) params.append("page_size", String(page_size));
 
       // có hours -> KHÔNG gửi notes; không có hours -> gửi notes
-      if (!hasHours) params.append("include_notes", "1");
+      params.append("include_notes", "1");
 
       const baseUrl = `/nornirps/healthcheck/history/?${params.toString()}`;
 

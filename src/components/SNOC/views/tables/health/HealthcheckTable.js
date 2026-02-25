@@ -70,7 +70,7 @@ const HealthcheckTable = ({
 
   // 🔹 Dữ liệu cho đồ thị NOK theo giờ (24h)
   const { hourlyItems = [], hourlyLoading = false } = useSelector(
-    (state) => state.pscore || {}
+    (state) => state.pscore || {},
   );
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -99,7 +99,7 @@ const HealthcheckTable = ({
   const [runningByHost, setRunningByHost] = useState({});
   const anyRowRunning = useMemo(
     () => Object.values(runningByHost).some(Boolean),
-    [runningByHost]
+    [runningByHost],
   );
 
   const pageSize = 10;
@@ -110,7 +110,7 @@ const HealthcheckTable = ({
       fetchLatestHealthcheckView({
         host: searchTerm, // có thể filter host ở BE cho nhẹ; để "" nếu muốn lấy tất cả
         platform: platformList,
-      })
+      }),
     );
   }, [dispatch, group, subsystem, platformList, searchTerm]);
 
@@ -137,7 +137,7 @@ const HealthcheckTable = ({
           platform: [],
           option: "",
           storeKey: "hostHistory",
-        })
+        }),
       );
     }
   }, [dispatch, showHostHistory, selectedHost, hostHistoryPage]);
@@ -154,7 +154,7 @@ const HealthcheckTable = ({
         hours: 24,
         option: "",
         storeKey: "hourly",
-      })
+      }),
     );
   }, [dispatch, platformList, hideChart]);
 
@@ -212,7 +212,7 @@ const HealthcheckTable = ({
         GenericHealthCheckView({
           selectedPlatform: platform,
           selectedDevice: [host],
-        })
+        }),
       ).unwrap();
 
       const arr = Array.isArray(res) ? res : res ? [res] : [];
@@ -227,7 +227,7 @@ const HealthcheckTable = ({
           status: r?.status || "OK",
           notes: Array.isArray(r?.notes)
             ? r.notes.map((n) => n?.note ?? "").join(" | ")
-            : r?.notes ?? "",
+            : (r?.notes ?? ""),
           result_file: r?.result_file || "",
           usecase: r?.usecase || "manual",
           starttime: r?.starttime || new Date().toISOString(),
@@ -261,7 +261,7 @@ const HealthcheckTable = ({
         item.status?.toLowerCase().includes(lowerSearch) ||
         (Array.isArray(item.notes)
           ? item.notes.some((note) =>
-              note.note?.toLowerCase().includes(lowerSearch)
+              note.note?.toLowerCase().includes(lowerSearch),
             )
           : String(item.notes || "")
               .toLowerCase()
@@ -375,7 +375,7 @@ const HealthcheckTable = ({
     }
     const key = (d) =>
       `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-        d.getDate()
+        d.getDate(),
       ).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:00`;
 
     const bucket = new Map(hours.map((d) => [key(d), 0]));
@@ -399,7 +399,7 @@ const HealthcheckTable = ({
   // ✅ Chỉ build series / index khi có chart để hiển thị
   const hourlySeries = useMemo(
     () => (!hideChart ? buildHourlySeries(hourlyItems || []) : []),
-    [hourlyItems, hideChart]
+    [hourlyItems, hideChart],
   );
 
   const hourIndex = useMemo(() => {
@@ -562,7 +562,13 @@ const HealthcheckTable = ({
               </div>
             ) : (
               <>
-                <Table responsive hover bordered className="table-sm">
+                <Table
+                  responsive
+                  hover
+                  bordered
+                  className="table-sm"
+                  style={{ fontSize: "0.75rem" }}
+                >
                   <thead className="table-light">
                     <tr>
                       <th
@@ -720,7 +726,7 @@ const HealthcheckTable = ({
                     )}
                     {Array.from(
                       { length: Math.min(5, totalPages) },
-                      (_, i) => Math.max(1, currentPage - 2) + i
+                      (_, i) => Math.max(1, currentPage - 2) + i,
                     )
                       .filter((page) => page <= totalPages)
                       .map((page) => (

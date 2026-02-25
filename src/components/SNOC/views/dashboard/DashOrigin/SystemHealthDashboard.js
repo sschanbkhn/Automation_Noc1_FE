@@ -1,12 +1,24 @@
 // src/components/SNOC/views/dashboard/DashOrigin/SystemHealthDashboard.js
 import React, { useEffect, useMemo, useState } from "react";
-import { Button, Card, Col, Modal, Row, Spinner } from "react-bootstrap";
+import { Button, Card, Col, Modal, Row, Spinner, Table } from "react-bootstrap";
 import KPIExplorerCore from "../../forms/kpi/KPIExplorerCore";
 
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useParams } from "react-router-dom";
+import {
+  Brush,
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import Alert from "../../../components/Alert/Alert";
 import WebSocketStatusBanner from "../../../components/WebSocketStatusBanner";
+import { SERVER_MEDIA } from "../../../config/constant";
 import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
 import {
   fetchHealthcheckSchedules,
@@ -20,18 +32,6 @@ import {
 import HealthcheckTable from "../../tables/health/HealthcheckTable";
 import styles from "./../../../styles/SystemHealth.module.scss";
 import TopNavbarHealth from "./TopNavbarHealth";
-
-import {
-  Brush,
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 
 // ====== HẰNG SỐ / SELECTOR ỔN ĐỊNH ======
 const statusColorClass = {
@@ -146,7 +146,7 @@ const buildMinuteSeries = (
     points.map((d) => [
       key(d),
       {
-        totalSet: new Set(),
+        totalMap: new Map(), // 🔥 Đổi từ Set sang Map để lưu toàn bộ chi tiết object
         platformSets: safePlatforms.reduce(
           (acc, p) => ({ ...acc, [p]: new Set() }),
           {},
@@ -178,7 +178,23 @@ const buildMinuteSeries = (
     if (bucket.has(k)) {
       const entry = bucket.get(k);
       if (entry) {
-        entry.totalSet.add(it.host);
+        // 🔥 LƯU CHI TIẾT LỖI (Thay vì chỉ lưu mỗi cái tên host)
+        entry.totalMap.set(hostKey, {
+          host: it.host,
+          platform: it.platform,
+          status: it.status,
+          // Bổ sung check nhiều tên trường phổ biến từ Backend
+          notes:
+            it.notes ||
+            it.note ||
+            it.message ||
+            it.description ||
+            it.reason ||
+            "Không có thông tin lỗi",
+          // 👇 THÊM DÒNG NÀY ĐỂ LẤY TÊN FILE
+          result_file: it.result_file || "",
+        });
+
         const pKey = (it.platform || "").toString().trim();
         if (entry.platformSets[pKey]) {
           entry.platformSets[pKey].add(it.host);
@@ -190,13 +206,18 @@ const buildMinuteSeries = (
   return points.map((d) => {
     const k = key(d);
     const entry = bucket.get(k);
+
+    // 🔥 XUẤT THÊM errorDetails ĐỂ ĐỒ THỊ LÀM POPUP DRILL-DOWN
     const row = {
       time: k.slice(11, 16),
-      Total: entry ? entry.totalSet.size : 0,
+      Total: entry ? entry.totalMap.size : 0, // Đếm tổng số từ Map
+      errorDetails: entry ? Array.from(entry.totalMap.values()) : [], // Mảng chứa chi tiết lỗi
     };
+
     safePlatforms.forEach((p) => {
       row[p] = entry && entry.platformSets[p] ? entry.platformSets[p].size : 0;
     });
+
     return row;
   });
 };
@@ -219,8 +240,11 @@ const GroupNokChart = ({
   // Quản lý co giãn trục Y (Bắt đầu từ 0 hoặc Tự động cắt đáy)
   const [yAxisScale, setYAxisScale] = useState("zero");
 
-  // 🔥 STATE MỚI: Quản lý kích thước (chiều cao vật lý) của biểu đồ
+  // Quản lý kích thước (chiều cao vật lý) của biểu đồ
   const [chartHeight, setChartHeight] = useState(height);
+
+  // 🔥 STATE MỚI: Quản lý dữ liệu khi click vào biểu đồ để hiện Popup
+  const [clickedPoint, setClickedPoint] = useState(null);
 
   // Đồng bộ lại chiều cao nếu component cha truyền prop mới (VD: Mở Modal)
   useEffect(() => {
@@ -286,6 +310,47 @@ const GroupNokChart = ({
     });
   };
 
+  // 🔥 1. Hàm xử lý logic khi click trúng chấm tròn
+  const handleDotClick = (dataKey, payload, e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+
+    if (!payload || !payload.errorDetails) return;
+
+    let filteredDetails = payload.errorDetails;
+
+    // Lọc thiết bị theo đúng tên đường vừa click (Nếu không phải đường Total)
+    if (dataKey !== "Total") {
+      filteredDetails = filteredDetails.filter(
+        (item) => (item.platform || "").toString().trim() === dataKey,
+      );
+    }
+
+    if (filteredDetails.length > 0) {
+      setClickedPoint({
+        time: payload.time,
+        lineName: dataKey, // Lưu tên đường để hiện lên Header Modal
+        details: filteredDetails,
+      });
+    }
+  };
+
+  // 🔥 2. Hàm TỰ VẼ chấm tròn để ép trình duyệt nhận sự kiện Click
+  const renderCustomActiveDot = (props, dataKey) => {
+    const { cx, cy, stroke, payload } = props;
+    return (
+      <circle
+        cx={cx}
+        cy={cy}
+        r={6} // Kích thước chấm sáng to một chút để dễ click
+        fill={stroke}
+        stroke="#fff"
+        strokeWidth={2}
+        style={{ cursor: "pointer", pointerEvents: "all" }} // 👈 XUYÊN THỦNG TOOLTIP LÀ NHỜ DÒNG NÀY
+        onClick={(e) => handleDotClick(dataKey, payload, e)}
+      />
+    );
+  };
+
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload || !payload.length) return null;
     const visiblePayload = payload.filter((p) => !hiddenKeys.has(p.dataKey));
@@ -339,7 +404,7 @@ const GroupNokChart = ({
             />
           )}
 
-          {/* 🔥 NHÓM NÚT [+] VÀ [-] ĐỂ THAY ĐỔI CHIỀU CAO BIỂU ĐỒ */}
+          {/* NHÓM NÚT [+] VÀ [-] ĐỂ THAY ĐỔI CHIỀU CAO BIỂU ĐỒ */}
           <div className="btn-group shadow-sm" role="group">
             <button
               type="button"
@@ -348,7 +413,6 @@ const GroupNokChart = ({
               title="Giảm chiều cao biểu đồ"
               onClick={(e) => {
                 e.stopPropagation();
-                // Giới hạn chiều cao tối thiểu là 100px để không bị méo mất đồ thị
                 setChartHeight((prev) => Math.max(100, prev - 40));
               }}
             >
@@ -434,7 +498,6 @@ const GroupNokChart = ({
         </div>
       </div>
 
-      {/* 🔥 Thay đổi height từ prop sang state chartHeight */}
       <div
         style={{
           width: "100%",
@@ -475,11 +538,11 @@ const GroupNokChart = ({
             <Tooltip content={<CustomTooltip />} />
             <Legend
               iconType="circle"
-              iconSize={8}
+              iconSize={6}
               height={20}
               onClick={handleLegendClick}
               wrapperStyle={{
-                fontSize: "10px",
+                fontSize: "8px",
                 paddingTop: "0px",
                 cursor: "pointer",
                 userSelect: "none",
@@ -491,6 +554,9 @@ const GroupNokChart = ({
                     textDecoration: hiddenKeys.has(entry.dataKey)
                       ? "line-through"
                       : "none",
+                    fontSize: "8px",
+                    fontWeight: "600",
+                    fontFamily: "Arial, sans-serif",
                   }}
                 >
                   {value}
@@ -503,7 +569,8 @@ const GroupNokChart = ({
               stroke="#dc3545"
               strokeWidth={2}
               dot={false}
-              activeDot={{ r: 4 }}
+              // 👇 SỬA DÒNG NÀY: Dùng hàm tự vẽ chấm tròn
+              activeDot={(props) => renderCustomActiveDot(props, "Total")}
               name="Total"
               isAnimationActive={false}
               hide={hiddenKeys.has("Total")}
@@ -516,7 +583,8 @@ const GroupNokChart = ({
                 stroke={LINE_COLORS[idx % LINE_COLORS.length]}
                 strokeWidth={1.5}
                 dot={false}
-                activeDot={{ r: 3 }}
+                // 👇 SỬA DÒNG NÀY: Truyền tên của platform (p) vào hàm vẽ
+                activeDot={(props) => renderCustomActiveDot(props, p)}
                 name={p}
                 connectNulls
                 isAnimationActive={false}
@@ -524,7 +592,6 @@ const GroupNokChart = ({
               />
             ))}
 
-            {/* Thanh kéo ngang tự động hiển thị khi chiều cao lớn hơn 150 */}
             {chartHeight > 150 && (
               <Brush
                 dataKey="time"
@@ -537,6 +604,94 @@ const GroupNokChart = ({
           </LineChart>
         </ResponsiveContainer>
       </div>
+
+      {/* 🔥 MODAL: HIỂN THỊ TRUY VẤN LỖI CHI TIẾT (ĐỒNG BỘ 100% GIAO DIỆN) */}
+      {clickedPoint && (
+        <Modal
+          show={!!clickedPoint}
+          onHide={() => setClickedPoint(null)}
+          centered
+          dialogClassName={styles.modalWide}
+        >
+          <Modal.Header closeButton>
+            <Modal.Title>
+              Chi tiết sự cố{" "}
+              {clickedPoint.lineName === "Total"
+                ? "(Tất cả)"
+                : `(${clickedPoint.lineName})`}{" "}
+              lúc {clickedPoint.time}
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {/* Sử dụng đúng các prop và class giống hệt HealthcheckTable */}
+            <Table
+              responsive
+              hover
+              bordered
+              className="table-sm mb-0"
+              style={{ fontSize: "0.75rem" }}
+            >
+              <thead className="table-light sticky-top">
+                <tr>
+                  <th>Host</th>
+                  <th>Platform</th>
+                  <th>Trạng thái</th>
+                  <th>Ghi chú</th>
+                  {/* 👇 THÊM CỘT TIÊU ĐỀ FILE */}
+                  <th>File kết quả</th>
+                </tr>
+              </thead>
+              <tbody>
+                {clickedPoint.details.map((item, idx) => {
+                  // Nếu trong component của bạn đã có sẵn biến statusRowClass,
+                  // bạn có thể đổi thành: className={statusRowClass[item.status] || ""}
+                  const isNok =
+                    item.status === "NOK" || item.status === "Error";
+                  const rowClass = isNok ? "table-danger" : "";
+
+                  return (
+                    <tr key={idx} className={rowClass}>
+                      <td>{item.host}</td>
+                      <td>{item.platform}</td>
+                      <td>{item.status}</td>
+                      <td style={{ whiteSpace: "pre-line" }}>{item.notes}</td>
+                      {/* 👇 THÊM CỘT HIỂN THỊ LINK DOWNLOAD GIỐNG COMPONENT CỦA BẠN */}
+                      <td>
+                        {item.result_file ? (
+                          <a
+                            href={`${SERVER_MEDIA}/download${item.result_file}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download
+                          >
+                            Download
+                          </a>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </Table>
+            {clickedPoint.details.length === 0 && (
+              <div className="text-center text-muted mt-2">
+                Không có dữ liệu thiết bị NOK.
+              </div>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setClickedPoint(null)}
+            >
+              Đóng
+            </Button>
+          </Modal.Footer>
+        </Modal>
+      )}
     </div>
   );
 };
@@ -558,7 +713,6 @@ const SubsystemChip = React.memo(
   }) => {
     const [isFlashing, setIsFlashing] = useState(false);
 
-    // Lắng nghe sự thay đổi của timestamp để kích hoạt chớp sáng, sau 3s tự tắt
     useEffect(() => {
       if (!updatedTimestamp) return;
       setIsFlashing(true);
@@ -575,12 +729,21 @@ const SubsystemChip = React.memo(
     const isWarning = statusKey === "warning";
     const isNormal = statusKey === "normal" || statusKey === "ok";
 
-    // Giữ nguyên dải màu chuẩn theo trạng thái
+    // 🔥 KIỂM TRA XEM CÓ SCHEDULE KHÔNG (Dựa vào total_devices)
+    const hasSchedule = (childData.total_devices || 0) > 0;
+
     let bgColor = "#f8f9fa",
       borderColor = "#dee2e6",
       textColor = "#6c757d",
       dotColor = "#6c757d";
-    if (isNok) {
+
+    // 👇 NẾU KHÔNG CÓ SCHEDULE, ÉP THÀNH MÀU XÁM MỜ HOÀN TOÀN
+    if (!hasSchedule) {
+      bgColor = "#f8f9fa";
+      borderColor = "#e9ecef";
+      textColor = "#adb5bd"; // Chữ xám mờ
+      dotColor = "#ced4da"; // Chấm xám mờ
+    } else if (isNok) {
       bgColor = "#fee2e2";
       borderColor = "#dc3545";
       textColor = "#b02a37";
@@ -597,7 +760,6 @@ const SubsystemChip = React.memo(
       dotColor = "#198754";
     }
 
-    // Nếu đang flash, ta làm hiệu ứng pulse (nhấn mạnh màu viền/bóng) thay vì đổi hẳn sang màu Vàng
     const flashStyle = isFlashing
       ? {
           boxShadow: `0 0 8px ${borderColor}`,
@@ -618,7 +780,9 @@ const SubsystemChip = React.memo(
           fontSize: "0.75rem",
           transition: "all 0.3s ease",
           borderWidth: "1px",
-          ...flashStyle, // Áp dụng hiệu ứng chớp
+          // 👇 GIẢM ĐỘ ĐỤC XUỐNG CÒN 60% NẾU KHÔNG CÓ LỊCH TRÌNH
+          opacity: hasSchedule ? 1 : 0.6,
+          ...flashStyle,
         }}
         draggable
         onDragStart={(e) => onSubDragStart(groupName, subsystemLabel, e)}
@@ -640,7 +804,7 @@ const SubsystemChip = React.memo(
             width: "8px",
             height: "8px",
             borderRadius: "50%",
-            backgroundColor: isFlashing ? "transparent" : dotColor, // Chớp tắt dấu chấm
+            backgroundColor: isFlashing ? "transparent" : dotColor,
             border: isFlashing ? `2px solid ${dotColor}` : "none",
             display: "inline-block",
           }}
@@ -1276,8 +1440,16 @@ const SystemHealth = () => {
                 const groupData = displayData[groupName] || {};
                 const groupStatus = groupData.status || "Unknown";
                 const groupChildren = groupData.children || {};
-                const cardClass = cardClassMapping[groupName] || "";
 
+                // 🔥 KIỂM TRA GROUP CÓ SCHEDULE KHÔNG
+                const hasSchedule = (groupData.total_devices || 0) > 0;
+
+                // 👇 Gỡ bỏ viền màu đặc trưng của Group nếu không có lịch trình
+                const cardClass = hasSchedule
+                  ? cardClassMapping[groupName] || ""
+                  : "";
+
+                // CÁC BIẾN NÀY BẮT BUỘC PHẢI GIỮ LẠI ĐỂ KHÔNG BỊ CRASH
                 const subsFromSchema = platformSchema[groupName] || {};
                 const subsystems =
                   Object.keys(subsFromSchema).length > 0
@@ -1315,7 +1487,13 @@ const SystemHealth = () => {
                   <Col {...gridProps} key={groupName} className="mb-3">
                     <Card
                       className={`shadow-sm ${styles.cardCommon} ${cardClass}`}
-                      style={{ ...highlightStyle, border: "1px solid #dee2e6" }}
+                      style={{
+                        ...highlightStyle,
+                        border: "1px solid #dee2e6",
+                        // 👇 ÉP ĐEN TRẮNG VÀ LÀM MỜ THẺ CARD NẾU KHÔNG CÓ SCHEDULE
+                        filter: hasSchedule ? "none" : "grayscale(100%)",
+                        opacity: hasSchedule ? 1 : 0.65,
+                      }}
                       onDragOver={(e) => onDragOver(groupName, e)}
                       onDrop={(e) => onDrop(groupName, e)}
                       onDragEnter={(e) => onDragOver(groupName, e)}
@@ -1372,6 +1550,29 @@ const SystemHealth = () => {
                                 style={{ width: "1rem", height: "1rem" }}
                                 className="me-1"
                               />
+                            )}
+                            {/* 👇 BỔ SUNG NÚT HIDE (CHỈ HIỆN KHI KHÔNG PHẢI CHẾ ĐỘ SOLO GROUP) */}
+                            {!soloGroup && (
+                              <Button
+                                size="sm"
+                                variant="link"
+                                className="p-0 text-muted me-1"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  hideGroup(groupName); // Gọi hàm ẩn Group
+                                }}
+                                title="Ẩn Group này"
+                              >
+                                <svg
+                                  viewBox="0 0 24 24"
+                                  width="16"
+                                  height="16"
+                                  fill="currentColor"
+                                >
+                                  {/* Icon con mắt bị gạch chéo (Eye-slash) */}
+                                  <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z" />
+                                </svg>
+                              </Button>
                             )}
                             <Button
                               size="sm"
