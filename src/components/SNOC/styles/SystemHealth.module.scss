@@ -196,10 +196,14 @@
   width: 95vw !important;
 }
 .modalWide {
-  max-width: 1800px !important;
+  max-width: 95vw !important;
   width: 95% !important;
 }
 
+.modalWide :global(.modal-content) {
+  max-width: 95vw !important;
+  width: 100% !important;
+}
 // === ICONS (màu ghi đơn sắc cho mọi nút SVG) ===
 .iconBtn {
   color: #6c757d !important; /* ghi */
@@ -284,5 +288,3 @@
     fill: currentColor;
   }
 }
-
-
