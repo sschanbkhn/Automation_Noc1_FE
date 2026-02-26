@@ -12,6 +12,7 @@ const Dotenv = require("dotenv-webpack");
 const CopyPlugin = require("copy-webpack-plugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const devMode = process.env.NODE_ENV === "development";
+// const devMode = (process.env.NODE_ENV || "development") === "development";
 const config = {
   devtool: "inline-source-map",
   mode: devMode ? "development" : "production",
@@ -119,7 +120,15 @@ const config = {
     }),
     new ESLintPlugin(),
     new CleanWebpackPlugin({ cleanStaleWebpackAssets: false }),
-    new Dotenv(),
+    // new Dotenv(),
+
+
+
+
+    
+new Dotenv({
+  path: devMode ? './.env.development' : './.env.production'
+}),
     new webpack.ProvidePlugin({
       process: "process/browser",
     }),
