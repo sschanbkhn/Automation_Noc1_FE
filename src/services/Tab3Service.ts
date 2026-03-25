@@ -6,7 +6,8 @@ import axios from 'axios'
  */
 const I001_TAB3 = "I001_TAB3";
 // Production server - ACTIVE
-const API_BASE_URL = 'http://10.155.43.196:3000';
+// const API_BASE_URL = 'http://10.155.43.196:3000';
+const API_BASE_URL = process.env.REACT_APP_INOC_API_URL;
 // Local development (comment production above, uncomment this for local dev)
 // const API_BASE_URL = 'http://localhost:3000';
 
