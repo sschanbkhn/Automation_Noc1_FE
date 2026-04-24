@@ -4,6 +4,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import alertReducer from "../redux/Alert/alertSlice";
 import dnsReducer from "../redux/Dns/dnsSlice";
 import psCoreReducer from "../redux/Healthcheck/healthcheckSlice";
+import dhttReducer from "../redux/Healthcheck/dhttSlice";
 import platformDeviceReducer from "../redux/Healthcheck/platformDeviceSlice";
 import snocReducer from "../redux/Healthcheck/snocSlice";
 import hostsReducer from "../redux/Hosts/hostsSlice";
@@ -44,6 +45,7 @@ const snocStore = configureStore({
     sbcConnection: sbcConnectionReducer,
     // ✅ NEW: output ignore rules
     outputIgnore: outputIgnoreReducer,
+    dhtt: dhttReducer,
   },
 });
 

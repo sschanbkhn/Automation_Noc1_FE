@@ -60,6 +60,7 @@ import DeclareNumberForm from "components/SNOC/views/forms/sbc/DeclareNumberForm
 import RequestHistoryTable from "components/SNOC/views/forms/sbc/RequestHistoryTable";
 import RoutingDeclarationForm from "components/SNOC/views/forms/sbc/RoutingDeclarationForm";
 import HistoricalReporting from "components/SNOC/views/tables/health/HistoricalReporting";
+import DhttHistoricalReporting from "components/SNOC/views/tables/health/DhttHistoricalReporting";
 import ConnectionConfigList from "components/SNOC/views/tables/sbc/ConnectionConfigList";
 
 import RequireSnocAuthInline from "components/SNOC/auth/RequireSnocAuthInline";
@@ -256,6 +257,10 @@ const MainPageRoute = (props: Props) => {
           <Route
             path="/healthcheck/history"
             element={<HistoricalReporting />}
+          />
+          <Route
+            path="/dhtt/history"
+            element={<DhttHistoricalReporting />}
           />
           <Route path="/healthcheck/kpi" element={<KPIChartDashboard />} />
           <Route

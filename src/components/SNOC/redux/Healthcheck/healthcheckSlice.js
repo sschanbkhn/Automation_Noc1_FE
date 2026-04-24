@@ -2,7 +2,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import snocApi from "../../api/snocApiWithAutoToken";
 import { showTemporaryAlert } from "../Alert/alertSlice";
-
+import axios from "axios";
 /* =========================
  * Helpers (không export)
  * ========================= */
@@ -451,21 +451,32 @@ export const GenericHealthCheckView = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
-      const isCanceled =
-        (axios.isCancel && axios.isCancel(error)) ||
-        error?.code === "ERR_CANCELED";
+        // 1. Log để debug (đã thấy trong log của bạn là OK)
+          console.log("SERVER DATA:", error?.response?.data);
 
-      const isTimeout =
-        error?.code === "ECONNABORTED" || /timeout/i.test(error?.message || "");
+          // 2. Trích xuất message an toàn
+          const data = error?.response?.data;
+          const serverDetail = data?.detail || data?.msg;
+          
+          // Ép kiểu về string để Alert không bị crash
+          const finalDetail = typeof serverDetail === 'string' 
+              ? serverDetail 
+              : (typeof serverDetail === 'object' ? JSON.stringify(serverDetail) : null);
 
-      const errorMessage = isCanceled
-        ? "Healthcheck request was canceled."
-        : isTimeout
-          ? "Healthcheck timed out after 2 minutes."
-          : error?.response?.data?.detail || "Failed to healthcheck nodes.";
+          // 3. Kiểm tra cancel/timeout (Dùng optional chaining cho axios để an toàn)
+          const isCanceled = axios?.isCancel?.(error) || error?.code === "ERR_CANCELED";
+          const isTimeout = error?.code === "ECONNABORTED" || /timeout/i.test(error?.message || "");
 
-      dispatch(showTemporaryAlert({ message: errorMessage, type: "error" }));
-      return rejectWithValue(error?.response?.data ?? { detail: errorMessage });
+          const errorMessage = isCanceled
+              ? "Request was canceled."
+              : isTimeout
+                  ? "Healthcheck timed out after 2 minutes."
+                  : finalDetail || error?.message || "Failed to healthcheck nodes.";
+
+          // 4. Bắn Alert - Bây giờ chắc chắn sẽ chạy vì không còn lỗi ReferenceError
+          dispatch(showTemporaryAlert({ message: String(errorMessage), type: "error" }));
+
+          return rejectWithValue(data ?? { detail: errorMessage });
     }
   },
 );

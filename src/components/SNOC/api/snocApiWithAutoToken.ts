@@ -158,7 +158,7 @@ function buildInstance(baseURL: string): AxiosInstance {
       };
       const status = error.response?.status;
 
-      if ((status === 401 || status === 403) && !originalRequest._handled401) {
+      if (status === 401  && !originalRequest._handled401) {
         originalRequest._handled401 = true;
         clearSnocToken();
         unauthorizedHandlers.forEach((fn) => {
@@ -166,6 +166,11 @@ function buildInstance(baseURL: string): AxiosInstance {
             fn();
           } catch {}
         });
+      }
+      // 2. Nếu gặp lỗi 403 (Thiếu quyền), KHÔNG clear token, KHÔNG gọi handler logout.
+      // Cứ để cho Promise.reject(error) chạy, Redux Thunk sẽ bắt được lỗi này.
+      if (status === 403) {
+        console.warn("Lỗi 403: Bạn không có quyền thực hiện hành động này.");
       }
       return Promise.reject(error);
     }

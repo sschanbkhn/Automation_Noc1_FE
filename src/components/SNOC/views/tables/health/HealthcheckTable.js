@@ -15,6 +15,7 @@ import { useDispatch, useSelector } from "react-redux";
 import * as XLSX from "xlsx";
 import { SERVER_MEDIA } from "../../../config/constant";
 import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
+import { getJwtClaims } from "../../../api/snocApiWithAutoToken";
 import {
   fetchLatestHealthcheckView,
   fetchPSCoreStatus,
@@ -454,6 +455,12 @@ const HealthcheckTable = ({
     setShowHourModal(true);
   };
 
+const isAdmin = useMemo(() => {
+    const claims = getJwtClaims();
+    console.log("Checking permissions for:", claims?.username);
+    return claims?.role === 'admin' || claims?.role === 'super';
+  }, []); // [] có nghĩa là chỉ chạy 1 lần duy nhất khi component load
+
   return (
     <Row>
       <Col md={12}>
@@ -678,6 +685,7 @@ const HealthcheckTable = ({
 
                           {/* ✅ Nút healthcheck từng thiết bị */}
                           <td>
+                            {isAdmin && (
                             <Button
                               type="button" // 🔒 không để submit
                               size="sm"
@@ -699,9 +707,11 @@ const HealthcheckTable = ({
                               )}
                               <span>{running ? "Running..." : "Run"}</span>
                             </Button>
+                            )}
                           </td>
 
                           <td className="text-center">
+                            {isAdmin && (
                             <Form.Check
                               type="checkbox"
                               checked={!!item.excluded}
@@ -710,6 +720,7 @@ const HealthcheckTable = ({
                                 handleToggleExclude(item.host, e.target.checked)
                               }
                             />
+                            )}
                           </td>
                         </tr>
                       );

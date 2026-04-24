@@ -21,11 +21,17 @@ import {
 } from "../../../redux/Healthcheck/platformDeviceSlice";
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
 import WebSocketStatusBanner from "./../../../components/WebSocketStatusBanner"; // cập nhật path cho đúng
-
+import { getJwtClaims } from "../../../api/snocApiWithAutoToken";
 const Healthcheck = () => {
   useScheduleWebSocket(); // ✅ Gọi ở đây
 
   const dispatch = useDispatch();
+  // 2. Tính toán quyền Admin/Super (Sử dụng useMemo để tối ưu)
+  const isAdmin = useMemo(() => {
+    const claims = getJwtClaims();
+    return claims?.role === 'admin' || claims?.role === 'super';
+  }, []);
+
   const { platforms, devices, loadingDevices } = useSelector(
     (state) => state.platformDevice
   );
@@ -129,14 +135,22 @@ const Healthcheck = () => {
                 </Col>
 
                 <Col md={2}>
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    className="w-100"
-                    onClick={handleHealthcheck}
-                  >
-                    Healthcheck ngay
-                  </Button>
+                  {/* 3. Phân quyền cho nút bấm */}
+                  {isAdmin ? (
+                    <Button
+                      variant="primary"
+                      size="lg"
+                      className="w-100"
+                      onClick={handleHealthcheck}
+                      disabled={loading}
+                    >
+                      {loading ? "Đang xử lý..." : "Healthcheck ngay"}
+                    </Button>
+                  ) : (
+                    <div className="text-muted small text-center border p-2 rounded bg-light">
+                      Quyền User: Chỉ xem dữ liệu
+                    </div>
+                  )}
                 </Col>
               </Row>
             </Card.Body>
