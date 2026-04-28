@@ -125,10 +125,11 @@ const config = {
 
 
 
-    
-new Dotenv({
-  path: devMode ? './.env.development' : './.env.production'
-}),
+
+    new Dotenv({
+      // path: devMode ? './.env.development' : './.env.production'
+      path: devMode ? './.env' : './.env.production'
+    }),
     new webpack.ProvidePlugin({
       process: "process/browser",
     }),
