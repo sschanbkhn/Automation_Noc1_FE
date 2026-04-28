@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { Button, Card, Col, FormControl, Row, Table } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import Select from "react-select";
@@ -29,7 +29,7 @@ import {
   getUsecaseOptionsForPlatform,
   isUsecaseAllowed,
 } from "./platformUsecases";
-
+import { USECASE_TYPES, getColumns } from "./schedule_config";
 const StatusBadge = ({ status }) => {
   const map = {
     success: { label: "Thành công", color: "success", icon: "✅" },
@@ -58,7 +58,7 @@ const ScheduleGeneric = () => {
   const [selectedDevices, setSelectedDevices] = useState([]);
   const [cronExpression, setCronExpression] = useState("");
   const [editingTask, setEditingTask] = useState(null);
-
+  const [activeType, setActiveType] = useState("kpi"); // Mặc định là kpi, có thể chọn dhtt
   // action (biến thể trong nhóm KPI), mặc định "causecode"
   const [action, setAction] = useState("causecode");
 
@@ -73,18 +73,26 @@ const ScheduleGeneric = () => {
   );
 
   // BẢNG: chỉ hiển thị KPI
-  const rowsKpi = useSelector((state) =>
-    selectGenericSchedulesByType(state, "kpi")
+  // const rowsKpi = useSelector((state) =>
+  //   selectGenericSchedulesByType(state, "kpi")
+  // );
+  const rows = useSelector((state) =>
+    selectGenericSchedulesByType(state, activeType)
   );
 
-  const allRows = useMemo(() => {
-    const merged = [...(rowsKpi || [])];
-    return merged.sort((a, b) => {
-      const ta = a?.last_run_at ? Date.parse(a.last_run_at) : -Infinity;
-      const tb = b?.last_run_at ? Date.parse(b.last_run_at) : -Infinity;
-      return tb - ta;
-    });
-  }, [rowsKpi]);
+const currentRows = useSelector((state) => 
+  selectGenericSchedulesByType(state, activeType)
+);
+
+const allRows = useMemo(() => {
+  // Sử dụng currentRows thay vì rowsKpi
+  const merged = [...(currentRows || [])];
+  return merged.sort((a, b) => {
+    const ta = a?.last_run_at ? Date.parse(a.last_run_at) : -Infinity;
+    const tb = b?.last_run_at ? Date.parse(b.last_run_at) : -Infinity;
+    return tb - ta;
+  });
+}, [currentRows]); // Dependency change
 
   // Init platforms
   useEffect(() => {
@@ -93,8 +101,8 @@ const ScheduleGeneric = () => {
 
   // Khi mount → fetch KPI
   useEffect(() => {
-    dispatch(fetchGenericSchedule({ usecase_type: "kpi" }));
-  }, [dispatch]);
+    dispatch(fetchGenericSchedule({ usecase_type: activeType }));
+  }, [dispatch, activeType]);
 
   // Action options phụ thuộc platform
   const actionOptions = useMemo(
@@ -160,83 +168,127 @@ const ScheduleGeneric = () => {
     setAction("causecode");
   };
 
-  const handleSubmitSchedule = () => {
-    const selectedNames = selectedDevices.map((d) => d.value);
+const handleSubmitSchedule = () => {
+  const selectedNames = selectedDevices.map((d) => d.value);
 
+  // 1. Kiểm tra các trường bắt buộc chung (không check action ở đây)
+  if (!name || !selectedPlatform || !cronExpression || selectedNames.length === 0) {
+    alert("Vui lòng nhập đầy đủ thông tin (Tên, Platform, Thiết bị, Cron).");
+    return;
+  }
+
+  if (!validateCron(cronExpression)) {
+    alert("Cron không hợp lệ. Định dạng đúng: */5 * * * *");
+    return;
+  }
+
+  // 2. Xử lý Action và Validation riêng rẽ theo từng Usecase
+  let finalAction = action;
+
+  if (activeType === "kpi") {
     if (actionOptions.length === 0) {
-      alert("Platform này hiện chưa hỗ trợ Action theo cấu hình.");
+      alert("Platform này hiện chưa hỗ trợ Action KPI theo cấu hình.");
       return;
     }
-
-    if (
-      !name ||
-      !selectedPlatform ||
-      !action ||
-      !cronExpression ||
-      selectedNames.length === 0
-    ) {
-      alert("Vui lòng nhập đầy đủ thông tin");
+    if (!action) {
+      alert("Vui lòng chọn Action.");
       return;
     }
-
     if (!isUsecaseAllowed(selectedPlatform, action)) {
       alert("Action không hợp lệ với platform đã chọn.");
       return;
     }
+    finalAction = action;
+  } else if (activeType === "dhtt") {
+    // Với DHTT, ta ép cứng action và bỏ qua check isUsecaseAllowed
+    finalAction = "dhtt_sync"; 
+  }
 
-    if (!validateCron(cronExpression)) {
-      alert("Cron không hợp lệ. Định dạng đúng: */5 * * * *");
-      return;
-    }
+  // 3. Khởi tạo Start Time
+  const defaultStartTime = dayjs()
+    .second(0)
+    .millisecond(0)
+    .format("YYYY-MM-DDTHH:mm:ssZ");
 
-    // ⏰ start_time mặc định: "bây giờ" (local, có offset, làm tròn giây)
-    const defaultStartTime = dayjs()
-      .second(0)
-      .millisecond(0)
-      .format("YYYY-MM-DDTHH:mm:ssZ");
-
-    if (editingTask) {
-      // UPDATE: theo yêu cầu, cũng reset start_time = now
-      const payload = {
-        name,
-        platform: selectedPlatform,
-        node_names: selectedNames,
-        cron: cronExpression,
-        start_time: defaultStartTime,
-        usecase_type: "kpi",
-        action,
-      };
-      dispatch(updateGenericSchedule({ id: editingTask.id, ...payload })).then(
-        () => {
-          dispatch(fetchGenericSchedule({ usecase_type: "kpi" }));
-          resetForm();
-        }
-      );
-    } else {
-      // CREATE: gửi start_time = now
-      const payload = {
-        name,
-        platform: selectedPlatform,
-        node_names: selectedNames,
-        cron: cronExpression,
-        start_time: defaultStartTime,
-        usecase_type: "kpi",
-        action,
-      };
-      dispatch(createGenericSchedule(payload)).then(() => {
-        dispatch(fetchGenericSchedule({ usecase_type: "kpi" }));
-        resetForm();
-      });
-    }
+  // 4. Tạo Payload dùng chung cho cả Create và Update
+  const payload = {
+    name,
+    platform: selectedPlatform,
+    node_names: selectedNames,
+    cron: cronExpression,
+    start_time: defaultStartTime,
+    usecase_type: activeType, // Lấy động từ Tab hiện tại
+    action: finalAction,      // Lấy action đã xử lý logic ở bước 2
   };
 
-  const handleEdit = (task) => {
+  // 5. Submit qua Redux
+  if (editingTask) {
+    // UPDATE
+    dispatch(updateGenericSchedule({ id: editingTask.id, ...payload })).then(() => {
+      // Đổi chữ "kpi" cứng thành activeType để bảng tự làm mới đúng Tab
+      dispatch(fetchGenericSchedule({ usecase_type: activeType })); 
+      resetForm();
+    });
+  } else {
+    // CREATE
+    dispatch(createGenericSchedule(payload)).then(() => {
+      // Đổi chữ "kpi" cứng thành activeType
+      dispatch(fetchGenericSchedule({ usecase_type: activeType })); 
+      resetForm();
+    });
+  }
+};
+
+  // const handleEdit = (task) => {
+  //   setName(task.name);
+  //   setSelectedPlatform(task.platform);
+
+  //   const ok = task.action && isUsecaseAllowed(task.platform, task.action);
+  //   const fallback =
+  //     getUsecaseOptionsForPlatform(task.platform)[0]?.value || "causecode";
+  //   setAction(ok ? task.action : fallback);
+
+  //   setSelectedDevices(
+  //     (task.node_names || []).map((d) => ({ label: d, value: d }))
+  //   );
+  //   setCronExpression(task.cron);
+  //   setEditingTask(task);
+  // };
+
+  // const handleDelete = (task) => {
+  //   const id = task.id;
+  //   const type = "kpi";
+  //   if (window.confirm("Bạn có chắc muốn xoá lịch này không?")) {
+  //     dispatch(deleteGenericSchedule({ id, usecase_type: type })).then(() => {
+  //       dispatch(fetchGenericSchedule({ usecase_type: type }));
+  //     });
+  //   }
+  // };
+
+  // const handleToggle = (task) => {
+  //   const type = "kpi";
+  //   dispatch(
+  //     toggleGenericSchedule({
+  //       id: task.id,
+  //       enabled: !task.enabled,
+  //       usecase_type: type,
+  //     })
+  //   ).then(() => dispatch(fetchGenericSchedule({ usecase_type: type })));
+  // };
+
+  // const columns = useMemo(
+  //   () => getColumns(handleToggle, handleEdit, handleDelete),
+  //   [handleToggle, handleEdit, handleDelete] 
+  // );
+
+
+
+  const handleEdit = useCallback((task) => {
     setName(task.name);
     setSelectedPlatform(task.platform);
 
     const ok = task.action && isUsecaseAllowed(task.platform, task.action);
-    const fallback =
-      getUsecaseOptionsForPlatform(task.platform)[0]?.value || "causecode";
+    const fallback = getUsecaseOptionsForPlatform(task.platform)[0]?.value || "causecode";
     setAction(ok ? task.action : fallback);
 
     setSelectedDevices(
@@ -244,20 +296,20 @@ const ScheduleGeneric = () => {
     );
     setCronExpression(task.cron);
     setEditingTask(task);
-  };
+}, [/* liệt kê các hàm set state ở đây nếu ESLint yêu cầu, thường là empty hoặc: */ setName, setSelectedPlatform, setAction, setSelectedDevices, setCronExpression, setEditingTask]);
 
-  const handleDelete = (task) => {
+const handleDelete = useCallback((task) => {
     const id = task.id;
-    const type = "kpi";
+    const type = activeType; // Sử dụng activeType thay vì fix cứng "kpi" để đồng bộ dynamic
     if (window.confirm("Bạn có chắc muốn xoá lịch này không?")) {
       dispatch(deleteGenericSchedule({ id, usecase_type: type })).then(() => {
         dispatch(fetchGenericSchedule({ usecase_type: type }));
       });
     }
-  };
+}, [dispatch, activeType]); // Thêm các phụ thuộc mà hàm này sử dụng
 
-  const handleToggle = (task) => {
-    const type = "kpi";
+const handleToggle = useCallback((task) => {
+    const type = activeType; 
     dispatch(
       toggleGenericSchedule({
         id: task.id,
@@ -265,8 +317,15 @@ const ScheduleGeneric = () => {
         usecase_type: type,
       })
     ).then(() => dispatch(fetchGenericSchedule({ usecase_type: type })));
-  };
+}, [dispatch, activeType]);
 
+// Bây giờ columns sẽ không còn bị cảnh báo vàng nữa
+const columns = useMemo(
+    () => getColumns(handleToggle, handleEdit, handleDelete),
+    [handleToggle, handleEdit, handleDelete] 
+);
+
+  
   return (
     <>
       <TopNavbarHealth />
@@ -361,85 +420,38 @@ const ScheduleGeneric = () => {
       </Card>
 
       {/* Bảng KPI */}
-      <Row>
-        <Col sm={12}>
-          <Card>
-            <Card.Body>
-              <h5>📋 Tất cả lịch KPI</h5>
-              <Table striped bordered hover>
-                <thead>
-                  <tr>
-                    <th>Tên</th>
-                    <th>Action</th>
-                    <th>Platform</th>
-                    <th>Cron</th>
-                    <th>Thiết bị</th>
-                    <th>Trạng thái</th>
-                    <th>Chạy gần nhất</th>
-                    <th>Kết quả</th>
-                    <th>Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {allRows.length === 0 ? (
-                    <tr>
-                      <td colSpan="9" className="text-center">
-                        Không có lịch nào
-                      </td>
-                    </tr>
-                  ) : (
-                    allRows.map((s) => (
-                      <tr key={`kpi:${s.id}`}>
-                        <td>{s.name}</td>
-                        <td>{s.action || "causecode"}</td>
-                        <td>{s.platform}</td>
-                        <td>{s.cron}</td>
-                        <td>{(s.node_names || []).join(", ")}</td>
-                        <td>
-                          <Button
-                            variant={s.enabled ? "success" : "secondary"}
-                            size="sm"
-                            onClick={() => handleToggle(s)}
-                          >
-                            {s.enabled ? "🟢 Bật" : "🔴 Tắt"}
-                          </Button>
-                        </td>
-                        <td>
-                          {s.last_run_at
-                            ? dayjs(s.last_run_at).format("DD/MM/YYYY HH:mm")
-                            : "Chưa chạy"}
-                        </td>
-                        <td>
-                          {s.result_summary || (
-                            <StatusBadge status={s.last_run_status} />
-                          )}
-                        </td>
-                        <td>
-                          <Button
-                            size="sm"
-                            variant="warning"
-                            className="me-2"
-                            onClick={() => handleEdit(s)}
-                          >
-                            ✏️
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="danger"
-                            onClick={() => handleDelete(s)}
-                          >
-                            🗑️
-                          </Button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </Table>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+{/* Render các Tab động */}
+      <div className="mb-3 d-flex gap-2">
+        {USECASE_TYPES.map((type) => (
+          <Button 
+            key={type.id}
+            variant={activeType === type.id ? type.color : `outline-${type.color}`} 
+            onClick={() => setActiveType(type.id)}
+          >
+            {type.label}
+          </Button>
+        ))}
+      </div>
+
+      {/* Render Bảng động */}
+      <Table striped bordered hover responsive>
+        <thead>
+          <tr>
+            {columns.map((col) => <th key={col.key}>{col.label}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {allRows.map((row) => (
+            <tr key={row.id}>
+              {columns.map((col) => (
+                <td key={`${row.id}-${col.key}`}>
+                  {col.render ? col.render(row[col.key], row) : row[col.key]}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </Table>
     </>
   );
 };
