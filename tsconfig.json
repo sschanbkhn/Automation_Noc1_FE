@@ -1,8 +1,10 @@
 {
-    
   "compilerOptions": {
-    "outDir": "./dist/",
+    // "outDir": "./dist/",
+    "outDir": "./build",
+    "rootDir": "./src",
     "noImplicitAny": true,
+    "ignoreDeprecations": "6.0",
     "allowSyntheticDefaultImports": true,
     "module": "es6",
     "target": "es5",
@@ -12,15 +14,33 @@
     "baseUrl": "./src",
     "resolveJsonModule": true,
     "paths": {
-      "app/*": ["app/*"],
-      "store/*": ["store/*"],
-      "assets/*": ["assets/*"],
-      "components/*": ["components/*"],
-      "helpers/*": ["helpers/*"],
-      "routes/*": ["routes/*"],
-      "services/*": ["services/*"],
-      "models/*": ["models/*"],
-      "@/*": ["./*"]
+      "app/*": [
+        "app/*"
+      ],
+      "store/*": [
+        "store/*"
+      ],
+      "assets/*": [
+        "assets/*"
+      ],
+      "components/*": [
+        "components/*"
+      ],
+      "helpers/*": [
+        "helpers/*"
+      ],
+      "routes/*": [
+        "routes/*"
+      ],
+      "services/*": [
+        "services/*"
+      ],
+      "models/*": [
+        "models/*"
+      ],
+      "@/*": [
+        "./*"
+      ]
     }
   },
   "include": [
