@@ -2,7 +2,7 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import snocApi from "../../api/snocApiWithAutoToken";
 import { showTemporaryAlert } from "../Alert/alertSlice";
-
+import axios from "axios";
 /* =========================
  * Helpers (không export)
  * ========================= */
@@ -47,9 +47,16 @@ export const toggleDeviceExcluded = createAsyncThunk(
       );
       return { host, excluded };
     } catch (error) {
+      // const msg =
+      //   error?.response?.data?.detail ||
+      //   "Không thể cập nhật trạng thái excluded";
+      const status = error?.response?.status;
       const msg =
-        error?.response?.data?.detail ||
-        "Không thể cập nhật trạng thái excluded";
+        status === 403
+          ? "Bạn không có quyền thay đổi thiết bị này."
+          : error?.response?.data?.error ||
+            error?.response?.data?.detail ||
+            "Không thể cập nhật trạng thái excluded";
       dispatch(showTemporaryAlert({ message: msg, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
@@ -87,33 +94,100 @@ export const fetchHealthcheckSchedules = createAsyncThunk(
   },
 );
 
+// export const createHealthcheckSchedule = createAsyncThunk(
+//   "pscore/createHealthcheckSchedule",
+//   async (
+//     { name, platform, node_names, cron, start_time },
+//     { dispatch, rejectWithValue },
+//   ) => {
+//     try {
+//       const response = await snocApi.post("/nornirps/schedulerhealth/", {
+//         name,
+//         platform,
+//         node_names,
+//         cron,
+//         start_time,
+//       });
+//       dispatch(
+//         showTemporaryAlert({
+//           message: "Đặt lịch thành công!",
+//           type: "success",
+//         }),
+//       );
+//       return response.data;
+//     } catch (error) {
+//       const message = error?.response?.data?.detail || "Lỗi khi đặt lịch";
+//       dispatch(showTemporaryAlert({ message, type: "error" }));
+//       return rejectWithValue(error?.response?.data);
+//     }
+//   },
+// );
+
+
+// export const updateHealthcheckSchedule = createAsyncThunk(
+//   "pscore/updateHealthcheckSchedule",
+//   async (
+//     { id, name, platform, node_names, cron, start_time },
+//     { dispatch, rejectWithValue },
+//   ) => {
+//     try {
+//       await snocApi.put(`/nornirps/schedulerhealth/${id}/update/`, {
+//         name,
+//         platform,
+//         node_names,
+//         cron,
+//         start_time,
+//       });
+//       dispatch(fetchHealthcheckSchedules());
+//       dispatch(
+//         showTemporaryAlert({
+//           message: "Đã cập nhật lịch thành công",
+//           type: "success",
+//         }),
+//       );
+//       return id;
+//     } catch (error) {
+//       const message = error?.response?.data?.detail || "Lỗi khi cập nhật lịch";
+//       dispatch(showTemporaryAlert({ message, type: "error" }));
+//       return rejectWithValue(error?.response?.data);
+//     }
+//   },
+// );
+
+
+// 1. Sửa hàm CREATE
 export const createHealthcheckSchedule = createAsyncThunk(
   "pscore/createHealthcheckSchedule",
-  async (
-    { name, platform, node_names, cron, start_time },
-    { dispatch, rejectWithValue },
-  ) => {
+  async (payload, { dispatch, rejectWithValue }) => {
     try {
-      const response = await snocApi.post("/nornirps/schedulerhealth/", {
-        name,
-        platform,
-        node_names,
-        cron,
-        start_time,
-      });
-      dispatch(
-        showTemporaryAlert({
-          message: "Đặt lịch thành công!",
-          type: "success",
-        }),
-      );
+      // Đẩy nguyên cục payload xuống (bao gồm cả group, department...)
+      const response = await snocApi.post("/nornirps/schedulerhealth/", payload);
+      dispatch(showTemporaryAlert({ message: "Đặt lịch thành công!", type: "success" }));
       return response.data;
     } catch (error) {
       const message = error?.response?.data?.detail || "Lỗi khi đặt lịch";
       dispatch(showTemporaryAlert({ message, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
-  },
+  }
+);
+
+// 2. Sửa hàm UPDATE
+export const updateHealthcheckSchedule = createAsyncThunk(
+  "pscore/updateHealthcheckSchedule",
+  async ({ id, ...payload }, { dispatch, rejectWithValue }) => {
+    try {
+      // Đẩy nguyên cục payload xuống API update
+      await snocApi.put(`/nornirps/schedulerhealth/${id}/update/`, payload);
+      dispatch(fetchHealthcheckSchedules());
+      dispatch(showTemporaryAlert({ message: "Đã cập nhật lịch thành công", type: "success" }));
+      return id;
+    } catch (error) {
+      const message = error?.response?.data?.detail || "Lỗi khi cập nhật lịch";
+      dispatch(showTemporaryAlert({ message, type: "error" }));
+      return rejectWithValue(error?.response?.data);
+    }
+  }
 );
 
 export const toggleScheduleEnabled = createAsyncThunk(
@@ -154,36 +228,6 @@ export const deleteHealthcheckSchedule = createAsyncThunk(
       return id;
     } catch (error) {
       const message = error?.response?.data?.detail || "Lỗi khi xóa lịch";
-      dispatch(showTemporaryAlert({ message, type: "error" }));
-      return rejectWithValue(error?.response?.data);
-    }
-  },
-);
-
-export const updateHealthcheckSchedule = createAsyncThunk(
-  "pscore/updateHealthcheckSchedule",
-  async (
-    { id, name, platform, node_names, cron, start_time },
-    { dispatch, rejectWithValue },
-  ) => {
-    try {
-      await snocApi.put(`/nornirps/schedulerhealth/${id}/update/`, {
-        name,
-        platform,
-        node_names,
-        cron,
-        start_time,
-      });
-      dispatch(fetchHealthcheckSchedules());
-      dispatch(
-        showTemporaryAlert({
-          message: "Đã cập nhật lịch thành công",
-          type: "success",
-        }),
-      );
-      return id;
-    } catch (error) {
-      const message = error?.response?.data?.detail || "Lỗi khi cập nhật lịch";
       dispatch(showTemporaryAlert({ message, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
@@ -451,21 +495,32 @@ export const GenericHealthCheckView = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
-      const isCanceled =
-        (axios.isCancel && axios.isCancel(error)) ||
-        error?.code === "ERR_CANCELED";
+        // 1. Log để debug (đã thấy trong log của bạn là OK)
+          console.log("SERVER DATA:", error?.response?.data);
 
-      const isTimeout =
-        error?.code === "ECONNABORTED" || /timeout/i.test(error?.message || "");
+          // 2. Trích xuất message an toàn
+          const data = error?.response?.data;
+          const serverDetail = data?.detail || data?.msg;
+          
+          // Ép kiểu về string để Alert không bị crash
+          const finalDetail = typeof serverDetail === 'string' 
+              ? serverDetail 
+              : (typeof serverDetail === 'object' ? JSON.stringify(serverDetail) : null);
 
-      const errorMessage = isCanceled
-        ? "Healthcheck request was canceled."
-        : isTimeout
-          ? "Healthcheck timed out after 2 minutes."
-          : error?.response?.data?.detail || "Failed to healthcheck nodes.";
+          // 3. Kiểm tra cancel/timeout (Dùng optional chaining cho axios để an toàn)
+          const isCanceled = axios?.isCancel?.(error) || error?.code === "ERR_CANCELED";
+          const isTimeout = error?.code === "ECONNABORTED" || /timeout/i.test(error?.message || "");
 
-      dispatch(showTemporaryAlert({ message: errorMessage, type: "error" }));
-      return rejectWithValue(error?.response?.data ?? { detail: errorMessage });
+          const errorMessage = isCanceled
+              ? "Request was canceled."
+              : isTimeout
+                  ? "Healthcheck timed out after 2 minutes."
+                  : finalDetail || error?.message || "Failed to healthcheck nodes.";
+
+          // 4. Bắn Alert - Bây giờ chắc chắn sẽ chạy vì không còn lỗi ReferenceError
+          dispatch(showTemporaryAlert({ message: String(errorMessage), type: "error" }));
+
+          return rejectWithValue(data ?? { detail: errorMessage });
     }
   },
 );

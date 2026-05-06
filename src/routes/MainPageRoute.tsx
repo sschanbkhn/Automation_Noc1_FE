@@ -60,6 +60,7 @@ import DeclareNumberForm from "components/SNOC/views/forms/sbc/DeclareNumberForm
 import RequestHistoryTable from "components/SNOC/views/forms/sbc/RequestHistoryTable";
 import RoutingDeclarationForm from "components/SNOC/views/forms/sbc/RoutingDeclarationForm";
 import HistoricalReporting from "components/SNOC/views/tables/health/HistoricalReporting";
+import DhttHistoricalReporting from "components/SNOC/views/tables/health/DhttHistoricalReporting";
 import ConnectionConfigList from "components/SNOC/views/tables/sbc/ConnectionConfigList";
 
 import RequireSnocAuthInline from "components/SNOC/auth/RequireSnocAuthInline";
@@ -67,6 +68,7 @@ import RequireSuperUserInline from "components/SNOC/auth/RequireSuperUserInline"
 import SnocLoginInline from "components/SNOC/auth/SnocLoginInline";
 import SnocSubApp from "components/SNOC/SnocSubApp";
 import OutputIgnoreRules from "components/SNOC/views/forms/health/OutputIgnoreRules";
+import OutputIgnoreRulesV2 from "components/SNOC/views/forms/health/OutputIgnoreRulesV2"; // ← thêm
 import HostConfigPanel from "components/SNOC/views/forms/hosts/HostConfigPanel";
 import KPIChartDashboard from "components/SNOC/views/forms/kpi/KPIChartDashboard";
 import KPISelectorPage from "components/SNOC/views/forms/kpi/KPISelectorPage";
@@ -252,10 +254,17 @@ const MainPageRoute = (props: Props) => {
             path="/healthcheck/OutputIgnoreRules"
             element={<OutputIgnoreRules />}
           />
-
+          <Route
+            path="/healthcheck/OutputIgnoreRulesV2"
+            element={<OutputIgnoreRulesV2 />}
+          />
           <Route
             path="/healthcheck/history"
             element={<HistoricalReporting />}
+          />
+          <Route
+            path="/dhtt/history"
+            element={<DhttHistoricalReporting />}
           />
           <Route path="/healthcheck/kpi" element={<KPIChartDashboard />} />
           <Route

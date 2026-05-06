@@ -47,22 +47,25 @@ export const createOutputIgnoreRule = createAsyncThunk(
     }
   }
 );
+
 // PATCH update rule
 export const patchOutputIgnoreRule = createAsyncThunk(
   "outputIgnore/patchOutputIgnoreRule",
   async ({ id, patch }, { rejectWithValue, dispatch }) => {
     try {
       const response = await snocApi.patch(`${BASE}${id}/`, patch);
-      dispatch(showTemporaryAlert({ message: "Cập nhật rule thành công", type: "success" }));
+      dispatch(
+        showTemporaryAlert({
+          message: "Cập nhật rule thành công",
+          type: "success",
+        })
+      );
       return response.data;
     } catch (error) {
-      const status = error?.response?.status;
       const msg =
-        status === 403
-          ? "Bạn không có quyền sửa rule của phòng ban khác."
-          : error?.response?.data?.error ||
-            error?.response?.data?.detail ||
-            "Không thể cập nhật output ignore rule";
+        error?.response?.data?.detail ||
+        error?.response?.data?.error ||
+        "Không thể cập nhật output ignore rule";
       dispatch(showTemporaryAlert({ message: msg, type: "error" }));
       return rejectWithValue(msg);
     }
@@ -75,21 +78,21 @@ export const deleteOutputIgnoreRule = createAsyncThunk(
   async (id, { rejectWithValue, dispatch }) => {
     try {
       await snocApi.delete(`${BASE}${id}/`);
-      dispatch(showTemporaryAlert({ message: "Xóa rule thành công", type: "success" }));
+      dispatch(
+        showTemporaryAlert({ message: "Xóa rule thành công", type: "success" })
+      );
       return id;
     } catch (error) {
-      const status = error?.response?.status;
       const msg =
-        status === 403
-          ? "Bạn không có quyền xóa rule của phòng ban khác."
-          : error?.response?.data?.error ||
-            error?.response?.data?.detail ||
-            "Không thể xóa output ignore rule";
+        error?.response?.data?.detail ||
+        error?.response?.data?.error ||
+        "Không thể xóa output ignore rule";
       dispatch(showTemporaryAlert({ message: msg, type: "error" }));
       return rejectWithValue(msg);
     }
   }
 );
+
 const outputIgnoreSlice = createSlice({
   name: "outputIgnore",
   initialState: {

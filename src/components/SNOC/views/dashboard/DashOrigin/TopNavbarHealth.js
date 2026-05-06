@@ -75,18 +75,32 @@ const TopNavbar = () => {
             <NavLink to="/healthcheck/history" className={getLinkClass}>
               Historical Reporting
             </NavLink>
-            <NavLink to="/healthcheck/kpi" className={getLinkClass}>
-              KPI
-            </NavLink>
-            <NavLink to="/healthcheck/kpischedule" className={getLinkClass}>
-              KPI Schedule
-            </NavLink>
-            <NavLink
+            {/* <NavLink
               to="/healthcheck/OutputIgnoreRules"
               className={getLinkClass}
             >
               Healthcheck Ignore Rules
+            </NavLink> */}
+
+            <NavLink
+              to="/healthcheck/OutputIgnoreRulesV2"
+              className={getLinkClass}
+            >
+              Ignore Rules
             </NavLink>
+
+
+
+            <NavLink to="/healthcheck/kpi" className={getLinkClass}>
+              KPI
+            </NavLink>
+            <NavLink to="/healthcheck/kpischedule" className={getLinkClass}>
+              Other Schedule
+            </NavLink>          
+            <NavLink to="/dhtt/history" className={getLinkClass}>
+              Other Schedule History
+            </NavLink>
+
           </Nav>
 
           <Nav className="ms-auto align-items-center" style={{ gap: 10 }}>

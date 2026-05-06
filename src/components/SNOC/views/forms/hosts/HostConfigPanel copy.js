@@ -19,7 +19,7 @@ import {
 } from "../../../redux/Hosts/hostsSlice";
 
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
-import { getJwtClaims } from "../../../api/snocApiWithAutoToken";
+
 const HostManager = () => {
   const dispatch = useDispatch();
 
@@ -28,17 +28,7 @@ const HostManager = () => {
   const { platforms = [] } = useSelector((state) => state.platformDevice || {});
   const { departments = [] } = useSelector((state) => state.department || {});
   const { groups = [] } = useSelector((state) => state.group || {});
-  
-  // 🛡️ RBAC — đồng bộ với Schedule.js
-  const userClaims = useMemo(() => getJwtClaims(), []);
-  const isAdmin = useMemo(() =>
-    userClaims?.role === 'admin'  ||
-    userClaims?.role === 'super'  ||
-    userClaims?.is_superuser      ||
-    userClaims?.is_staff,
-  [userClaims]);
-console.log("userClaims:", userClaims);
-console.log("isAdmin:", isAdmin);
+  const { user } = useSelector((state) => state.auth || {});
 
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -135,57 +125,44 @@ console.log("isAdmin:", isAdmin);
     setShowModal(false);
   };
 
-const handleEdit = (host) => {
-  setEditing(true);
-  const platformObj = platforms.find((p) => p.name === host.platform);
-  const groupObj    = groups.find(g => g.name === host.group);
-  const deptObj     = departments.find(d => d.name === host.department);
+  const handleEdit = (host) => {
+    setEditing(true);
+    const platformObj = platforms.find((p) => p.name === host.platform);
+    const groupObj = groups.find(g => g.name === host.group);
+    const deptObj = departments.find(d => d.name === host.department);
 
-  setNewHost({
-    ...host,
-    platform:           platformObj?.id || "",
-    platformName:       platformObj ? "" : host.platform,
-    // User thường: giữ nguyên group/dept của thiết bị (không cho đổi)
-    group:      isAdmin ? (groupObj?.id || "")  : (userClaims?.group_id      ?? groupObj?.id ?? ""),
-    department: isAdmin ? (deptObj?.id  || "")  : (userClaims?.department_id ?? deptObj?.id  ?? ""),
-    groups:             host.groups?.join(", ") || "",
-    username:           host.username === "—" ? "" : host.username,
-    password:           "",
-    port:               host.port ?? "22",
-    site_code:          host.site_code ?? "",
-    vendor:             host.vendor ?? "",
-    license_throughput: host.license_throughput ?? "",
-  });
-  setShowModal(true);
-};
-
-  // const handleAddNew = () => {
-  //   setEditing(false);
-    
-  //   // Tự động gán nếu Backend chỉ trả về 1 lựa chọn
-  //   const defDept = departments.length === 1 ? departments[0].id : "";
-  //   const validGroups = defDept ? groups.filter(g => String(g.department?.id || g.department) === String(defDept)) : groups;
-  //   const defGroup = validGroups.length === 1 ? validGroups[0].id : "";
-
-  //   setNewHost({
-  //     name: "", hostname: "", platform: "", platformName: "",
-  //     group: defGroup, department: defDept, groups: "",
-  //     username: "", password: "", port: "22", site_code: "", vendor: "", license_throughput: "",
-  //   });
-  //   setTimeout(() => setShowModal(true), 0);
-  // };
+    setNewHost({
+      ...host,
+      platform: platformObj?.id || "",
+      platformName: platformObj ? "" : host.platform,
+      group: groupObj?.id || "",       
+      department: deptObj?.id || "",   
+      groups: host.groups?.join(", ") || "", 
+      username: host.username === "—" ? "" : host.username,
+      password: "",
+      port: host.port ?? "22",
+      site_code: host.site_code ?? "",
+      vendor: host.vendor ?? "",
+      license_throughput: host.license_throughput ?? "",
+    });
+    setShowModal(true);
+  };
 
   const handleAddNew = () => {
-  setEditing(false);
-  setNewHost({
-    name: "", hostname: "", platform: "", platformName: "",
-    group:      !isAdmin ? (userClaims?.group_id      ?? "") : "",
-    department: !isAdmin ? (userClaims?.department_id ?? "") : "",
-    groups: "", username: "", password: "",
-    port: "22", site_code: "", vendor: "", license_throughput: "",
-  });
-  setTimeout(() => setShowModal(true), 0);
-};
+    setEditing(false);
+    
+    // Tự động gán nếu Backend chỉ trả về 1 lựa chọn
+    const defDept = departments.length === 1 ? departments[0].id : "";
+    const validGroups = defDept ? groups.filter(g => String(g.department?.id || g.department) === String(defDept)) : groups;
+    const defGroup = validGroups.length === 1 ? validGroups[0].id : "";
+
+    setNewHost({
+      name: "", hostname: "", platform: "", platformName: "",
+      group: defGroup, department: defDept, groups: "",
+      username: "", password: "", port: "22", site_code: "", vendor: "", license_throughput: "",
+    });
+    setTimeout(() => setShowModal(true), 0);
+  };
 
   const getPlatformLabel = (id) => {
     const p = platforms.find((pl) => pl.id === id);
@@ -205,10 +182,10 @@ const handleEdit = (host) => {
               <div className="d-flex gap-2">
                 <Form.Control
                   type="text"
-                  placeholder="Tìm theo tên, IP, platform, vendor, site..."
+                  placeholder="Tìm theo tên, IP, platform, vendor..."
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-                  style={{ width: "350px" }}
+                  style={{ width: "320px" }}
                 />
                 <Button variant="success" onClick={handleAddNew}>➕ Thêm thiết bị</Button>
               </div>
@@ -235,26 +212,15 @@ const handleEdit = (host) => {
                         <th onClick={() => handleSort("department")} style={{ cursor: "pointer" }}>
                           Dept {sortConfig.key === "department" ? (sortConfig.direction === "asc" ? "🔼" : "🔽") : ""}
                         </th>
-                        <th onClick={() => handleSort("port")} style={{ cursor: "pointer" }}>
-                          Port {sortConfig.key === "port" ? (sortConfig.direction === "asc" ? "🔼" : "🔽") : ""}
-                        </th>
-                        <th onClick={() => handleSort("vendor")} style={{ cursor: "pointer" }}>
-                          Vendor {sortConfig.key === "vendor" ? (sortConfig.direction === "asc" ? "🔼" : "🔽") : ""}
-                        </th>
-                        <th onClick={() => handleSort("site_code")} style={{ cursor: "pointer" }}>
-                          Site {sortConfig.key === "site_code" ? (sortConfig.direction === "asc" ? "🔼" : "🔽") : ""}
-                        </th>
-                        <th onClick={() => handleSort("license_throughput")} style={{ cursor: "pointer" }}>
-                          License {sortConfig.key === "license_throughput" ? (sortConfig.direction === "asc" ? "🔼" : "🔽") : ""}
-                        </th>
                         <th>Hành động</th>
                       </tr>
                     </thead>
                     <tbody>
                       {paginatedItems.length > 0 ? paginatedItems.map((d, i) => {
                         // Logic phân quyền an toàn: Nếu ko có thông tin user, cứ hiện cho an toàn (Backend sẽ chặn nếu sai)
-                        const canEdit = isAdmin || userClaims?.group_name === d.group;
-
+                        const isSuper = user?.is_superuser || user?.is_staff;
+                        const isOwner = user?.group_name === d.group;
+                        const canEdit = !user || isSuper || isOwner;
 
                         return (
                           <tr key={d.name}>
@@ -264,11 +230,7 @@ const handleEdit = (host) => {
                             <td><span className="badge bg-info text-dark">{d.platform}</span></td>
                             <td>{d.group}</td>
                             <td>{d.department}</td>
-                            <td>{d.port ?? ""}</td>
-                            <td>{d.vendor ?? ""}</td>
-                            <td>{d.site_code ?? ""}</td>
-                            <td>{d.license_throughput ?? ""}</td>
-                            <td style={{ minWidth: "100px" }}>
+                            <td>
                               {canEdit ? (
                                 <>
                                   <Button variant="warning" size="sm" className="me-2" onClick={() => handleEdit(d)}>✏️</Button>
@@ -281,7 +243,7 @@ const handleEdit = (host) => {
                           </tr>
                         );
                       }) : (
-                        <tr><td colSpan="11">Không tìm thấy thiết bị nào.</td></tr>
+                        <tr><td colSpan="7">Không tìm thấy thiết bị nào.</td></tr>
                       )}
                     </tbody>
                   </Table>
@@ -338,40 +300,26 @@ const handleEdit = (host) => {
 
               <Col md={4}>
                 <Form.Label className="fw-bold">Department</Form.Label>
-<Form.Select
-  value={newHost.department}
-  onChange={e => {
-    const newDept = e.target.value;
-    const filteredGroups = groups.filter(g =>
-      String(g.department?.id || g.department) === String(newDept)
-    );
-    setNewHost({
-      ...newHost,
-      department: newDept,
-      // Nếu dept mới chỉ có 1 group → tự chọn luôn, không để ""
-      group: filteredGroups.length === 1 ? String(filteredGroups[0].id) : "",
-    });
-  }}
-  disabled={!isAdmin}
->
-  {departments.length > 1 && <option value="">-- Chọn Dept --</option>}
-  {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-</Form.Select>
+                <Form.Select 
+                  value={newHost.department} 
+                  onChange={e => setNewHost({...newHost, department: e.target.value, group: ""})}
+                  disabled={departments.length === 1}
+                >
+                  {departments.length > 1 && <option value="">-- Chọn Dept --</option>}
+                  {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </Form.Select>
               </Col>
 
               <Col md={4}>
                 <Form.Label className="fw-bold">Device Group (Phân quyền)</Form.Label>
-<Form.Select
-  value={newHost.group}
-  onChange={e => setNewHost({...newHost, group: e.target.value})}
-  disabled={!isAdmin}
->
-  {/* Luôn hiện placeholder để admin có thể chọn lại */}
-  {(isAdmin || displayGroups.length > 1) && (
-    <option value="">-- Chọn Group --</option>
-  )}
-  {displayGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-</Form.Select>
+                <Form.Select 
+                  value={newHost.group} 
+                  onChange={e => setNewHost({...newHost, group: e.target.value})}
+                  disabled={displayGroups.length === 1 && !editing}
+                >
+                  {displayGroups.length > 1 && <option value="">-- Chọn Group --</option>}
+                  {displayGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                </Form.Select>
               </Col>
             </Row>
 
