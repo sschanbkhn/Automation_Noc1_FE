@@ -70,10 +70,10 @@ const TopNavbar = () => {
               Schedule
             </NavLink>
             <NavLink to="/healthcheck/checks" className={getLinkClass}>
-              Health Checks
+              Health Manual
             </NavLink>
             <NavLink to="/healthcheck/history" className={getLinkClass}>
-              Historical Reporting
+              Health History
             </NavLink>
             {/* <NavLink
               to="/healthcheck/OutputIgnoreRules"
@@ -86,7 +86,7 @@ const TopNavbar = () => {
               to="/healthcheck/OutputIgnoreRulesV2"
               className={getLinkClass}
             >
-              Ignore Rules
+              Health Ignore Rules
             </NavLink>
 
 
@@ -95,10 +95,10 @@ const TopNavbar = () => {
               KPI
             </NavLink>
             <NavLink to="/healthcheck/kpischedule" className={getLinkClass}>
-              Other Schedule
+              DHTT Schedule
             </NavLink>          
             <NavLink to="/dhtt/history" className={getLinkClass}>
-              Other Schedule History
+              DHTT History
             </NavLink>
 
           </Nav>

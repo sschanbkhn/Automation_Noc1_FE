@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import {
-  Button, Card, Col, Form, Modal, Pagination, Row, Spinner, Table,
+  Button, Card, Col, Form, Modal, Pagination, Row, Spinner, Table, FormControl 
 } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import CreatableSelect from "react-select/creatable";
@@ -16,6 +16,7 @@ import {
   deleteHost,
   fetchHosts,
   updateHost,
+  cloneDevice,
 } from "../../../redux/Hosts/hostsSlice";
 
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
@@ -28,7 +29,15 @@ const HostManager = () => {
   const { platforms = [] } = useSelector((state) => state.platformDevice || {});
   const { departments = [] } = useSelector((state) => state.department || {});
   const { groups = [] } = useSelector((state) => state.group || {});
-  
+  // State
+  const [showCloneModal, setShowCloneModal] = useState(false);
+  const [cloneSource,    setCloneSource]    = useState(null);
+  const [cloneForm,      setCloneForm]      = useState({
+    name: "", hostname: "", username: "", password: "", port: "22",
+  });
+
+
+
   // 🛡️ RBAC — đồng bộ với Schedule.js
   const userClaims = useMemo(() => getJwtClaims(), []);
   const isAdmin = useMemo(() =>
@@ -159,21 +168,6 @@ const handleEdit = (host) => {
   setShowModal(true);
 };
 
-  // const handleAddNew = () => {
-  //   setEditing(false);
-    
-  //   // Tự động gán nếu Backend chỉ trả về 1 lựa chọn
-  //   const defDept = departments.length === 1 ? departments[0].id : "";
-  //   const validGroups = defDept ? groups.filter(g => String(g.department?.id || g.department) === String(defDept)) : groups;
-  //   const defGroup = validGroups.length === 1 ? validGroups[0].id : "";
-
-  //   setNewHost({
-  //     name: "", hostname: "", platform: "", platformName: "",
-  //     group: defGroup, department: defDept, groups: "",
-  //     username: "", password: "", port: "22", site_code: "", vendor: "", license_throughput: "",
-  //   });
-  //   setTimeout(() => setShowModal(true), 0);
-  // };
 
   const handleAddNew = () => {
   setEditing(false);
@@ -191,6 +185,39 @@ const handleEdit = (host) => {
     const p = platforms.find((pl) => pl.id === id);
     return p ? p.name : "";
   };
+// clone handle
+const handleClone = (host) => {
+  setCloneSource(host);
+  setCloneForm({
+    name:     `${host.name}_clone`,
+    hostname: host.hostname,
+    username: host.username !== "—" ? host.username : "",
+    password: "",   // user phải nhập lại hoặc để trống = giữ nguyên từ Vault
+    port:     host.port ?? "22",
+  });
+  setShowCloneModal(true);
+};
+
+const onConfirmClone = async () => {
+  if (!cloneForm.name?.trim())
+    return alert("Tên thiết bị mới không được để trống");
+  if (!cloneForm.hostname?.trim())
+    return alert("Hostname/IP không được để trống");
+
+  await dispatch(cloneDevice({
+    sourceName: cloneSource.name,
+    payload: {
+      name:     cloneForm.name.trim().toLowerCase(),
+      hostname: cloneForm.hostname.trim().toLowerCase(),
+      username: cloneForm.username,
+      password: cloneForm.password,
+      port:     cloneForm.port,
+    },
+  }));
+  setShowCloneModal(false);
+};
+
+
 
   return (
     <>
@@ -268,11 +295,12 @@ const handleEdit = (host) => {
                             <td>{d.vendor ?? ""}</td>
                             <td>{d.site_code ?? ""}</td>
                             <td>{d.license_throughput ?? ""}</td>
-                            <td style={{ minWidth: "100px" }}>
+                            <td style={{ minWidth: "130px" }}>
                               {canEdit ? (
                                 <>
-                                  <Button variant="warning" size="sm" className="me-2" onClick={() => handleEdit(d)}>✏️</Button>
-                                  <Button variant="danger" size="sm" onClick={() => window.confirm(`Xoá ${d.name}?`) && dispatch(deleteHost(d.name))}>🗑️</Button>
+                                  <Button variant="warning"       size="sm" className="me-1" onClick={() => handleEdit(d)}>✏️</Button>
+                                  <Button variant="outline-success" size="sm" className="me-1" onClick={() => handleClone(d)}>📋</Button>
+                                  <Button variant="danger"        size="sm" onClick={() => window.confirm(`Xoá ${d.name}?`) && dispatch(deleteHost(d.name))}>🗑️</Button>
                                 </>
                               ) : (
                                 <span className="text-muted small">Read-only</span>
@@ -398,6 +426,76 @@ const handleEdit = (host) => {
           <Button variant="primary" onClick={handleSaveHost}>Lưu thay đổi</Button>
         </Modal.Footer>
       </Modal>
+
+      {/* ── CLONE MODAL ─────────────────────────────────────────────── */}
+      <Modal show={showCloneModal} onHide={() => setShowCloneModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>
+            Clone thiết bị: <strong>{cloneSource?.name}</strong>
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Row className="g-2">
+            <Col md={6}>
+              <Form.Label className="fw-bold">
+                Tên mới <span className="text-danger">*</span>
+              </Form.Label>
+              <FormControl
+                value={cloneForm.name}
+                onChange={e => setCloneForm(p => ({ ...p, name: e.target.value }))}
+                placeholder="tên_thiết_bị_mới"
+              />
+            </Col>
+            <Col md={6}>
+              <Form.Label className="fw-bold">
+                Hostname / IP <span className="text-danger">*</span>
+              </Form.Label>
+              <FormControl
+                value={cloneForm.hostname}
+                onChange={e => setCloneForm(p => ({ ...p, hostname: e.target.value }))}
+                placeholder="192.168.1.x"
+              />
+            </Col>
+            <Col md={4}>
+              <Form.Label>Port</Form.Label>
+              <FormControl
+                value={cloneForm.port}
+                onChange={e => setCloneForm(p => ({ ...p, port: e.target.value }))}
+              />
+            </Col>
+            <Col md={4}>
+              <Form.Label>Username</Form.Label>
+              <FormControl
+                value={cloneForm.username}
+                onChange={e => setCloneForm(p => ({ ...p, username: e.target.value }))}
+                placeholder="Giữ nguyên nếu để trống"
+              />
+            </Col>
+            <Col md={4}>
+              <Form.Label>Password</Form.Label>
+              <FormControl
+                type="password"
+                value={cloneForm.password}
+                onChange={e => setCloneForm(p => ({ ...p, password: e.target.value }))}
+                placeholder="Giữ nguyên nếu để trống"
+              />
+            </Col>
+          </Row>
+          <small className="text-muted mt-2 d-block">
+            Platform, Group, Department sẽ được giữ nguyên từ thiết bị gốc.
+            Username/Password để trống = copy từ Vault của thiết bị gốc.
+          </small>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowCloneModal(false)}>
+            Hủy
+          </Button>
+          <Button variant="success" onClick={onConfirmClone}>
+            📋 Clone
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
     </>
   );
 };

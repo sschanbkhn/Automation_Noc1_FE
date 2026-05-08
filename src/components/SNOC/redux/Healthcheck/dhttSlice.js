@@ -6,14 +6,16 @@ import { showTemporaryAlert } from "../Alert/alertSlice";
 // Thunk lấy dữ liệu lịch sử DHTT
 export const fetchDhttHistory = createAsyncThunk(
   "dhtt/fetchDhttHistory",
-  async ({ host, page = 1, page_size = 10 }, { dispatch, rejectWithValue }) => {
+  async ({ host, hours, start, end, page = 1, page_size = 10 }, { dispatch, rejectWithValue }) => {
     try {
       const params = new URLSearchParams();
-      if (host) params.append("host", host);
-      params.append("page", String(page));
+      if (host)      params.append("host",      host);
+      if (hours)     params.append("hours",     String(hours));
+      if (start)     params.append("start",     start);
+      if (end)       params.append("end",       end);
+      params.append("page",      String(page));
       params.append("page_size", String(page_size));
 
-      // ⚠️ Đổi endpoint này theo API thực tế của DHTT
       const response = await snocApi.get(`/nornirps/DhttSyncHistoryView/?${params.toString()}`);
       return response.data;
     } catch (error) {
