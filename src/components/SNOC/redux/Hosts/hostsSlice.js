@@ -141,6 +141,32 @@ export const deleteHost = createAsyncThunk(
   }
 );
 
+
+export const cloneDevice = createAsyncThunk(
+  "hosts/cloneDevice",
+  async ({ sourceName, payload }, { rejectWithValue, dispatch }) => {
+    try {
+      const res = await snocApi.post(`/nornirps/hosts/${sourceName}/clone/`, payload);
+      dispatch(showTemporaryAlert({ message: res.data.message, type: "success" }));
+      dispatch(fetchHosts());
+      return res.data;
+    } catch (error) {
+      const status = error?.response?.status;
+      const msg =
+        status === 403
+          ? "Bạn không có quyền clone thiết bị của đơn vị khác."
+          : status === 400
+          ? error?.response?.data?.error || "Dữ liệu không hợp lệ"
+          : error?.response?.data?.error || "Không thể clone thiết bị";
+      dispatch(showTemporaryAlert({ message: msg, type: "error" }));
+      return rejectWithValue(msg);
+    }
+  }
+);
+
+
+
+
 const hostsSlice = createSlice({
   name: "hosts",
   initialState: {
