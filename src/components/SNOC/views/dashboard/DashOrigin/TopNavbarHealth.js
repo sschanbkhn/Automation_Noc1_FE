@@ -1,19 +1,23 @@
 import React from "react";
 import { Container, Nav, Navbar, NavDropdown } from "react-bootstrap";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import {
+  getSnocToken,
+  setSnocToken,
+  snocApiNoAuth,
+} from "../../../api/snocApiWithAutoToken";
 import Clock from "../../../components/Clock";
-import { getSnocToken, setSnocToken, snocApiNoAuth } from "../../../api/snocApiWithAutoToken";
 
-const LINK_BASE  = "fw-semibold px-2 py-1 mx-1 rounded text-decoration-none";
+const LINK_BASE = "fw-semibold px-2 py-1 mx-1 rounded text-decoration-none";
 const LINK_ACTIVE = `${LINK_BASE} bg-white text-primary`;
-const LINK_IDLE   = `${LINK_BASE} text-white`;
+const LINK_IDLE = `${LINK_BASE} text-white`;
 
 const TopNavbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const pathname = location.pathname;
 
-  const getLinkClass = ({ isActive }) => isActive ? LINK_ACTIVE : LINK_IDLE;
+  const getLinkClass = ({ isActive }) => (isActive ? LINK_ACTIVE : LINK_IDLE);
 
   const dropdownActive = (paths) => paths.some((p) => pathname.startsWith(p));
 
@@ -24,12 +28,16 @@ const TopNavbar = () => {
     try {
       const token = getSnocToken();
       if (token) {
-        await snocApiNoAuth.post("/users/logout", {}, {
-          headers: { Authorization: token },
-        });
+        await snocApiNoAuth.post(
+          "/users/logout",
+          {},
+          {
+            headers: { Authorization: token },
+          },
+        );
       }
-    } catch (_) {}
-    finally {
+    } catch (_) {
+    } finally {
       setSnocToken(null, { persist: true });
       navigate("/snoc/login", { replace: true, state: { from: location } });
     }
@@ -43,7 +51,12 @@ const TopNavbar = () => {
   });
 
   return (
-    <Navbar bg="primary" variant="dark" expand="lg" className="px-3 py-1 shadow-sm">
+    <Navbar
+      bg="primary"
+      variant="dark"
+      expand="lg"
+      className="px-3 py-1 shadow-sm"
+    >
       <Container fluid>
         <Navbar.Brand className="fw-bold me-0" style={{ fontSize: "1rem" }}>
           System Health Automation
@@ -69,12 +82,14 @@ const TopNavbar = () => {
             {/* ── Precheck ▾ ── */}
             <NavDropdown
               title={
-                <span style={ddTitleStyle([
-                  "/healthcheck/schedule",
-                  "/healthcheck/checks",
-                  "/healthcheck/history",
-                  "/healthcheck/OutputIgnoreRules",
-                ])}>
+                <span
+                  style={ddTitleStyle([
+                    "/healthcheck/schedule",
+                    "/healthcheck/checks",
+                    "/healthcheck/history",
+                    "/healthcheck/OutputIgnoreRules",
+                  ])}
+                >
                   Precheck
                 </span>
               }
@@ -97,7 +112,10 @@ const TopNavbar = () => {
                 📋 History
               </NavDropdown.Item>
               <NavDropdown.Divider />
-              <NavDropdown.Item as={NavLink} to="/healthcheck/OutputIgnoreRulesV2">
+              <NavDropdown.Item
+                as={NavLink}
+                to="/healthcheck/OutputIgnoreRulesV2"
+              >
                 🚫 Ignore Rules
               </NavDropdown.Item>
             </NavDropdown>
@@ -105,19 +123,18 @@ const TopNavbar = () => {
             {/* ── Bảo Dưỡng ▾ ── */}
             <NavDropdown
               title={
-                <span style={ddTitleStyle([
-                  "/healthcheck/kpischedule",
-                  "/dhtt/history",
-                ])}>
+                <span
+                  style={ddTitleStyle([
+                    "/healthcheck/kpischedule",
+                    "/dhtt/history",
+                  ])}
+                >
                   Bảo Dưỡng
                 </span>
               }
               id="dd-baoduong"
               menuVariant="light"
-              className={ddClass([
-                "/healthcheck/kpischedule",
-                "/dhtt/history",
-              ])}
+              className={ddClass(["/healthcheck/kpischedule", "/dhtt/history"])}
             >
               <NavDropdown.Item as={NavLink} to="/healthcheck/kpischedule">
                 📅 Schedule
@@ -134,7 +151,10 @@ const TopNavbar = () => {
           </Nav>
 
           <Nav className="ms-auto align-items-center" style={{ gap: 10 }}>
-            <span className="text-white fw-semibold" style={{ fontSize: "0.85rem" }}>
+            <span
+              className="text-white fw-semibold"
+              style={{ fontSize: "0.85rem" }}
+            >
               <Clock />
             </span>
             <button
