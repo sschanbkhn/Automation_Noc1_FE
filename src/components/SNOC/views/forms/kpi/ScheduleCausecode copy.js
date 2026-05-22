@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Button, Card, Col, FormControl, Row, Table } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import Select from "react-select";
@@ -64,12 +64,12 @@ const ScheduleGeneric = () => {
 
   // Store platform/device
   const { platforms = [], devices = [] } = useSelector(
-    (state) => state.platformDevice || {}
+    (state) => state.platformDevice || {},
   );
 
   // Loading theo nhóm KPI
   const formBusy = useSelector((state) =>
-    selectGenericLoadingByType(state, "kpi")
+    selectGenericLoadingByType(state, "kpi"),
   );
 
   // BẢNG: chỉ hiển thị KPI
@@ -77,22 +77,22 @@ const ScheduleGeneric = () => {
   //   selectGenericSchedulesByType(state, "kpi")
   // );
   const rows = useSelector((state) =>
-    selectGenericSchedulesByType(state, activeType)
+    selectGenericSchedulesByType(state, activeType),
   );
 
-const currentRows = useSelector((state) => 
-  selectGenericSchedulesByType(state, activeType)
-);
+  const currentRows = useSelector((state) =>
+    selectGenericSchedulesByType(state, activeType),
+  );
 
-const allRows = useMemo(() => {
-  // Sử dụng currentRows thay vì rowsKpi
-  const merged = [...(currentRows || [])];
-  return merged.sort((a, b) => {
-    const ta = a?.last_run_at ? Date.parse(a.last_run_at) : -Infinity;
-    const tb = b?.last_run_at ? Date.parse(b.last_run_at) : -Infinity;
-    return tb - ta;
-  });
-}, [currentRows]); // Dependency change
+  const allRows = useMemo(() => {
+    // Sử dụng currentRows thay vì rowsKpi
+    const merged = [...(currentRows || [])];
+    return merged.sort((a, b) => {
+      const ta = a?.last_run_at ? Date.parse(a.last_run_at) : -Infinity;
+      const tb = b?.last_run_at ? Date.parse(b.last_run_at) : -Infinity;
+      return tb - ta;
+    });
+  }, [currentRows]); // Dependency change
 
   // Init platforms
   useEffect(() => {
@@ -107,7 +107,7 @@ const allRows = useMemo(() => {
   // Action options phụ thuộc platform
   const actionOptions = useMemo(
     () => getUsecaseOptionsForPlatform(selectedPlatform),
-    [selectedPlatform]
+    [selectedPlatform],
   );
   const actionDisabled = actionOptions.length === 0;
 
@@ -124,7 +124,7 @@ const allRows = useMemo(() => {
     setAction((prev) =>
       prev && isUsecaseAllowed(selectedPlatform, prev)
         ? prev
-        : actionOptions[0]?.value || "causecode"
+        : actionOptions[0]?.value || "causecode",
     );
   }, [selectedPlatform, actionOptions]);
 
@@ -142,7 +142,7 @@ const allRows = useMemo(() => {
         label: `${d.name} (${d.ip || "no-ip"})`,
         value: d.name,
       })),
-    [devices]
+    [devices],
   );
   const allOption = { label: "-- Chọn tất cả thiết bị --", value: "__all__" };
   const combinedOptions = [allOption, ...deviceOptions];
@@ -168,76 +168,83 @@ const allRows = useMemo(() => {
     setAction("causecode");
   };
 
-const handleSubmitSchedule = () => {
-  const selectedNames = selectedDevices.map((d) => d.value);
+  const handleSubmitSchedule = () => {
+    const selectedNames = selectedDevices.map((d) => d.value);
 
-  // 1. Kiểm tra các trường bắt buộc chung (không check action ở đây)
-  if (!name || !selectedPlatform || !cronExpression || selectedNames.length === 0) {
-    alert("Vui lòng nhập đầy đủ thông tin (Tên, Platform, Thiết bị, Cron).");
-    return;
-  }
-
-  if (!validateCron(cronExpression)) {
-    alert("Cron không hợp lệ. Định dạng đúng: */5 * * * *");
-    return;
-  }
-
-  // 2. Xử lý Action và Validation riêng rẽ theo từng Usecase
-  let finalAction = action;
-
-  if (activeType === "kpi") {
-    if (actionOptions.length === 0) {
-      alert("Platform này hiện chưa hỗ trợ Action KPI theo cấu hình.");
+    // 1. Kiểm tra các trường bắt buộc chung (không check action ở đây)
+    if (
+      !name ||
+      !selectedPlatform ||
+      !cronExpression ||
+      selectedNames.length === 0
+    ) {
+      alert("Vui lòng nhập đầy đủ thông tin (Tên, Platform, Thiết bị, Cron).");
       return;
     }
-    if (!action) {
-      alert("Vui lòng chọn Action.");
+
+    if (!validateCron(cronExpression)) {
+      alert("Cron không hợp lệ. Định dạng đúng: */5 * * * *");
       return;
     }
-    if (!isUsecaseAllowed(selectedPlatform, action)) {
-      alert("Action không hợp lệ với platform đã chọn.");
-      return;
+
+    // 2. Xử lý Action và Validation riêng rẽ theo từng Usecase
+    let finalAction = action;
+
+    if (activeType === "kpi") {
+      if (actionOptions.length === 0) {
+        alert("Platform này hiện chưa hỗ trợ Action KPI theo cấu hình.");
+        return;
+      }
+      if (!action) {
+        alert("Vui lòng chọn Action.");
+        return;
+      }
+      if (!isUsecaseAllowed(selectedPlatform, action)) {
+        alert("Action không hợp lệ với platform đã chọn.");
+        return;
+      }
+      finalAction = action;
+    } else if (activeType === "dhtt") {
+      // Với DHTT, ta ép cứng action và bỏ qua check isUsecaseAllowed
+      finalAction = "dhtt_sync";
     }
-    finalAction = action;
-  } else if (activeType === "dhtt") {
-    // Với DHTT, ta ép cứng action và bỏ qua check isUsecaseAllowed
-    finalAction = "dhtt_sync"; 
-  }
 
-  // 3. Khởi tạo Start Time
-  const defaultStartTime = dayjs()
-    .second(0)
-    .millisecond(0)
-    .format("YYYY-MM-DDTHH:mm:ssZ");
+    // 3. Khởi tạo Start Time
+    const defaultStartTime = dayjs()
+      .second(0)
+      .millisecond(0)
+      .format("YYYY-MM-DDTHH:mm:ssZ");
 
-  // 4. Tạo Payload dùng chung cho cả Create và Update
-  const payload = {
-    name,
-    platform: selectedPlatform,
-    node_names: selectedNames,
-    cron: cronExpression,
-    start_time: defaultStartTime,
-    usecase_type: activeType, // Lấy động từ Tab hiện tại
-    action: finalAction,      // Lấy action đã xử lý logic ở bước 2
+    // 4. Tạo Payload dùng chung cho cả Create và Update
+    const payload = {
+      name,
+      platform: selectedPlatform,
+      node_names: selectedNames,
+      cron: cronExpression,
+      start_time: defaultStartTime,
+      usecase_type: activeType, // Lấy động từ Tab hiện tại
+      action: finalAction, // Lấy action đã xử lý logic ở bước 2
+    };
+
+    // 5. Submit qua Redux
+    if (editingTask) {
+      // UPDATE
+      dispatch(updateGenericSchedule({ id: editingTask.id, ...payload })).then(
+        () => {
+          // Đổi chữ "kpi" cứng thành activeType để bảng tự làm mới đúng Tab
+          dispatch(fetchGenericSchedule({ usecase_type: activeType }));
+          resetForm();
+        },
+      );
+    } else {
+      // CREATE
+      dispatch(createGenericSchedule(payload)).then(() => {
+        // Đổi chữ "kpi" cứng thành activeType
+        dispatch(fetchGenericSchedule({ usecase_type: activeType }));
+        resetForm();
+      });
+    }
   };
-
-  // 5. Submit qua Redux
-  if (editingTask) {
-    // UPDATE
-    dispatch(updateGenericSchedule({ id: editingTask.id, ...payload })).then(() => {
-      // Đổi chữ "kpi" cứng thành activeType để bảng tự làm mới đúng Tab
-      dispatch(fetchGenericSchedule({ usecase_type: activeType })); 
-      resetForm();
-    });
-  } else {
-    // CREATE
-    dispatch(createGenericSchedule(payload)).then(() => {
-      // Đổi chữ "kpi" cứng thành activeType
-      dispatch(fetchGenericSchedule({ usecase_type: activeType })); 
-      resetForm();
-    });
-  }
-};
 
   // const handleEdit = (task) => {
   //   setName(task.name);
@@ -278,54 +285,68 @@ const handleSubmitSchedule = () => {
 
   // const columns = useMemo(
   //   () => getColumns(handleToggle, handleEdit, handleDelete),
-  //   [handleToggle, handleEdit, handleDelete] 
+  //   [handleToggle, handleEdit, handleDelete]
   // );
 
+  const handleEdit = useCallback(
+    (task) => {
+      setName(task.name);
+      setSelectedPlatform(task.platform);
 
+      const ok = task.action && isUsecaseAllowed(task.platform, task.action);
+      const fallback =
+        getUsecaseOptionsForPlatform(task.platform)[0]?.value || "causecode";
+      setAction(ok ? task.action : fallback);
 
-  const handleEdit = useCallback((task) => {
-    setName(task.name);
-    setSelectedPlatform(task.platform);
+      setSelectedDevices(
+        (task.node_names || []).map((d) => ({ label: d, value: d })),
+      );
+      setCronExpression(task.cron);
+      setEditingTask(task);
+    },
+    [
+      /* liệt kê các hàm set state ở đây nếu ESLint yêu cầu, thường là empty hoặc: */ setName,
+      setSelectedPlatform,
+      setAction,
+      setSelectedDevices,
+      setCronExpression,
+      setEditingTask,
+    ],
+  );
 
-    const ok = task.action && isUsecaseAllowed(task.platform, task.action);
-    const fallback = getUsecaseOptionsForPlatform(task.platform)[0]?.value || "causecode";
-    setAction(ok ? task.action : fallback);
+  const handleDelete = useCallback(
+    (task) => {
+      const id = task.id;
+      const type = activeType; // Sử dụng activeType thay vì fix cứng "kpi" để đồng bộ dynamic
+      if (window.confirm("Bạn có chắc muốn xoá lịch này không?")) {
+        dispatch(deleteGenericSchedule({ id, usecase_type: type })).then(() => {
+          dispatch(fetchGenericSchedule({ usecase_type: type }));
+        });
+      }
+    },
+    [dispatch, activeType],
+  ); // Thêm các phụ thuộc mà hàm này sử dụng
 
-    setSelectedDevices(
-      (task.node_names || []).map((d) => ({ label: d, value: d }))
-    );
-    setCronExpression(task.cron);
-    setEditingTask(task);
-}, [/* liệt kê các hàm set state ở đây nếu ESLint yêu cầu, thường là empty hoặc: */ setName, setSelectedPlatform, setAction, setSelectedDevices, setCronExpression, setEditingTask]);
+  const handleToggle = useCallback(
+    (task) => {
+      const type = activeType;
+      dispatch(
+        toggleGenericSchedule({
+          id: task.id,
+          enabled: !task.enabled,
+          usecase_type: type,
+        }),
+      ).then(() => dispatch(fetchGenericSchedule({ usecase_type: type })));
+    },
+    [dispatch, activeType],
+  );
 
-const handleDelete = useCallback((task) => {
-    const id = task.id;
-    const type = activeType; // Sử dụng activeType thay vì fix cứng "kpi" để đồng bộ dynamic
-    if (window.confirm("Bạn có chắc muốn xoá lịch này không?")) {
-      dispatch(deleteGenericSchedule({ id, usecase_type: type })).then(() => {
-        dispatch(fetchGenericSchedule({ usecase_type: type }));
-      });
-    }
-}, [dispatch, activeType]); // Thêm các phụ thuộc mà hàm này sử dụng
-
-const handleToggle = useCallback((task) => {
-    const type = activeType; 
-    dispatch(
-      toggleGenericSchedule({
-        id: task.id,
-        enabled: !task.enabled,
-        usecase_type: type,
-      })
-    ).then(() => dispatch(fetchGenericSchedule({ usecase_type: type })));
-}, [dispatch, activeType]);
-
-// Bây giờ columns sẽ không còn bị cảnh báo vàng nữa
-const columns = useMemo(
+  // Bây giờ columns sẽ không còn bị cảnh báo vàng nữa
+  const columns = useMemo(
     () => getColumns(handleToggle, handleEdit, handleDelete),
-    [handleToggle, handleEdit, handleDelete] 
-);
+    [handleToggle, handleEdit, handleDelete],
+  );
 
-  
   return (
     <>
       <TopNavbarHealth />
@@ -420,12 +441,14 @@ const columns = useMemo(
       </Card>
 
       {/* Bảng KPI */}
-{/* Render các Tab động */}
+      {/* Render các Tab động */}
       <div className="mb-3 d-flex gap-2">
         {USECASE_TYPES.map((type) => (
-          <Button 
+          <Button
             key={type.id}
-            variant={activeType === type.id ? type.color : `outline-${type.color}`} 
+            variant={
+              activeType === type.id ? type.color : `outline-${type.color}`
+            }
             onClick={() => setActiveType(type.id)}
           >
             {type.label}
@@ -437,7 +460,9 @@ const columns = useMemo(
       <Table striped bordered hover responsive>
         <thead>
           <tr>
-            {columns.map((col) => <th key={col.key}>{col.label}</th>)}
+            {columns.map((col) => (
+              <th key={col.key}>{col.label}</th>
+            ))}
           </tr>
         </thead>
         <tbody>
