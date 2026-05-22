@@ -20,10 +20,10 @@ const StatusBadge = ({ status }) => {
 };
 
 // 1. Danh sách các Tab (Usecase)
+// 1. Danh sách các Tab (Usecase)
 export const USECASE_TYPES = [
-  { id: "kpi", label: "📊 Quản lý KPI", color: "primary" },
-  { id: "dhtt", label: "☁️ Đồng bộ DHTT", color: "info" },
-  // Sau này thêm usecase mới chỉ cần thêm 1 dòng ở đây
+  { id: "dhtt", label: "🛠️ Bảo Dưỡng",   color: "info"    },  // ← đổi tên, giữ đầu tiên
+  { id: "kpi",  label: "📊 Quản lý KPI", color: "primary" },
 ];
 
 // 2. Định nghĩa các cột của bảng

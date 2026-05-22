@@ -27,6 +27,10 @@ import departmentReducer from "./../redux/User/departmentSlice";
 import groupReducer from "./../redux/User/groupSlice";
 import userReducer from "./../redux/User/userSlice";
 import outputIgnoreV2Reducer from "../redux/Healthcheck/outputIgnoreSliceV2";
+import blackoutReducer from "../redux/Healthcheck/blackoutSlice";
+import precheckReducer from "../redux/Healthcheck/precheckSlice";
+import regionReducer from "../redux/User/regionSlice";
+import accessScopeReducer from "../redux/User/accessScopeSlice";
 const snocStore = configureStore({
   reducer: {
     account: accountReducer, // KHÔNG persist ở store (token đã được API persist trong sessionStorage)
@@ -48,6 +52,10 @@ const snocStore = configureStore({
     outputIgnore: outputIgnoreReducer,
     dhtt: dhttReducer,
     outputIgnoreV2: outputIgnoreV2Reducer,
+    blackout: blackoutReducer,
+    precheck: precheckReducer,
+    region: regionReducer,
+    accessScope: accessScopeReducer,
   },
 });
 

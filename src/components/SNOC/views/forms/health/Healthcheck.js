@@ -94,6 +94,10 @@ const Healthcheck = () => {
     NOK: "table-danger",
     Unknown: "table-secondary",
   };
+console.log("=== 1. DỮ LIỆU REDUX ===", {
+    platforms: platforms,
+    devices: devices
+  });
 
   return (
     <>
