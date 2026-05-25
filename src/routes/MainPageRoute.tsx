@@ -49,6 +49,7 @@ import {
 import UserGroupDeptManager from "components/SNOC/Admin/UserGroupDeptManager";
 import NornirPlatformView from "components/SNOC/components/NornirPlatformView";
 import DnsConfigDashboard from "components/SNOC/views/dashboard/DashOrigin/DnsConfigDashboard";
+import PrecheckDashboard from "components/SNOC/views/dashboard/DashOrigin/PrecheckDashboard";
 import SbcDashboardWithNavbar from "components/SNOC/views/dashboard/DashOrigin/SbcDashboardWithNavbar";
 import DashOrigin from "components/SNOC/views/dashboard/DashOrigin/SystemHealthDashboard";
 import DnsLacracrnc from "components/SNOC/views/forms/dns/Dnslacracrnc";
@@ -72,7 +73,14 @@ import OutputIgnoreRulesV2 from "components/SNOC/views/forms/health/OutputIgnore
 import HostConfigPanel from "components/SNOC/views/forms/hosts/HostConfigPanel";
 import KPIChartDashboard from "components/SNOC/views/forms/kpi/KPIChartDashboard";
 import KPISelectorPage from "components/SNOC/views/forms/kpi/KPISelectorPage";
-import ScheduleGeneric from "components/SNOC/views/forms/kpi/ScheduleCausecode";
+import ScheduleGeneric from "components/SNOC/views/forms/kpi/ScheduleGeneric";
+import PrecheckHistory from "components/SNOC/views/tables/health/PrecheckHistory";
+import PrecheckSchedule from "components/SNOC/views/forms/health/PrecheckSchedule";
+import BlackoutConfigPage from "components/SNOC/views/forms/health/BlackoutConfig";
+import DhttManual from "components/SNOC/views/forms/health/DhttManual";
+import DhttDashboard from "components/SNOC/views/dashboard/DashOrigin/DhttDashboard";
+import PrecheckManual from "components/SNOC/views/forms/health/PrecheckManual";
+import SystemMonitorPage from "components/SNOC/Admin/SystemMonitorPage";
 
 ///snoc end
 interface Props {
@@ -259,14 +267,25 @@ const MainPageRoute = (props: Props) => {
             element={<OutputIgnoreRulesV2 />}
           />
           <Route
+            path="/healthcheck/blackout"
+            element={<BlackoutConfigPage />}
+          />
+          <Route
             path="/healthcheck/history"
             element={<HistoricalReporting />}
           />
+          <Route path="/precheck"          element={<PrecheckDashboard/>}/>
+          <Route path="/precheck/manual"   element={<PrecheckManual/>}/>
+          <Route path="/precheck/schedule" element={<PrecheckSchedule/>}/>
+          <Route path="/precheck/history"  element={<PrecheckHistory/>}/>
+          <Route path="/healthcheck/monitor" element={<SystemMonitorPage />} />
           <Route
             path="/dhtt/history"
             element={<DhttHistoricalReporting />}
           />
+          <Route path="/dhtt/manual" element={<DhttManual />} />
           <Route path="/healthcheck/kpi" element={<KPIChartDashboard />} />
+          <Route path="/dhtt/dashboard" element={<DhttDashboard />} />
           <Route
             path="/healthcheck/kpischedule"
             element={<ScheduleGeneric />}
