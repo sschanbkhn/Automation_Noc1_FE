@@ -84,8 +84,9 @@ import OutputIgnoreRulesV2 from "components/SNOC/views/forms/health/OutputIgnore
 import HostConfigPanel from "components/SNOC/views/forms/hosts/HostConfigPanel";
 import KPIChartDashboard from "components/SNOC/views/forms/kpi/KPIChartDashboard";
 import KPISelectorPage from "components/SNOC/views/forms/kpi/KPISelectorPage";
-import ScheduleGeneric from "components/SNOC/views/forms/kpi/ScheduleCausecode";
 
+
+import ScheduleGeneric from "components/SNOC/views/forms/kpi/ScheduleGeneric";
 
 import BlackoutConfigPage from "components/SNOC/views/forms/health/BlackoutConfig";
 import DhttManual from "components/SNOC/views/forms/health/DhttManual";
