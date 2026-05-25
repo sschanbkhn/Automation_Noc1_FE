@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Button, Card, Col, Form, Modal, Pagination, Row, Spinner, Table, FormControl 
+  Button, Card, Col, Form, Modal, Pagination, Row, Spinner, Table, FormControl
 } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import CreatableSelect from "react-select/creatable";
@@ -9,7 +9,7 @@ import WebSocketStatusBanner from "../../../components/WebSocketStatusBanner";
 
 // Redux Actions
 import { fetchPlatforms } from "../../../redux/Healthcheck/platformDeviceSlice";
-import { addHost, cloneDevice, deleteHost, fetchHosts ,updateHost,} from "../../../redux/Hosts/hostsSlice";
+import { addHost, cloneDevice, deleteHost, fetchHosts, updateHost, } from "../../../redux/Hosts/hostsSlice";
 import { fetchDepartments } from "../../../redux/User/departmentSlice";
 import { fetchGroups } from "../../../redux/User/groupSlice";
 
@@ -27,8 +27,8 @@ const HostManager = () => {
   const { groups = [] } = useSelector((state) => state.group || {});
   // State
   const [showCloneModal, setShowCloneModal] = useState(false);
-  const [cloneSource,    setCloneSource]    = useState(null);
-  const [cloneForm,      setCloneForm]      = useState({
+  const [cloneSource, setCloneSource] = useState(null);
+  const [cloneForm, setCloneForm] = useState({
     name: "", hostname: "", username: "", password: "", port: "22",
   });
 
@@ -184,78 +184,78 @@ const HostManager = () => {
   //   setShowModal(false);
   // };
 
-const handleSaveHost = () => {
-  const payload = {
-    ...newHost,
-    // ✅ Nếu có platformName (tạo mới) thì gửi chuỗi chữ, ngược lại gửi ID số
-    platform: newHost.platformName ? newHost.platformName : newHost.platform, 
-    group: newHost.group,
-    department: newHost.department,
-    groups: newHost.groups ? newHost.groups.split(",").map(g => g.trim()).filter(Boolean) : [],
+  const handleSaveHost = () => {
+    const payload = {
+      ...newHost,
+      // ✅ Nếu có platformName (tạo mới) thì gửi chuỗi chữ, ngược lại gửi ID số
+      platform: newHost.platformName ? newHost.platformName : newHost.platform,
+      group: newHost.group,
+      department: newHost.department,
+      groups: newHost.groups ? newHost.groups.split(",").map(g => g.trim()).filter(Boolean) : [],
+    };
+
+    if (payload.port !== "") payload.port = Number(payload.port);
+    if (payload.license_throughput !== "") payload.license_throughput = Number(payload.license_throughput);
+
+    // Xóa biến tạm dùng cho UI tránh làm rối Backend
+    delete payload.platformName;
+
+    if (editing) {
+      dispatch(updateHost({ name: newHost.name, data: payload }));
+    } else {
+      dispatch(addHost(payload));
+    }
+    setShowModal(false);
   };
 
-  if (payload.port !== "") payload.port = Number(payload.port);
-  if (payload.license_throughput !== "") payload.license_throughput = Number(payload.license_throughput);
+  // const handleEdit = (host) => {
+  //   setEditing(true);
+  //   const platformObj = platforms.find((p) => p.name === host.platform);
+  //   const groupObj    = groups.find(g => g.name === host.group);
+  //   const deptObj     = departments.find(d => d.name === host.department);
 
-  // Xóa biến tạm dùng cho UI tránh làm rối Backend
-  delete payload.platformName;
-
-  if (editing) {
-    dispatch(updateHost({ name: newHost.name, data: payload }));
-  } else {
-    dispatch(addHost(payload));
-  }
-  setShowModal(false);
-};
-
-// const handleEdit = (host) => {
-//   setEditing(true);
-//   const platformObj = platforms.find((p) => p.name === host.platform);
-//   const groupObj    = groups.find(g => g.name === host.group);
-//   const deptObj     = departments.find(d => d.name === host.department);
-
-//   setNewHost({
-//     ...host,
-//     platform:           platformObj?.id || "",
-//     platformName:       platformObj ? "" : host.platform,
-//     // User thường: giữ nguyên group/dept của thiết bị (không cho đổi)
-//     group:      isAdmin ? (groupObj?.id || "")  : (userClaims?.group_id      ?? groupObj?.id ?? ""),
-//     department: isAdmin ? (deptObj?.id  || "")  : (userClaims?.department_id ?? deptObj?.id  ?? ""),
-//     groups:             host.groups?.join(", ") || "",
-//     username:           host.username === "—" ? "" : host.username,
-//     password:           "",
-//     port:               host.port ?? "22",
-//     site_code:          host.site_code ?? "",
-//     vendor:             host.vendor ?? "",
-//     license_throughput: host.license_throughput ?? "",
-//   });
-//   setShowModal(true);
-// };
+  //   setNewHost({
+  //     ...host,
+  //     platform:           platformObj?.id || "",
+  //     platformName:       platformObj ? "" : host.platform,
+  //     // User thường: giữ nguyên group/dept của thiết bị (không cho đổi)
+  //     group:      isAdmin ? (groupObj?.id || "")  : (userClaims?.group_id      ?? groupObj?.id ?? ""),
+  //     department: isAdmin ? (deptObj?.id  || "")  : (userClaims?.department_id ?? deptObj?.id  ?? ""),
+  //     groups:             host.groups?.join(", ") || "",
+  //     username:           host.username === "—" ? "" : host.username,
+  //     password:           "",
+  //     port:               host.port ?? "22",
+  //     site_code:          host.site_code ?? "",
+  //     vendor:             host.vendor ?? "",
+  //     license_throughput: host.license_throughput ?? "",
+  //   });
+  //   setShowModal(true);
+  // };
 
 
-const handleEdit = (host) => {
-  setEditing(true);
-  const platformObj = platforms.find((p) => p.name === host.platform);
-  const groupObj    = groups.find(g => g.name === host.group);
-  const deptObj     = departments.find(d => d.name === host.department);
+  const handleEdit = (host) => {
+    setEditing(true);
+    const platformObj = platforms.find((p) => p.name === host.platform);
+    const groupObj = groups.find(g => g.name === host.group);
+    const deptObj = departments.find(d => d.name === host.department);
 
-  setNewHost({
-    ...host,
-    // ✅ Nếu tìm thấy platform trong DB thì set ID, nếu không (hữu họa) thì điền vào platformName
-    platform:           platformObj?.id || "",
-    platformName:       platformObj ? "" : host.platform,
-    group:      isAdmin ? (groupObj?.id || "")  : (userClaims?.group_id      ?? groupObj?.id ?? ""),
-    department: isAdmin ? (deptObj?.id  || "")  : (userClaims?.department_id ?? deptObj?.id  ?? ""),
-    groups:             host.groups?.join(", ") || "",
-    username:           host.username === "—" ? "" : host.username,
-    password:           "",
-    port:               host.port ?? "22",
-    site_code:          host.site_code ?? "",
-    vendor:             host.vendor ?? "",
-    license_throughput: host.license_throughput ?? "",
-  });
-  setShowModal(true);
-};
+    setNewHost({
+      ...host,
+      // ✅ Nếu tìm thấy platform trong DB thì set ID, nếu không (hữu họa) thì điền vào platformName
+      platform: platformObj?.id || "",
+      platformName: platformObj ? "" : host.platform,
+      group: isAdmin ? (groupObj?.id || "") : (userClaims?.group_id ?? groupObj?.id ?? ""),
+      department: isAdmin ? (deptObj?.id || "") : (userClaims?.department_id ?? deptObj?.id ?? ""),
+      groups: host.groups?.join(", ") || "",
+      username: host.username === "—" ? "" : host.username,
+      password: "",
+      port: host.port ?? "22",
+      site_code: host.site_code ?? "",
+      vendor: host.vendor ?? "",
+      license_throughput: host.license_throughput ?? "",
+    });
+    setShowModal(true);
+  };
 
   const handleAddNew = () => {
     setEditing(false);
@@ -281,37 +281,37 @@ const handleEdit = (host) => {
     const p = platforms.find((pl) => pl.id === id);
     return p ? p.name : "";
   };
-// clone handle
-const handleClone = (host) => {
-  setCloneSource(host);
-  setCloneForm({
-    name:     `${host.name}_clone`,
-    hostname: host.hostname,
-    username: host.username !== "—" ? host.username : "",
-    password: "",   // user phải nhập lại hoặc để trống = giữ nguyên từ Vault
-    port:     host.port ?? "22",
-  });
-  setShowCloneModal(true);
-};
+  // clone handle
+  const handleClone = (host) => {
+    setCloneSource(host);
+    setCloneForm({
+      name: `${host.name}_clone`,
+      hostname: host.hostname,
+      username: host.username !== "—" ? host.username : "",
+      password: "",   // user phải nhập lại hoặc để trống = giữ nguyên từ Vault
+      port: host.port ?? "22",
+    });
+    setShowCloneModal(true);
+  };
 
-const onConfirmClone = async () => {
-  if (!cloneForm.name?.trim())
-    return alert("Tên thiết bị mới không được để trống");
-  if (!cloneForm.hostname?.trim())
-    return alert("Hostname/IP không được để trống");
+  const onConfirmClone = async () => {
+    if (!cloneForm.name?.trim())
+      return alert("Tên thiết bị mới không được để trống");
+    if (!cloneForm.hostname?.trim())
+      return alert("Hostname/IP không được để trống");
 
-  await dispatch(cloneDevice({
-    sourceName: cloneSource.name,
-    payload: {
-      name:     cloneForm.name.trim().toLowerCase(),
-      hostname: cloneForm.hostname.trim().toLowerCase(),
-      username: cloneForm.username,
-      password: cloneForm.password,
-      port:     cloneForm.port,
-    },
-  }));
-  setShowCloneModal(false);
-};
+    await dispatch(cloneDevice({
+      sourceName: cloneSource.name,
+      payload: {
+        name: cloneForm.name.trim().toLowerCase(),
+        hostname: cloneForm.hostname.trim().toLowerCase(),
+        username: cloneForm.username,
+        password: cloneForm.password,
+        port: cloneForm.port,
+      },
+    }));
+    setShowCloneModal(false);
+  };
 
 
 
@@ -470,33 +470,33 @@ const onConfirmClone = async () => {
                           const canEdit =
                             isAdmin || userClaims?.group_name === d.group;
 
+                          return (
+                            <tr key={d.name}>
+                              <td>{(currentPage - 1) * pageSize + i + 1}</td>
+                              <td><b>{d.name}</b></td>
+                              <td>{d.hostname}</td>
+                              <td><span className="badge bg-info text-dark">{d.platform}</span></td>
+                              <td>{d.group}</td>
+                              <td>{d.department}</td>
+                              <td>{d.port ?? ""}</td>
+                              <td>{d.vendor ?? ""}</td>
+                              <td>{d.site_code ?? ""}</td>
+                              <td>{d.license_throughput ?? ""}</td>
+                              <td style={{ minWidth: "130px" }}>
+                                {canEdit ? (
+                                  <>
+                                    <Button variant="warning" size="sm" className="me-1" onClick={() => handleEdit(d)}>✏️</Button>
+                                    <Button variant="outline-success" size="sm" className="me-1" onClick={() => handleClone(d)}>📋</Button>
+                                    <Button variant="danger" size="sm" onClick={() => window.confirm(`Xoá ${d.name}?`) && dispatch(deleteHost(d.name))}>🗑️</Button>
+                                  </>
+                                ) : (
+                                  <span className="text-muted small">Read-only</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
 
-                        return (
-                          <tr key={d.name}>
-                            <td>{(currentPage - 1) * pageSize + i + 1}</td>
-                            <td><b>{d.name}</b></td>
-                            <td>{d.hostname}</td>
-                            <td><span className="badge bg-info text-dark">{d.platform}</span></td>
-                            <td>{d.group}</td>
-                            <td>{d.department}</td>
-                            <td>{d.port ?? ""}</td>
-                            <td>{d.vendor ?? ""}</td>
-                            <td>{d.site_code ?? ""}</td>
-                            <td>{d.license_throughput ?? ""}</td>
-                            <td style={{ minWidth: "130px" }}>
-                              {canEdit ? (
-                                <>
-                                  <Button variant="warning"       size="sm" className="me-1" onClick={() => handleEdit(d)}>✏️</Button>
-                                  <Button variant="outline-success" size="sm" className="me-1" onClick={() => handleClone(d)}>📋</Button>
-                                  <Button variant="danger"        size="sm" onClick={() => window.confirm(`Xoá ${d.name}?`) && dispatch(deleteHost(d.name))}>🗑️</Button>
-                                </>
-                              ) : (
-                                <span className="text-muted small">Read-only</span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      }) : (
+                        })) : (
                         <tr><td colSpan="11">Không tìm thấy thiết bị nào.</td></tr>
                       )}
                     </tbody>
@@ -570,33 +570,33 @@ const onConfirmClone = async () => {
             <Row className="mb-3">
               <Col md={4}>
                 <Form.Label className="fw-bold">Platform</Form.Label>
-<CreatableSelect
-  isClearable
-  placeholder="Chọn hoặc gõ Platform mới..."
-  options={platforms.map(p => ({ value: p.id, label: p.name }))}
-  
-  // ✅ SỬA TẠI ĐÂY: Logic tính toán value hiển thị trực quan
-  value={
-    newHost.platformName
-      ? { value: newHost.platformName, label: newHost.platformName }
-      : newHost.platform && !isNaN(newHost.platform) // Nếu platform là ID (số)
-      ? { value: newHost.platform, label: getPlatformLabel(newHost.platform) }
-      : null
-  }
-  
-  // ✅ SỬA TẠI ĐÂY: Lưu tách bạch ID và Tên mới
-  onChange={(opt) => {
-    if (!opt) {
-      setNewHost({ ...newHost, platform: "", platformName: "" });
-    } else if (opt.__isNew__) {
-      // Nếu là gõ mới hoàn toàn
-      setNewHost({ ...newHost, platform: "", platformName: opt.value });
-    } else {
-      // Nếu là chọn từ danh sách có sẵn (đã có ID)
-      setNewHost({ ...newHost, platform: opt.value, platformName: "" });
-    }
-  }}
-/>
+                <CreatableSelect
+                  isClearable
+                  placeholder="Chọn hoặc gõ Platform mới..."
+                  options={platforms.map(p => ({ value: p.id, label: p.name }))}
+
+                  // ✅ SỬA TẠI ĐÂY: Logic tính toán value hiển thị trực quan
+                  value={
+                    newHost.platformName
+                      ? { value: newHost.platformName, label: newHost.platformName }
+                      : newHost.platform && !isNaN(newHost.platform) // Nếu platform là ID (số)
+                        ? { value: newHost.platform, label: getPlatformLabel(newHost.platform) }
+                        : null
+                  }
+
+                  // ✅ SỬA TẠI ĐÂY: Lưu tách bạch ID và Tên mới
+                  onChange={(opt) => {
+                    if (!opt) {
+                      setNewHost({ ...newHost, platform: "", platformName: "" });
+                    } else if (opt.__isNew__) {
+                      // Nếu là gõ mới hoàn toàn
+                      setNewHost({ ...newHost, platform: "", platformName: opt.value });
+                    } else {
+                      // Nếu là chọn từ danh sách có sẵn (đã có ID)
+                      setNewHost({ ...newHost, platform: opt.value, platformName: "" });
+                    }
+                  }}
+                />
               </Col>
 
               <Col md={4}>

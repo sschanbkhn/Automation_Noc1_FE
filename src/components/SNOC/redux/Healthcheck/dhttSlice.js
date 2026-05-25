@@ -73,47 +73,8 @@ export const fetchDhttParamConfig = createAsyncThunk(
   },
 );
 
-// Thêm thunk
-export const runManualDhtt = createAsyncThunk(
-  "dhtt/runManual",
-  async ({ platform, node_names }, { dispatch, rejectWithValue }) => {
-    try {
-      const res = await snocApi.post("/nornirps/ManualDhttCheckView/", {
-        platform,
-        node_names,
-      });
-      dispatch(
-        showTemporaryAlert({
-          message: `✅ Hoàn thành DHTT manual: ${platform}`,
-          type: "success",
-        }),
-      );
-      return res.data;
-    } catch (error) {
-      const status = error?.response?.status;
-      const msg =
-        status === 403
-          ? "Bạn không có quyền chạy thiết bị này."
-          : error?.response?.data?.error || "Lỗi khi chạy DHTT manual";
-      dispatch(showTemporaryAlert({ message: msg, type: "error" }));
-      return rejectWithValue(msg);
-    }
-  },
-);
 
-export const fetchDhttParamConfig = createAsyncThunk(
-  "dhtt/fetchParamConfig",
-  async (platform, { rejectWithValue }) => {
-    try {
-      const res = await snocApi.get(
-        `/nornirps/DhttParamConfigView/?platform=${platform}`,
-      );
-      return { platform, ...res.data };
-    } catch (error) {
-      return rejectWithValue("Không thể tải cấu hình tham số DHTT");
-    }
-  },
-);
+
 
 const dhttSlice = createSlice({
   name: "dhtt",
