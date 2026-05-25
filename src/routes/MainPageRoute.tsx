@@ -60,6 +60,7 @@ import DashboardPowerSaving from "components/RNOC1/R008";
 import UserGroupDeptManager from "components/SNOC/Admin/UserGroupDeptManager";
 import NornirPlatformView from "components/SNOC/components/NornirPlatformView";
 import DnsConfigDashboard from "components/SNOC/views/dashboard/DashOrigin/DnsConfigDashboard";
+import PrecheckDashboard from "components/SNOC/views/dashboard/DashOrigin/PrecheckDashboard";
 import SbcDashboardWithNavbar from "components/SNOC/views/dashboard/DashOrigin/SbcDashboardWithNavbar";
 import DashOrigin from "components/SNOC/views/dashboard/DashOrigin/SystemHealthDashboard";
 import DnsLacracrnc from "components/SNOC/views/forms/dns/Dnslacracrnc";
@@ -79,11 +80,23 @@ import RequireSuperUserInline from "components/SNOC/auth/RequireSuperUserInline"
 import SnocLoginInline from "components/SNOC/auth/SnocLoginInline";
 import SnocSubApp from "components/SNOC/SnocSubApp";
 import OutputIgnoreRules from "components/SNOC/views/forms/health/OutputIgnoreRules";
+import OutputIgnoreRulesV2 from "components/SNOC/views/forms/health/OutputIgnoreRulesV2"; // ← thêm
 import HostConfigPanel from "components/SNOC/views/forms/hosts/HostConfigPanel";
 import KPIChartDashboard from "components/SNOC/views/forms/kpi/KPIChartDashboard";
 import KPISelectorPage from "components/SNOC/views/forms/kpi/KPISelectorPage";
 import ScheduleGeneric from "components/SNOC/views/forms/kpi/ScheduleCausecode";
 
+
+import BlackoutConfigPage from "components/SNOC/views/forms/health/BlackoutConfig";
+import DhttManual from "components/SNOC/views/forms/health/DhttManual";
+import DhttDashboard from "components/SNOC/views/dashboard/DashOrigin/DhttDashboard";
+import PrecheckManual from "components/SNOC/views/forms/health/PrecheckManual";
+
+import PrecheckHistory from "components/SNOC/views/tables/health/PrecheckHistory";
+import PrecheckSchedule from "components/SNOC/views/forms/health/PrecheckSchedule";
+
+
+import SystemMonitorPage from "components/SNOC/Admin/SystemMonitorPage";
 
 
 ///snoc end
@@ -384,6 +397,17 @@ const MainPageRoute = (props: Props) => {
                         path="/healthcheck/OutputIgnoreRules"
                         element={<OutputIgnoreRules />}
                     />
+
+                    <Route path="/healthcheck/OutputIgnoreRulesV2" element={<OutputIgnoreRulesV2 />} />
+                    <Route path="/healthcheck/blackout" element={<BlackoutConfigPage />} />
+                    <Route path="/precheck" element={<PrecheckDashboard />} />
+                    <Route path="/precheck/manual" element={<PrecheckManual />} />
+                    <Route path="/precheck/schedule" element={<PrecheckSchedule />} />
+                    <Route path="/precheck/history" element={<PrecheckHistory />} />
+                    <Route path="/healthcheck/monitor" element={<SystemMonitorPage />} />
+                    <Route path="/dhtt/manual" element={<DhttManual />} />
+                    <Route path="/dhtt/dashboard" element={<DhttDashboard />} />
+
 
                     <Route
                         path="/healthcheck/history"

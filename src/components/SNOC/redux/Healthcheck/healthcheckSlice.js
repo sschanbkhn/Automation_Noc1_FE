@@ -47,9 +47,16 @@ export const toggleDeviceExcluded = createAsyncThunk(
       );
       return { host, excluded };
     } catch (error) {
+      // const msg =
+      //   error?.response?.data?.detail ||
+      //   "Không thể cập nhật trạng thái excluded";
+      const status = error?.response?.status;
       const msg =
-        error?.response?.data?.detail ||
-        "Không thể cập nhật trạng thái excluded";
+        status === 403
+          ? "Bạn không có quyền thay đổi thiết bị này."
+          : error?.response?.data?.error ||
+            error?.response?.data?.detail ||
+            "Không thể cập nhật trạng thái excluded";
       dispatch(showTemporaryAlert({ message: msg, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
@@ -87,33 +94,100 @@ export const fetchHealthcheckSchedules = createAsyncThunk(
   },
 );
 
+// export const createHealthcheckSchedule = createAsyncThunk(
+//   "pscore/createHealthcheckSchedule",
+//   async (
+//     { name, platform, node_names, cron, start_time },
+//     { dispatch, rejectWithValue },
+//   ) => {
+//     try {
+//       const response = await snocApi.post("/nornirps/schedulerhealth/", {
+//         name,
+//         platform,
+//         node_names,
+//         cron,
+//         start_time,
+//       });
+//       dispatch(
+//         showTemporaryAlert({
+//           message: "Đặt lịch thành công!",
+//           type: "success",
+//         }),
+//       );
+//       return response.data;
+//     } catch (error) {
+//       const message = error?.response?.data?.detail || "Lỗi khi đặt lịch";
+//       dispatch(showTemporaryAlert({ message, type: "error" }));
+//       return rejectWithValue(error?.response?.data);
+//     }
+//   },
+// );
+
+
+// export const updateHealthcheckSchedule = createAsyncThunk(
+//   "pscore/updateHealthcheckSchedule",
+//   async (
+//     { id, name, platform, node_names, cron, start_time },
+//     { dispatch, rejectWithValue },
+//   ) => {
+//     try {
+//       await snocApi.put(`/nornirps/schedulerhealth/${id}/update/`, {
+//         name,
+//         platform,
+//         node_names,
+//         cron,
+//         start_time,
+//       });
+//       dispatch(fetchHealthcheckSchedules());
+//       dispatch(
+//         showTemporaryAlert({
+//           message: "Đã cập nhật lịch thành công",
+//           type: "success",
+//         }),
+//       );
+//       return id;
+//     } catch (error) {
+//       const message = error?.response?.data?.detail || "Lỗi khi cập nhật lịch";
+//       dispatch(showTemporaryAlert({ message, type: "error" }));
+//       return rejectWithValue(error?.response?.data);
+//     }
+//   },
+// );
+
+
+// 1. Sửa hàm CREATE
 export const createHealthcheckSchedule = createAsyncThunk(
   "pscore/createHealthcheckSchedule",
-  async (
-    { name, platform, node_names, cron, start_time },
-    { dispatch, rejectWithValue },
-  ) => {
+  async (payload, { dispatch, rejectWithValue }) => {
     try {
-      const response = await snocApi.post("/nornirps/schedulerhealth/", {
-        name,
-        platform,
-        node_names,
-        cron,
-        start_time,
-      });
-      dispatch(
-        showTemporaryAlert({
-          message: "Đặt lịch thành công!",
-          type: "success",
-        }),
-      );
+      // Đẩy nguyên cục payload xuống (bao gồm cả group, department...)
+      const response = await snocApi.post("/nornirps/schedulerhealth/", payload);
+      dispatch(showTemporaryAlert({ message: "Đặt lịch thành công!", type: "success" }));
       return response.data;
     } catch (error) {
       const message = error?.response?.data?.detail || "Lỗi khi đặt lịch";
       dispatch(showTemporaryAlert({ message, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
-  },
+  }
+);
+
+// 2. Sửa hàm UPDATE
+export const updateHealthcheckSchedule = createAsyncThunk(
+  "pscore/updateHealthcheckSchedule",
+  async ({ id, ...payload }, { dispatch, rejectWithValue }) => {
+    try {
+      // Đẩy nguyên cục payload xuống API update
+      await snocApi.put(`/nornirps/schedulerhealth/${id}/update/`, payload);
+      dispatch(fetchHealthcheckSchedules());
+      dispatch(showTemporaryAlert({ message: "Đã cập nhật lịch thành công", type: "success" }));
+      return id;
+    } catch (error) {
+      const message = error?.response?.data?.detail || "Lỗi khi cập nhật lịch";
+      dispatch(showTemporaryAlert({ message, type: "error" }));
+      return rejectWithValue(error?.response?.data);
+    }
+  }
 );
 
 export const toggleScheduleEnabled = createAsyncThunk(
@@ -154,36 +228,6 @@ export const deleteHealthcheckSchedule = createAsyncThunk(
       return id;
     } catch (error) {
       const message = error?.response?.data?.detail || "Lỗi khi xóa lịch";
-      dispatch(showTemporaryAlert({ message, type: "error" }));
-      return rejectWithValue(error?.response?.data);
-    }
-  },
-);
-
-export const updateHealthcheckSchedule = createAsyncThunk(
-  "pscore/updateHealthcheckSchedule",
-  async (
-    { id, name, platform, node_names, cron, start_time },
-    { dispatch, rejectWithValue },
-  ) => {
-    try {
-      await snocApi.put(`/nornirps/schedulerhealth/${id}/update/`, {
-        name,
-        platform,
-        node_names,
-        cron,
-        start_time,
-      });
-      dispatch(fetchHealthcheckSchedules());
-      dispatch(
-        showTemporaryAlert({
-          message: "Đã cập nhật lịch thành công",
-          type: "success",
-        }),
-      );
-      return id;
-    } catch (error) {
-      const message = error?.response?.data?.detail || "Lỗi khi cập nhật lịch";
       dispatch(showTemporaryAlert({ message, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
