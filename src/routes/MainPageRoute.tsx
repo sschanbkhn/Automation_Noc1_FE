@@ -74,14 +74,23 @@ import HostConfigPanel from "components/SNOC/views/forms/hosts/HostConfigPanel";
 import KPIChartDashboard from "components/SNOC/views/forms/kpi/KPIChartDashboard";
 import KPISelectorPage from "components/SNOC/views/forms/kpi/KPISelectorPage";
 import ScheduleGeneric from "components/SNOC/views/forms/kpi/ScheduleGeneric";
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 089334de9a937a1169bdd57453273b614afa8126
 import PrecheckHistory from "components/SNOC/views/tables/health/PrecheckHistory";
 import PrecheckSchedule from "components/SNOC/views/forms/health/PrecheckSchedule";
 import BlackoutConfigPage from "components/SNOC/views/forms/health/BlackoutConfig";
 import DhttManual from "components/SNOC/views/forms/health/DhttManual";
 import DhttDashboard from "components/SNOC/views/dashboard/DashOrigin/DhttDashboard";
 import PrecheckManual from "components/SNOC/views/forms/health/PrecheckManual";
+<<<<<<< HEAD
 import SystemMonitorPage from "components/SNOC/Admin/SystemMonitorPage";
+=======
+=======
+>>>>>>> 089334de9a937a1169bdd57453273b614afa8126
 
+>>>>>>> 00d51b5701bb0f8237217a6da77fd6ff330c4f65
 ///snoc end
 interface Props {
   Apps: any;
@@ -278,7 +287,10 @@ const MainPageRoute = (props: Props) => {
           <Route path="/precheck/manual"   element={<PrecheckManual/>}/>
           <Route path="/precheck/schedule" element={<PrecheckSchedule/>}/>
           <Route path="/precheck/history"  element={<PrecheckHistory/>}/>
+<<<<<<< HEAD
           <Route path="/healthcheck/monitor" element={<SystemMonitorPage />} />
+=======
+>>>>>>> 089334de9a937a1169bdd57453273b614afa8126
           <Route
             path="/dhtt/history"
             element={<DhttHistoricalReporting />}
