@@ -1,6 +1,12 @@
+<<<<<<< HEAD
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Badge, Button, Card, Col, Form, Modal, Pagination, Row, Spinner, Table, FormControl 
+=======
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  Button, Card, Col, Form, Modal, Pagination, Row, Spinner, Table, FormControl 
+>>>>>>> 48d58af632a4d040d5bac9f1af75fd7269fab8f9
 } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import CreatableSelect from "react-select/creatable";
@@ -14,7 +20,10 @@ import { fetchDepartments } from "../../../redux/User/departmentSlice";
 import { fetchGroups } from "../../../redux/User/groupSlice";
 
 import { getJwtClaims } from "../../../api/snocApiWithAutoToken";
+<<<<<<< HEAD
 import snocApi from "../../../api/snocApiWithAutoToken";
+=======
+>>>>>>> 48d58af632a4d040d5bac9f1af75fd7269fab8f9
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
 const HostManager = () => {
   const dispatch = useDispatch();
@@ -54,6 +63,7 @@ const HostManager = () => {
     key: "name",
     direction: "asc",
   });
+<<<<<<< HEAD
 
   // ── Ping / Port Check ────────────────────────────────────────────────────
   const [selectedForPing, setSelectedForPing]   = useState(new Set());
@@ -67,6 +77,8 @@ const HostManager = () => {
   const [traceResult,   setTraceResult]   = useState(null);    // API response
   const [showTraceModal,setShowTraceModal]= useState(false);
   const [showRaw,       setShowRaw]       = useState(false);
+=======
+>>>>>>> 48d58af632a4d040d5bac9f1af75fd7269fab8f9
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(false);
 
@@ -404,7 +416,11 @@ const onConfirmClone = async () => {
               <Card.Title as="h5" className="mb-0">
                 Quản lý Thiết bị
               </Card.Title>
+<<<<<<< HEAD
               <div className="d-flex gap-2 flex-wrap align-items-center">
+=======
+              <div className="d-flex gap-2">
+>>>>>>> 48d58af632a4d040d5bac9f1af75fd7269fab8f9
                 <Form.Control
                   type="text"
                   placeholder="Tìm theo tên, IP, platform, vendor, site..."
@@ -415,6 +431,7 @@ const onConfirmClone = async () => {
                   }}
                   style={{ width: "350px" }}
                 />
+<<<<<<< HEAD
                 {selectedForPing.size > 0 && (
                   <Button
                     variant="info"
@@ -434,6 +451,8 @@ const onConfirmClone = async () => {
                     Bỏ chọn tất cả
                   </Button>
                 )}
+=======
+>>>>>>> 48d58af632a4d040d5bac9f1af75fd7269fab8f9
                 <Button variant="success" onClick={handleAddNew}>
                   ➕ Thêm thiết bị
                 </Button>
@@ -594,6 +613,7 @@ const onConfirmClone = async () => {
                             <td>{d.vendor ?? ""}</td>
                             <td>{d.site_code ?? ""}</td>
                             <td>{d.license_throughput ?? ""}</td>
+<<<<<<< HEAD
                             <td style={{ minWidth: "160px" }}>
                               {canEdit ? (
                                 <>
@@ -606,6 +626,14 @@ const onConfirmClone = async () => {
                                     title={`Traceroute đến ${d.hostname}`}
                                     onClick={() => runTraceroute(d)}
                                   >🔍</Button>
+=======
+                            <td style={{ minWidth: "130px" }}>
+                              {canEdit ? (
+                                <>
+                                  <Button variant="warning"       size="sm" className="me-1" onClick={() => handleEdit(d)}>✏️</Button>
+                                  <Button variant="outline-success" size="sm" className="me-1" onClick={() => handleClone(d)}>📋</Button>
+                                  <Button variant="danger"        size="sm" onClick={() => window.confirm(`Xoá ${d.name}?`) && dispatch(deleteHost(d.name))}>🗑️</Button>
+>>>>>>> 48d58af632a4d040d5bac9f1af75fd7269fab8f9
                                 </>
                               ) : (
                                 <span className="text-muted small">Read-only</span>
@@ -1017,6 +1045,7 @@ const onConfirmClone = async () => {
         </Modal.Footer>
       </Modal>
 
+<<<<<<< HEAD
       {/* ── Ping / Port Check Results Modal ────────────────────────────────── */}
       <Modal
         show={showPingModal}
@@ -1251,6 +1280,8 @@ const onConfirmClone = async () => {
         </Modal.Footer>
       </Modal>
 
+=======
+>>>>>>> 48d58af632a4d040d5bac9f1af75fd7269fab8f9
     </>
   );
 };

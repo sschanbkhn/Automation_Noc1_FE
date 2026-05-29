@@ -74,15 +74,32 @@ import HostConfigPanel from "components/SNOC/views/forms/hosts/HostConfigPanel";
 import KPIChartDashboard from "components/SNOC/views/forms/kpi/KPIChartDashboard";
 import KPISelectorPage from "components/SNOC/views/forms/kpi/KPISelectorPage";
 import ScheduleGeneric from "components/SNOC/views/forms/kpi/ScheduleGeneric";
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 089334de9a937a1169bdd57453273b614afa8126
+>>>>>>> 48d58af632a4d040d5bac9f1af75fd7269fab8f9
 import PrecheckHistory from "components/SNOC/views/tables/health/PrecheckHistory";
 import PrecheckSchedule from "components/SNOC/views/forms/health/PrecheckSchedule";
 import BlackoutConfigPage from "components/SNOC/views/forms/health/BlackoutConfig";
 import DhttManual from "components/SNOC/views/forms/health/DhttManual";
 import DhttDashboard from "components/SNOC/views/dashboard/DashOrigin/DhttDashboard";
 import PrecheckManual from "components/SNOC/views/forms/health/PrecheckManual";
+<<<<<<< HEAD
 import SystemMonitorPage from "components/SNOC/Admin/SystemMonitorPage";
 import PrecheckExternal from "components/SNOC/views/forms/health/PrecheckExternal";
 import HealthcheckExternal from "components/SNOC/views/forms/health/HealthcheckExternal";
+=======
+<<<<<<< HEAD
+import SystemMonitorPage from "components/SNOC/Admin/SystemMonitorPage";
+=======
+=======
+>>>>>>> 089334de9a937a1169bdd57453273b614afa8126
+
+>>>>>>> 00d51b5701bb0f8237217a6da77fd6ff330c4f65
+>>>>>>> 48d58af632a4d040d5bac9f1af75fd7269fab8f9
 ///snoc end
 interface Props {
   Apps: any;
@@ -278,10 +295,19 @@ const MainPageRoute = (props: Props) => {
           />
           <Route path="/precheck"          element={<PrecheckDashboard/>}/>
           <Route path="/precheck/manual"   element={<PrecheckManual/>}/>
+<<<<<<< HEAD
           <Route path="/healthcheck/precheck-external" element={<PrecheckExternal />} />
           <Route path="/precheck/schedule" element={<PrecheckSchedule/>}/>
           <Route path="/precheck/history"  element={<PrecheckHistory/>}/>
           <Route path="/healthcheck/monitor" element={<SystemMonitorPage />} />
+=======
+          <Route path="/precheck/schedule" element={<PrecheckSchedule/>}/>
+          <Route path="/precheck/history"  element={<PrecheckHistory/>}/>
+<<<<<<< HEAD
+          <Route path="/healthcheck/monitor" element={<SystemMonitorPage />} />
+=======
+>>>>>>> 089334de9a937a1169bdd57453273b614afa8126
+>>>>>>> 48d58af632a4d040d5bac9f1af75fd7269fab8f9
           <Route
             path="/dhtt/history"
             element={<DhttHistoricalReporting />}
