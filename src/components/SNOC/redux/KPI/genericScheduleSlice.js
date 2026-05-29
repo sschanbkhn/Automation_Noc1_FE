@@ -38,42 +38,21 @@ export const fetchGenericSchedule = createAsyncThunk(
 
 export const createGenericSchedule = createAsyncThunk(
   "genericSchedule/createGenericSchedule",
-  async (
-    {
-      name,
-      platform,
-      node_names,
-      cron,
-      start_time,
-      usecase_type,
-      action = "causecode",
-      params,
-    },
-    { dispatch, rejectWithValue }
-  ) => {
+  async (payload, { dispatch, rejectWithValue }) => {
     try {
-      const response = await snocApi.post("/nornirps/scheduler/generic/", {
-        name,
-        platform,
-        node_names,
-        cron,
-        start_time,
-        usecase_type, // "kpi"
-        action,       // "causecode" | ...
-        params,       // optional
-      });
-      dispatch(
-        showTemporaryAlert({
-          message: "Tạo lịch generic thành công!",
-          type: "success",
-        })
-      );
-      dispatch(fetchGenericSchedule({ usecase_type }));
+      const response = await snocApi.post("/nornirps/scheduler/generic/", payload);
+      dispatch(showTemporaryAlert({ message: "Tạo lịch generic thành công!", type: "success" }));
+      dispatch(fetchGenericSchedule({ usecase_type: payload.usecase_type }));
       return response.data;
     } catch (error) {
-      const message =
-        error?.response?.data?.detail || "Lỗi khi tạo lịch generic";
-      dispatch(showTemporaryAlert({ message, type: "error" }));
+      const status = error?.response?.status;
+      const msg =
+        status === 403
+          ? "Bạn không có quyền tạo lịch cho đơn vị khác."
+          : error?.response?.data?.error ||
+            error?.response?.data?.detail ||
+            "Lỗi khi tạo lịch generic";
+      dispatch(showTemporaryAlert({ message: msg, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
   }
@@ -81,43 +60,21 @@ export const createGenericSchedule = createAsyncThunk(
 
 export const updateGenericSchedule = createAsyncThunk(
   "genericSchedule/updateGenericSchedule",
-  async (
-    {
-      id,
-      name,
-      platform,
-      node_names,
-      cron,
-      start_time,
-      usecase_type,
-      action = "causecode",
-      params,
-    },
-    { dispatch, rejectWithValue }
-  ) => {
+  async ({ id, ...payload }, { dispatch, rejectWithValue }) => {
     try {
-      await snocApi.put(`/nornirps/scheduler/generic/${id}/update/`, {
-        name,
-        platform,
-        node_names,
-        cron,
-        start_time,
-        usecase_type, // "kpi"
-        action,
-        params,
-      });
-      dispatch(fetchGenericSchedule({ usecase_type }));
-      dispatch(
-        showTemporaryAlert({
-          message: "Đã cập nhật lịch thành công",
-          type: "success",
-        })
-      );
+      await snocApi.put(`/nornirps/scheduler/generic/${id}/update/`, payload);
+      dispatch(fetchGenericSchedule({ usecase_type: payload.usecase_type }));
+      dispatch(showTemporaryAlert({ message: "Đã cập nhật lịch thành công", type: "success" }));
       return id;
     } catch (error) {
-      const message =
-        error?.response?.data?.detail || "Lỗi khi cập nhật lịch generic";
-      dispatch(showTemporaryAlert({ message, type: "error" }));
+      const status = error?.response?.status;
+      const msg =
+        status === 403
+          ? "Bạn không có quyền sửa lịch của đơn vị khác."
+          : error?.response?.data?.error ||
+            error?.response?.data?.detail ||
+            "Lỗi khi cập nhật lịch generic";
+      dispatch(showTemporaryAlert({ message: msg, type: "error" }));
       return rejectWithValue(error?.response?.data);
     }
   }
@@ -138,12 +95,17 @@ export const toggleGenericSchedule = createAsyncThunk(
       );
       if (usecase_type) dispatch(fetchGenericSchedule({ usecase_type }));
       return { id, enabled };
-    } catch (error) {
-      const message =
-        error?.response?.data?.detail || "Lỗi bật/tắt lịch generic";
-      dispatch(showTemporaryAlert({ message, type: "error" }));
-      return rejectWithValue(error?.response?.data);
-    }
+      } catch (error) {
+        const status = error?.response?.status;
+        const msg =
+          status === 403
+            ? "Bạn không có quyền thao tác lịch của đơn vị khác."  // ← thêm
+            : error?.response?.data?.error ||
+              error?.response?.data?.detail ||
+              "Lỗi thao tác lịch";
+        dispatch(showTemporaryAlert({ message: msg, type: "error" }));
+        return rejectWithValue(msg);
+      }
   }
 );
 
@@ -159,11 +121,17 @@ export const deleteGenericSchedule = createAsyncThunk(
       );
       dispatch(fetchGenericSchedule({ usecase_type }));
       return { id, usecase_type };
-    } catch (error) {
-      const message = error?.response?.data?.detail || "Lỗi xóa lịch generic";
-      dispatch(showTemporaryAlert({ message, type: "error" }));
-      return rejectWithValue(error?.response?.data);
-    }
+      } catch (error) {
+        const status = error?.response?.status;
+        const msg =
+          status === 403
+            ? "Bạn không có quyền thao tác lịch của đơn vị khác."  // ← thêm
+            : error?.response?.data?.error ||
+              error?.response?.data?.detail ||
+              "Lỗi thao tác lịch";
+        dispatch(showTemporaryAlert({ message: msg, type: "error" }));
+        return rejectWithValue(msg);
+      }
   }
 );
 

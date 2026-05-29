@@ -19,6 +19,12 @@ import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
 import { getJwtClaims } from "../../../api/snocApiWithAutoToken";
 
 // ── Constants ─────────────────────────────────────────────────────────────
+const OP_OPTIONS = [
+  { label: "EQUALS",     value: "EQUALS"     },
+  { label: "CONTAINS",   value: "CONTAINS"   },
+  { label: "STARTSWITH", value: "STARTSWITH" },
+  { label: "ENDSWITH",   value: "ENDSWITH"   },
+];
 const OPERATOR_OPTIONS = [
   { label: "OR  — bất kỳ điều kiện nào khớp", value: "OR"  },
   { label: "AND — tất cả điều kiện phải khớp", value: "AND" },
@@ -28,7 +34,6 @@ const EMPTY_BLOCK_COND = {
   mode: "BLOCK",
   block_start_op: "STARTSWITH", block_start_text: "",
   block_end_op:   "EQUALS",     block_end_text:   "END",
-  block_body_op:  null,         block_body_text:  "",  // optional — body/middle filter
 };
 const DEFAULT_FORM = {
   name: "", department: "", group: "",
@@ -62,17 +67,10 @@ function validateForm(form) {
       if (!c.line_text?.trim())   return `Condition ${i+1}: LINE thiếu line_text`;
     }
     if (c.mode === "BLOCK") {
-      if (!c.block_start_op)             return `Condition ${i+1}: BLOCK thiếu start_op`;
-      if (!c.block_start_text?.trim())   return `Condition ${i+1}: BLOCK thiếu start_text`;
-      if (!c.block_end_op)               return `Condition ${i+1}: BLOCK thiếu end_op`;
-      if (!c.block_end_text?.trim())     return `Condition ${i+1}: BLOCK thiếu end_text`;
-      // body filter — optional nhưng phải đi cặp
-      const hasBodyOp   = !!c.block_body_op;
-      const hasBodyText = !!(c.block_body_text?.trim());
-      if (hasBodyOp && !hasBodyText)
-        return `Condition ${i+1}: Body filter đã chọn op (${c.block_body_op}) nhưng chưa nhập body_text`;
-      if (!hasBodyOp && hasBodyText)
-        return `Condition ${i+1}: Body filter đã nhập text nhưng chưa chọn body_op`;
+      if (!c.block_start_op)             return `Condition ${i+1}: BLOCK thiếu block_start_op`;
+      if (!c.block_start_text?.trim())   return `Condition ${i+1}: BLOCK thiếu block_start_text`;
+      if (!c.block_end_op)               return `Condition ${i+1}: BLOCK thiếu block_end_op`;
+      if (!c.block_end_text?.trim())     return `Condition ${i+1}: BLOCK thiếu block_end_text`;
     }
   }
   return null;
@@ -105,16 +103,12 @@ const ConditionEditor = ({ conditions, onChange }) => {
             <Row className="g-2">
               <Col md={4}>
                 <Form.Label className="small">line_op</Form.Label>
-                <FormControl
-                  as="select" size="sm"
-                  value={c.line_op || "CONTAINS"}
-                  onChange={e => update(idx, { line_op: e.target.value })}
-                >
-                  <option value="CONTAINS">CONTAINS</option>
-                  <option value="EQUALS">EQUALS</option>
-                  <option value="STARTSWITH">STARTSWITH</option>
-                  <option value="ENDSWITH">ENDSWITH</option>
-                </FormControl>
+                <Select
+                  options={OP_OPTIONS}
+                  value={OP_OPTIONS.find(o => o.value === c.line_op) || null}
+                  onChange={opt => update(idx, { line_op: opt.value })}
+                  menuPortalTarget={document.body}
+                />
               </Col>
               <Col md={8}>
                 <Form.Label className="small">line_text</Form.Label>
@@ -129,128 +123,44 @@ const ConditionEditor = ({ conditions, onChange }) => {
           )}
 
           {c.mode === "BLOCK" && (
-            <>
-              {/* ── Row 1: Start condition ───────────────────────── */}
-              <Row className="g-2 mb-1">
-                <Col xs={12}>
-                  <small className="text-muted fw-semibold">
-                    🟢 Block START — dòng bắt đầu block
-                  </small>
-                </Col>
-                <Col md={4}>
-                  <Form.Label className="small">start_op</Form.Label>
-                  <FormControl
-                    as="select" size="sm"
-                    value={c.block_start_op || "STARTSWITH"}
-                    onChange={e => update(idx, { block_start_op: e.target.value })}
-                  >
-                    <option value="STARTSWITH">STARTSWITH</option>
-                    <option value="CONTAINS">CONTAINS</option>
-                    <option value="EQUALS">EQUALS</option>
-                    <option value="ENDSWITH">ENDSWITH</option>
-                  </FormControl>
-                </Col>
-                <Col md={8}>
-                  <Form.Label className="small">start_text</Form.Label>
-                  <FormControl
-                    size="sm"
-                    value={c.block_start_text || ""}
-                    onChange={e => update(idx, { block_start_text: e.target.value })}
-                    placeholder="Chuỗi bắt đầu block..."
-                  />
-                </Col>
-              </Row>
-
-              {/* ── Row 2: Body/middle filter (OPTIONAL) ─────────── */}
-              <Row className="g-2 mb-1">
-                <Col xs={12}>
-                  <Form.Check
-                    type="checkbox"
-                    id={`body-filter-toggle-${idx}`}
-                    label={
-                      <span className="text-muted fw-semibold" style={{ fontSize: "0.85rem" }}>
-                        🔍 Body Filter — chỉ drop block này nếu bên trong có dòng thỏa mãn
-                        &nbsp;<em>(không tích = drop tất cả block khớp START/END)</em>
-                      </span>
-                    }
-                    checked={!!c.block_body_op}
-                    onChange={e => update(idx, {
-                      block_body_op:   e.target.checked ? "CONTAINS" : null,
-                      block_body_text: e.target.checked ? (c.block_body_text || "") : "",
-                    })}
-                  />
-                </Col>
-                {c.block_body_op && (
-                  <>
-                    <Col md={4}>
-                      <Form.Label className="small">body_op</Form.Label>
-                      <FormControl
-                        as="select"
-                        size="sm"
-                        value={c.block_body_op || "CONTAINS"}
-                        onChange={e => update(idx, { block_body_op: e.target.value })}
-                      >
-                        <option value="CONTAINS">CONTAINS — bên trong có dòng chứa chuỗi</option>
-                        <option value="EQUALS">EQUALS — bên trong có dòng bằng chính xác</option>
-                        <option value="STARTSWITH">STARTSWITH — bên trong có dòng bắt đầu bằng</option>
-                        <option value="ENDSWITH">ENDSWITH — bên trong có dòng kết thúc bằng</option>
-                      </FormControl>
-                    </Col>
-                    <Col md={8}>
-                      <Form.Label className="small">body_text</Form.Label>
-                      <FormControl
-                        size="sm"
-                        value={c.block_body_text || ""}
-                        onChange={e => update(idx, { block_body_text: e.target.value })}
-                        placeholder="VD: FAULT — drop block nếu bên trong có dòng chứa FAULT"
-                        autoFocus
-                      />
-                    </Col>
-                    <Col xs={12}>
-                      <small className="text-info">
-                        💡 Block sẽ bị xóa toàn bộ (kể cả dòng START và END) nếu bên trong tìm thấy dòng thỏa mãn điều kiện trên.
-                        Nếu không tìm thấy dòng nào thỏa mãn → block được <strong>giữ lại</strong>.
-                      </small>
-                    </Col>
-                  </>
-                )}
-              </Row>
-
-              {/* ── Row 3: End condition ─────────────────────────── */}
-              <Row className="g-2">
-                <Col xs={12}>
-                  <small className="text-muted fw-semibold">
-                    🔴 Block END — dòng kết thúc block (luôn bị drop)
-                    <span className="text-info ms-2">
-                      💡 Nếu end_op = start_op và end_text = start_text → boundary pattern:
-                      dòng END tự động làm START của block kế tiếp
-                    </span>
-                  </small>
-                </Col>
-                <Col md={4}>
-                  <Form.Label className="small">end_op</Form.Label>
-                  <FormControl
-                    as="select" size="sm"
-                    value={c.block_end_op || "EQUALS"}
-                    onChange={e => update(idx, { block_end_op: e.target.value })}
-                  >
-                    <option value="EQUALS">EQUALS</option>
-                    <option value="STARTSWITH">STARTSWITH</option>
-                    <option value="CONTAINS">CONTAINS</option>
-                    <option value="ENDSWITH">ENDSWITH</option>
-                  </FormControl>
-                </Col>
-                <Col md={8}>
-                  <Form.Label className="small">end_text</Form.Label>
-                  <FormControl
-                    size="sm"
-                    value={c.block_end_text || ""}
-                    onChange={e => update(idx, { block_end_text: e.target.value })}
-                    placeholder="END"
-                  />
-                </Col>
-              </Row>
-            </>
+            <Row className="g-2">
+              <Col md={3}>
+                <Form.Label className="small">start_op</Form.Label>
+                <Select
+                  options={OP_OPTIONS}
+                  value={OP_OPTIONS.find(o => o.value === c.block_start_op) || null}
+                  onChange={opt => update(idx, { block_start_op: opt.value })}
+                  menuPortalTarget={document.body}
+                />
+              </Col>
+              <Col md={5}>
+                <Form.Label className="small">start_text</Form.Label>
+                <FormControl
+                  size="sm"
+                  value={c.block_start_text || ""}
+                  onChange={e => update(idx, { block_start_text: e.target.value })}
+                  placeholder="Chuỗi bắt đầu block..."
+                />
+              </Col>
+              <Col md={2}>
+                <Form.Label className="small">end_op</Form.Label>
+                <Select
+                  options={OP_OPTIONS}
+                  value={OP_OPTIONS.find(o => o.value === c.block_end_op) || null}
+                  onChange={opt => update(idx, { block_end_op: opt.value })}
+                  menuPortalTarget={document.body}
+                />
+              </Col>
+              <Col md={2}>
+                <Form.Label className="small">end_text</Form.Label>
+                <FormControl
+                  size="sm"
+                  value={c.block_end_text || ""}
+                  onChange={e => update(idx, { block_end_text: e.target.value })}
+                  placeholder="END"
+                />
+              </Col>
+            </Row>
           )}
         </div>
       ))}
@@ -413,12 +323,7 @@ const OutputIgnoreRulesV2 = () => {
       case_insensitive: !!r.case_insensitive,
       line_operator:    r.line_operator    || "OR",
       block_operator:   r.block_operator   || "OR",
-      // normalize: cũ không có block_body fields → đặt null để UI render đúng
-      conditions: (r.conditions || []).map(c =>
-        c.mode === "BLOCK"
-          ? { ...c, block_body_op: c.block_body_op || null, block_body_text: c.block_body_text || "" }
-          : c
-      ),
+      conditions:       r.conditions       || [],
       reason:           r.reason           || "",
     });
     const platVal = r.platform && r.platform !== "*" ? r.platform : null;
@@ -448,16 +353,6 @@ const OutputIgnoreRulesV2 = () => {
       ? selectedDevices.map(d => d.value)
       : ["*"];
 
-    // Normalize conditions: đảm bảo block_body_op/text là null (không phải undefined/"")
-    const normalizedConditions = (form.conditions || []).map(c => {
-      if (c.mode !== "BLOCK") return c;
-      return {
-        ...c,
-        block_body_op:   c.block_body_op  || null,
-        block_body_text: c.block_body_text || null,
-      };
-    });
-
     const payload = {
       name:             form.name.trim(),
       hosts,
@@ -468,22 +363,18 @@ const OutputIgnoreRulesV2 = () => {
       case_insensitive: form.case_insensitive,
       line_operator:    form.line_operator,
       block_operator:   form.block_operator,
-      conditions:       normalizedConditions,
+      conditions:       form.conditions,
       reason:           form.reason,
       group:            form.group      || null,
       department:       form.department || null,
     };
 
-    try {
-      if (editingId) {
-        await dispatch(patchOutputIgnoreRuleV2({ id: editingId, patch: payload })).unwrap();
-      } else {
-        await dispatch(createOutputIgnoreRuleV2(payload)).unwrap();
-      }
-      setShowModal(false);   // ← chỉ đóng modal khi thành công
-    } catch (_err) {
-      // lỗi đã được thunk dispatch showTemporaryAlert — giữ modal mở để user sửa
+    if (editingId) {
+      await dispatch(patchOutputIgnoreRuleV2({ id: editingId, patch: payload }));
+    } else {
+      await dispatch(createOutputIgnoreRuleV2(payload));
     }
+    setShowModal(false);
   };
 
   const onConfirmDelete = async () => {
@@ -861,20 +752,9 @@ const OutputIgnoreRulesV2 = () => {
                                   BLOCK ×{blockConds.length}
                                 </Badge>
                                 {blockConds.map((c, i) => (
-                                  <div key={i} className="text-truncate" style={{ maxWidth: 220 }}
-                                    title={[
-                                      `START: ${c.block_start_op} | ${c.block_start_text}`,
-                                      c.block_body_op ? `BODY: ${c.block_body_op} | ${c.block_body_text}` : null,
-                                      `END: ${c.block_end_op} | ${c.block_end_text}`,
-                                    ].filter(Boolean).join(" → ")}>
-                                    <small>
-                                      {c.block_start_op}: <em>{c.block_start_text}</em>
-                                      {c.block_body_op && (
-                                        <span className="text-primary ms-1">
-                                          → body:{c.block_body_op}
-                                        </span>
-                                      )}
-                                    </small>
+                                  <div key={i} className="text-truncate" style={{ maxWidth: 180 }}
+                                    title={`${c.block_start_op} | ${c.block_start_text}`}>
+                                    <small>{c.block_start_op}: <em>{c.block_start_text}</em></small>
                                   </div>
                                 ))}
                               </div>
