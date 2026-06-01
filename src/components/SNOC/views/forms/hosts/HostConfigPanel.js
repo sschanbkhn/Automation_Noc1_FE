@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Button, Card, Col, Form, Modal, Pagination, Row, Spinner, Table, FormControl
+  Button, Card, Col, Form, Modal, Pagination, Row, Spinner, Table, FormControl 
 } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import CreatableSelect from "react-select/creatable";
@@ -97,6 +97,69 @@ const HostManager = () => {
       direction = "desc";
     }
     setSortConfig({ key, direction });
+  };
+
+  // ── Ping / Port helpers ─────────────────────────────────────────────────
+  const togglePingSelect = (name) => {
+    setSelectedForPing(prev => {
+      const next = new Set(prev);
+      next.has(name) ? next.delete(name) : next.add(name);
+      return next;
+    });
+  };
+
+  const toggleSelectAllPing = (visibleDevices) => {
+    const names = visibleDevices.map(d => d.name);
+    const allSelected = names.every(n => selectedForPing.has(n));
+    if (allSelected) {
+      setSelectedForPing(prev => {
+        const next = new Set(prev);
+        names.forEach(n => next.delete(n));
+        return next;
+      });
+    } else {
+      setSelectedForPing(prev => new Set([...prev, ...names]));
+    }
+  };
+
+  const runPingCheck = async () => {
+    const targets = devices
+      .filter(d => selectedForPing.has(d.name))
+      .map(d => ({ name: d.name, hostname: d.hostname, port: d.port || 22 }));
+
+    if (!targets.length) return;
+    setPingLoading(true);
+    setPingResults(null);
+    setShowPingModal(true);
+    try {
+      const res = await snocApi.post("/nornirps/hosts/ping-check/", { targets });
+      setPingResults(res.data.results || []);
+    } catch (err) {
+      setPingResults([{ error: err?.response?.data?.error || "Lỗi kết nối server" }]);
+    } finally {
+      setPingLoading(false);
+    }
+  };
+
+  const runTraceroute = async (device) => {
+    setTraceTarget(device);
+    setTraceResult(null);
+    setShowRaw(false);
+    setTraceLoading(true);
+    setShowTraceModal(true);
+    try {
+      const res = await snocApi.post("/nornirps/hosts/traceroute/", {
+        name:     device.name,
+        hostname: device.hostname,
+        port:     device.port || 22,
+        max_hops: 20,
+      });
+      setTraceResult(res.data);
+    } catch (err) {
+      setTraceResult({ error: err?.response?.data?.error || "Lỗi kết nối server" });
+    } finally {
+      setTraceLoading(false);
+    }
   };
 
   // 🔹 TÍNH NĂNG SEARCH (TÌM KIẾM TOÀN DIỆN)
@@ -360,6 +423,14 @@ const HostManager = () => {
                   >
                     <thead className="table-light">
                       <tr>
+                        <th style={{ width: 36 }}>
+                          <Form.Check
+                            type="checkbox"
+                            title="Chọn/bỏ chọn tất cả trang này"
+                            checked={paginatedItems.length > 0 && paginatedItems.every(d => selectedForPing.has(d.name))}
+                            onChange={() => toggleSelectAllPing(paginatedItems)}
+                          />
+                        </th>
                         <th>STT</th>
                         <th
                           onClick={() => handleSort("name")}
@@ -470,34 +541,42 @@ const HostManager = () => {
                           const canEdit =
                             isAdmin || userClaims?.group_name === d.group;
 
-                          return (
-                            <tr key={d.name}>
-                              <td>{(currentPage - 1) * pageSize + i + 1}</td>
-                              <td><b>{d.name}</b></td>
-                              <td>{d.hostname}</td>
-                              <td><span className="badge bg-info text-dark">{d.platform}</span></td>
-                              <td>{d.group}</td>
-                              <td>{d.department}</td>
-                              <td>{d.port ?? ""}</td>
-                              <td>{d.vendor ?? ""}</td>
-                              <td>{d.site_code ?? ""}</td>
-                              <td>{d.license_throughput ?? ""}</td>
-                              <td style={{ minWidth: "130px" }}>
-                                {canEdit ? (
-                                  <>
-                                    <Button variant="warning" size="sm" className="me-1" onClick={() => handleEdit(d)}>✏️</Button>
-                                    <Button variant="outline-success" size="sm" className="me-1" onClick={() => handleClone(d)}>📋</Button>
-                                    <Button variant="danger" size="sm" onClick={() => window.confirm(`Xoá ${d.name}?`) && dispatch(deleteHost(d.name))}>🗑️</Button>
-                                  </>
-                                ) : (
-                                  <span className="text-muted small">Read-only</span>
-                                )}
-                              </td>
-                            </tr>
-                          );
 
-                        })) : (
-                        <tr><td colSpan="11">Không tìm thấy thiết bị nào.</td></tr>
+                        return (
+                          <tr key={d.name}>
+                            <td>
+                              <Form.Check
+                                type="checkbox"
+                                checked={selectedForPing.has(d.name)}
+                                onChange={() => togglePingSelect(d.name)}
+                              />
+                            </td>
+                            <td>{(currentPage - 1) * pageSize + i + 1}</td>
+                            <td><b>{d.name}</b></td>
+                            <td>{d.hostname}</td>
+                            <td><span className="badge bg-info text-dark">{d.platform}</span></td>
+                            <td>{d.group}</td>
+                            <td>{d.department}</td>
+                            <td>{d.port ?? ""}</td>
+                            <td>{d.vendor ?? ""}</td>
+                            <td>{d.site_code ?? ""}</td>
+                            <td>{d.license_throughput ?? ""}</td>
+                            <td style={{ minWidth: "130px" }}>
+                              {canEdit ? (
+                                <>
+                                  <Button variant="warning"       size="sm" className="me-1" onClick={() => handleEdit(d)}>✏️</Button>
+                                  <Button variant="outline-success" size="sm" className="me-1" onClick={() => handleClone(d)}>📋</Button>
+                                  <Button variant="danger"        size="sm" onClick={() => window.confirm(`Xoá ${d.name}?`) && dispatch(deleteHost(d.name))}>🗑️</Button>
+                                </>
+                              ) : (
+                                <span className="text-muted small">Read-only</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
+                      ) : (
+                        <tr><td colSpan="12">Không tìm thấy thiết bị nào.</td></tr>
                       )}
                     </tbody>
                   </Table>

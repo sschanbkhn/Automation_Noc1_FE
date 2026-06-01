@@ -109,6 +109,12 @@ const TopNavbar = () => {
               <NavDropdown.Item as={NavLink} to="/healthcheck/checks">
                 🔍 Manual Check
               </NavDropdown.Item>
+              <NavDropdown.Item
+                as={NavLink}
+                to="/healthcheck/healthcheck-external"
+              >
+                🔍 Manual External
+              </NavDropdown.Item>
               <NavDropdown.Item as={NavLink} to="/healthcheck/schedule">
                 📅 Schedule
               </NavDropdown.Item>
@@ -139,6 +145,12 @@ const TopNavbar = () => {
               </NavDropdown.Item>
               <NavDropdown.Item as={NavLink} to="/precheck/manual">
                 🔍 Manual
+              </NavDropdown.Item>
+              <NavDropdown.Item
+                as={NavLink}
+                to="/healthcheck/precheck-external"
+              >
+                🔍 Manual external
               </NavDropdown.Item>
               <NavDropdown.Item as={NavLink} to="/precheck/schedule">
                 📅 Schedule
@@ -202,9 +214,9 @@ const TopNavbar = () => {
               </NavDropdown>
             )}
             {/* ── 4. KPI ───────────────────────────────────────────── */}
-            {/* <NavLink to="/healthcheck/kpi" className={getLinkClass}>
+            <NavLink to="/healthcheck/kpi" className={getLinkClass}>
               KPI
-            </NavLink> */}
+            </NavLink>
           </Nav>
 
           <Nav className="ms-auto align-items-center" style={{ gap: 10 }}>

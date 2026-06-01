@@ -88,16 +88,18 @@ import KPISelectorPage from "components/SNOC/views/forms/kpi/KPISelectorPage";
 
 import ScheduleGeneric from "components/SNOC/views/forms/kpi/ScheduleGeneric";
 
+import PrecheckHistory from "components/SNOC/views/tables/health/PrecheckHistory";
+import PrecheckSchedule from "components/SNOC/views/forms/health/PrecheckSchedule";
 import BlackoutConfigPage from "components/SNOC/views/forms/health/BlackoutConfig";
 import DhttManual from "components/SNOC/views/forms/health/DhttManual";
 import DhttDashboard from "components/SNOC/views/dashboard/DashOrigin/DhttDashboard";
 import PrecheckManual from "components/SNOC/views/forms/health/PrecheckManual";
 
-import PrecheckHistory from "components/SNOC/views/tables/health/PrecheckHistory";
-import PrecheckSchedule from "components/SNOC/views/forms/health/PrecheckSchedule";
-
-
 import SystemMonitorPage from "components/SNOC/Admin/SystemMonitorPage";
+import PrecheckExternal from "components/SNOC/views/forms/health/PrecheckExternal";
+import HealthcheckExternal from "components/SNOC/views/forms/health/HealthcheckExternal";
+
+
 
 
 ///snoc end
@@ -391,52 +393,64 @@ const MainPageRoute = (props: Props) => {
                         <Route path="/app/snoc/admin" element={<UserGroupDeptManager />} />
                     </Route>
 
-                    <Route path="/healthcheck/devices" element={<HostConfigPanel />} />
-                    <Route path="/healthcheck/schedule" element={<Schedule />} />
-                    <Route path="/healthcheck/checks" element={<Healthcheck />} />
-                    <Route
-                        path="/healthcheck/OutputIgnoreRules"
-                        element={<OutputIgnoreRules />}
-                    />
+          <Route path="/healthcheck/devices" element={<HostConfigPanel />} />
+          <Route path="/healthcheck/schedule" element={<Schedule />} />
+          <Route path="/healthcheck/checks" element={<Healthcheck />} />
+          <Route path="/healthcheck/healthcheck-external" element={<HealthcheckExternal />} />
+          <Route
+            path="/healthcheck/OutputIgnoreRules"
+            element={<OutputIgnoreRules />}
+          />
+          <Route
+            path="/healthcheck/OutputIgnoreRulesV2"
+            element={<OutputIgnoreRulesV2 />}
+          />
+          <Route
+            path="/healthcheck/blackout"
+            element={<BlackoutConfigPage />}
+          />
+          <Route
+            path="/healthcheck/history"
+            element={<HistoricalReporting />}
+          />
+          <Route path="/precheck"          element={<PrecheckDashboard/>}/>
+          <Route path="/precheck/manual"   element={<PrecheckManual/>}/>
 
-                    <Route path="/healthcheck/OutputIgnoreRulesV2" element={<OutputIgnoreRulesV2 />} />
-                    <Route path="/healthcheck/blackout" element={<BlackoutConfigPage />} />
-                    <Route path="/precheck" element={<PrecheckDashboard />} />
-                    <Route path="/precheck/manual" element={<PrecheckManual />} />
-                    <Route path="/precheck/schedule" element={<PrecheckSchedule />} />
-                    <Route path="/precheck/history" element={<PrecheckHistory />} />
-                    <Route path="/healthcheck/monitor" element={<SystemMonitorPage />} />
-                    <Route path="/dhtt/manual" element={<DhttManual />} />
-                    <Route path="/dhtt/dashboard" element={<DhttDashboard />} />
+          <Route path="/healthcheck/precheck-external" element={<PrecheckExternal />} />
+          <Route path="/precheck/schedule" element={<PrecheckSchedule/>}/>
+          <Route path="/precheck/history"  element={<PrecheckHistory/>}/>
+          <Route path="/healthcheck/monitor" element={<SystemMonitorPage />} />
 
+          <Route path="/precheck/schedule" element={<PrecheckSchedule/>}/>
+          <Route path="/precheck/history"  element={<PrecheckHistory/>}/>
 
-                    <Route
-                        path="/healthcheck/history"
-                        element={<HistoricalReporting />}
-                    />
-                    <Route
-                        path="/dhtt/history"
-                        element={<DhttHistoricalReporting />}
-                    />
-                    <Route path="/healthcheck/kpi" element={<KPIChartDashboard />} />
-                    <Route
-                        path="/healthcheck/kpischedule"
-                        element={<ScheduleGeneric />}
-                    />
-                    <Route path="/kpi/:system/:subsystem" element={<KPISelectorPage />} />
-                    <Route path="/healthcheck/:group" element={<DashOrigin />} />
-                    <Route
-                        path="/healthcheck/:group/:subsystem"
-                        element={<DashOrigin />}
-                    />
-                    <Route path="/app/dashboard/dns" element={<DnsConfigDashboard />} />
-                    <Route path="/dns/tacs" element={<TACConfigPanel />} />
-                    <Route path="/dns/lacracrnc" element={<DnsLacracrnc />} />
-                    <Route path="/dns/apns" element={<TACConfigPanel />} />
-                    <Route
-                        path="/app/dashboard/sbc"
-                        element={<SbcDashboardWithNavbar />}
-                    />
+          <Route path="/healthcheck/monitor" element={<SystemMonitorPage />} />
+
+          <Route
+            path="/dhtt/history"
+            element={<DhttHistoricalReporting />}
+          />
+          <Route path="/dhtt/manual" element={<DhttManual />} />
+          <Route path="/healthcheck/kpi" element={<KPIChartDashboard />} />
+          <Route path="/dhtt/dashboard" element={<DhttDashboard />} />
+          <Route
+            path="/healthcheck/kpischedule"
+            element={<ScheduleGeneric />}
+          />
+          <Route path="/kpi/:system/:subsystem" element={<KPISelectorPage />} />
+          <Route path="/healthcheck/:group" element={<DashOrigin />} />
+          <Route
+            path="/healthcheck/:group/:subsystem"
+            element={<DashOrigin />}
+          />
+          <Route path="/app/dashboard/dns" element={<DnsConfigDashboard />} />
+          <Route path="/dns/tacs" element={<TACConfigPanel />} />
+          <Route path="/dns/lacracrnc" element={<DnsLacracrnc />} />
+          <Route path="/dns/apns" element={<TACConfigPanel />} />
+          <Route
+            path="/app/dashboard/sbc"
+            element={<SbcDashboardWithNavbar />}
+          />
 
                     <Route path="/sbc/dashboard" element={<SbcDashboardWithNavbar />} />
                     <Route
@@ -532,6 +546,8 @@ const MainPageRoute = (props: Props) => {
 
             {/* //======================================================================== */}
             {/* //======================================================================== */}
+
+
 
 
 

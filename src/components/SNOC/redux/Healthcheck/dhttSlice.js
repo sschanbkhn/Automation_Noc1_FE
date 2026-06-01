@@ -73,9 +73,6 @@ export const fetchDhttParamConfig = createAsyncThunk(
   },
 );
 
-
-
-
 const dhttSlice = createSlice({
   name: "dhtt",
   initialState: {
