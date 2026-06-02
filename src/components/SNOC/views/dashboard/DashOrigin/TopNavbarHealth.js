@@ -1,58 +1,49 @@
 import React from "react";
 import { Container, Nav, Navbar, NavDropdown } from "react-bootstrap";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import {
-  getJwtClaims,
-  getSnocToken,
-  setSnocToken,
-  snocApiNoAuth,
-} from "../../../api/snocApiWithAutoToken";
 import Clock from "../../../components/Clock";
+import { getSnocToken, setSnocToken, snocApiNoAuth, getJwtClaims } from "../../../api/snocApiWithAutoToken";
 
-const LINK_BASE = "fw-semibold px-2 py-1 mx-1 rounded text-decoration-none";
+
+const LINK_BASE   = "fw-semibold px-2 py-1 mx-1 rounded text-decoration-none";
 const LINK_ACTIVE = `${LINK_BASE} bg-white text-primary`;
-const LINK_IDLE = `${LINK_BASE} text-white`;
+const LINK_IDLE   = `${LINK_BASE} text-white`;
 
 const TopNavbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const pathname = location.pathname;
-  const claims = getJwtClaims();
-  const isAdmin =
-    claims?.is_superuser || ["super", "admin"].includes(claims?.role);
-  const getLinkClass = ({ isActive }) => (isActive ? LINK_ACTIVE : LINK_IDLE);
-
-  const isActive = (paths) => paths.some((p) => pathname.startsWith(p));
+  const claims  = getJwtClaims();
+  const isAdmin = claims?.is_superuser || ["super", "admin"].includes(claims?.role);
+  const getLinkClass = ({ isActive }) => isActive ? LINK_ACTIVE : LINK_IDLE;
+  
+  const isActive     = (paths) => paths.some(p => pathname.startsWith(p));
   const ddClass = (paths) =>
     `${isActive(paths) ? "bg-white rounded" : ""} fw-semibold mx-1`;
 
   const ddTitleStyle = (paths) => ({
-    color: isActive(paths) ? "#0d6efd" : "white",
+    color:    isActive(paths) ? "#0d6efd" : "white",
     fontSize: "0.85rem",
-    padding: "0.25rem 0.5rem",
+    padding:  "0.25rem 0.5rem",
   });
 
   const handleLogout = async () => {
     try {
       const token = getSnocToken();
       if (token) {
-        await snocApiNoAuth.post(
-          "/users/logout",
-          {},
-          {
-            headers: { Authorization: token },
-          },
-        );
+        await snocApiNoAuth.post("/users/logout", {}, {
+          headers: { Authorization: token },
+        });
       }
-    } catch (_) {
-    } finally {
+    } catch (_) {}
+    finally {
       setSnocToken(null, { persist: true });
       navigate("/snoc/login", { replace: true, state: { from: location } });
     }
   };
 
   // ── Path groups ───────────────────────────────────────────────────────
-
+  
   // Healthcheck bao gồm Dashboard và các chức năng của Precheck cũ
   const HC_PATHS = [
     "/app/dashboard/origin",
@@ -62,8 +53,7 @@ const TopNavbar = () => {
     "/healthcheck/OutputIgnoreRulesV2",
     "/healthcheck/blackout",
   ];
-  const PRECHECK_PATHS = [
-    // ← thêm
+  const PRECHECK_PATHS = [            // ← thêm
     "/precheck",
     "/precheck/manual",
     "/precheck/schedule",
@@ -77,12 +67,7 @@ const TopNavbar = () => {
   ];
 
   return (
-    <Navbar
-      bg="primary"
-      variant="dark"
-      expand="lg"
-      className="px-3 py-1 shadow-sm"
-    >
+    <Navbar bg="primary" variant="dark" expand="lg" className="px-3 py-1 shadow-sm">
       <Container fluid>
         <Navbar.Brand className="fw-bold me-0" style={{ fontSize: "1rem" }}>
           System Health Automation
@@ -95,6 +80,7 @@ const TopNavbar = () => {
             className="mx-auto align-items-center"
             style={{ fontSize: "0.85rem", gap: "2px" }}
           >
+
             {/* ── 1. HEALTHCHECK ▾ ─────────────────────────────────── */}
             <NavDropdown
               title={<span style={ddTitleStyle(HC_PATHS)}>Healthcheck</span>}
@@ -109,10 +95,7 @@ const TopNavbar = () => {
               <NavDropdown.Item as={NavLink} to="/healthcheck/checks">
                 🔍 Manual Check
               </NavDropdown.Item>
-              <NavDropdown.Item
-                as={NavLink}
-                to="/healthcheck/healthcheck-external"
-              >
+              <NavDropdown.Item as={NavLink} to="/healthcheck/healthcheck-external">
                 🔍 Manual External
               </NavDropdown.Item>
               <NavDropdown.Item as={NavLink} to="/healthcheck/schedule">
@@ -122,10 +105,7 @@ const TopNavbar = () => {
                 📋 History
               </NavDropdown.Item>
               <NavDropdown.Divider />
-              <NavDropdown.Item
-                as={NavLink}
-                to="/healthcheck/OutputIgnoreRulesV2"
-              >
+              <NavDropdown.Item as={NavLink} to="/healthcheck/OutputIgnoreRulesV2">
                 🚫 Ignore Rules
               </NavDropdown.Item>
               <NavDropdown.Item as={NavLink} to="/healthcheck/blackout">
@@ -146,10 +126,7 @@ const TopNavbar = () => {
               <NavDropdown.Item as={NavLink} to="/precheck/manual">
                 🔍 Manual
               </NavDropdown.Item>
-              <NavDropdown.Item
-                as={NavLink}
-                to="/healthcheck/precheck-external"
-              >
+              <NavDropdown.Item as={NavLink} to="/healthcheck/precheck-external">
                 🔍 Manual external
               </NavDropdown.Item>
               <NavDropdown.Item as={NavLink} to="/precheck/schedule">
@@ -162,9 +139,7 @@ const TopNavbar = () => {
 
             {/* ── 3. BẢO DƯỠNG ▾ ───────────────────────────────────── */}
             <NavDropdown
-              title={
-                <span style={ddTitleStyle(BAODUONG_PATHS)}>Bảo Dưỡng</span>
-              }
+              title={<span style={ddTitleStyle(BAODUONG_PATHS)}>Bảo Dưỡng</span>}
               id="dd-baoduong"
               menuVariant="light"
               className={ddClass(BAODUONG_PATHS)}
@@ -192,12 +167,7 @@ const TopNavbar = () => {
             {isAdmin && (
               <NavDropdown
                 title={
-                  <span
-                    style={ddTitleStyle([
-                      "/healthcheck/monitor",
-                      "/admin/monitor",
-                    ])}
-                  >
+                  <span style={ddTitleStyle(["/healthcheck/monitor", "/admin/monitor"])}>
                     ⚙️ System
                   </span>
                 }
@@ -216,14 +186,12 @@ const TopNavbar = () => {
             {/* ── 4. KPI ───────────────────────────────────────────── */}
             <NavLink to="/healthcheck/kpi" className={getLinkClass}>
               KPI
-            </NavLink>
+            </NavLink> 
+
           </Nav>
 
           <Nav className="ms-auto align-items-center" style={{ gap: 10 }}>
-            <span
-              className="text-white fw-semibold"
-              style={{ fontSize: "0.85rem" }}
-            >
+            <span className="text-white fw-semibold" style={{ fontSize: "0.85rem" }}>
               <Clock />
             </span>
             <button

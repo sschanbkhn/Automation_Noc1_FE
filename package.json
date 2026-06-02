@@ -32,6 +32,7 @@
     "@types/d3": "^6.7.8",
     "@types/lodash": "^4.17.20",
     "@types/ol": "^7.0.0",
+    "@types/react-redux": "^7.1.34",
     "antd": "^5.27.0",
     "apexcharts": "^4.5.0",
     "axios": "^0.21.1",

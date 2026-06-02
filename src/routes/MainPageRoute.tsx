@@ -84,24 +84,16 @@ import OutputIgnoreRulesV2 from "components/SNOC/views/forms/health/OutputIgnore
 import HostConfigPanel from "components/SNOC/views/forms/hosts/HostConfigPanel";
 import KPIChartDashboard from "components/SNOC/views/forms/kpi/KPIChartDashboard";
 import KPISelectorPage from "components/SNOC/views/forms/kpi/KPISelectorPage";
-
-
 import ScheduleGeneric from "components/SNOC/views/forms/kpi/ScheduleGeneric";
-
 import PrecheckHistory from "components/SNOC/views/tables/health/PrecheckHistory";
 import PrecheckSchedule from "components/SNOC/views/forms/health/PrecheckSchedule";
 import BlackoutConfigPage from "components/SNOC/views/forms/health/BlackoutConfig";
 import DhttManual from "components/SNOC/views/forms/health/DhttManual";
 import DhttDashboard from "components/SNOC/views/dashboard/DashOrigin/DhttDashboard";
 import PrecheckManual from "components/SNOC/views/forms/health/PrecheckManual";
-
 import SystemMonitorPage from "components/SNOC/Admin/SystemMonitorPage";
 import PrecheckExternal from "components/SNOC/views/forms/health/PrecheckExternal";
 import HealthcheckExternal from "components/SNOC/views/forms/health/HealthcheckExternal";
-
-
-
-
 ///snoc end
 // ANM
 import AnmTabs from 'components/ANM/Anmtabs';
@@ -415,17 +407,10 @@ const MainPageRoute = (props: Props) => {
           />
           <Route path="/precheck"          element={<PrecheckDashboard/>}/>
           <Route path="/precheck/manual"   element={<PrecheckManual/>}/>
-
           <Route path="/healthcheck/precheck-external" element={<PrecheckExternal />} />
           <Route path="/precheck/schedule" element={<PrecheckSchedule/>}/>
           <Route path="/precheck/history"  element={<PrecheckHistory/>}/>
           <Route path="/healthcheck/monitor" element={<SystemMonitorPage />} />
-
-          <Route path="/precheck/schedule" element={<PrecheckSchedule/>}/>
-          <Route path="/precheck/history"  element={<PrecheckHistory/>}/>
-
-          <Route path="/healthcheck/monitor" element={<SystemMonitorPage />} />
-
           <Route
             path="/dhtt/history"
             element={<DhttHistoricalReporting />}

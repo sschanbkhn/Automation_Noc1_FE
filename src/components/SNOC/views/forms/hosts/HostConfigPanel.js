@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Button, Card, Col, Form, Modal, Pagination, Row, Spinner, Table, FormControl 
+  Badge, Button, Card, Col, Form, Modal, Pagination, Row, Spinner, Table, FormControl
 } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import CreatableSelect from "react-select/creatable";
@@ -14,6 +14,7 @@ import { fetchDepartments } from "../../../redux/User/departmentSlice";
 import { fetchGroups } from "../../../redux/User/groupSlice";
 
 import { getJwtClaims } from "../../../api/snocApiWithAutoToken";
+import snocApi from "../../../api/snocApiWithAutoToken";
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
 const HostManager = () => {
   const dispatch = useDispatch();
@@ -53,6 +54,19 @@ const HostManager = () => {
     key: "name",
     direction: "asc",
   });
+
+  // ── Ping / Port Check ────────────────────────────────────────────────────
+  const [selectedForPing, setSelectedForPing] = useState(new Set());
+  const [pingLoading, setPingLoading] = useState(false);
+  const [pingResults, setPingResults] = useState(null);
+  const [showPingModal, setShowPingModal] = useState(false);
+
+  // ── Traceroute ───────────────────────────────────────────────────────────
+  const [traceTarget, setTraceTarget] = useState(null);    // {name, hostname}
+  const [traceLoading, setTraceLoading] = useState(false);
+  const [traceResult, setTraceResult] = useState(null);    // API response
+  const [showTraceModal, setShowTraceModal] = useState(false);
+  const [showRaw, setShowRaw] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(false);
 
@@ -149,9 +163,9 @@ const HostManager = () => {
     setShowTraceModal(true);
     try {
       const res = await snocApi.post("/nornirps/hosts/traceroute/", {
-        name:     device.name,
+        name: device.name,
         hostname: device.hostname,
-        port:     device.port || 22,
+        port: device.port || 22,
         max_hops: 20,
       });
       setTraceResult(res.data);
@@ -390,7 +404,7 @@ const HostManager = () => {
               <Card.Title as="h5" className="mb-0">
                 Quản lý Thiết bị
               </Card.Title>
-              <div className="d-flex gap-2">
+              <div className="d-flex gap-2 flex-wrap align-items-center">
                 <Form.Control
                   type="text"
                   placeholder="Tìm theo tên, IP, platform, vendor, site..."
@@ -401,6 +415,25 @@ const HostManager = () => {
                   }}
                   style={{ width: "350px" }}
                 />
+                {selectedForPing.size > 0 && (
+                  <Button
+                    variant="info"
+                    onClick={runPingCheck}
+                    disabled={pingLoading}
+                    title="Ping ICMP + kiểm tra TCP port cho các thiết bị đã chọn"
+                  >
+                    {pingLoading
+                      ? <><Spinner animation="border" size="sm" className="me-1" />Đang kiểm tra...</>
+                      : <>📡 Ping & Port ({selectedForPing.size})</>
+                    }
+                  </Button>
+                )}
+                {selectedForPing.size > 0 && (
+                  <Button variant="outline-secondary" size="sm"
+                    onClick={() => setSelectedForPing(new Set())}>
+                    Bỏ chọn tất cả
+                  </Button>
+                )}
                 <Button variant="success" onClick={handleAddNew}>
                   ➕ Thêm thiết bị
                 </Button>
@@ -542,39 +575,45 @@ const HostManager = () => {
                             isAdmin || userClaims?.group_name === d.group;
 
 
-                        return (
-                          <tr key={d.name}>
-                            <td>
-                              <Form.Check
-                                type="checkbox"
-                                checked={selectedForPing.has(d.name)}
-                                onChange={() => togglePingSelect(d.name)}
-                              />
-                            </td>
-                            <td>{(currentPage - 1) * pageSize + i + 1}</td>
-                            <td><b>{d.name}</b></td>
-                            <td>{d.hostname}</td>
-                            <td><span className="badge bg-info text-dark">{d.platform}</span></td>
-                            <td>{d.group}</td>
-                            <td>{d.department}</td>
-                            <td>{d.port ?? ""}</td>
-                            <td>{d.vendor ?? ""}</td>
-                            <td>{d.site_code ?? ""}</td>
-                            <td>{d.license_throughput ?? ""}</td>
-                            <td style={{ minWidth: "130px" }}>
-                              {canEdit ? (
-                                <>
-                                  <Button variant="warning"       size="sm" className="me-1" onClick={() => handleEdit(d)}>✏️</Button>
-                                  <Button variant="outline-success" size="sm" className="me-1" onClick={() => handleClone(d)}>📋</Button>
-                                  <Button variant="danger"        size="sm" onClick={() => window.confirm(`Xoá ${d.name}?`) && dispatch(deleteHost(d.name))}>🗑️</Button>
-                                </>
-                              ) : (
-                                <span className="text-muted small">Read-only</span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })
+                          return (
+                            <tr key={d.name}>
+                              <td>
+                                <Form.Check
+                                  type="checkbox"
+                                  checked={selectedForPing.has(d.name)}
+                                  onChange={() => togglePingSelect(d.name)}
+                                />
+                              </td>
+                              <td>{(currentPage - 1) * pageSize + i + 1}</td>
+                              <td><b>{d.name}</b></td>
+                              <td>{d.hostname}</td>
+                              <td><span className="badge bg-info text-dark">{d.platform}</span></td>
+                              <td>{d.group}</td>
+                              <td>{d.department}</td>
+                              <td>{d.port ?? ""}</td>
+                              <td>{d.vendor ?? ""}</td>
+                              <td>{d.site_code ?? ""}</td>
+                              <td>{d.license_throughput ?? ""}</td>
+                              <td style={{ minWidth: "160px" }}>
+                                {canEdit ? (
+                                  <>
+                                    <Button variant="warning" size="sm" className="me-1" onClick={() => handleEdit(d)}>✏️</Button>
+                                    <Button variant="outline-success" size="sm" className="me-1" onClick={() => handleClone(d)}>📋</Button>
+                                    <Button variant="danger" size="sm" className="me-1" onClick={() => window.confirm(`Xoá ${d.name}?`) && dispatch(deleteHost(d.name))}>🗑️</Button>
+                                    <Button
+                                      variant="outline-info"
+                                      size="sm"
+                                      title={`Traceroute đến ${d.hostname}`}
+                                      onClick={() => runTraceroute(d)}
+                                    >🔍</Button>
+                                  </>
+                                ) : (
+                                  <span className="text-muted small">Read-only</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })
                       ) : (
                         <tr><td colSpan="12">Không tìm thấy thiết bị nào.</td></tr>
                       )}
@@ -975,6 +1014,254 @@ const HostManager = () => {
           <Button variant="success" onClick={onConfirmClone}>
             📋 Clone
           </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* ── Ping / Port Check Results Modal ────────────────────────────────── */}
+      <Modal
+        show={showPingModal}
+        onHide={() => setShowPingModal(false)}
+        size="lg"
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>📡 Kết quả Ping & Kiểm tra Port</Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={{ maxHeight: "65vh", overflowY: "auto" }}>
+          <div className="alert alert-info py-1 px-2 mb-2 small">
+            ℹ️ Kết quả kiểm tra <b>từ management server</b> đến thiết bị — phản ánh khả năng kết nối SSH/ICMP từ hệ thống NOC
+          </div>
+          {pingLoading ? (
+            <div className="text-center py-4">
+              <Spinner animation="border" className="me-2" />
+              <span>Đang kiểm tra {selectedForPing.size} thiết bị...</span>
+            </div>
+          ) : pingResults && pingResults[0]?.error && !pingResults[0]?.name ? (
+            <div className="text-danger text-center py-3">❌ {pingResults[0].error}</div>
+          ) : (
+            <Table bordered size="sm" className="text-center align-middle mb-0">
+              <thead className="table-dark">
+                <tr>
+                  <th>Thiết bị</th>
+                  <th>IP</th>
+                  <th>ICMP Ping</th>
+                  <th>TCP Port</th>
+                  <th>Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(pingResults || []).map((r, i) => {
+                  const icmpOk = r.icmp?.ok;
+                  const tcpOk = r.tcp?.ok;
+                  const allOk = icmpOk && tcpOk;
+                  const partOk = icmpOk || tcpOk;
+                  const rowCls = allOk ? "table-success" : partOk ? "table-warning" : "table-danger";
+                  return (
+                    <tr key={i} className={rowCls}>
+                      <td><b>{r.name}</b></td>
+                      <td className="font-monospace">{r.hostname}</td>
+                      <td>
+                        {icmpOk
+                          ? <><span className="text-success fw-bold">✅ OK</span><br /><small>{r.icmp.ms} ms</small></>
+                          : <><span className="text-danger fw-bold">❌ FAIL</span><br /><small className="text-muted">{r.icmp?.error || "—"}</small></>
+                        }
+                      </td>
+                      <td>
+                        {tcpOk
+                          ? <><span className="text-success fw-bold">✅ {r.port}</span><br /><small>{r.tcp.ms} ms</small></>
+                          : <><span className="text-danger fw-bold">❌ :{r.port}</span><br /><small className="text-muted">{r.tcp?.error || "—"}</small></>
+                        }
+                      </td>
+                      <td>
+                        {allOk
+                          ? <Badge bg="success">Reachable</Badge>
+                          : partOk
+                            ? <Badge bg="warning" text="dark">Partial</Badge>
+                            : <Badge bg="danger">Unreachable</Badge>
+                        }
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </Table>
+          )}
+        </Modal.Body>
+        <Modal.Footer className="justify-content-between">
+          {pingResults && !pingLoading && (
+            <small className="text-muted">
+              Tổng: {pingResults.length} |{" "}
+              <span className="text-success">✅ {pingResults.filter(r => r.icmp?.ok && r.tcp?.ok).length} OK</span> |{" "}
+              <span className="text-danger">❌ {pingResults.filter(r => !r.icmp?.ok || !r.tcp?.ok).length} lỗi</span>
+            </small>
+          )}
+          <div className="d-flex gap-2">
+            <Button variant="outline-info" size="sm" onClick={runPingCheck} disabled={pingLoading}>
+              🔄 Chạy lại
+            </Button>
+            <Button variant="secondary" onClick={() => setShowPingModal(false)}>
+              Đóng
+            </Button>
+          </div>
+        </Modal.Footer>
+      </Modal>
+
+      {/* ── Network Diagnostics Modal (Ping + Port + Traceroute) ─────── */}
+      <Modal
+        show={showTraceModal}
+        onHide={() => setShowTraceModal(false)}
+        size="xl"
+        centered
+      >
+        <Modal.Header closeButton className="bg-dark text-white">
+          <Modal.Title>
+            🔍 Network Diagnostics —{" "}
+            <span className="font-monospace text-info">{traceTarget?.hostname}</span>
+            <small className="ms-2 text-secondary">{traceTarget?.name}</small>
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={{ maxHeight: "75vh", overflowY: "auto", background: "#0d1117", padding: "1rem" }}>
+          <div style={{
+            color: "#58a6ff", fontSize: "0.75rem", marginBottom: 12,
+            background: "#161b22", border: "1px solid #30363d",
+            borderRadius: 4, padding: "4px 10px"
+          }}>
+            ℹ️ Kết quả từ <b>management server</b> → thiết bị
+          </div>
+
+          {traceLoading ? (
+            <div className="text-center py-5 text-light">
+              <Spinner animation="border" variant="info" className="me-2" />
+              <span>Đang kiểm tra <b>{traceTarget?.hostname}</b>...</span>
+              <div className="text-muted small mt-2">Ping + Port + Traceroute chạy song song</div>
+            </div>
+          ) : traceResult?.error && !traceResult?.hops ? (
+            <div className="text-danger text-center py-4">❌ {traceResult.error}</div>
+          ) : traceResult ? (
+            <>
+              {/* ── Summary: Ping + Port ─────────────────────────── */}
+              <div className="d-flex gap-3 mb-3 flex-wrap">
+                {/* ICMP Ping */}
+                <div style={{
+                  background: traceResult.ping?.ok ? "#0f2d1a" : "#2d0f0f",
+                  border: `1px solid ${traceResult.ping?.ok ? "#3fb950" : "#f85149"}`,
+                  borderRadius: 6, padding: "8px 16px", minWidth: 140
+                }}>
+                  <div style={{ color: "#8b949e", fontSize: "0.72rem", marginBottom: 2 }}>ICMP PING</div>
+                  {traceResult.ping?.ok
+                    ? <><span style={{ color: "#3fb950", fontSize: "1.1rem" }}>✅ OK</span>
+                      <span style={{ color: "#8b949e", fontSize: "0.8rem", marginLeft: 8 }}>{traceResult.ping.ms} ms</span></>
+                    : <><span style={{ color: "#f85149", fontSize: "1.1rem" }}>❌ FAIL</span>
+                      <div style={{ color: "#8b949e", fontSize: "0.72rem" }}>{traceResult.ping?.error || "—"}</div></>
+                  }
+                </div>
+                {/* TCP Port */}
+                <div style={{
+                  background: traceResult.tcp?.ok ? "#0f2d1a" : "#2d0f0f",
+                  border: `1px solid ${traceResult.tcp?.ok ? "#3fb950" : "#f85149"}`,
+                  borderRadius: 6, padding: "8px 16px", minWidth: 140
+                }}>
+                  <div style={{ color: "#8b949e", fontSize: "0.72rem", marginBottom: 2 }}>TCP PORT {traceResult.port}</div>
+                  {traceResult.tcp?.ok
+                    ? <><span style={{ color: "#3fb950", fontSize: "1.1rem" }}>✅ Open</span>
+                      <span style={{ color: "#8b949e", fontSize: "0.8rem", marginLeft: 8 }}>{traceResult.tcp.ms} ms</span></>
+                    : <><span style={{ color: "#f85149", fontSize: "1.1rem" }}>❌ Closed</span>
+                      <div style={{ color: "#8b949e", fontSize: "0.72rem" }}>{traceResult.tcp?.error || "—"}</div></>
+                  }
+                </div>
+                {/* Traceroute status */}
+                <div style={{
+                  background: "#161b22", border: "1px solid #30363d",
+                  borderRadius: 6, padding: "8px 16px", minWidth: 140
+                }}>
+                  <div style={{ color: "#8b949e", fontSize: "0.72rem", marginBottom: 2 }}>
+                    TRACEROUTE {traceResult.tool ? `(${traceResult.tool})` : ""}
+                  </div>
+                  {traceResult.status === "unavailable"
+                    ? <span style={{ color: "#d29922" }}>⚠️ Không có tool</span>
+                    : traceResult.status === "ok"
+                      ? <><span style={{ color: "#3fb950" }}>✅ Reached</span>
+                        <span style={{ color: "#8b949e", fontSize: "0.8rem", marginLeft: 8 }}>{traceResult.hop_count} hops</span></>
+                      : <><span style={{ color: "#d29922" }}>⚠️ {traceResult.status}</span>
+                        <span style={{ color: "#8b949e", fontSize: "0.8rem", marginLeft: 8 }}>{traceResult.hop_count || 0} hops</span></>
+                  }
+                </div>
+                <Button size="sm" variant="outline-secondary" className="ms-auto align-self-center"
+                  onClick={() => setShowRaw(r => !r)}>
+                  {showRaw ? "📊 Bảng" : "📄 Raw"}
+                </Button>
+              </div>
+
+              {/* ── Traceroute hops / raw ─────────────────────────── */}
+              {traceResult.status === "unavailable" ? (
+                <div style={{
+                  background: "#161b22", border: "1px solid #d29922",
+                  borderRadius: 6, padding: "12px 16px", color: "#d29922"
+                }}>
+                  ⚠️ {traceResult.error}<br />
+                  <code style={{ color: "#8b949e", fontSize: "0.8rem" }}>
+                    sudo apt install traceroute
+                  </code>
+                </div>
+              ) : showRaw ? (
+                <pre style={{
+                  color: "#a8ff78", background: "#0d1117", fontSize: "0.78rem",
+                  padding: "1rem", borderRadius: 6, overflowX: "auto", margin: 0
+                }}>
+                  {traceResult.raw || "(no output)"}
+                </pre>
+              ) : (
+                <Table size="sm" style={{ color: "#e6edf3", background: "transparent" }} className="mb-0">
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid #30363d" }}>
+                      {["#", "IP", "Hostname", "RTT 1", "RTT 2", "RTT 3", "Avg"].map(h => (
+                        <th key={h} style={{
+                          color: "#8b949e", background: "transparent",
+                          textAlign: h.startsWith("RTT") || h === "Avg" ? "right" : "left"
+                        }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(traceResult.hops || []).map((h, i) => {
+                      const isLast = i === (traceResult.hops.length - 1);
+                      const isStar = !h.ok;
+                      const ms = v => v != null
+                        ? <span style={{ color: v < 5 ? "#3fb950" : v < 50 ? "#d29922" : "#f85149" }}>{v} ms</span>
+                        : <span style={{ color: "#484f58" }}>*</span>;
+                      return (
+                        <tr key={i} style={{ borderBottom: "1px solid #21262d", opacity: isStar ? 0.45 : 1 }}>
+                          <td style={{ color: "#484f58", width: 36 }}>{h.hop}</td>
+                          <td className="font-monospace" style={{ fontSize: "0.82rem" }}>
+                            {isStar ? <span style={{ color: "#484f58" }}>* * *</span> : h.ip}
+                            {isLast && !isStar && (
+                              <Badge bg="success" className="ms-1" style={{ fontSize: "0.6rem" }}>dest</Badge>
+                            )}
+                          </td>
+                          <td style={{ color: "#8b949e", fontSize: "0.78rem" }}>
+                            {h.hostname !== h.ip ? h.hostname : "—"}
+                          </td>
+                          <td style={{ textAlign: "right" }}>{ms(h.ms?.[0])}</td>
+                          <td style={{ textAlign: "right" }}>{ms(h.ms?.[1])}</td>
+                          <td style={{ textAlign: "right" }}>{ms(h.ms?.[2])}</td>
+                          <td style={{ textAlign: "right", fontWeight: 600 }}>
+                            {isStar ? <span style={{ color: "#484f58" }}>—</span> : ms(h.avg_ms)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </Table>
+              )}
+            </>
+          ) : null}
+        </Modal.Body>
+        <Modal.Footer style={{ background: "#161b22", borderTop: "1px solid #30363d" }}>
+          <Button variant="outline-info" size="sm"
+            onClick={() => runTraceroute(traceTarget)} disabled={traceLoading}>
+            🔄 Chạy lại
+          </Button>
+          <Button variant="secondary" onClick={() => setShowTraceModal(false)}>Đóng</Button>
         </Modal.Footer>
       </Modal>
 

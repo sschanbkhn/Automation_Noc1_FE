@@ -123,6 +123,11 @@ console.log("=== 1. DỮ LIỆU REDUX ===", {
     devices: devices
   });
 
+  console.log("=== 1. DỮ LIỆU REDUX ===", {
+    platforms: platforms,
+    devices: devices
+  });
+
   return (
     <>
       <TopNavbarHealth />
