@@ -743,15 +743,18 @@ const MonitorDashboard = () => {
                             </span>
                           </td>
                           <td className="text-center">
-                            {d.locked && (
-                              <OverlayTrigger overlay={<Tooltip>Mở khóa device này</Tooltip>}>
-                                <Button size="sm" variant="outline-success"
-                                  style={{ fontSize: "0.7rem", padding: "1px 7px" }}
-                                  onClick={() => unlockAuthDevice(d.device_name)}>
-                                  🔓
-                                </Button>
-                              </OverlayTrigger>
-                            )}
+                            <OverlayTrigger overlay={
+                              <Tooltip>
+                                {d.locked ? "Mở khóa device — cho phép SSH lại" : "Reset cảnh báo — xóa fail count"}
+                              </Tooltip>
+                            }>
+                              <Button size="sm"
+                                variant={d.locked ? "outline-success" : "outline-warning"}
+                                style={{ fontSize: "0.7rem", padding: "1px 7px" }}
+                                onClick={() => unlockAuthDevice(d.device_name)}>
+                                {d.locked ? "🔓 Mở khóa" : "🔄 Reset"}
+                              </Button>
+                            </OverlayTrigger>
                           </td>
                         </tr>
                       );
