@@ -3,7 +3,6 @@ import {
   Button,
   Card,
   Col,
-  FormControl,
   InputGroup,
   Row,
   Spinner,
@@ -20,27 +19,36 @@ import {
   fetchPlatforms,
 } from "../../../redux/Healthcheck/platformDeviceSlice";
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
-import WebSocketStatusBanner from "./../../../components/WebSocketStatusBanner"; // cập nhật path cho đúng
+import WebSocketStatusBanner from "./../../../components/WebSocketStatusBanner"; 
 import { getJwtClaims } from "../../../api/snocApiWithAutoToken";
+
+// Định dạng style đồng bộ với Precheck để hiển thị thanh cuộn nếu chọn quá nhiều thiết bị
+const SELECT_STYLES = {
+  valueContainer: (b) => ({ ...b, maxHeight: "38px", overflowX: "auto", flexWrap: "nowrap" }),
+  multiValue:     (b) => ({ ...b, margin: "1px 2px" }),
+};
+
 const Healthcheck = () => {
   useScheduleWebSocket(); // ✅ Gọi ở đây
 
   const dispatch = useDispatch();
-  // 2. Tính toán quyền Admin/Super (Sử dụng useMemo để tối ưu)
+  
+  // Tính toán quyền Admin/Super
   const isAdmin = useMemo(() => {
     const claims = getJwtClaims();
     return claims?.role === 'admin' || claims?.role === 'super';
   }, []);
 
-  const { platforms, devices, loadingDevices } = useSelector(
-    (state) => state.platformDevice
+  const { platforms = [], devices = [], loadingDevices = false } = useSelector(
+    (state) => state.platformDevice || {}
   );
   const { healthchecknodes = [], loading = false } = useSelector(
     (state) => state.pscore ?? {}
   );
   console.log("healthchecknodes", healthchecknodes);
 
-  const [selectedPlatform, setSelectedPlatform] = useState("");
+  // Chuyển sang quản lý object { label, value } giống Precheck để react-select hoạt động đúng
+  const [selectedPlatform, setSelectedPlatform] = useState(null);
   const [selectedDevices, setSelectedDevices] = useState([]);
 
   useEffect(() => {
@@ -48,11 +56,20 @@ const Healthcheck = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    if (selectedPlatform) {
-      dispatch(fetchDevicesByPlatform(selectedPlatform));
+    const platformVal = selectedPlatform?.value;
+    if (platformVal) {
+      dispatch(fetchDevicesByPlatform(platformVal));
     }
     setSelectedDevices([]); // reset khi đổi platform
   }, [dispatch, selectedPlatform]);
+
+  // Convert danh sách platforms sang dạng options cho react-select (Có khả năng SEARCH)
+  const platformOptions = useMemo(() => {
+    return platforms.map((p) => ({
+      label: `${p?.name} (${p?.device_count ?? 0})`,
+      value: p?.name,
+    }));
+  }, [platforms]);
 
   const deviceOptions = useMemo(() => {
     return devices.map((d) => ({
@@ -62,7 +79,7 @@ const Healthcheck = () => {
   }, [devices]);
 
   const allOption = { label: "-- Chọn tất cả thiết bị --", value: "__all__" };
-  const combinedOptions = [allOption, ...deviceOptions];
+  const combinedOptions = useMemo(() => [allOption, ...deviceOptions], [deviceOptions]);
 
   const handleDeviceChange = (selected) => {
     if (!selected) return setSelectedDevices([]);
@@ -74,11 +91,13 @@ const Healthcheck = () => {
   };
 
   const handleHealthcheck = () => {
+    const platformVal = selectedPlatform?.value;
     const selectedNames = selectedDevices.map((d) => d.value);
-    if (selectedPlatform && selectedNames.length > 0) {
+    
+    if (platformVal && selectedNames.length > 0) {
       dispatch(
         GenericHealthCheckView({
-          selectedPlatform,
+          selectedPlatform: platformVal,
           selectedDevice: selectedNames,
         })
       );
@@ -95,6 +114,11 @@ const Healthcheck = () => {
     Unknown: "table-secondary",
   };
 
+  console.log("=== 1. DỮ LIỆU REDUX ===", {
+    platforms: platforms,
+    devices: devices
+  });
+
   return (
     <>
       <TopNavbarHealth />
@@ -102,47 +126,44 @@ const Healthcheck = () => {
 
       <Row>
         <Col sm={12}>
-          <Card>
+          <Card className="mb-3 shadow-sm">
             <Card.Body>
-              <Row className="align-items-center">
+              <Row className="align-items-end"> {/* Đổi sang align-items-end để căn đều hàng với Select */}
+                
+                {/* Ô chọn Platform mới - Đã tích hợp Search */}
                 <Col md={3}>
-                  <InputGroup>
-                    <FormControl
-                      as="select"
-                      value={selectedPlatform}
-                      onChange={(e) => setSelectedPlatform(e.target.value)}
-                      className="custom-select"
-                    >
-                      <option value="">-- Chọn platform --</option>
-                      {platforms.map((p, idx) => (
-                        <option key={idx} value={p?.name}>
-                          {p?.name} ({p?.device_count ?? 0})
-                        </option>
-                      ))}
-                    </FormControl>
-                  </InputGroup>
+                  <Select
+                    options={platformOptions}
+                    value={selectedPlatform}
+                    onChange={(v) => setSelectedPlatform(v)}
+                    placeholder="-- Chọn platform --"
+                    isClearable
+                    styles={SELECT_STYLES}
+                  />
                 </Col>
 
+                {/* Ô chọn thiết bị */}
                 <Col md={5}>
                   <Select
                     isMulti
                     options={combinedOptions}
                     value={selectedDevices}
                     onChange={handleDeviceChange}
-                    isDisabled={!selectedPlatform}
+                    isDisabled={!selectedPlatform || loadingDevices}
                     placeholder="-- Chọn thiết bị --"
+                    styles={SELECT_STYLES}
+                    closeMenuOnSelect={false}
                   />
                 </Col>
 
+                {/* Nút bấm Phân quyền */}
                 <Col md={2}>
-                  {/* 3. Phân quyền cho nút bấm */}
                   {isAdmin ? (
                     <Button
                       variant="primary"
-                      size="lg"
                       className="w-100"
                       onClick={handleHealthcheck}
-                      disabled={loading}
+                      disabled={loading || !selectedPlatform || !selectedDevices.length}
                     >
                       {loading ? "Đang xử lý..." : "Healthcheck ngay"}
                     </Button>
@@ -158,9 +179,10 @@ const Healthcheck = () => {
         </Col>
       </Row>
 
+      {/* Bảng hiển thị kết quả giữ nguyên */}
       <Row>
         <Col md={12}>
-          <Card>
+          <Card className="shadow-sm">
             <Card.Header>
               <Card.Title as="h5">
                 PS Core - Danh sách bản ghi healthcheck

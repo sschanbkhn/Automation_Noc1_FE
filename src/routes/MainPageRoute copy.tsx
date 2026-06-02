@@ -41,7 +41,7 @@ import Schedule from "components/SNOC/views/forms/health/Schedule";
 import HostConfigPanel from "components/SNOC/views/forms/hosts/HostConfigPanel";
 import KPIChartDashboard from "components/SNOC/views/forms/kpi/KPIChartDashboard";
 import KPISelectorPage from "components/SNOC/views/forms/kpi/KPISelectorPage";
-import ScheduleKpi from "components/SNOC/views/forms/kpi/ScheduleCausecode";
+import ScheduleKpi from "components/SNOC/views/forms/kpi/ScheduleGeneric";
 import CreateConnectionForm from "components/SNOC/views/forms/sbc/CreateConnectionForm";
 import DeclareNumberForm from "components/SNOC/views/forms/sbc/DeclareNumberForm";
 import RequestHistoryTable from "components/SNOC/views/forms/sbc/RequestHistoryTable";
