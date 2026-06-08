@@ -52,6 +52,8 @@ const TopNavbar = () => {
     "/healthcheck/history",
     "/healthcheck/OutputIgnoreRulesV2",
     "/healthcheck/blackout",
+    "/healthcheck/analysis-params",
+    "/healthcheck/alert-config",
   ];
   const PRECHECK_PATHS = [            // ← thêm
     "/precheck",
@@ -64,6 +66,10 @@ const TopNavbar = () => {
     "/dhtt/manual",
     "/dhtt/history",
     "/healthcheck/kpischedule",
+  ];
+  const KPI_PATHS = [
+    "/healthcheck/kpi",
+    "/kpi/",
   ];
 
   return (
@@ -110,6 +116,12 @@ const TopNavbar = () => {
               </NavDropdown.Item>
               <NavDropdown.Item as={NavLink} to="/healthcheck/blackout">
                 ⏸️ Blackout Config
+              </NavDropdown.Item>
+              <NavDropdown.Item as={NavLink} to="/healthcheck/analysis-params">
+                ⚙️ Analysis Params
+              </NavDropdown.Item>
+              <NavDropdown.Item as={NavLink} to="/healthcheck/alert-config">
+                🔔 Alert Config
               </NavDropdown.Item>
             </NavDropdown>
 
@@ -167,26 +179,39 @@ const TopNavbar = () => {
             {isAdmin && (
               <NavDropdown
                 title={
-                  <span style={ddTitleStyle(["/healthcheck/monitor", "/admin/monitor"])}>
+                  <span style={ddTitleStyle(["/healthcheck/monitor", "/admin/monitor", "/config-email-sms"])}>
                     ⚙️ System
                   </span>
                 }
                 id="dd-monitor"
                 menuVariant="light"
-                className={ddClass(["/healthcheck/monitor", "/admin/monitor"])}
+                className={ddClass(["/healthcheck/monitor", "/admin/monitor", "/config-email-sms"])}
               >
                 <NavDropdown.Item as={NavLink} to="/healthcheck/monitor">
                   🖥️ System Monitor
                 </NavDropdown.Item>
-                {/* <NavDropdown.Item as={NavLink} to="/admin/users">
-                  👤 Quản lý User
-                </NavDropdown.Item> */}
+                <NavDropdown.Item as={NavLink} to="/config-email-sms">
+                  📣 Cấu hình kênh thông báo
+                </NavDropdown.Item>
               </NavDropdown>
             )}
-            {/* ── 4. KPI ───────────────────────────────────────────── */}
-            <NavLink to="/healthcheck/kpi" className={getLinkClass}>
-              KPI
-            </NavLink> 
+            {/* ── 4. KPI ▾ ─────────────────────────────────────────── */}
+            <NavDropdown
+              title={<span style={ddTitleStyle(KPI_PATHS)}>KPI</span>}
+              id="dd-kpi"
+              menuVariant="light"
+              className={ddClass(KPI_PATHS)}
+            >
+              <NavDropdown.Item as={NavLink} to="/healthcheck/kpi">
+                📊 KPI Explorer
+              </NavDropdown.Item>
+              <NavDropdown.Item as={NavLink} to="/kpi/dashboard">
+                📌 KPI Dashboard
+              </NavDropdown.Item>
+              <NavDropdown.Item as={NavLink} to="/kpi/schedule">
+                📅 Quản lý Schedule
+              </NavDropdown.Item>
+            </NavDropdown>
 
           </Nav>
 

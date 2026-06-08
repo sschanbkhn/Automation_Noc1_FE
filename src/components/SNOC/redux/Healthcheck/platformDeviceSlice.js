@@ -48,6 +48,7 @@ const platformDeviceSlice = createSlice({
   initialState: {
     platforms: [],
     devices: [],
+    devicesByPlatform: {}, // { [platformName]: Device[] } — per-platform, tránh conflict embed
     loadingPlatforms: false,
     loadingDevices: false,
   },
@@ -70,6 +71,10 @@ const platformDeviceSlice = createSlice({
       .addCase(fetchDevicesByPlatform.fulfilled, (state, action) => {
         state.loadingDevices = false;
         state.devices = action.payload || [];
+        const platform = action.meta.arg;
+        if (platform) {
+          state.devicesByPlatform[platform] = action.payload || [];
+        }
       })
       .addCase(fetchDevicesByPlatform.rejected, (state) => {
         state.loadingDevices = false;

@@ -1,31 +1,34 @@
 import React, { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import SnocLoginInline from "./SnocLoginInline";
 import { SnocAuthGuardContext } from "./SnocAuthContext";
-
-// ⚠️ import thêm AUTH_EVENT
-import { getSnocToken, onSnocUnauthorized, AUTH_EVENT } from "../api/snocApiWithAutoToken";
+import {
+  getSnocToken,
+  onSnocUnauthorized,
+  AUTH_EVENT,
+  onSnocOffline,
+  onSnocOnline,
+  clearSnocToken,
+} from "../api/snocApiWithAutoToken";
+import { LOGOUT } from "../redux/User/authSlice";
 
 const RequireSnocAuthInline: React.FC = () => {
-  // App chính đã login?
+  const dispatch = useDispatch();
+
   const mainLogged: boolean =
     (useSelector((s: any) => s?.account?.isLoggedIn) as boolean) ?? false;
 
-  // Helper đọc token hiện tại
   const readSnoc = () => Boolean(getSnocToken());
   const [snocLogged, setSnocLogged] = useState<boolean>(readSnoc());
+  const [isOffline, setIsOffline] = useState(false);
 
+  // Effect 1: 401 handler + cross-tab token sync
   useEffect(() => {
-    // BE trả 401 -> coi như logout
     const off401 = onSnocUnauthorized?.(() => setSnocLogged(false));
-
-    // 🔔 Lắng nghe đổi token ở tab khác
     const onStorage = (e: StorageEvent) => {
       if (e.key === "snoc_jwt_token") setSnocLogged(readSnoc());
     };
-
-    // 🔔 QUAN TRỌNG: lắng nghe sự kiện cục bộ sau login/logout trong cùng tab
     const onAuth = () => setSnocLogged(readSnoc());
 
     window.addEventListener("storage", onStorage);
@@ -38,12 +41,79 @@ const RequireSnocAuthInline: React.FC = () => {
     };
   }, []);
 
-  // Fallback: nếu state chưa kịp cập nhật ngay sau login, vẫn check trực tiếp token
+  // Effect 2: Offline/online — onSnocOffline gọi callback ngay nếu đã offline (late-mount safe)
+  useEffect(() => {
+    const offOff = onSnocOffline(() => setIsOffline(true));
+    const offOn  = onSnocOnline(() => setIsOffline(false));
+    return () => { offOff(); offOn(); };
+  }, []);
+
+  // Effect 3: Detect main app logout — Token cookie biến mất trong khi SNOC vẫn có token
+  useEffect(() => {
+    const getMainToken = () =>
+      Boolean(document.cookie.match(/(^|;\s*)Token=([^;]*)/));
+    const check = () => {
+      if (readSnoc() && !getMainToken()) {
+        clearSnocToken(); // clear SNOC khi main app đã logout
+      }
+    };
+    window.addEventListener("focus", check);
+    const iv = setInterval(check, 5000);
+    return () => {
+      window.removeEventListener("focus", check);
+      clearInterval(iv);
+    };
+  }, []);
+
   const isLoggedIn = mainLogged || snocLogged || readSnoc();
 
   return (
     <SnocAuthGuardContext.Provider value={true}>
-      {isLoggedIn ? <Outlet /> : <SnocLoginInline />}
+      {isLoggedIn ? (
+        <>
+          {isOffline && (
+            <div
+              style={{
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                zIndex: 9999,
+                background: "#dc3545",
+                color: "#fff",
+                padding: "8px 16px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                fontSize: 14,
+                boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+              }}
+            >
+              <span>
+                ⚠️ Mất kết nối tới server. Đang thử kết nối lại...
+              </span>
+              <button
+                style={{
+                  background: "#fff",
+                  color: "#dc3545",
+                  border: "none",
+                  padding: "4px 14px",
+                  borderRadius: 4,
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  marginLeft: 16,
+                }}
+                onClick={() => dispatch(LOGOUT())}
+              >
+                Đăng xuất
+              </button>
+            </div>
+          )}
+          <Outlet />
+        </>
+      ) : (
+        <SnocLoginInline />
+      )}
     </SnocAuthGuardContext.Provider>
   );
 };

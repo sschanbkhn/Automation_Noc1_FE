@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Button,
   Col,
@@ -12,6 +12,7 @@ import { useDispatch, useSelector } from "react-redux";
 import CreatableSelect from "react-select/creatable";
 
 import TopNavbar from "../../dashboard/DashOrigin/TopNavbarSbc";
+import { getJwtClaims } from "../../../api/snocApiWithAutoToken";
 
 // ⚠️ chỉnh lại path nếu khác
 import {
@@ -28,6 +29,10 @@ import {
 
 const CreateConnectionForm = () => {
   const dispatch = useDispatch();
+  const isAdmin = useMemo(() => {
+    const claims = getJwtClaims();
+    return claims?.is_superuser || ["super", "admin"].includes(claims?.role);
+  }, []);
 
   const {
     connectionTypes = [],
@@ -800,16 +805,18 @@ const CreateConnectionForm = () => {
               📝 Generate Template
             </Button>
 
-            <Button type="submit" variant="primary" disabled={submitting}>
-              {submitting ? (
-                <>
-                  <Spinner animation="border" size="sm" className="me-2" />
-                  Đang tạo kết nối...
-                </>
-              ) : (
-                "Tạo Kết Nối"
-              )}
-            </Button>
+            {isAdmin && (
+              <Button type="submit" variant="primary" disabled={submitting}>
+                {submitting ? (
+                  <>
+                    <Spinner animation="border" size="sm" className="me-2" />
+                    Đang tạo kết nối...
+                  </>
+                ) : (
+                  "Tạo Kết Nối"
+                )}
+              </Button>
+            )}
           </div>
         </Form>
       </Container>

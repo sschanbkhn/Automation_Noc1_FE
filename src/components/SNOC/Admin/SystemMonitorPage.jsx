@@ -1,16 +1,14 @@
 // src/views/admin/SystemMonitorPage.jsx  — v3 (final)
 // Dùng đúng hook pattern + env var REACT_APP_SNOC_WS_URL
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import Select from "react-select";
+import { fetchHosts } from "../redux/Hosts/hostsSlice";
 import {
   Badge, Button, Card, Col, Form, Modal,
   OverlayTrigger, Row, Spinner, Table, Tooltip,
 } from "react-bootstrap";
-import { Container, Nav, Navbar, NavDropdown } from "react-bootstrap";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import Clock from "../components/Clock";
-import {
-  getJwtClaims, getSnocToken, setSnocToken, snocApiNoAuth,
-} from "../api/snocApiWithAutoToken";
+import { getJwtClaims } from "../api/snocApiWithAutoToken";
 import snocApi from "../api/snocApiWithAutoToken";
 import useMonitorWebSocket from "../hooks/useMonitorWebSocket";
 import TopNavbarHealth from "../views/dashboard/DashOrigin/TopNavbarHealth";
@@ -65,102 +63,13 @@ const KpiCard = ({ icon, value, label, color }) => (
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Navbar
-// ─────────────────────────────────────────────────────────────────────────────
-const LINK_BASE   = "fw-semibold px-2 py-1 mx-1 rounded text-decoration-none";
-const LINK_ACTIVE = `${LINK_BASE} bg-white text-primary`;
-const LINK_IDLE   = `${LINK_BASE} text-white`;
-
-const MonitorNavbar = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const pathname = location.pathname;
-  const claims   = getJwtClaims();
-  const isAdmin  = claims?.is_superuser || ["super", "admin"].includes(claims?.role);
-
-  const getLinkClass = ({ isActive }) => (isActive ? LINK_ACTIVE : LINK_IDLE);
-  const ddActive     = (paths) => paths.some((p) => pathname.startsWith(p));
-  const ddClass      = (paths) =>
-    `${ddActive(paths) ? "bg-white rounded" : ""} fw-semibold mx-1`;
-  const ddTitleStyle = (paths) => ({
-    color: ddActive(paths) ? "#0d6efd" : "white",
-    fontSize: "0.85rem", padding: "0.25rem 0.5rem",
-  });
-
-  const handleLogout = async () => {
-    try {
-      const t = getSnocToken();
-      if (t) await snocApiNoAuth.post("/users/logout", {}, { headers: { Authorization: t } });
-    } catch (_) {} finally {
-      setSnocToken(null, { persist: true });
-      navigate("/snoc/login", { replace: true });
-    }
-  };
-
-  return (
-    <Navbar bg="primary" variant="dark" expand="lg" className="px-3 py-1 shadow-sm">
-      <Container fluid>
-        <Navbar.Brand className="fw-bold" style={{ fontSize: "1rem" }}>
-          System Health Automation
-        </Navbar.Brand>
-        <Navbar.Toggle aria-controls="nav-col" />
-        <Navbar.Collapse id="nav-col" className="w-100">
-          <Nav className="mx-auto align-items-center" style={{ fontSize: "0.85rem", gap: 2 }}>
-            <NavLink to="/app/dashboard/origin" className={getLinkClass}>Dashboard</NavLink>
-            <NavLink to="/healthcheck/devices"  className={getLinkClass}>Devices</NavLink>
-
-            <NavDropdown
-              title={<span style={ddTitleStyle(["/healthcheck/checks","/healthcheck/schedule","/healthcheck/history"])}>Precheck</span>}
-              id="dd-pre" menuVariant="light"
-              className={ddClass(["/healthcheck/checks","/healthcheck/schedule","/healthcheck/history"])}>
-              <NavDropdown.Item as={NavLink} to="/healthcheck/checks">🔍 Manual Check</NavDropdown.Item>
-              <NavDropdown.Item as={NavLink} to="/healthcheck/schedule">📅 Schedule</NavDropdown.Item>
-              <NavDropdown.Item as={NavLink} to="/healthcheck/history">📋 History</NavDropdown.Item>
-              <NavDropdown.Divider />
-              <NavDropdown.Item as={NavLink} to="/healthcheck/OutputIgnoreRulesV2">🚫 Ignore Rules</NavDropdown.Item>
-              <NavDropdown.Item as={NavLink} to="/healthcheck/blackout">⏸️ Blackout</NavDropdown.Item>
-            </NavDropdown>
-
-            <NavDropdown
-              title={<span style={ddTitleStyle(["/dhtt"])}>Bảo Dưỡng</span>}
-              id="dd-dhtt" menuVariant="light" className={ddClass(["/dhtt"])}>
-              <NavDropdown.Item as={NavLink} to="/dhtt/manual">🛠️ Manual</NavDropdown.Item>
-              <NavDropdown.Item as={NavLink} to="/healthcheck/kpischedule">📅 Schedule</NavDropdown.Item>
-              <NavDropdown.Item as={NavLink} to="/dhtt/history">📋 History</NavDropdown.Item>
-            </NavDropdown>
-
-            <NavLink to="/healthcheck/kpi" className={getLinkClass}>KPI</NavLink>
-
-            {isAdmin && (
-              <NavDropdown
-                title={<span style={ddTitleStyle(["/healthcheck/monitor","/admin"])}>⚙️ Monitor</span>}
-                id="dd-monitor" menuVariant="light"
-                className={ddClass(["/healthcheck/monitor","/admin"])}>
-                <NavDropdown.Item as={NavLink} to="/healthcheck/monitor">🖥️ System Monitor</NavDropdown.Item>
-                <NavDropdown.Item as={NavLink} to="/admin/users">👤 Quản lý User</NavDropdown.Item>
-              </NavDropdown>
-            )}
-          </Nav>
-
-          <Nav className="ms-auto align-items-center" style={{ gap: 10 }}>
-            <span className="text-white fw-semibold" style={{ fontSize: "0.85rem" }}>
-              <Clock />
-            </span>
-            <button className="btn btn-outline-light align-items-center d-flex"
-              onClick={handleLogout} style={{ fontSize: "0.8rem", padding: "0.2rem 0.5rem" }}>
-              <i className="bi bi-box-arrow-right me-1" /> Logout
-            </button>
-          </Nav>
-        </Navbar.Collapse>
-      </Container>
-    </Navbar>
-  );
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Dashboard
 // ─────────────────────────────────────────────────────────────────────────────
 const MonitorDashboard = () => {
+  const dispatch      = useDispatch();
+  const reduxDevices  = useSelector((state) => state.hosts?.devices || []);
+  const reduxHostsLoading = useSelector((state) => state.hosts?.loading || false);
+
   const [data,       setData]       = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [trigger,    setTrigger]    = useState("");
@@ -174,13 +83,16 @@ const MonitorDashboard = () => {
   const [releasing,        setReleasing]         = useState(false);
   const [showAuthRelAll,   setShowAuthRelAll]    = useState(false);
   const [authReleasing,    setAuthReleasing]     = useState(false);
-  const [showManualLock,   setShowManualLock]    = useState(false);
-  const [manualLockDevice, setManualLockDevice]  = useState("");
-  const [manualLockReason, setManualLockReason]  = useState("");
-  const [manualLocking,    setManualLocking]     = useState(false);
-  const [lockFilter,       setLockFilter]        = useState("all"); // all | locked | warned
-  const [lockSearch,       setLockSearch]        = useState("");
-  const [deviceList,       setDeviceList]        = useState([]);
+  const [showManualLock,    setShowManualLock]    = useState(false);
+  const [selectedDevices,   setSelectedDevices]   = useState([]); // react-select options [{label, value}]
+  const [manualLockReason,  setManualLockReason]  = useState("");
+  const [manualLocking,     setManualLocking]     = useState(false);
+  const [lockFilter,        setLockFilter]        = useState("all"); // all | locked | warned
+  const [lockSearch,        setLockSearch]        = useState("");
+
+  const claims    = useMemo(() => getJwtClaims(), []);
+  const isAdmin   = claims?.is_superuser || ["super", "admin"].includes(claims?.role);
+  const isSuperUser = claims?.is_superuser || claims?.role === "super";
 
   const flash = (msg) => {
     setActionMsg(msg);
@@ -267,34 +179,34 @@ const MonitorDashboard = () => {
     finally { setAuthReleasing(false); }
   };
 
+  const _closeManualLockModal = () => {
+    setShowManualLock(false);
+    setSelectedDevices([]);
+    setManualLockReason("");
+  };
+
   const lockDeviceManually = async () => {
-    if (!manualLockDevice) { flash("❌ Chưa chọn device"); return; }
-    if (!manualLockReason.trim()) { flash("❌ Vui lòng nhập lý do"); return; }
+    if (selectedDevices.length === 0) { flash("❌ Chưa chọn device nào"); return; }
+    if (!manualLockReason.trim())     { flash("❌ Vui lòng nhập lý do"); return; }
     setManualLocking(true);
     try {
       await snocApi.post("nornirps/monitor/auth-lock/manual-lock/", {
-        device_name: manualLockDevice,
+        device_names: selectedDevices.map((d) => d.value),
         reason: manualLockReason.trim(),
       });
-      setShowManualLock(false);
-      setManualLockDevice("");
-      setManualLockReason("");
-      flash(`🔒 Đã khóa thủ công: ${manualLockDevice}`);
+      flash(`🔒 Đã khóa ${selectedDevices.length} device thủ công`);
+      _closeManualLockModal();
       sendRefresh();
       fetchREST();
     } catch (e) { flash("❌ " + (e?.response?.data?.error || e.message)); }
     finally { setManualLocking(false); }
   };
 
-  const openManualLockModal = async () => {
+  const openManualLockModal = () => {
     setShowManualLock(true);
-    if (deviceList.length === 0) {
-      try {
-        const res = await snocApi.get("nornirps/list-hosts/");
-        const hosts = res.data?.hosts || res.data || [];
-        setDeviceList(Array.isArray(hosts) ? hosts : []);
-      } catch (_) {}
-    }
+    setSelectedDevices([]);
+    setManualLockReason("");
+    if (reduxDevices.length === 0) dispatch(fetchHosts());
   };
 
   // ── Derived ────────────────────────────────────────────────────────────
@@ -324,6 +236,29 @@ const MonitorDashboard = () => {
     }
     return true;
   });
+
+  // Options cho react-select trong modal khóa thủ công
+  const deviceOptions = useMemo(() =>
+    reduxDevices.map((d) => ({
+      label: `${d.name}${d.hostname ? ` (${d.hostname})` : ""}${d.platform ? ` — ${d.platform}` : ""}`,
+      value: d.name,
+    })), [reduxDevices]
+  );
+  const allDeviceOption = { label: "── Chọn tất cả thiết bị ──", value: "__all__" };
+
+  const handleDeviceSelectChange = (selected) => {
+    if (!selected) return setSelectedDevices([]);
+    if (selected.find((o) => o.value === "__all__")) {
+      setSelectedDevices(deviceOptions);
+    } else {
+      setSelectedDevices(selected);
+    }
+  };
+
+  const SELECT_STYLES = {
+    valueContainer: (b) => ({ ...b, maxHeight: "80px", overflowY: "auto", flexWrap: "wrap" }),
+    multiValue:     (b) => ({ ...b, margin: "2px 3px" }),
+  };
 
   const filteredJobs = allJobs.filter((j) => {
     if (filterStatus !== "all" && j.status !== filterStatus) return false;
@@ -395,7 +330,7 @@ const MonitorDashboard = () => {
               <span className="fw-semibold" style={{ fontSize: "0.88rem" }}>
                 🔒 Locks đang hoạt động ({locks.length})
               </span>
-              {locks.length > 0 && (
+              {locks.length > 0 && isSuperUser && (
                 <Button size="sm" variant="danger" style={{ fontSize: "0.72rem" }}
                   onClick={() => setShowRelAll(true)}>
                   Release All
@@ -441,13 +376,15 @@ const MonitorDashboard = () => {
                             </OverlayTrigger>
                           </td>
                           <td className="text-center">
-                            <OverlayTrigger overlay={<Tooltip>Force release lock</Tooltip>}>
-                              <Button size="sm" variant="outline-danger"
-                                style={{ fontSize: "0.7rem", padding: "0 5px", lineHeight: 1.5 }}
-                                onClick={() => releaseLock(node)}>
-                                🔓
-                              </Button>
-                            </OverlayTrigger>
+                            {isAdmin && (
+                              <OverlayTrigger overlay={<Tooltip>Force release lock</Tooltip>}>
+                                <Button size="sm" variant="outline-danger"
+                                  style={{ fontSize: "0.7rem", padding: "0 5px", lineHeight: 1.5 }}
+                                  onClick={() => releaseLock(node)}>
+                                  🔓
+                                </Button>
+                              </OverlayTrigger>
+                            )}
                           </td>
                         </tr>
                       );
@@ -561,7 +498,7 @@ const MonitorDashboard = () => {
                           </td>
                           <td><StatusBadge status={job.status} /></td>
                           <td className="text-center">
-                            {job.status === "pending" && (
+                            {job.status === "pending" && isAdmin && (
                               <Button size="sm" variant="outline-danger"
                                 style={{ fontSize: "0.68rem", padding: "0 5px" }}
                                 onClick={() => cancelJob(job.job_id)}>
@@ -593,20 +530,22 @@ const MonitorDashboard = () => {
               <span className="fw-bold" style={{ fontSize: "0.92rem", color: "#6f42c1" }}>
                 🔐 Device Lock Manager
               </span>
-              <div className="d-flex gap-2 align-items-center flex-wrap">
-                <Button size="sm" variant="outline-danger"
-                  style={{ fontSize: "0.76rem" }}
-                  onClick={openManualLockModal}>
-                  🔒 Khóa thủ công
-                </Button>
-                {authLocked.length > 0 && (
-                  <Button size="sm" variant="success"
+              {isAdmin && (
+                <div className="d-flex gap-2 align-items-center flex-wrap">
+                  <Button size="sm" variant="outline-danger"
                     style={{ fontSize: "0.76rem" }}
-                    onClick={() => setShowAuthRelAll(true)}>
-                    🔓 Mở khóa tất cả ({authLocked.length})
+                    onClick={openManualLockModal}>
+                    🔒 Khóa thủ công
                   </Button>
-                )}
-              </div>
+                  {authLocked.length > 0 && (
+                    <Button size="sm" variant="success"
+                      style={{ fontSize: "0.76rem" }}
+                      onClick={() => setShowAuthRelAll(true)}>
+                      🔓 Mở khóa tất cả ({authLocked.length})
+                    </Button>
+                  )}
+                </div>
+              )}
             </Card.Header>
 
             {/* ── Stats Row ── */}
@@ -743,18 +682,20 @@ const MonitorDashboard = () => {
                             </span>
                           </td>
                           <td className="text-center">
-                            <OverlayTrigger overlay={
-                              <Tooltip>
-                                {d.locked ? "Mở khóa device — cho phép SSH lại" : "Reset cảnh báo — xóa fail count"}
-                              </Tooltip>
-                            }>
-                              <Button size="sm"
-                                variant={d.locked ? "outline-success" : "outline-warning"}
-                                style={{ fontSize: "0.7rem", padding: "1px 7px" }}
-                                onClick={() => unlockAuthDevice(d.device_name)}>
-                                {d.locked ? "🔓 Mở khóa" : "🔄 Reset"}
-                              </Button>
-                            </OverlayTrigger>
+                            {isAdmin && (
+                              <OverlayTrigger overlay={
+                                <Tooltip>
+                                  {d.locked ? "Mở khóa device — cho phép SSH lại" : "Reset cảnh báo — xóa fail count"}
+                                </Tooltip>
+                              }>
+                                <Button size="sm"
+                                  variant={d.locked ? "outline-success" : "outline-warning"}
+                                  style={{ fontSize: "0.7rem", padding: "1px 7px" }}
+                                  onClick={() => unlockAuthDevice(d.device_name)}>
+                                  {d.locked ? "🔓 Mở khóa" : "🔄 Reset"}
+                                </Button>
+                              </OverlayTrigger>
+                            )}
                           </td>
                         </tr>
                       );
@@ -787,34 +728,43 @@ const MonitorDashboard = () => {
         </Modal.Footer>
       </Modal>
 
-      {/* ── Modal: Khóa thủ công ── */}
-      <Modal show={showManualLock} onHide={() => { setShowManualLock(false); setManualLockDevice(""); setManualLockReason(""); }}
-        size="sm" centered>
+      {/* ── Modal: Khóa thủ công ── nhất quán với Healthcheck/Precheck (react-select) */}
+      <Modal show={showManualLock} onHide={_closeManualLockModal} size="md" centered>
         <Modal.Header closeButton style={{ background: "#fdf0ff" }}>
           <Modal.Title style={{ fontSize: "1rem" }}>🔒 Khóa thủ công thiết bị</Modal.Title>
         </Modal.Header>
         <Modal.Body>
+          {/* ── Chọn thiết bị — react-select isMulti với search ── */}
           <Form.Group className="mb-3">
-            <Form.Label style={{ fontSize: "0.82rem", fontWeight: 600 }}>Tên thiết bị *</Form.Label>
-            {deviceList.length > 0 ? (
-              <Form.Select size="sm" value={manualLockDevice}
-                onChange={(e) => setManualLockDevice(e.target.value)}
-                style={{ fontSize: "0.8rem" }}>
-                <option value="">— Chọn device —</option>
-                {deviceList.map((dev) => (
-                  <option key={dev.name} value={dev.name}>
-                    {dev.name} {dev.hostname ? `(${dev.hostname})` : ""}
-                  </option>
-                ))}
-              </Form.Select>
+            <Form.Label style={{ fontSize: "0.82rem", fontWeight: 600 }}>
+              Thiết bị *
+              {selectedDevices.length > 0 && (
+                <Badge bg="danger" className="ms-2" style={{ fontSize: "0.7rem" }}>
+                  {selectedDevices.length} đã chọn
+                </Badge>
+              )}
+            </Form.Label>
+            {reduxHostsLoading ? (
+              <div className="text-muted" style={{ fontSize: "0.8rem" }}>
+                <Spinner size="sm" animation="border" className="me-1" />Đang tải danh sách...
+              </div>
             ) : (
-              <Form.Control size="sm" placeholder="Nhập tên device..."
-                value={manualLockDevice}
-                onChange={(e) => setManualLockDevice(e.target.value.trim().toLowerCase())}
-                style={{ fontSize: "0.8rem" }} />
+              <Select
+                isMulti
+                isSearchable
+                placeholder="Tìm và chọn thiết bị..."
+                options={[allDeviceOption, ...deviceOptions]}
+                value={selectedDevices}
+                onChange={handleDeviceSelectChange}
+                styles={SELECT_STYLES}
+                noOptionsMessage={() => "Không tìm thấy thiết bị"}
+                loadingMessage={() => "Đang tải..."}
+              />
             )}
           </Form.Group>
-          <Form.Group>
+
+          {/* ── Lý do khóa ── */}
+          <Form.Group className="mb-2">
             <Form.Label style={{ fontSize: "0.82rem", fontWeight: 600 }}>Lý do khóa *</Form.Label>
             <Form.Control as="textarea" rows={2} size="sm"
               placeholder="Ví dụ: Bảo trì định kỳ, đang thay password..."
@@ -822,17 +772,17 @@ const MonitorDashboard = () => {
               onChange={(e) => setManualLockReason(e.target.value)}
               style={{ fontSize: "0.8rem", resize: "none" }} />
           </Form.Group>
-          <p className="text-muted mt-2 mb-0" style={{ fontSize: "0.74rem" }}>
-            Device sẽ bị bỏ qua trong mọi lần chạy healthcheck, precheck, bảo dưỡng cho đến khi được mở khóa.
+          <p className="text-muted mb-0" style={{ fontSize: "0.72rem" }}>
+            Device bị khóa sẽ bị bỏ qua trong healthcheck, precheck, bảo dưỡng cho đến khi admin mở khóa.
           </p>
         </Modal.Body>
         <Modal.Footer>
-          <Button size="sm" variant="secondary"
-            onClick={() => { setShowManualLock(false); setManualLockDevice(""); setManualLockReason(""); }}>
-            Hủy
-          </Button>
-          <Button size="sm" variant="danger" onClick={lockDeviceManually} disabled={manualLocking}>
-            {manualLocking ? <Spinner size="sm" animation="border" /> : "🔒 Khóa thiết bị"}
+          <Button size="sm" variant="secondary" onClick={_closeManualLockModal}>Hủy</Button>
+          <Button size="sm" variant="danger" onClick={lockDeviceManually}
+            disabled={manualLocking || selectedDevices.length === 0}>
+            {manualLocking
+              ? <Spinner size="sm" animation="border" />
+              : `🔒 Khóa ${selectedDevices.length > 0 ? selectedDevices.length + " thiết bị" : "thiết bị"}`}
           </Button>
         </Modal.Footer>
       </Modal>
@@ -922,7 +872,7 @@ const MonitorDashboard = () => {
           })()}
         </Modal.Body>
         <Modal.Footer>
-          {jobDetail?.status === "pending" && (
+          {jobDetail?.status === "pending" && isAdmin && (
             <Button size="sm" variant="danger"
               onClick={() => { cancelJob(jobDetail.job_id); setJobDetail(null); }}>
               Cancel Job

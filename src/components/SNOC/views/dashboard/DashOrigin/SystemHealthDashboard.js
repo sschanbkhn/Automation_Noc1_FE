@@ -113,7 +113,9 @@ const renderLastUpdatedOneLine = (dateStr, small = false) => {
   );
 };
 
-// ====== HELPER: Xử lý dữ liệu chi tiết từng PHÚT (Hỗ trợ biến thiên số giờ) ======
+// ====== HELPER: Running-state NOK chart (tránh răng cưa do schedule không đều) ======
+// Thay vì đếm events xảy ra trong từng phút (gây trồi sụt khi platforms có chu kỳ khác nhau),
+// hàm này duy trì trạng thái mới nhất của từng thiết bị và đếm "đang NOK" tại mỗi phút.
 const buildMinuteSeries = (
   items,
   platformList,
@@ -125,97 +127,101 @@ const buildMinuteSeries = (
   const now = new Date();
   now.setHours(now.getHours() + 2); // Bù giờ server
 
-  const points = [];
-  const totalMinutes = hours * 60; // Tính tổng số phút dựa trên biến hours
+  const totalMinutes = hours * 60;
 
+  const points = [];
   for (let i = totalMinutes - 1; i >= 0; i--) {
     const d = new Date(now.getTime() - i * 60 * 1000);
     d.setSeconds(0, 0);
     points.push(d);
   }
 
+  const windowStart = points[0];
+
   const key = (d) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
       d.getDate(),
-    ).padStart(
-      2,
-      "0",
-    )} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    ).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(
+      d.getMinutes(),
+    ).padStart(2, "0")}`;
 
-  const bucket = new Map(
-    points.map((d) => [
-      key(d),
-      {
-        totalMap: new Map(), // 🔥 Đổi từ Set sang Map để lưu toàn bộ chi tiết object
-        platformSets: safePlatforms.reduce(
-          (acc, p) => ({ ...acc, [p]: new Set() }),
-          {},
-        ),
-      },
-    ]),
-  );
+  // Sắp xếp items theo thời gian tăng dần để duyệt một lần (O(n log n))
+  const validItems = (items || [])
+    .filter((it) => it?.starttime && it?.host)
+    .map((it) => ({ ...it, _t: new Date(it.starttime) }))
+    .filter((it) => !isNaN(it._t.getTime()))
+    .sort((a, b) => a._t - b._t);
 
-  (items || []).forEach((it) => {
-    if (!it?.starttime || !it?.host) return;
+  // Running state: hostKey → thông tin thiết bị tại trạng thái mới nhất đã biết
+  const deviceState = new Map();
+  let itemIdx = 0;
 
-    const t = new Date(it.starttime);
-    if (isNaN(t.getTime())) return;
+  const applyItem = (it) => {
+    const hostKey = (it.host || "").trim().toLowerCase();
+    deviceState.set(hostKey, {
+      host: it.host,
+      platform: (it.platform || "").trim(),
+      status: it.status,
+      excludedFlag: it.excluded === true,
+      notes:
+        it.notes ||
+        it.note ||
+        it.message ||
+        it.description ||
+        it.reason ||
+        "Không có thông tin lỗi",
+      result_file: it.result_file || "",
+    });
+  };
 
-    const m = new Date(t);
-    m.setSeconds(0, 0);
-    const k = key(m);
-
-    // 🔥 Đảm bảo thiết bị đó không bị excluded
-    const hostKey = (it.host || "").toString().trim().toLowerCase();
-    const isExcluded =
-      it.excluded === true ||
-      (excludedHostsSet && excludedHostsSet.has(hostKey));
-
-    const isNok = (it.status === "NOK" || it.status === "Error") && !isExcluded;
-
-    if (!isNok) return;
-
-    if (bucket.has(k)) {
-      const entry = bucket.get(k);
-      if (entry) {
-        // 🔥 LƯU CHI TIẾT LỖI (Thay vì chỉ lưu mỗi cái tên host)
-        entry.totalMap.set(hostKey, {
-          host: it.host,
-          platform: it.platform,
-          status: it.status,
-          // Bổ sung check nhiều tên trường phổ biến từ Backend
-          notes:
-            it.notes ||
-            it.note ||
-            it.message ||
-            it.description ||
-            it.reason ||
-            "Không có thông tin lỗi",
-          // 👇 THÊM DÒNG NÀY ĐỂ LẤY TÊN FILE
-          result_file: it.result_file || "",
-        });
-
-        const pKey = (it.platform || "").toString().trim();
-        if (entry.platformSets[pKey]) {
-          entry.platformSets[pKey].add(it.host);
-        }
-      }
-    }
-  });
+  // Khởi tạo state từ items TRƯỚC cửa sổ hiển thị (thiết bị NOK từ trước vẫn được tính)
+  while (itemIdx < validItems.length && validItems[itemIdx]._t < windowStart) {
+    applyItem(validItems[itemIdx]);
+    itemIdx++;
+  }
 
   return points.map((d) => {
-    const k = key(d);
-    const entry = bucket.get(k);
+    const minuteEnd = new Date(d.getTime() + 60000);
 
-    // 🔥 XUẤT THÊM errorDetails ĐỂ ĐỒ THỊ LÀM POPUP DRILL-DOWN
+    // Áp dụng tất cả kết quả healthcheck xảy ra trong phút này
+    while (itemIdx < validItems.length && validItems[itemIdx]._t < minuteEnd) {
+      applyItem(validItems[itemIdx]);
+      itemIdx++;
+    }
+
+    // Đếm NOK từ trạng thái hiện tại của tất cả thiết bị đã biết
+    let totalNok = 0;
+    const platformNok = {};
+    safePlatforms.forEach((p) => { platformNok[p] = 0; });
+    const errorDetails = [];
+
+    deviceState.forEach((device, hostKey) => {
+      const isExcluded =
+        device.excludedFlag || (excludedHostsSet && excludedHostsSet.has(hostKey));
+      if (isExcluded) return;
+      if (device.status !== "NOK" && device.status !== "Error") return;
+
+      totalNok++;
+      if (Object.prototype.hasOwnProperty.call(platformNok, device.platform)) {
+        platformNok[device.platform]++;
+      }
+      errorDetails.push({
+        host: device.host,
+        platform: device.platform,
+        status: device.status,
+        notes: device.notes,
+        result_file: device.result_file,
+      });
+    });
+
     const row = {
-      time: k.slice(11, 16),
-      Total: entry ? entry.totalMap.size : 0, // Đếm tổng số từ Map
-      errorDetails: entry ? Array.from(entry.totalMap.values()) : [], // Mảng chứa chi tiết lỗi
+      time: key(d).slice(11, 16),
+      Total: totalNok > 0 ? totalNok : null,
+      errorDetails,
     };
 
     safePlatforms.forEach((p) => {
-      row[p] = entry && entry.platformSets[p] ? entry.platformSets[p].size : 0;
+      row[p] = platformNok[p] > 0 ? platformNok[p] : null;
     });
 
     return row;
@@ -569,9 +575,9 @@ const GroupNokChart = ({
               stroke="#dc3545"
               strokeWidth={2}
               dot={false}
-              // 👇 SỬA DÒNG NÀY: Dùng hàm tự vẽ chấm tròn
               activeDot={(props) => renderCustomActiveDot(props, "Total")}
               name="Total"
+              connectNulls
               isAnimationActive={false}
               hide={hiddenKeys.has("Total")}
             />
