@@ -121,6 +121,33 @@ export function onSnocUnauthorized(cb: UnauthorizedHandler) {
     (unauthorizedHandlers = unauthorizedHandlers.filter((f) => f !== cb));
 }
 
+/* ===== Offline / Online tracking ===== */
+type VoidHandler = () => void;
+let _offlineHandlers: VoidHandler[] = [];
+let _onlineHandlers: VoidHandler[] = [];
+export let _snocIsOffline = false;
+
+export function onSnocOffline(cb: VoidHandler) {
+  _offlineHandlers.push(cb);
+  // Gọi ngay nếu đã offline trước khi component mount (late-mount safe)
+  if (_snocIsOffline) { try { cb(); } catch {} }
+  return () => (_offlineHandlers = _offlineHandlers.filter((f) => f !== cb));
+}
+export function onSnocOnline(cb: VoidHandler) {
+  _onlineHandlers.push(cb);
+  return () => (_onlineHandlers = _onlineHandlers.filter((f) => f !== cb));
+}
+export function fireSnocOffline() {
+  if (_snocIsOffline) return;
+  _snocIsOffline = true;
+  _offlineHandlers.forEach((fn) => { try { fn(); } catch {} });
+}
+export function fireSnocOnline() {
+  if (!_snocIsOffline) return;
+  _snocIsOffline = false;
+  _onlineHandlers.forEach((fn) => { try { fn(); } catch {} });
+}
+
 /* ===== helper tạo instance + interceptors giống nhau ===== */
 function buildInstance(baseURL: string): AxiosInstance {
   const ins = axios.create({
@@ -151,12 +178,20 @@ function buildInstance(baseURL: string): AxiosInstance {
   );
 
   ins.interceptors.response.use(
-    (response) => response,
+    (response) => {
+      fireSnocOnline(); // reset offline flag khi có response thành công
+      return response;
+    },
     async (error: AxiosError) => {
       const originalRequest = (error.config || {}) as AxiosRequestConfig & {
         _handled401?: boolean;
       };
       const status = error.response?.status;
+
+      if (!error.response && getSnocToken()) {
+        // Network error (backend không phản hồi) trong khi còn token
+        fireSnocOffline();
+      }
 
       if (status === 401  && !originalRequest._handled401) {
         originalRequest._handled401 = true;
@@ -167,8 +202,7 @@ function buildInstance(baseURL: string): AxiosInstance {
           } catch {}
         });
       }
-      // 2. Nếu gặp lỗi 403 (Thiếu quyền), KHÔNG clear token, KHÔNG gọi handler logout.
-      // Cứ để cho Promise.reject(error) chạy, Redux Thunk sẽ bắt được lỗi này.
+      // Nếu gặp lỗi 403 (Thiếu quyền), KHÔNG clear token, KHÔNG gọi handler logout.
       if (status === 403) {
         console.warn("Lỗi 403: Bạn không có quyền thực hiện hành động này.");
       }

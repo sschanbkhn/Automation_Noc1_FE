@@ -10,6 +10,7 @@ import snocReducer from "../redux/Healthcheck/snocSlice";
 import hostsReducer from "../redux/Hosts/hostsSlice";
 import genericScheduleReducer from "../redux/KPI/genericScheduleSlice";
 import kpiReducer from "../redux/KPI/kpiSlice";
+import kpiScheduleReducer from "../redux/KPI/kpiScheduleSlice";
 
 // ✅ Auth slice (account)
 import accountReducer, {
@@ -29,6 +30,9 @@ import userReducer from "./../redux/User/userSlice";
 import outputIgnoreV2Reducer from "../redux/Healthcheck/outputIgnoreSliceV2";
 import blackoutReducer from "../redux/Healthcheck/blackoutSlice";
 import precheckReducer from "../redux/Healthcheck/precheckSlice";
+import analysisParamReducer from "../redux/Healthcheck/analysisParamSlice";
+import alertConfigReducer from "../redux/Healthcheck/alertConfigSlice";
+import notifChannelConfigReducer from "../redux/Healthcheck/notifChannelConfigSlice";
 import regionReducer from "../redux/User/regionSlice";
 import accessScopeReducer from "../redux/User/accessScopeSlice";
 const snocStore = configureStore({
@@ -42,6 +46,7 @@ const snocStore = configureStore({
     hosts: hostsReducer,
     kpi: kpiReducer,
     genericSchedule: genericScheduleReducer,
+    kpiSchedule: kpiScheduleReducer,
     user: userReducer,
     group: groupReducer,
     department: departmentReducer,
@@ -54,6 +59,9 @@ const snocStore = configureStore({
     outputIgnoreV2: outputIgnoreV2Reducer,
     blackout: blackoutReducer,
     precheck: precheckReducer,
+    analysisParam: analysisParamReducer,
+    alertConfig: alertConfigReducer,
+    notifChannelConfig: notifChannelConfigReducer,
     region: regionReducer,
     accessScope: accessScopeReducer,
   },

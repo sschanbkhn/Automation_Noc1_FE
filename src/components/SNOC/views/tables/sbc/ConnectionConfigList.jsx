@@ -39,6 +39,7 @@ import {
   updateConnectionConfig,
 } from "../../../redux/Sbc/sbcConnectionSlice";
 import TopNavbar from "../../dashboard/DashOrigin/TopNavbarSbc";
+import { getJwtClaims } from "../../../api/snocApiWithAutoToken";
 
 // Helper tìm tên
 const findLabel = (list = [], id, key = "id", label = "name") =>
@@ -136,6 +137,10 @@ const buildTemplate = (cfg, options = {}) => {
 
 const ConnectionConfigList = () => {
   const dispatch = useDispatch();
+  const isAdmin = useMemo(() => {
+    const claims = getJwtClaims();
+    return claims?.is_superuser || ["super", "admin"].includes(claims?.role);
+  }, []);
 
   const {
     configs = [],
@@ -817,12 +822,14 @@ const ConnectionConfigList = () => {
                 }}
                 style={{ width: "400px" }}
               />
-              <Button
-                variant="warning"
-                onClick={() => setShowCreateModal(true)}
-              >
-                Tạo Mới
-              </Button>
+              {isAdmin && (
+                <Button
+                  variant="warning"
+                  onClick={() => setShowCreateModal(true)}
+                >
+                  Tạo Mới
+                </Button>
+              )}
               <Badge bg="light" text="dark" className="fs-6">
                 Tổng: <strong>{configs.length}</strong> kết nối
               </Badge>
@@ -1001,14 +1008,16 @@ const ConnectionConfigList = () => {
                       </td>
 
                       <td className="text-center">
-                        <Button
-                          size="sm"
-                          variant="outline-warning"
-                          onClick={() => handleEdit(cfg)}
-                          className="me-1"
-                        >
-                          Sửa
-                        </Button>
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant="outline-warning"
+                            onClick={() => handleEdit(cfg)}
+                            className="me-1"
+                          >
+                            Sửa
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="outline-info"
@@ -1017,23 +1026,27 @@ const ConnectionConfigList = () => {
                         >
                           Template
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline-success"
-                          onClick={() =>
-                            openPairModal(cfg.id, cfg.partner_pairs)
-                          }
-                          className="me-1"
-                        >
-                          Gán VIP
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="danger"
-                          onClick={() => handleDelete(cfg)}
-                        >
-                          Xóa
-                        </Button>
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant="outline-success"
+                            onClick={() =>
+                              openPairModal(cfg.id, cfg.partner_pairs)
+                            }
+                            className="me-1"
+                          >
+                            Gán VIP
+                          </Button>
+                        )}
+                        {isAdmin && (
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            onClick={() => handleDelete(cfg)}
+                          >
+                            Xóa
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   ))}

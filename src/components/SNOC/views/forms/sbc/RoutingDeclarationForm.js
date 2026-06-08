@@ -17,6 +17,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 
 import TopNavbar from "../../dashboard/DashOrigin/TopNavbarSbc";
+import { getJwtClaims } from "../../../api/snocApiWithAutoToken";
 
 import {
   addCountryDestinationQuick,
@@ -58,6 +59,10 @@ const SearchIcon = () => (
 
 const RoutingDeclarationForm = () => {
   const dispatch = useDispatch();
+  const isAdmin = useMemo(() => {
+    const claims = getJwtClaims();
+    return claims?.is_superuser || ["super", "admin"].includes(claims?.role);
+  }, []);
 
   const {
     services = [],
@@ -674,14 +679,16 @@ const RoutingDeclarationForm = () => {
               </Col>
 
               <Col lg={1} md={4} className="text-end">
-                <Button
-                  size="sm"
-                  variant="primary"
-                  onClick={() => setShowCreate(true)}
-                >
-                  <PlusIcon />{" "}
-                  <span className="d-none d-sm-inline">Khai báo</span>
-                </Button>
+                {isAdmin && (
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    onClick={() => setShowCreate(true)}
+                  >
+                    <PlusIcon />{" "}
+                    <span className="d-none d-sm-inline">Khai báo</span>
+                  </Button>
+                )}
               </Col>
             </Row>
           </Card.Body>
@@ -765,21 +772,25 @@ const RoutingDeclarationForm = () => {
                           </td>
                           <td className="text-muted small">{r.note || "—"}</td>
                           <td className="text-center">
-                            <Button
-                              size="sm"
-                              variant="outline-warning"
-                              className="me-1"
-                              onClick={() => openEdit(r)}
-                            >
-                              <EditIcon />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline-danger"
-                              onClick={() => handleDelete(r)}
-                            >
-                              <TrashIcon />
-                            </Button>
+                            {isAdmin && (
+                              <Button
+                                size="sm"
+                                variant="outline-warning"
+                                className="me-1"
+                                onClick={() => openEdit(r)}
+                              >
+                                <EditIcon />
+                              </Button>
+                            )}
+                            {isAdmin && (
+                              <Button
+                                size="sm"
+                                variant="outline-danger"
+                                onClick={() => handleDelete(r)}
+                              >
+                                <TrashIcon />
+                              </Button>
+                            )}
                           </td>
                         </tr>
                       ))}

@@ -49,12 +49,6 @@
           "name": "Cấu hình chung",
           "url": "/config",
           "icon": "bi bi-grid"
-        },
-        {
-          "code": "ConfigEmailSms",
-          "name": "Cấu hình Email Sms",
-          "url": "/config-email-sms",
-          "icon": "bi bi-grid"
         }
       ]
     },

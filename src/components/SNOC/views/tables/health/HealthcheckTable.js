@@ -27,9 +27,9 @@ import KPIExplorerCore from "../../forms/kpi/KPIExplorerCore";
 import styles from "./../../../styles/SystemHealth.module.scss";
 // ✅ Recharts cho đồ thị
 import {
-  Bar,
-  BarChart,
   CartesianGrid,
+  Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -393,7 +393,7 @@ const HealthcheckTable = ({
 
     return hours.map((d) => ({
       hour: key(d).slice(11, 16), // HH:00
-      nok: bucket.get(key(d)) || 0,
+      nok: bucket.get(key(d)) || null,
     }));
   };
 
@@ -447,8 +447,9 @@ const HealthcheckTable = ({
     );
   };
 
-  const handleBarClick = (data) => {
-    const label = data?.payload?.hour;
+  const handleChartClick = (data) => {
+    const label = data?.activeLabel;
+    if (!label) return;
     const arr = hourIndex.get(label) || [];
     setSelectedHour(label);
     setSelectedHourItems(arr);
@@ -544,20 +545,27 @@ const isAdmin = useMemo(() => {
                 </div>
                 <div style={{ width: "100%", height: 220 }}>
                   <ResponsiveContainer>
-                    <BarChart data={hourlySeries}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="hour" />
-                      <YAxis allowDecimals={false} />
+                    <LineChart
+                      data={hourlySeries}
+                      onClick={handleChartClick}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                      <XAxis dataKey="hour" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
                       <Tooltip content={<CustomTooltip />} />
-                      <Bar
+                      <Line
+                        type="monotone"
                         dataKey="nok"
                         name="NOK"
-                        fill={NOK_BAR_COLOR}
                         stroke={NOK_BAR_COLOR}
-                        cursor="pointer"
-                        onClick={handleBarClick}
+                        strokeWidth={2}
+                        dot={{ r: 4, fill: NOK_BAR_COLOR, strokeWidth: 0 }}
+                        activeDot={{ r: 6, fill: NOK_BAR_COLOR, stroke: "#fff", strokeWidth: 2 }}
+                        connectNulls
+                        isAnimationActive={false}
                       />
-                    </BarChart>
+                    </LineChart>
                   </ResponsiveContainer>
                 </div>
               </div>

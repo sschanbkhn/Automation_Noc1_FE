@@ -8,17 +8,20 @@ import KPIExplorerCore from "../../forms/kpi/KPIExplorerCore";
 export default function PinnedKPISection({
   group,
   subsystem,           // optional: nếu có → đây là Subsystem detail; nếu không → Group page
+  platform = null,     // optional: lọc theo platform cụ thể (dùng trong KPIDashboard)
   scopes = "all",       // "subsystem,platform,device" | "platform,device" | "all"
   title = "Pinned KPIs",
+  showAddButton = true, // false khi context đã có KPIExplorerCore để thêm pin (vd: KPIDashboard)
 }) {
   const dispatch = useDispatch();
   const { items, loading } = useSelector(s => s.pinned);
+  const loadingByKey = useSelector(s => s.kpi?.loadingByKey || {});
 
-  const query = useMemo(() => ({ group, subsystem, scopes }), [group, subsystem, scopes]);
+  const query = useMemo(() => ({ group, subsystem, platform, scopes }), [group, subsystem, platform, scopes]);
 
   useEffect(() => {
     if (group) dispatch(loadPins(query));
-  }, [dispatch, group, subsystem, scopes]);
+  }, [dispatch, group, subsystem, platform, scopes]);
 
   // Modal add
   const [show, setShow] = useState(false);
@@ -34,10 +37,14 @@ export default function PinnedKPISection({
   const onChange = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
 
   const handleAdd = async () => {
+    if (!form.kpi_key.trim()) return;
+
+    const resolvedSubsystem = subsystem || form.subsystem || null;
+
     const payload = {
       group,
-      subsystem: subsystem || form.subsystem || null,
-      platform: form.platform || null,
+      subsystem: resolvedSubsystem,
+      platform: form.platform || platform || null,
       device: form.device || null,
       kpi_key: form.kpi_key.trim(),
       title: form.title || "",
@@ -45,7 +52,7 @@ export default function PinnedKPISection({
     };
     await dispatch(addPin(payload));
     setShow(false);
-    setForm({ kpi_key:"", title:"", subsystem:"", platform:"", device:"", chart_config:{} });
+    setForm({ kpi_key: "", title: "", subsystem: "", platform: "", device: "", chart_config: {} });
   };
 
   const handleUnpin = async (id) => {
@@ -58,14 +65,14 @@ export default function PinnedKPISection({
         <div className="fw-bold">{title}</div>
         <div className="d-flex align-items-center gap-2">
           {loading && <Spinner size="sm" />}
-          <Button size="sm" onClick={() => setShow(true)}>+ Pin KPI</Button>
+          {showAddButton && <Button size="sm" onClick={() => setShow(true)}>+ Pin KPI</Button>}
         </div>
       </Card.Header>
 
       <Card.Body>
-        {items.length === 0 && (
+        {/* {items.length === 0 && (
           <div className="text-muted">Chưa có KPI nào được pin.</div>
-        )}
+        )} */}
 
         <Row className="g-3">
           {items.map(pin => (
@@ -89,22 +96,35 @@ export default function PinnedKPISection({
                     <Button size="sm" variant="outline-danger" onClick={() => handleUnpin(pin.id)}>Unpin</Button>
                   </div>
 
-                  <div className="mt-2">
-                    {/* Render đồ thị KPI bằng KPIExplorerCore (sửa props cho đúng API dự án của bạn) */}
-                    <KPIExplorerCore
-                      kpiKey={pin.kpi_key}
-                      scope={{
-                        group: pin.group,
-                        subsystem: pin.subsystem || undefined,
-                        platform: pin.platform || undefined,
-                        device: pin.device || undefined,
-                      }}
-                      chartConfig={pin.chart_config}
-                      titleOverride={pin.title || undefined}
-                      embed
-                      hideToolbar
-                    />
-                  </div>
+                  {(() => {
+                    const pinKey = `${pin.platform || ""}:${pin.device || ""}:${pin.kpi_key}`;
+                    const isPinLoading = loadingByKey[pinKey] === true;
+                    return (
+                      <div className="mt-2 position-relative" style={{ minHeight: 80 }}>
+                        {isPinLoading && (
+                          <div
+                            className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+                            style={{ zIndex: 2, background: "rgba(255,255,255,0.7)" }}
+                          >
+                            <Spinner size="sm" />
+                          </div>
+                        )}
+                        <KPIExplorerCore
+                          kpiKey={pin.kpi_key}
+                          scope={{
+                            group: pin.group,
+                            subsystem: pin.subsystem || undefined,
+                            platform: pin.platform || undefined,
+                            device: pin.device || undefined,
+                          }}
+                          chartConfig={pin.chart_config}
+                          titleOverride={pin.title || undefined}
+                          embed
+                          hideToolbar
+                        />
+                      </div>
+                    );
+                  })()}
                 </Card.Body>
               </Card>
             </Col>
@@ -124,23 +144,29 @@ export default function PinnedKPISection({
           )}
           <Form.Group className="mb-3">
             <Form.Label>KPI Key</Form.Label>
-            <Form.Control name="kpi_key" value={form.kpi_key} onChange={onChange} placeholder="vd: pgw.causecode.topn"/>
+            <Form.Control name="kpi_key" value={form.kpi_key} onChange={onChange} placeholder="vd: pgw.causecode.topn" />
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label>Title (optional)</Form.Label>
-            <Form.Control name="title" value={form.title} onChange={onChange} placeholder="Tên hiển thị"/>
+            <Form.Control name="title" value={form.title} onChange={onChange} placeholder="Tên hiển thị" />
           </Form.Group>
           <Row>
             <Col>
               <Form.Group className="mb-3">
-                <Form.Label>Platform (optional)</Form.Label>
-                <Form.Control name="platform" value={form.platform} onChange={onChange} placeholder="vd: pgw_native_epg2"/>
+                <Form.Label>Platform {platform ? "" : "(optional)"}</Form.Label>
+                <Form.Control
+                  name="platform"
+                  value={platform || form.platform}
+                  onChange={platform ? undefined : onChange}
+                  placeholder="vd: pgw_native_epg2"
+                  disabled={!!platform}
+                />
               </Form.Group>
             </Col>
             <Col>
               <Form.Group className="mb-3">
                 <Form.Label>Device (optional)</Form.Label>
-                <Form.Control name="device" value={form.device} onChange={onChange} placeholder="vd: epg2-01"/>
+                <Form.Control name="device" value={form.device} onChange={onChange} placeholder="vd: epg2-01" />
               </Form.Group>
             </Col>
           </Row>

@@ -72,11 +72,14 @@ import OutputIgnoreRules from "components/SNOC/views/forms/health/OutputIgnoreRu
 import OutputIgnoreRulesV2 from "components/SNOC/views/forms/health/OutputIgnoreRulesV2"; // ← thêm
 import HostConfigPanel from "components/SNOC/views/forms/hosts/HostConfigPanel";
 import KPIChartDashboard from "components/SNOC/views/forms/kpi/KPIChartDashboard";
-import KPISelectorPage from "components/SNOC/views/forms/kpi/KPISelectorPage";
+import KPIDashboard from "components/SNOC/views/forms/kpi/KPIDashboard";
 import ScheduleGeneric from "components/SNOC/views/forms/kpi/ScheduleGeneric";
 import PrecheckHistory from "components/SNOC/views/tables/health/PrecheckHistory";
 import PrecheckSchedule from "components/SNOC/views/forms/health/PrecheckSchedule";
 import BlackoutConfigPage from "components/SNOC/views/forms/health/BlackoutConfig";
+import AnalysisParams from "components/SNOC/views/forms/health/AnalysisParams";
+import AlertConfigs from "components/SNOC/views/forms/health/AlertConfigs";
+import NotifChannelConfig from "components/SNOC/views/forms/health/NotifChannelConfig";
 import DhttManual from "components/SNOC/views/forms/health/DhttManual";
 import DhttDashboard from "components/SNOC/views/dashboard/DashOrigin/DhttDashboard";
 import PrecheckManual from "components/SNOC/views/forms/health/PrecheckManual";
@@ -273,6 +276,18 @@ const MainPageRoute = (props: Props) => {
             element={<BlackoutConfigPage />}
           />
           <Route
+            path="/healthcheck/analysis-params"
+            element={<AnalysisParams />}
+          />
+          <Route
+            path="/healthcheck/alert-config"
+            element={<AlertConfigs />}
+          />
+          <Route
+            path="/config-email-sms"
+            element={<NotifChannelConfig />}
+          />
+          <Route
             path="/healthcheck/history"
             element={<HistoricalReporting />}
           />
@@ -291,9 +306,14 @@ const MainPageRoute = (props: Props) => {
           <Route path="/dhtt/dashboard" element={<DhttDashboard />} />
           <Route
             path="/healthcheck/kpischedule"
-            element={<ScheduleGeneric />}
+            element={<ScheduleGeneric key="dhtt-schedule" onlyType="dhtt" />}
           />
-          <Route path="/kpi/:system/:subsystem" element={<KPISelectorPage />} />
+          <Route
+            path="/kpi/schedule"
+            element={<ScheduleGeneric key="kpi-schedule" onlyType="kpi" />}
+          />
+          <Route path="/kpi/dashboard" element={<KPIDashboard />} />
+          <Route path="/kpi/:system/:subsystem" element={<KPIChartDashboard />} />
           <Route path="/healthcheck/:group" element={<DashOrigin />} />
           <Route
             path="/healthcheck/:group/:subsystem"

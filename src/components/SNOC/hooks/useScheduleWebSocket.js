@@ -9,7 +9,7 @@ import {
   upsertLatestFromClient,
   wsMergeHourlyItems,
 } from "../redux/Healthcheck/healthcheckSlice";
-import { getSnocToken } from "../api/snocApiWithAutoToken";  // ← thêm
+import { getSnocToken, fireSnocOffline, fireSnocOnline } from "../api/snocApiWithAutoToken";
 
 const BASE_WS_URL = process.env.REACT_APP_SNOC_WS_URL || "ws://localhost:8000/ws";
 const RECONNECT_INTERVAL = 5000;
@@ -22,6 +22,8 @@ const useScheduleWebSocket = () => {
   const socketRef = useRef(null);
   const timerRef = useRef(null);
   const isMountedRef = useRef(true);
+  const wsRetryCountRef = useRef(0);
+  const WS_OFFLINE_THRESHOLD = 3; // lần fail liên tiếp trước khi báo offline
 
   const connect = () => {
     // ✅ Truyền token qua query string để backend authenticate
@@ -34,6 +36,8 @@ const useScheduleWebSocket = () => {
     socket.onopen = () => {
       console.log("✅ WebSocket connected");
       if (!isMountedRef.current) return;
+      wsRetryCountRef.current = 0;
+      fireSnocOnline(); // WS connected = backend online
       setIsConnected(true);
       setHasEverConnected(true);
       dispatch(setWebSocketStatus(true));
@@ -103,6 +107,11 @@ const useScheduleWebSocket = () => {
       if (!isMountedRef.current) return;
       setIsConnected(false);
       dispatch(setWebSocketStatus(false));
+      if (!getSnocToken()) return; // đã logout → không reconnect
+      wsRetryCountRef.current += 1;
+      if (wsRetryCountRef.current >= WS_OFFLINE_THRESHOLD) {
+        fireSnocOffline(); // N lần fail liên tiếp → báo backend offline
+      }
       reconnect();
     };
 

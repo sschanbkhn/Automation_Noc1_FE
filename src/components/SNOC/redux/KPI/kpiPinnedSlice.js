@@ -1,8 +1,9 @@
 // src/redux/KPI/kpiPinnedSlice.js
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { fetchKPIChartData } from "./kpiSlice"; // cùng folder KPI
+import { fetchKPIChartDataBatch } from "./kpiSlice";
 
 const LS_KEY = "pinned_kpis_by_platform";
+const LS_DEVICES_KEY = "pinned_devices_by_platform";
 
 const loadPinned = () => {
   try {
@@ -17,12 +18,22 @@ const savePinned = (obj) => {
     localStorage.setItem(LS_KEY, JSON.stringify(obj));
   } catch {}
 };
+const loadPinnedDevices = () => {
+  try {
+    const raw = localStorage.getItem(LS_DEVICES_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+const savePinnedDevices = (obj) => {
+  try {
+    localStorage.setItem(LS_DEVICES_KEY, JSON.stringify(obj));
+  } catch {}
+};
 
-/**
- * Lấy “latest” cho các KPI đã ghim của 1 platform (trong window mặc định 120 phút)
- * - Dùng lại thunk fetchKPIChartData để kéo dữ liệu (per KPI)
- * - Trả về map latestByPlatform[platform][device][kpi] = { value, ts }
- */
+// Lay "latest" cho cac KPI da ghim cua 1 platform (window mac dinh 120 phut)
+// Dung fetchKPIChartDataBatch de gop tat ca KPI vao 1 request
 export const fetchLatestForPinnedKpis = createAsyncThunk(
   "kpiPinned/fetchLatestForPinnedKpis",
   async (
@@ -43,24 +54,21 @@ export const fetchLatestForPinnedKpis = createAsyncThunk(
     const end = new Date();
     const start = new Date(end.getTime() - windowMinutes * 60 * 1000);
 
-    const results = {}; // { [kpi]: { [device]: {value, ts} } }
+    try {
+      const { grouped = {} } = await dispatch(
+        fetchKPIChartDataBatch({
+          selectedPlatform: platform,
+          selectedDevice: devices,
+          selectedKPIs: pinned,
+          startDate: start.toISOString(),
+          endDate: end.toISOString(),
+        })
+      ).unwrap();
 
-    for (const kpi of pinned) {
-      try {
-        // unwrap() để lấy payload của fetchKPIChartData
-        const rows = await dispatch(
-          fetchKPIChartData({
-            selectedPlatform: platform,
-            selectedDevice: devices, // array of names
-            selectedKPI: kpi,
-            startDate: start.toISOString(),
-            endDate: end.toISOString(),
-          })
-        ).unwrap();
-
+      const results = {};
+      for (const [kpi, rows] of Object.entries(grouped)) {
         const latestPerDevice = {};
-        const arr = Array.isArray(rows) ? rows : rows?.data || [];
-        for (const row of arr) {
+        for (const row of Array.isArray(rows) ? rows : []) {
           const dev = row?.device;
           const ts = Date.parse(row?.timestamp);
           const val = Number(row?.value);
@@ -70,32 +78,36 @@ export const fetchLatestForPinnedKpis = createAsyncThunk(
           }
         }
         results[kpi] = latestPerDevice;
-      } catch (e) {
-        // bỏ qua KPI lỗi để phần còn lại vẫn cập nhật
       }
-    }
 
-    return { platform, results };
+      return { platform, results };
+    } catch (e) {
+      return rejectWithValue(e?.message || "Batch fetch failed");
+    }
   }
 );
 
 const kpiPinnedSlice = createSlice({
   name: "kpiPinned",
   initialState: {
-    pinnedByPlatform: loadPinned(), // { [platform]: string[] }
-    latestByPlatform: {},           // { [platform]: { [device]: { [kpi]: {value, ts} } } }
+    pinnedByPlatform: loadPinned(),
+    savedDevicesByPlatform: loadPinnedDevices(),
+    latestByPlatform: {},
     loading: false,
     error: null,
   },
   reducers: {
     setPinnedKPIs: (state, action) => {
-      const { platform, kpis } = action.payload || {};
+      const { platform, kpis, devices } = action.payload || {};
       if (!platform) return;
       const uniq = Array.from(new Set((kpis || []).filter(Boolean)));
       state.pinnedByPlatform[platform] = uniq;
       savePinned(state.pinnedByPlatform);
+      if (Array.isArray(devices)) {
+        state.savedDevicesByPlatform[platform] = devices;
+        savePinnedDevices(state.savedDevicesByPlatform);
+      }
     },
-    // (tuỳ chọn) toggle 1 KPI
     togglePinnedKPI: (state, action) => {
       const { platform, kpi } = action.payload || {};
       if (!platform || !kpi) return;
@@ -116,11 +128,12 @@ const kpiPinnedSlice = createSlice({
         state.loading = false;
         const { platform, results } = action.payload || {};
         if (!platform || !results) return;
-        const dest = (state.latestByPlatform[platform] ||= {}); // per device
-        // results[kpi][device] = {value, ts}
+        if (!state.latestByPlatform[platform]) state.latestByPlatform[platform] = {};
+        const dest = state.latestByPlatform[platform];
         Object.entries(results).forEach(([kpi, byDev]) => {
           Object.entries(byDev || {}).forEach(([dev, obj]) => {
-            const devBucket = (dest[dev] ||= {});
+            if (!dest[dev]) dest[dev] = {};
+            const devBucket = dest[dev];
             devBucket[kpi] = obj;
           });
         });

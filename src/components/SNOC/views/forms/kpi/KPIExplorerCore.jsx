@@ -4,47 +4,45 @@ import { Button, Card, Col, FormControl, Row } from "react-bootstrap";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useDispatch, useSelector } from "react-redux";
-import { useLocation, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import Select from "react-select";
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 
 import useCausecodeWebSocket from "../../../hooks/useCausecodeWebSocket";
+import KPIChartGrid from "./KPIChartGrid";
 
 // Redux actions/selectors
 import { fetchPlatformGroupSchema } from "../../../redux/Healthcheck/healthcheckSlice";
 import { fetchDevicesByPlatform } from "../../../redux/Healthcheck/platformDeviceSlice";
 import {
   fetchAvailableKPIs,
-  fetchKPIChartData,
+  fetchKPIChartDataBatch,
+  clearEmbeddedData,
 } from "../../../redux/KPI/kpiSlice";
 import { setPinnedKPIs } from "../../../redux/KPI/kpiPinnedSlice";
+import { addPin } from "../../../redux/KPI/pinnedKpisSlice";
 import { showTemporaryAlert } from "../../../redux/Alert/alertSlice";
 
-/** Format giờ ICT (Asia/Bangkok ~ UTC+7) */
-function formatTimeLocal(ts, withDate = false) {
-  const d = new Date(ts);
-  return d.toLocaleString(undefined, {
-    timeZone: "Asia/Bangkok",
-    hour12: false,
-    ...(withDate
-      ? {
-          year: "2-digit",
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        }
-      : { hour: "2-digit", minute: "2-digit" }),
-  });
+/** ===== Quick range presets ===== */
+export const QUICK_RANGES = [
+  { label: "3h",  value: "3h",  hours: 3   },
+  { label: "6h",  value: "6h",  hours: 6   },
+  { label: "12h", value: "12h", hours: 12  },
+  { label: "1d",  value: "1d",  hours: 24  },
+  { label: "3d",  value: "3d",  hours: 72  },
+  { label: "7d",  value: "7d",  hours: 168 },
+];
+
+export const BUCKET_OPTIONS = [
+  { label: "Auto", value: "auto" },
+  { label: "Raw",  value: "raw"  },
+  { label: "15m",  value: "15m"  },
+  { label: "1h",   value: "1h"   },
+];
+
+export function getEffectiveBucketLabel(hours, override) {
+  if (override !== "auto") return override;
+  if (hours < 24) return "raw";
+  return "1h";
 }
 
 /** ===== Prefix grouping config ===== */
@@ -73,19 +71,30 @@ const KPIExplorerCore = ({
   defaultGroup,
   defaultSubsystem,
   defaultPlatform,
+  embed = false,
+  kpiKey,
+  scope,
+  hideToolbar = false,
+  pinGroup = null,
+  hideCharts = false,
+  onFetch = null,
+  initialQuickRange = "3d",
+  initialBucketOverride = "auto",
 }) => {
   const dispatch = useDispatch();
   const { system: urlSystem, subsystem: urlSubsystem } = useParams();
-  const location = useLocation();
 
   // --- Schema
   const { platformSchema = {} } = useSelector((state) => state.pscore || {});
-  const { devices = [] } = useSelector((state) => state.platformDevice || {});
-  const { kpiChartData = {}, availableKPIs = { kpis: [] } } = useSelector(
+  const { devices = [], devicesByPlatform = {}, loadingDevices = false } = useSelector((state) => state.platformDevice || {});
+  const { availableKPIs = { kpis: [] }, accessError = null } = useSelector(
     (state) => state.kpi || {}
   );
   const pinnedByPlatform = useSelector(
     (s) => s.kpiPinned?.pinnedByPlatform || {}
+  );
+  const savedDevicesByPlatform = useSelector(
+    (s) => s.kpiPinned?.savedDevicesByPlatform || {}
   );
 
   // ====== Cascading selections
@@ -105,8 +114,19 @@ const KPIExplorerCore = ({
   const [chartMode, setChartMode] = useState("absolute"); // 'absolute' | 'delta'
   const [viewMode, setViewMode] = useState("per-kpi"); // 'per-kpi' | 'all-in-one'
 
+  // ====== Range / bucket controls
+  const [quickRange, setQuickRange] = useState(initialQuickRange);
+  const [bucketOverride, setBucketOverride] = useState(initialBucketOverride);
+
   // Auto-pick KPI lần đầu
   const [allowAutoPick, setAllowAutoPick] = useState(true);
+
+  // Auto-restore từ pinned config sau khi refresh
+  const autoRestoreDone = useRef(false);
+  const [autoFetchPending, setAutoFetchPending] = useState(false);
+
+  // Đánh dấu user đã fetch ít nhất 1 lần — cho phép auto-refetch khi range/bucket đổi
+  const hasFetched = useRef(false);
 
   // ====== Prefix filter
   const [selectedPrefix, setSelectedPrefix] = useState("__all__"); // "__all__" | prefix string
@@ -149,6 +169,96 @@ const KPIExplorerCore = ({
   useEffect(() => {
     if (defaultPlatform) setSelectedPlatform(defaultPlatform);
   }, [defaultPlatform]);
+
+  // Auto-restore: khi platform đã set + devices đã load + chưa có selection nào + có KPI đã ghim
+  // Chỉ chạy cho context có defaultGroup/defaultSubsystem (HealthcheckTable), không chạy trong embed mode
+  useEffect(() => {
+    if (embed || !defaultGroup || !defaultSubsystem) return;
+    if (autoRestoreDone.current) return;
+    if (!selectedPlatform || loadingDevices || devices.length === 0) return;
+    if (selectedDevices.length > 0) {
+      autoRestoreDone.current = true;
+      return;
+    }
+    const pinned = pinnedByPlatform[selectedPlatform] || [];
+    if (pinned.length === 0) return;
+
+    const savedDevNames = savedDevicesByPlatform[selectedPlatform] || [];
+    const allDevOpts = devices.map((d) => ({
+      label: `${d.name} (${d.ip || "no-ip"})`,
+      value: d.name,
+    }));
+    const toRestore =
+      savedDevNames.length > 0
+        ? allDevOpts.filter((d) => savedDevNames.includes(d.value))
+        : allDevOpts;
+
+    if (toRestore.length === 0) return;
+    setSelectedDevices(toRestore);
+    // filterKey change sẽ reset selectedKPIs + allowAutoPick = true
+    // auto-pick effect sẽ pick pinned KPIs (xem bên dưới)
+    autoRestoreDone.current = true;
+  }, [
+    embed,
+    defaultGroup,
+    defaultSubsystem,
+    selectedPlatform,
+    loadingDevices,
+    devices,
+    selectedDevices.length,
+    pinnedByPlatform,
+    savedDevicesByPlatform,
+  ]);
+
+  // Key duy nhất cho embed instance này, dùng để track per-pin loading state
+  const embedKey = useMemo(
+    () =>
+      embed && kpiKey
+        ? `${scope?.platform || ""}:${scope?.device || ""}:${kpiKey}`
+        : null,
+    [embed, kpiKey, scope]
+  );
+
+  // Embed: dùng devicesByPlatform[platform] để không đọc sai platform khi nhiều embed instances
+  const effectiveDevices = useMemo(
+    () => (embed && selectedPlatform ? devicesByPlatform[selectedPlatform] || [] : devices),
+    [embed, selectedPlatform, devicesByPlatform, devices]
+  );
+
+  // ====== Embed mode: auto-init platform + kpiKey từ props
+  const embedInitDone = useRef(false);
+  useEffect(() => {
+    if (!embed || embedInitDone.current || !scope) return;
+    if (scope.platform) setSelectedPlatform(scope.platform);
+    if (kpiKey) {
+      setSelectedKPIs([{ label: kpiKey, value: kpiKey }]);
+      setAllowAutoPick(false);
+    }
+    embedInitDone.current = true;
+  }, [embed, scope, kpiKey]);
+
+  // ====== Embed mode: auto-fetch khi devices đã load
+  const embedFetchDone = useRef(false);
+  useEffect(() => {
+    if (!embed || embedFetchDone.current || !selectedPlatform || !kpiKey) return;
+    const deviceParam = scope?.device
+      ? [scope.device]
+      : effectiveDevices.map((d) => d.name);
+    if (deviceParam.length === 0) return;
+    const end = new Date();
+    const start = new Date(end.getTime() - 3 * 24 * 60 * 60 * 1000);
+    dispatch(
+      fetchKPIChartDataBatch({
+        selectedPlatform,
+        selectedDevice: deviceParam,
+        selectedKPIs: [kpiKey],
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
+        embedKey,
+      })
+    );
+    embedFetchDone.current = true;
+  }, [embed, selectedPlatform, kpiKey, effectiveDevices, scope, dispatch, embedKey]);
 
   // ====== Options từ schema
   const groupOptions = useMemo(
@@ -223,19 +333,31 @@ const KPIExplorerCore = ({
   }, [selectedPlatform, selectedDevices]);
 
   useEffect(() => {
+    // Embed mode tự quản lý selectedKPIs qua embedInitDone — không reset ở đây
+    if (embed) return;
     setAllowAutoPick(true);
     setSelectedKPIs([]);
     setSelectedPrefix("__all__");
-  }, [filterKey]);
+  }, [filterKey, embed]);
 
   useEffect(() => {
     if (!allowAutoPick) return;
+    // Embed mode tự quản lý selectedKPIs qua embedInitDone — không auto-pick ở đây
+    if (embed) return;
     if (availableKPIs.kpis?.length > 0 && selectedKPIs.length === 0) {
-      setSelectedKPIs([
-        { label: availableKPIs.kpis[0], value: availableKPIs.kpis[0] },
-      ]);
+      // Nếu đang trong auto-restore flow (đã set devices tự động), ưu tiên pinned KPIs
+      if (autoRestoreDone.current) {
+        const pinned = (pinnedByPlatform[selectedPlatform] || []).filter((k) =>
+          availableKPIs.kpis.includes(k)
+        );
+        if (pinned.length > 0) {
+          setSelectedKPIs(pinned.map((k) => ({ label: k, value: k })));
+          setAutoFetchPending(true);
+          return;
+        }
+      }
     }
-  }, [availableKPIs.kpis, selectedKPIs.length, allowAutoPick]);
+  }, [availableKPIs.kpis, selectedKPIs.length, allowAutoPick, pinnedByPlatform, selectedPlatform, embed]);
 
   // ====== WebSocket realtime
   useCausecodeWebSocket({
@@ -244,14 +366,62 @@ const KPIExplorerCore = ({
     selectedKPIs,
   });
 
+  // ====== Auto-fetch sau khi restore từ pinned config
+  useEffect(() => {
+    if (!autoFetchPending) return;
+    if (!selectedPlatform || selectedDevices.length === 0 || selectedKPIs.length === 0) return;
+    const rangeHours = quickRange !== "custom"
+      ? (QUICK_RANGES.find((r) => r.value === quickRange)?.hours || 72)
+      : 72;
+    const end = new Date();
+    const start = new Date(end.getTime() - rangeHours * 60 * 60 * 1000);
+    dispatch(
+      fetchKPIChartDataBatch({
+        selectedPlatform,
+        selectedDevice: selectedDevices.map((d) => d.value),
+        selectedKPIs: selectedKPIs.map((k) => k.value),
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
+      })
+    );
+    hasFetched.current = true;
+    // Không gọi onFetch ở đây — auto-restore là internal, không notify parent.
+    // onFetch chỉ được gọi khi user bấm "Xem" (handleCheckKPI).
+    setAutoFetchPending(false);
+  }, [autoFetchPending, selectedPlatform, selectedDevices, selectedKPIs, dispatch, quickRange]);
+
+  // ====== Auto-refetch khi range hoặc bucket thay đổi (chỉ sau khi đã fetch ít nhất 1 lần)
+  useEffect(() => {
+    if (!hasFetched.current) return;
+    if (quickRange === "custom") return; // custom: user phải bấm "Xem" thủ công
+    if (!selectedPlatform || selectedDevices.length === 0 || selectedKPIs.length === 0) return;
+
+    const rangeHours = QUICK_RANGES.find((r) => r.value === quickRange)?.hours || 72;
+    const end = new Date();
+    const start = new Date(end.getTime() - rangeHours * 60 * 60 * 1000);
+    const effectiveBucket = bucketOverride === "auto" ? undefined : bucketOverride;
+
+    dispatch(
+      fetchKPIChartDataBatch({
+        selectedPlatform,
+        selectedDevice: selectedDevices.map((d) => d.value),
+        selectedKPIs: selectedKPIs.map((k) => k.value),
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
+        bucket: effectiveBucket,
+      })
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quickRange, bucketOverride]);
+
   // ====== Devices Select options
   const deviceOptions = useMemo(
     () =>
-      devices.map((d) => ({
+      effectiveDevices.map((d) => ({
         label: `${d.name} (${d.ip || "no-ip"})`,
         value: d.name,
       })),
-    [devices]
+    [effectiveDevices]
   );
   const combinedDeviceOptions = [
     { label: "-- Chọn tất cả thiết bị --", value: "__all__" },
@@ -306,7 +476,11 @@ const KPIExplorerCore = ({
     const selectedNames = selectedDevices.map((d) => d.value);
     let startDateTime, endDateTime;
 
-    if (!startDate || !endDate) {
+    if (quickRange !== "custom") {
+      const rangeHours = QUICK_RANGES.find((r) => r.value === quickRange)?.hours || 72;
+      endDateTime = new Date();
+      startDateTime = new Date(endDateTime.getTime() - rangeHours * 60 * 60 * 1000);
+    } else if (!startDate || !endDate) {
       endDateTime = new Date();
       startDateTime = new Date(endDateTime.getTime() - 3 * 24 * 60 * 60 * 1000);
     } else {
@@ -318,182 +492,64 @@ const KPIExplorerCore = ({
       endDateTime.setHours(endH, endM, 0, 0);
     }
 
+    const effectiveBucket = bucketOverride === "auto" ? undefined : bucketOverride;
+
     if (selectedPlatform && selectedKPIs.length > 0) {
-      selectedKPIs.forEach((kpiObj) => {
-        dispatch(
-          fetchKPIChartData({
-            selectedPlatform,
-            selectedDevice: selectedNames.length > 0 ? selectedNames : undefined,
-            selectedKPI: kpiObj.value,
-            startDate: startDateTime.toISOString(),
-            endDate: endDateTime.toISOString(),
-          })
-        );
-      });
+      hasFetched.current = true;
+      dispatch(
+        fetchKPIChartDataBatch({
+          selectedPlatform,
+          selectedDevice: selectedNames.length > 0 ? selectedNames : undefined,
+          selectedKPIs: selectedKPIs.map((k) => k.value),
+          startDate: startDateTime.toISOString(),
+          endDate: endDateTime.toISOString(),
+          bucket: effectiveBucket,
+        })
+      );
+      onFetch?.({ selectedKPIs, selectedPlatform, selectedDevices, chartMode, viewMode });
     }
   };
 
   // ====== PIN all selected KPIs
-  const pinnedSet = useMemo(
-    () => new Set(pinnedByPlatform[selectedPlatform] || []),
-    [pinnedByPlatform, selectedPlatform]
-  );
-
   const handlePinToHealthTable = () => {
     if (!selectedPlatform || selectedKPIs.length === 0) return;
     const kpis = selectedKPIs.map((k) => k.value);
-    dispatch(setPinnedKPIs({ platform: selectedPlatform, kpis }));
+    const devices = selectedDevices.map((d) => d.value);
+    dispatch(setPinnedKPIs({ platform: selectedPlatform, kpis, devices }));
     try {
       dispatch(
         showTemporaryAlert({
           type: "success",
-          message: `Đã ghim ${kpis.length} KPI cho '${selectedPlatform}' vào Healthcheck Table.`,
+          message: `Đã ghim ${kpis.length} KPI cho '${selectedPlatform}'.`,
           timeout: 2500,
         })
       );
     } catch {}
   };
 
-  // ====== Chuẩn hoá dữ liệu cho chart
-  const groupedChartDataByKPIAndDevice = useMemo(() => {
-    const groups = {};
-    for (const kpi in kpiChartData) {
-      const rows = Array.isArray(kpiChartData[kpi]) ? kpiChartData[kpi] : [];
-      const byDeviceMinute = {};
-      for (const row of rows) {
-        const device = row?.device;
-        const ts = Date.parse(row?.timestamp);
-        if (!device || !Number.isFinite(ts)) continue;
-        const tsMin = Math.floor(ts / 60000) * 60000;
-        const val = Number(row?.value);
-        if (!Number.isFinite(val)) continue;
-        const mm = (byDeviceMinute[device] ||= new Map());
-        mm.set(tsMin, { ...row, value: val, ts: tsMin });
-      }
-      const deviceObj = {};
-      for (const [dev, minuteMap] of Object.entries(byDeviceMinute)) {
-        const arr = Array.from(minuteMap.values()).sort((a, b) => a.ts - b.ts);
-        deviceObj[dev] = arr;
-      }
-      groups[kpi] = deviceObj;
+  const handlePinToDashboard = async () => {
+    if (!pinGroup || !selectedPlatform || selectedKPIs.length === 0) return;
+    const device = selectedDevices.length === 1 ? selectedDevices[0].value : null;
+    let successCount = 0;
+    for (const kpi of selectedKPIs) {
+      const result = await dispatch(addPin({
+        group: pinGroup,
+        platform: selectedPlatform,
+        device,
+        kpi_key: kpi.value,
+        title: kpi.label || kpi.value,
+      }));
+      if (!result.error) successCount++;
     }
-    return groups;
-  }, [kpiChartData]);
-
-  // ====== Delta transform
-  const getDeltaLineData = (deviceData) => {
-    const delta = {};
-    Object.entries(deviceData).forEach(([dev, arr]) => {
-      let prev = null;
-      delta[dev] = arr.map((p) => {
-        let d = 0;
-        if (prev && p.ts > prev.ts) {
-          const diff = p.value - prev.value;
-          d = diff >= 0 ? diff : 0;
-        }
-        prev = p;
-        return { ...p, value: d };
-      });
-    });
-    return delta;
-  };
-
-  // ====== Legend per-kpi (theo thiết bị)
-  const [visibleDevices, setVisibleDevices] = useState([]);
-  const [showAll, setShowAll] = useState(true);
-  useEffect(() => {
-    const all = new Set();
-    for (const kpi in groupedChartDataByKPIAndDevice) {
-      for (const dev in groupedChartDataByKPIAndDevice[kpi]) {
-        all.add(dev);
-      }
-    }
-    setVisibleDevices(Array.from(all));
-    setShowAll(true);
-  }, [groupedChartDataByKPIAndDevice]);
-  const toggleDeviceVisibility = (deviceName) => {
-    setVisibleDevices((prev) =>
-      prev.includes(deviceName)
-        ? prev.filter((d) => d !== deviceName)
-        : [...prev, deviceName]
-    );
-  };
-  const toggleAllDevices = () => {
-    if (showAll) {
-      setVisibleDevices([]);
-    } else {
-      const all = new Set();
-      for (const kpi in groupedChartDataByKPIAndDevice) {
-        for (const dev in groupedChartDataByKPIAndDevice[kpi]) {
-          all.add(dev);
-        }
-      }
-      setVisibleDevices(Array.from(all));
-    }
-    setShowAll(!showAll);
-  };
-
-  // ====== Combined view (1 chart cho tất cả KPI)
-  const colors = [
-    "#2ca02c",
-    "#1f77b4",
-    "#d62728",
-    "#ff7f0e",
-    "#9467bd",
-    "#8c564b",
-    "#e377c2",
-    "#7f7f7f",
-    "#bcbd22",
-    "#17becf",
-  ];
-  const selectedKpiValues = useMemo(
-    () => selectedKPIs.map((k) => k.value),
-    [selectedKPIs]
-  );
-  const combinedSeries = useMemo(() => {
-    const list = [];
-    selectedKpiValues.forEach((kpi) => {
-      const deviceData = groupedChartDataByKPIAndDevice[kpi] || {};
-      const displayData =
-        chartMode === "delta" ? getDeltaLineData(deviceData) : deviceData;
-      for (const [device, arr] of Object.entries(displayData)) {
-        list.push({
-          key: `${kpi}__${device}`,
-          name: `${device} • ${kpi}`,
-          data: arr,
-          kpi,
-          device,
-        });
-      }
-    });
-    return list;
-  }, [selectedKpiValues, groupedChartDataByKPIAndDevice, chartMode]);
-  const combinedColorMap = useMemo(() => {
-    const map = {};
-    combinedSeries.forEach((s, idx) => {
-      map[s.key] = colors[idx % colors.length];
-    });
-    return map;
-  }, [combinedSeries]);
-
-  const [visibleSeriesKeys, setVisibleSeriesKeys] = useState([]);
-  const [showAllCombined, setShowAllCombined] = useState(true);
-  useEffect(() => {
-    setVisibleSeriesKeys(combinedSeries.map((s) => s.key));
-    setShowAllCombined(true);
-  }, [combinedSeries]);
-  const toggleSeriesVisibility = (key) => {
-    setVisibleSeriesKeys((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    );
-  };
-  const toggleAllSeries = () => {
-    if (showAllCombined) {
-      setVisibleSeriesKeys([]);
-    } else {
-      setVisibleSeriesKeys(combinedSeries.map((s) => s.key));
-    }
-    setShowAllCombined(!showAllCombined);
+    try {
+      dispatch(showTemporaryAlert({
+        type: successCount > 0 ? "success" : "danger",
+        message: successCount > 0
+          ? `Đã ghim ${successCount} KPI lên Dashboard.`
+          : "Ghim thất bại, vui lòng thử lại.",
+        timeout: 2500,
+      }));
+    } catch {}
   };
 
   // ====== KPI search input UX
@@ -501,28 +557,36 @@ const KPIExplorerCore = ({
   const kpiInputRef = useRef("");
   const [kpiMenuOpen, setKpiMenuOpen] = useState(false);
 
+  // ====== Danh sách KPI đã chọn — toggle panel
+  const [showSelectedList, setShowSelectedList] = useState(false);
+
+  // Bổ sung tất cả KPI trong prefix/filter hiện tại vào selection (append, không replace)
+  const handleAddAllFiltered = () => {
+    const existing = new Set(selectedKPIs.map((k) => k.value));
+    const toAdd = kpiOptionsFiltered
+      .filter((o) => o.value !== "__all__" && !existing.has(o.value));
+    if (toAdd.length === 0) return;
+    setSelectedKPIs((prev) => [...prev, ...toAdd]);
+    setAllowAutoPick(false);
+  };
+
   // ====== Remove KPI
   const removeKPI = (kpiValue) => {
     setSelectedKPIs((prev) => prev.filter((x) => x.value !== kpiValue));
     setAllowAutoPick(false);
   };
 
-  // ====== Group selected KPIs theo prefix (cho phần render per-kpi)
-  const selectedByPrefix = useMemo(() => {
-    const map = {};
-    for (const k of selectedKPIs) {
-      const px = getKpiPrefix(k.value) || "(no-prefix)";
-      (map[px] ||= []).push(k);
-    }
-    Object.values(map).forEach((arr) =>
-      arr.sort((a, b) => (a.value > b.value ? 1 : -1))
-    );
-    return map;
-  }, [selectedKPIs]);
+  // ====== Embed cleanup: xoá embeddedData khi unmount để tránh memory leak
+  useEffect(() => {
+    if (!embed || !embedKey) return;
+    return () => {
+      dispatch(clearEmbeddedData(embedKey));
+    };
+  }, [embed, embedKey, dispatch]);
 
   return (
     <>
-      <Card className="mb-4">
+      {!hideToolbar && <Card className="mb-4">
         <Card.Body>
           {/* Hàng 1: Group/Sub/Platform */}
           <Row className="align-items-center mb-3">
@@ -565,7 +629,7 @@ const KPIExplorerCore = ({
           </Row>
 
           {/* Hàng 2: Devices / Prefix / KPI / Buttons */}
-          <Row className="align-items-center mb-3">
+          <Row className="align-items-start mb-2">
             <Col md={3}>
               <Select
                 isMulti
@@ -580,9 +644,9 @@ const KPIExplorerCore = ({
                 styles={{
                   valueContainer: (base) => ({
                     ...base,
-                    maxHeight: "38px",
-                    overflowX: "auto",
-                    flexWrap: "nowrap",
+                    maxHeight: "60px",
+                    overflowY: "auto",
+                    flexWrap: "wrap",
                   }),
                   multiValue: (base) => ({ ...base, margin: "1px 2px" }),
                 }}
@@ -590,7 +654,7 @@ const KPIExplorerCore = ({
             </Col>
 
             {/* Prefix */}
-            <Col md={3}>
+            <Col md={2}>
               <Select
                 isSearchable
                 isClearable={false}
@@ -602,13 +666,13 @@ const KPIExplorerCore = ({
                 onChange={(opt) => {
                   setSelectedPrefix(opt?.value || "__all__");
                 }}
-                placeholder="-- Chọn prefix KPI --"
+                placeholder="-- Prefix --"
                 isDisabled={selectedDevices.length === 0}
               />
             </Col>
 
-            {/* KPI */}
-            <Col md={3}>
+            {/* KPI — lớn hơn, menu cao hơn */}
+            <Col md={4}>
               <Select
                 isMulti
                 isClearable
@@ -648,6 +712,7 @@ const KPIExplorerCore = ({
                 hideSelectedOptions={false}
                 options={kpiOptionsFiltered}
                 value={selectedKPIs}
+                maxMenuHeight={440}
                 placeholder={
                   selectedPrefix === "__all__"
                     ? "-- Chọn KPI --"
@@ -657,18 +722,38 @@ const KPIExplorerCore = ({
                 styles={{
                   valueContainer: (base) => ({
                     ...base,
-                    maxHeight: "38px",
-                    overflowX: "auto",
-                    flexWrap: "nowrap",
+                    maxHeight: "60px",
+                    overflowY: "auto",
+                    flexWrap: "wrap",
                   }),
                   multiValue: (base) => ({ ...base, margin: "1px 2px" }),
                 }}
               />
+              {/* Hàng phụ dưới KPI Select */}
+              <div className="d-flex gap-2 mt-1">
+                <Button
+                  size="sm"
+                  variant="outline-secondary"
+                  onClick={handleAddAllFiltered}
+                  disabled={selectedDevices.length === 0 || kpiOptionsFiltered.filter(o => o.value !== "__all__").length === 0}
+                  title="Bổ sung tất cả KPI trong prefix hiện tại vào danh sách đã chọn"
+                >
+                  + Thêm tất cả
+                </Button>
+                <Button
+                  size="sm"
+                  variant={showSelectedList ? "secondary" : "outline-secondary"}
+                  onClick={() => setShowSelectedList((v) => !v)}
+                  disabled={selectedKPIs.length === 0}
+                >
+                  📋 {selectedKPIs.length} đã chọn
+                </Button>
+              </div>
             </Col>
 
             {/* Buttons */}
             <Col md={3}>
-              <div className="d-flex gap-2">
+              <div className="d-flex gap-2 flex-wrap">
                 <Button
                   className="flex-fill"
                   onClick={handleCheckKPI}
@@ -685,335 +770,211 @@ const KPIExplorerCore = ({
                 >
                   📌 Ghim
                 </Button>
-              </div>
-            </Col>
-          </Row>
-
-          {/* Hàng 3: Thời gian + chế độ hiển thị */}
-          <Row className="align-items-end mb-2">
-            <Col md={3}>
-              <DatePicker
-                selected={startDate}
-                onChange={setStartDate}
-                className="form-control"
-                placeholderText="Chọn ngày bắt đầu"
-              />
-            </Col>
-            <Col md={3}>
-              <FormControl
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-              />
-            </Col>
-            <Col md={3}>
-              <DatePicker
-                selected={endDate}
-                onChange={setEndDate}
-                className="form-control"
-                placeholderText="Chọn ngày kết thúc"
-              />
-            </Col>
-            <Col md={3}>
-              <FormControl
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-              />
-            </Col>
-          </Row>
-
-          <Row className="mb-2">
-            <Col className="d-flex flex-wrap gap-2">
-              <div className="btn-group" role="group" aria-label="Chart value mode">
-                <Button
-                  size="sm"
-                  variant={chartMode === "absolute" ? "primary" : "outline-primary"}
-                  onClick={() => setChartMode("absolute")}
-                >
-                  Absolute
-                </Button>
-                <Button
-                  size="sm"
-                  variant={chartMode === "delta" ? "primary" : "outline-primary"}
-                  onClick={() => setChartMode("delta")}
-                >
-                  Delta
-                </Button>
-              </div>
-
-              <div className="btn-group" role="group" aria-label="View mode">
-                <Button
-                  size="sm"
-                  variant={viewMode === "per-kpi" ? "success" : "outline-success"}
-                  onClick={() => setViewMode("per-kpi")}
-                >
-                  Mỗi KPI 1 đồ thị
-                </Button>
-                <Button
-                  size="sm"
-                  variant={viewMode === "all-in-one" ? "success" : "outline-success"}
-                  onClick={() => setViewMode("all-in-one")}
-                >
-                  1 đồ thị tất cả KPI
-                </Button>
-              </div>
-            </Col>
-          </Row>
-        </Card.Body>
-      </Card>
-
-      {/* ALL-IN-ONE */}
-      {viewMode === "all-in-one" && selectedKPIs.length > 0 && (
-        <Row className="mb-4">
-          <Col md={12}>
-            <Card>
-              <Card.Body>
-                {/* Badge KPI + toggle pin + remove */}
-                <div className="mb-2 d-flex flex-wrap gap-2">
-                  {selectedKPIs.map((k) => (
-                    <span key={k.value} className="badge text-bg-light">
-                      {k.label}{" "}
-                      <span
-                        role="button"
-                        onClick={() => {
-                          const next = pinnedSet.has(k.value)
-                            ? [...[...pinnedSet].filter((x) => x !== k.value)]
-                            : [...pinnedSet, k.value];
-                          dispatch(setPinnedKPIs({ platform: selectedPlatform, kpis: next }));
-                        }}
-                        style={{
-                          marginLeft: 6,
-                          cursor: "pointer",
-                          opacity: pinnedSet.has(k.value) ? 1 : 0.4,
-                        }}
-                        title={pinnedSet.has(k.value) ? "Bỏ ghim KPI này" : "Ghim KPI này"}
-                      >
-                        📌
-                      </span>
-                      <span
-                        role="button"
-                        onClick={() => removeKPI(k.value)}
-                        style={{ marginLeft: 6, cursor: "pointer" }}
-                        title="Bỏ KPI này"
-                      >
-                        ✕
-                      </span>
-                    </span>
-                  ))}
-                </div>
-
-                {combinedSeries.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={660}>
-                    <LineChart margin={{ top: 20, right: 20, bottom: 50 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis
-                        type="number"
-                        dataKey="ts"
-                        scale="time"
-                        domain={["dataMin", "dataMax"]}
-                        tickFormatter={(ts) => formatTimeLocal(ts)}
-                        angle={-45}
-                        textAnchor="end"
-                      />
-                      <YAxis />
-                      <Tooltip
-                        labelFormatter={(ts) =>
-                          `⏱ ${formatTimeLocal(ts, true)} (ICT)`
-                        }
-                        formatter={(value, name) => [value, name]}
-                      />
-                      {combinedSeries.map((s, idx) =>
-                        visibleSeriesKeys.includes(s.key) ? (
-                          <Line
-                            key={s.key}
-                            type="monotone"
-                            data={s.data}
-                            dataKey="value"
-                            name={s.name}
-                            stroke={colors[idx % colors.length]}
-                            dot={{ r: 1 }}
-                            strokeWidth={2}
-                            isAnimationActive={false}
-                          />
-                        ) : null
-                      )}
-                    </LineChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="text-muted">Chưa có dữ liệu để vẽ biểu đồ.</div>
-                )}
-
-                <div className="d-flex gap-2 mt-3" style={{ fontSize: "12px" }}>
+                {pinGroup && (
                   <Button
-                    size="sm"
-                    variant="outline-secondary"
-                    onClick={toggleAllSeries}
-                    title={showAllCombined ? "Ẩn tất cả" : "Hiện tất cả"}
+                    className="flex-fill"
+                    variant="outline-success"
+                    onClick={handlePinToDashboard}
+                    disabled={!selectedPlatform || selectedKPIs.length === 0}
+                    title="Lưu KPI đã chọn lên Dashboard (per-user, lưu server)"
                   >
-                    👁️
+                    ⭐ Dashboard
                   </Button>
-                  <div
-                    className="d-flex flex-wrap gap-2"
-                    style={{ maxHeight: 140, overflowY: "auto" }}
-                  >
-                    {combinedSeries.map((s, idx) => {
-                      const visible = visibleSeriesKeys.includes(s.key);
-                      return (
+                )}
+              </div>
+            </Col>
+          </Row>
+
+          {/* Panel danh sách KPI đã chọn */}
+          {showSelectedList && selectedKPIs.length > 0 && (
+            <Row className="mb-2">
+              <Col>
+                <div
+                  className="border rounded p-2 bg-light"
+                  style={{ maxHeight: 180, overflowY: "auto" }}
+                >
+                  <div className="d-flex flex-wrap gap-1">
+                    {selectedKPIs.map((k) => (
+                      <span
+                        key={k.value}
+                        className="badge bg-white text-dark border d-inline-flex align-items-center gap-1"
+                        style={{ fontSize: "0.78rem", fontWeight: 400 }}
+                      >
+                        {k.label}
                         <span
-                          key={s.key}
-                          onClick={() => toggleSeriesVisibility(s.key)}
-                          style={{
-                            cursor: "pointer",
-                            color: colors[idx % colors.length],
-                            textDecoration: visible ? "none" : "line-through",
-                            whiteSpace: "nowrap",
-                          }}
-                          title={s.name}
+                          style={{ cursor: "pointer", fontSize: "0.9rem", lineHeight: 1 }}
+                          onClick={() => removeKPI(k.value)}
+                          title="Bỏ chọn"
                         >
-                          {s.name}
+                          ×
                         </span>
-                      );
-                    })}
+                      </span>
+                    ))}
                   </div>
                 </div>
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
+              </Col>
+            </Row>
+          )}
+
+          {/* Hàng 3: Quick range + Bucket override */}
+          <Row className="align-items-center mb-2">
+            <Col className="d-flex flex-wrap align-items-center gap-3">
+              {/* Quick range */}
+              <div className="d-flex align-items-center gap-1">
+                <small className="text-muted" style={{ whiteSpace: "nowrap" }}>Range:</small>
+                <div className="btn-group btn-group-sm">
+                  {QUICK_RANGES.map((r) => (
+                    <Button
+                      key={r.value}
+                      variant={quickRange === r.value ? "primary" : "outline-primary"}
+                      onClick={() => setQuickRange(r.value)}
+                    >{r.label}</Button>
+                  ))}
+                  <Button
+                    variant={quickRange === "custom" ? "primary" : "outline-primary"}
+                    onClick={() => setQuickRange("custom")}
+                  >Tuỳ chỉnh</Button>
+                </div>
+              </div>
+
+              <div style={{ width: 1, height: 26, background: "#dee2e6", flexShrink: 0 }} />
+
+              {/* Bucket override */}
+              <div className="d-flex align-items-center gap-1">
+                <small className="text-muted" style={{ whiteSpace: "nowrap" }}>Bucket:</small>
+                <div className="btn-group btn-group-sm">
+                  {BUCKET_OPTIONS.map((b) => (
+                    <Button
+                      key={b.value}
+                      variant={bucketOverride === b.value ? "success" : "outline-success"}
+                      onClick={() => setBucketOverride(b.value)}
+                    >{b.label}</Button>
+                  ))}
+                </div>
+                {/* Effective bucket preview */}
+                {bucketOverride === "auto" && (
+                  <small className="text-muted ms-1" style={{ whiteSpace: "nowrap" }}>
+                    →&nbsp;
+                    {quickRange !== "custom"
+                      ? getEffectiveBucketLabel(QUICK_RANGES.find((r) => r.value === quickRange)?.hours || 72, "auto")
+                      : "auto"}
+                  </small>
+                )}
+              </div>
+            </Col>
+          </Row>
+
+          {/* Custom date pickers — chỉ hiện khi chọn Tuỳ chỉnh */}
+          {quickRange === "custom" && (
+            <Row className="align-items-end mb-2">
+              <Col md={3}>
+                <DatePicker
+                  selected={startDate}
+                  onChange={setStartDate}
+                  className="form-control"
+                  placeholderText="Ngày bắt đầu"
+                />
+              </Col>
+              <Col md={3}>
+                <FormControl
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                />
+              </Col>
+              <Col md={3}>
+                <DatePicker
+                  selected={endDate}
+                  onChange={setEndDate}
+                  className="form-control"
+                  placeholderText="Ngày kết thúc"
+                />
+              </Col>
+              <Col md={3}>
+                <FormControl
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                />
+              </Col>
+            </Row>
+          )}
+
+          {!hideCharts && (
+            <Row className="mb-2">
+              <Col className="d-flex flex-wrap gap-2">
+                <div className="btn-group" role="group" aria-label="Chart value mode">
+                  <Button
+                    size="sm"
+                    variant={chartMode === "absolute" ? "primary" : "outline-primary"}
+                    onClick={() => setChartMode("absolute")}
+                  >
+                    Absolute
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={chartMode === "delta" ? "primary" : "outline-primary"}
+                    onClick={() => setChartMode("delta")}
+                  >
+                    Delta
+                  </Button>
+                </div>
+
+                <div className="btn-group" role="group" aria-label="View mode">
+                  <Button
+                    size="sm"
+                    variant={viewMode === "per-kpi" ? "success" : "outline-success"}
+                    onClick={() => setViewMode("per-kpi")}
+                  >
+                    Mỗi KPI 1 đồ thị
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={viewMode === "all-in-one" ? "success" : "outline-success"}
+                    onClick={() => setViewMode("all-in-one")}
+                  >
+                    1 đồ thị tất cả KPI
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={viewMode === "per-kpi-row" ? "success" : "outline-success"}
+                    onClick={() => setViewMode("per-kpi-row")}
+                  >
+                    Mỗi KPI 1 hàng
+                  </Button>
+                </div>
+              </Col>
+            </Row>
+          )}
+        </Card.Body>
+      </Card>}
+
+      {/* 403 RBAC banner */}
+      {accessError === 403 && (
+        <div className="alert alert-warning d-flex align-items-center gap-2 mb-3" role="alert">
+          <span>⚠️</span>
+          <span>Không có quyền truy cập thiết bị này. Vui lòng liên hệ admin để được cấp quyền.</span>
+        </div>
       )}
 
-      {/* PER-KPI: nhóm theo prefix */}
-      {viewMode === "per-kpi" && (
-        <div>
-          {Object.entries(selectedByPrefix).map(([px, kpiList]) => (
-            <div key={px} className="mb-3">
-              <h6 className="mb-2">
-                Nhóm: <i>{px}</i>
-              </h6>
-              <Row>
-                {kpiList.map((kpiObj) => {
-                  const kpi = kpiObj.value;
-                  const deviceData = groupedChartDataByKPIAndDevice[kpi] || {};
-                  const displayData =
-                    chartMode === "delta"
-                      ? getDeltaLineData(deviceData)
-                      : deviceData;
-
-                  return (
-                    <Col md={4} key={kpi} className="mb-4">
-                      <Card className="position-relative">
-                        {/* Close & remove KPI */}
-                        <Button
-                          variant="light"
-                          size="sm"
-                          onClick={() => removeKPI(kpi)}
-                          style={{
-                            position: "absolute",
-                            top: 8,
-                            right: 8,
-                            lineHeight: "1",
-                            border: "1px solid #ddd",
-                          }}
-                          title="Đóng chart & bỏ chọn KPI này"
-                        >
-                          ✕
-                        </Button>
-
-                        <Card.Body>
-                          <h6 className="mb-2">
-                            KPI: <i>{kpi}</i>
-                          </h6>
-                          <ResponsiveContainer width="100%" height={300}>
-                            <LineChart margin={{ top: 20, right: 20, bottom: 50 }}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis
-                                type="number"
-                                dataKey="ts"
-                                scale="time"
-                                domain={["dataMin", "dataMax"]}
-                                tickFormatter={(ts) => formatTimeLocal(ts)}
-                                angle={-45}
-                                textAnchor="end"
-                              />
-                              <YAxis />
-                              <Tooltip
-                                labelFormatter={(ts) =>
-                                  `⏱ ${formatTimeLocal(ts, true)} (ICT)`
-                                }
-                                formatter={(value, name) => [value, name]}
-                              />
-                              {Object.entries(displayData).map(
-                                ([device, data], index) =>
-                                  visibleDevices.includes(device) ? (
-                                    <Line
-                                      key={device}
-                                      type="monotone"
-                                      data={data}
-                                      dataKey="value"
-                                      name={device}
-                                      stroke={colors[index % colors.length]}
-                                      dot={{ r: 1 }}
-                                      strokeWidth={2}
-                                      isAnimationActive={false}
-                                    />
-                                  ) : null
-                              )}
-                            </LineChart>
-                          </ResponsiveContainer>
-
-                          {/* Legend thiết bị */}
-                          <div
-                            className="d-flex flex-column gap-1 mt-2"
-                            style={{
-                              maxHeight: "120px",
-                              overflowY: "auto",
-                              fontSize: "11px",
-                            }}
-                          >
-                            <Button
-                              size="sm"
-                              variant="outline-secondary"
-                              onClick={toggleAllDevices}
-                              title={showAll ? "Ẩn tất cả" : "Hiện tất cả"}
-                              style={{
-                                width: "32px",
-                                padding: "2px 6px",
-                                cursor: "pointer",
-                              }}
-                            >
-                              👁️
-                            </Button>
-                            {Object.keys(deviceData).map((device, index) => {
-                              const isVisible = visibleDevices.includes(device);
-                              return (
-                                <div
-                                  key={device}
-                                  onClick={() => toggleDeviceVisibility(device)}
-                                  style={{
-                                    cursor: "pointer",
-                                    color: colors[index % colors.length],
-                                    textDecoration: isVisible
-                                      ? "none"
-                                      : "line-through",
-                                    whiteSpace: "nowrap",
-                                  }}
-                                  title={device}
-                                >
-                                  {device}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </Card.Body>
-                      </Card>
-                    </Col>
-                  );
-                })}
-              </Row>
-            </div>
-          ))}
+      {/* Empty state: platform đã chọn nhưng không có device nào trong scope */}
+      {selectedPlatform && !loadingDevices && effectiveDevices.length === 0 && accessError !== 403 && (
+        <div className="alert alert-info d-flex align-items-center gap-2 mb-3" role="alert">
+          <span>ℹ️</span>
+          <span>Không có thiết bị nào trong phạm vi quyền của bạn cho platform <strong>{selectedPlatform}</strong>.</span>
         </div>
+      )}
+
+      {!hideCharts && (
+        <KPIChartGrid
+          selectedKPIs={selectedKPIs}
+          selectedPlatform={selectedPlatform}
+          chartMode={chartMode}
+          viewMode={viewMode}
+          onRemoveKPI={removeKPI}
+          embed={embed}
+          embedKey={embedKey}
+        />
       )}
     </>
   );

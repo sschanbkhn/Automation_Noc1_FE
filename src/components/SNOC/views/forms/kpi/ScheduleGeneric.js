@@ -14,6 +14,11 @@ import {
   selectGenericLoadingByType, selectGenericSchedulesByType,
   toggleGenericSchedule, updateGenericSchedule,
 } from "../../../redux/KPI/genericScheduleSlice";
+import {
+  createKpiSchedule, deleteKpiSchedule, fetchKpiSchedule,
+  selectKpiScheduleLoading, selectKpiSchedules,
+  toggleKpiSchedule, updateKpiSchedule,
+} from "../../../redux/KPI/kpiScheduleSlice";
 import { fetchDevicesByPlatform, fetchPlatforms } from "../../../redux/Healthcheck/platformDeviceSlice";
 import { fetchDepartments } from "../../../redux/User/departmentSlice";
 import { fetchGroups }      from "../../../redux/User/groupSlice";
@@ -54,14 +59,14 @@ const DEFAULT_FORM = {
 };
 
 // ── Component ──────────────────────────────────────────────────────────────
-const ScheduleGeneric = () => {
+const ScheduleGeneric = ({ onlyType = null }) => {
   const dispatch = useDispatch();
   useScheduleKpiWebSocket({ endpoint: "schedule", silent: true });
 
   // 🛡️ RBAC
   const userClaims = useMemo(() => getJwtClaims(), []);
   const isAdmin    = useMemo(() =>
-    userClaims?.role === "super" || userClaims?.is_superuser,
+    userClaims?.is_superuser || ["super", "admin"].includes(userClaims?.role),
   [userClaims]);
   const checkCanAction = (task) =>
     isAdmin || task.owner_group === userClaims?.group_name;
@@ -72,9 +77,16 @@ const ScheduleGeneric = () => {
   const { departments = [] } = useSelector((s) => s.department || {});
   const { groups = []      } = useSelector((s) => s.group      || {});
 
-  const [activeType, setActiveType] = useState("dhtt");
-  const formBusy = useSelector((s) => selectGenericLoadingByType(s, activeType));
-  const currentRows = useSelector((s) => selectGenericSchedulesByType(s, activeType));
+  const [activeType, setActiveType] = useState(onlyType || "dhtt");
+
+  // Selectors cho từng tab — gọi cả hai để không vi phạm rules of hooks
+  const dhttRows  = useSelector((s) => selectGenericSchedulesByType(s, "dhtt"));
+  const dhttBusy  = useSelector((s) => selectGenericLoadingByType(s, "dhtt"));
+  const kpiRows   = useSelector((s) => selectKpiSchedules(s));
+  const kpiBusy   = useSelector((s) => selectKpiScheduleLoading(s));
+
+  const currentRows = activeType === "kpi" ? kpiRows   : dhttRows;
+  const formBusy    = activeType === "kpi" ? kpiBusy   : dhttBusy;
 
   const allRows = useMemo(() => {
     return [...(currentRows || [])].sort((a, b) => {
@@ -104,7 +116,11 @@ const ScheduleGeneric = () => {
   }, [dispatch]);
 
   useEffect(() => {
-    dispatch(fetchGenericSchedule({ usecase_type: activeType }));
+    if (activeType === "kpi") {
+      dispatch(fetchKpiSchedule());
+    } else {
+      dispatch(fetchGenericSchedule({ usecase_type: activeType }));
+    }
   }, [dispatch, activeType]);
 
   useEffect(() => {
@@ -192,9 +208,13 @@ const openCreate = () => {
   }, []);
 
   const handleToggle = useCallback((task) => {
-    dispatch(toggleGenericSchedule({
-      id: task.id, enabled: !task.enabled, usecase_type: activeType,
-    })).then(() => dispatch(fetchGenericSchedule({ usecase_type: activeType })));
+    if (activeType === "kpi") {
+      dispatch(toggleKpiSchedule({ id: task.id, enabled: !task.enabled }));
+    } else {
+      dispatch(toggleGenericSchedule({
+        id: task.id, enabled: !task.enabled, usecase_type: activeType,
+      })).then(() => dispatch(fetchGenericSchedule({ usecase_type: activeType })));
+    }
   }, [dispatch, activeType]);
 
   const handleSubmit = () => {
@@ -231,32 +251,46 @@ const openCreate = () => {
     };
 
     if (editingTask) {
-      console.log("form.group:", form.group, "form.department:", form.department);
-      console.log("payload:", payload);
-      dispatch(updateGenericSchedule({ id: editingTask.id, ...payload }))
-        .then(() => {
-          dispatch(fetchGenericSchedule({ usecase_type: activeType }));
-          setShowModal(false);
-        });
+      if (activeType === "kpi") {
+        dispatch(updateKpiSchedule({ id: editingTask.id, ...payload }))
+          .then(() => setShowModal(false));
+      } else {
+        dispatch(updateGenericSchedule({ id: editingTask.id, ...payload }))
+          .then(() => {
+            dispatch(fetchGenericSchedule({ usecase_type: activeType }));
+            setShowModal(false);
+          });
+      }
     } else {
-      console.log("form.group:", form.group, "form.department:", form.department);
-      console.log("payload:", payload);
-      dispatch(createGenericSchedule(payload))
-        .then(() => {
-          dispatch(fetchGenericSchedule({ usecase_type: activeType }));
-          setShowModal(false);
-        });
+      if (activeType === "kpi") {
+        dispatch(createKpiSchedule(payload))
+          .then(() => setShowModal(false));
+      } else {
+        dispatch(createGenericSchedule(payload))
+          .then(() => {
+            dispatch(fetchGenericSchedule({ usecase_type: activeType }));
+            setShowModal(false);
+          });
+      }
     }
   };
 
   const onConfirmDelete = () => {
     if (!deletingTask) return;
-    dispatch(deleteGenericSchedule({ id: deletingTask.id, usecase_type: activeType }))
-      .then(() => {
-        dispatch(fetchGenericSchedule({ usecase_type: activeType }));
-        setShowDeleteModal(false);
-        setDeletingTask(null);
-      });
+    if (activeType === "kpi") {
+      dispatch(deleteKpiSchedule({ id: deletingTask.id }))
+        .then(() => {
+          setShowDeleteModal(false);
+          setDeletingTask(null);
+        });
+    } else {
+      dispatch(deleteGenericSchedule({ id: deletingTask.id, usecase_type: activeType }))
+        .then(() => {
+          dispatch(fetchGenericSchedule({ usecase_type: activeType }));
+          setShowDeleteModal(false);
+          setDeletingTask(null);
+        });
+    }
   };
 
   // ── Render ─────────────────────────────────────────────────────────────
@@ -423,9 +457,9 @@ const openCreate = () => {
       {/* ── MAIN CARD ──────────────────────────────────────────────── */}
       <Card className="mb-3">
         <Card.Header className="d-flex align-items-center justify-content-between">
-          {/* Tabs */}
+          {/* Tabs — ẩn khi chỉ dùng một loại cố định */}
           <div className="d-flex gap-2">
-            {USECASE_TYPES.map(type => (
+            {!onlyType && USECASE_TYPES.map(type => (
               <Button
                 key={type.id}
                 variant={activeType === type.id ? type.color : `outline-${type.color}`}
@@ -434,11 +468,19 @@ const openCreate = () => {
                 {type.label}
               </Button>
             ))}
+            {onlyType && (
+              <span className="fw-semibold text-secondary">
+                {USECASE_TYPES.find(t => t.id === onlyType)?.label}
+              </span>
+            )}
           </div>
           <div className="d-flex gap-2">
             <Button
               variant="outline-secondary"
-              onClick={() => dispatch(fetchGenericSchedule({ usecase_type: activeType }))}
+              onClick={() => activeType === "kpi"
+                ? dispatch(fetchKpiSchedule())
+                : dispatch(fetchGenericSchedule({ usecase_type: activeType }))
+              }
               disabled={formBusy}
             >
               Reload
