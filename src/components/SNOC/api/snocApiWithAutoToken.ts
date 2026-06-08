@@ -189,8 +189,11 @@ function buildInstance(baseURL: string): AxiosInstance {
       const status = error.response?.status;
 
       if (!error.response && getSnocToken()) {
-        // Network error (backend không phản hồi) trong khi còn token
-        fireSnocOffline();
+        // Timeout (ECONNABORTED) = server đang bận, không phải offline → không báo
+        const isTimeout = error.code === "ECONNABORTED";
+        if (!isTimeout) {
+          fireSnocOffline();
+        }
       }
 
       if (status === 401  && !originalRequest._handled401) {

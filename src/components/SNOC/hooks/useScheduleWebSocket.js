@@ -23,7 +23,7 @@ const useScheduleWebSocket = () => {
   const timerRef = useRef(null);
   const isMountedRef = useRef(true);
   const wsRetryCountRef = useRef(0);
-  const WS_OFFLINE_THRESHOLD = 3; // lần fail liên tiếp trước khi báo offline
+  const WS_OFFLINE_THRESHOLD = 6; // lần fail liên tiếp trước khi báo offline (tăng lên để tránh false alarm khi server đang xử lý healthcheck dài)
 
   const connect = () => {
     // ✅ Truyền token qua query string để backend authenticate
