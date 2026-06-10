@@ -5,6 +5,7 @@ import menu_config from 'assets/json/menu_config.json';
 import { Actions } from 'store/app/Action';
 import { Cookie } from 'helpers/cookie';
 import { IUserInfo } from 'models/Apps';
+import { getJwtClaims } from 'components/SNOC/api/snocApiWithAutoToken';
 
 interface Props {
   Apps: any
@@ -135,9 +136,15 @@ const Sidebar = (props: Props) => {
         }).filter(Boolean);
     };
 
-    const IsMenuOfUser = (menu: any): boolean => { 
-        let userInfo: IUserInfo = JSON.parse(Cookie.getCookie("UserInfo"));    
-        if (userInfo && userInfo.UserName == "admin") return true;   
+    const IsMenuOfUser = (menu: any): boolean => {
+        // "User Admin Snoc" chỉ hiển thị cho SNOC super user
+        if (menu.code === 'hc-snoc-admin-dashboard') {
+            const claims = getJwtClaims();
+            return Boolean(claims?.is_superuser || claims?.role === 'super');
+        }
+
+        let userInfo: IUserInfo = JSON.parse(Cookie.getCookie("UserInfo"));
+        if (userInfo && userInfo.UserName == "admin") return true;
         if (userInfo != null) {
             for (let i = 0; i < userInfo.Menus.length; i++) {
                 if (userInfo.Menus[i] == menu.code) {

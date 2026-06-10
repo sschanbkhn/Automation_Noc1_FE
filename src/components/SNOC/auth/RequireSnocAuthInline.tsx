@@ -19,6 +19,10 @@ const RequireSnocAuthInline: React.FC = () => {
   const mainLogged: boolean =
     (useSelector((s: any) => s?.account?.isLoggedIn) as boolean) ?? false;
 
+  // Track main login state để Effect 3 không xóa SNOC token khi user là SNOC-only
+  const mainLoggedRef = React.useRef(mainLogged);
+  React.useEffect(() => { mainLoggedRef.current = mainLogged; }, [mainLogged]);
+
   const readSnoc = () => Boolean(getSnocToken());
   const [snocLogged, setSnocLogged] = useState<boolean>(readSnoc());
   const [isOffline, setIsOffline] = useState(false);
@@ -49,12 +53,13 @@ const RequireSnocAuthInline: React.FC = () => {
   }, []);
 
   // Effect 3: Detect main app logout — Token cookie biến mất trong khi SNOC vẫn có token
+  // Guard mainLoggedRef: chỉ clear SNOC nếu main app đã từng logged in (không logout SNOC-only user)
   useEffect(() => {
     const getMainToken = () =>
       Boolean(document.cookie.match(/(^|;\s*)Token=([^;]*)/));
     const check = () => {
-      if (readSnoc() && !getMainToken()) {
-        clearSnocToken(); // clear SNOC khi main app đã logout
+      if (readSnoc() && mainLoggedRef.current && !getMainToken()) {
+        clearSnocToken();
       }
     };
     window.addEventListener("focus", check);

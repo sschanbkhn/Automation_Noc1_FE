@@ -16,7 +16,7 @@ const MainCard = (props) => {
 
     const cardReloadHandler = () => {
         setloadCard(true);
-        setInterval(() => {
+        setTimeout(() => {
             setloadCard(false);
         }, 3000);
     };

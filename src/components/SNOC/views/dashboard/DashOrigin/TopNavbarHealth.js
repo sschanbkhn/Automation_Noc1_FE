@@ -179,19 +179,22 @@ const TopNavbar = () => {
             {isAdmin && (
               <NavDropdown
                 title={
-                  <span style={ddTitleStyle(["/healthcheck/monitor", "/admin/monitor", "/config-email-sms"])}>
+                  <span style={ddTitleStyle(["/healthcheck/monitor", "/admin/monitor", "/config-email-sms", "/healthcheck/retention-config"])}>
                     ⚙️ System
                   </span>
                 }
                 id="dd-monitor"
                 menuVariant="light"
-                className={ddClass(["/healthcheck/monitor", "/admin/monitor", "/config-email-sms"])}
+                className={ddClass(["/healthcheck/monitor", "/admin/monitor", "/config-email-sms", "/healthcheck/retention-config"])}
               >
                 <NavDropdown.Item as={NavLink} to="/healthcheck/monitor">
                   🖥️ System Monitor
                 </NavDropdown.Item>
                 <NavDropdown.Item as={NavLink} to="/config-email-sms">
                   📣 Cấu hình kênh thông báo
+                </NavDropdown.Item>
+                <NavDropdown.Item as={NavLink} to="/healthcheck/retention-config">
+                  🗂️ Cấu Hình Lưu Giữ
                 </NavDropdown.Item>
               </NavDropdown>
             )}
@@ -219,6 +222,15 @@ const TopNavbar = () => {
             <span className="text-white fw-semibold" style={{ fontSize: "0.85rem" }}>
               <Clock />
             </span>
+            {(claims?.username || claims?.email) && (
+              <span
+                className="text-white d-flex align-items-center"
+                style={{ fontSize: "0.8rem", opacity: 0.9 }}
+              >
+                <i className="bi bi-person-circle me-1" />
+                {claims.username || claims.email}
+              </span>
+            )}
             <button
               className="btn btn-outline-light d-flex align-items-center"
               onClick={handleLogout}

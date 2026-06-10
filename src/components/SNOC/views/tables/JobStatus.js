@@ -4,8 +4,9 @@ function JobStatus({ jobId }) {
     const [status, setStatus] = useState('pending');
     const [output, setOutput] = useState('');
 
+    const WS_BASE = process.env.REACT_APP_SNOC_WS_URL || "ws://localhost:8000/ws";
     useEffect(() => {
-        const socket = new WebSocket(`ws://localhost:5000/ws/job/${jobId}/`);
+        const socket = new WebSocket(`${WS_BASE}/job/${jobId}/`);
 
         socket.onmessage = function (event) {
             const data = JSON.parse(event.data);
