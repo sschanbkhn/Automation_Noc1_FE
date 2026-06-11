@@ -28,8 +28,34 @@ const EMPTY_BLOCK_COND = {
   mode: "BLOCK",
   block_start_op: "STARTSWITH", block_start_text: "",
   block_end_op:   "EQUALS",     block_end_text:   "END",
-  block_body_op:  null,         block_body_text:  "",  // optional — body/middle filter
+  // old single filter — kept for backward compat display
+  block_body_op:  null,         block_body_text:  "",
+  // new multiple filters
+  block_body_filters:          [],
+  block_body_filter_operator:  "OR",
 };
+const EMPTY_BODY_FILTER = { op: "CONTAINS", text: "" };
+
+// Convert old single body filter → new list format (nếu data từ DB cũ chưa có block_body_filters)
+function normalizeCondition(c) {
+  if (c.mode !== "BLOCK") return c;
+  // Data cũ: có block_body_op nhưng chưa có block_body_filters → migrate sang list
+  if (!c.block_body_filters && c.block_body_op) {
+    return {
+      ...c,
+      block_body_filters: [{ op: c.block_body_op, text: c.block_body_text || "" }],
+      block_body_filter_operator: "OR",
+      block_body_op:   null,
+      block_body_text: "",
+    };
+  }
+  // Đảm bảo luôn có 2 field mới
+  return {
+    block_body_filters: [],
+    block_body_filter_operator: "OR",
+    ...c,
+  };
+}
 const DEFAULT_FORM = {
   name: "", department: "", group: "",
   platform: "*", usecase: "healthcheck", command_prefix: "*",
@@ -66,13 +92,12 @@ function validateForm(form) {
       if (!c.block_start_text?.trim())   return `Condition ${i+1}: BLOCK thiếu start_text`;
       if (!c.block_end_op)               return `Condition ${i+1}: BLOCK thiếu end_op`;
       if (!c.block_end_text?.trim())     return `Condition ${i+1}: BLOCK thiếu end_text`;
-      // body filter — optional nhưng phải đi cặp
-      const hasBodyOp   = !!c.block_body_op;
-      const hasBodyText = !!(c.block_body_text?.trim());
-      if (hasBodyOp && !hasBodyText)
-        return `Condition ${i+1}: Body filter đã chọn op (${c.block_body_op}) nhưng chưa nhập body_text`;
-      if (!hasBodyOp && hasBodyText)
-        return `Condition ${i+1}: Body filter đã nhập text nhưng chưa chọn body_op`;
+      // body filters mới (multiple) — mỗi filter phải có đủ op + text
+      const filters = c.block_body_filters || [];
+      for (let j = 0; j < filters.length; j++) {
+        if (!filters[j].op)           return `Condition ${i+1}: Body filter ${j+1}: thiếu op`;
+        if (!filters[j].text?.trim()) return `Condition ${i+1}: Body filter ${j+1}: thiếu text`;
+      }
     }
   }
   return null;
@@ -161,60 +186,103 @@ const ConditionEditor = ({ conditions, onChange }) => {
                 </Col>
               </Row>
 
-              {/* ── Row 2: Body/middle filter (OPTIONAL) ─────────── */}
-              <Row className="g-2 mb-1">
-                <Col xs={12}>
-                  <Form.Check
-                    type="checkbox"
-                    id={`body-filter-toggle-${idx}`}
-                    label={
-                      <span className="text-muted fw-semibold" style={{ fontSize: "0.85rem" }}>
-                        🔍 Body Filter — chỉ drop block này nếu bên trong có dòng thỏa mãn
-                        &nbsp;<em>(không tích = drop tất cả block khớp START/END)</em>
-                      </span>
-                    }
-                    checked={!!c.block_body_op}
-                    onChange={e => update(idx, {
-                      block_body_op:   e.target.checked ? "CONTAINS" : null,
-                      block_body_text: e.target.checked ? (c.block_body_text || "") : "",
-                    })}
-                  />
-                </Col>
-                {c.block_body_op && (
-                  <>
-                    <Col md={4}>
-                      <Form.Label className="small">body_op</Form.Label>
-                      <FormControl
-                        as="select"
-                        size="sm"
-                        value={c.block_body_op || "CONTAINS"}
-                        onChange={e => update(idx, { block_body_op: e.target.value })}
-                      >
-                        <option value="CONTAINS">CONTAINS — bên trong có dòng chứa chuỗi</option>
-                        <option value="EQUALS">EQUALS — bên trong có dòng bằng chính xác</option>
-                        <option value="STARTSWITH">STARTSWITH — bên trong có dòng bắt đầu bằng</option>
-                        <option value="ENDSWITH">ENDSWITH — bên trong có dòng kết thúc bằng</option>
-                      </FormControl>
-                    </Col>
-                    <Col md={8}>
-                      <Form.Label className="small">body_text</Form.Label>
-                      <FormControl
-                        size="sm"
-                        value={c.block_body_text || ""}
-                        onChange={e => update(idx, { block_body_text: e.target.value })}
-                        placeholder="VD: FAULT — drop block nếu bên trong có dòng chứa FAULT"
-                        autoFocus
-                      />
-                    </Col>
-                    <Col xs={12}>
-                      <small className="text-info">
-                        💡 Block sẽ bị xóa toàn bộ (kể cả dòng START và END) nếu bên trong tìm thấy dòng thỏa mãn điều kiện trên.
-                        Nếu không tìm thấy dòng nào thỏa mãn → block được <strong>giữ lại</strong>.
+              {/* ── Row 2: Body Filters (OPTIONAL, multiple) ─────── */}
+              {(() => {
+                const filters = c.block_body_filters || [];
+                const hasFilters = filters.length > 0;
+
+                const updateFilter = (fi, patch) => {
+                  const newFilters = filters.map((f, i) => i === fi ? { ...f, ...patch } : f);
+                  update(idx, { block_body_filters: newFilters });
+                };
+                const removeFilter = (fi) => {
+                  const newFilters = filters.filter((_, i) => i !== fi);
+                  update(idx, { block_body_filters: newFilters });
+                };
+                const addFilter = () =>
+                  update(idx, { block_body_filters: [...filters, { ...EMPTY_BODY_FILTER }] });
+
+                return (
+                  <div className="border rounded p-2 mb-1" style={{ background: "#f8f9fa" }}>
+                    <div className="d-flex align-items-center justify-content-between mb-1">
+                      <small className="text-muted fw-semibold">
+                        🔍 Body Filters{" "}
+                        <em className="fw-normal">
+                          — chỉ drop block nếu bên trong thỏa mãn
+                          {!hasFilters && " (bỏ trống = drop tất cả block khớp START/END)"}
+                        </em>
                       </small>
-                    </Col>
-                  </>
-                )}
-              </Row>
+                      <Button size="sm" variant="outline-secondary" className="py-0 px-2"
+                        onClick={addFilter}
+                      >
+                        + Thêm filter
+                      </Button>
+                    </div>
+
+                    {hasFilters && (
+                      <>
+                        {filters.map((f, fi) => (
+                          <Row key={fi} className="g-1 mb-1 align-items-center">
+                            <Col md={3}>
+                              <FormControl
+                                as="select" size="sm"
+                                value={f.op || "CONTAINS"}
+                                onChange={e => updateFilter(fi, { op: e.target.value })}
+                              >
+                                <option value="CONTAINS">CONTAINS</option>
+                                <option value="EQUALS">EQUALS</option>
+                                <option value="STARTSWITH">STARTSWITH</option>
+                                <option value="ENDSWITH">ENDSWITH</option>
+                              </FormControl>
+                            </Col>
+                            <Col>
+                              <FormControl
+                                size="sm"
+                                value={f.text || ""}
+                                onChange={e => updateFilter(fi, { text: e.target.value })}
+                                placeholder={`VD: FAULT`}
+                              />
+                            </Col>
+                            <Col xs="auto">
+                              <Button size="sm" variant="outline-danger" className="py-0 px-1"
+                                onClick={() => removeFilter(fi)}
+                              >✕</Button>
+                            </Col>
+                          </Row>
+                        ))}
+
+                        {filters.length >= 2 && (
+                          <div className="d-flex align-items-center gap-2 mt-1">
+                            <small className="text-muted">Kết hợp:</small>
+                            {["OR", "AND"].map(op => (
+                              <Form.Check
+                                key={op} inline type="radio"
+                                id={`bfo-${idx}-${op}`}
+                                name={`bfo-${idx}`}
+                                label={
+                                  <small>
+                                    <strong>{op}</strong>
+                                    {op === "OR"
+                                      ? " — bất kỳ filter nào khớp"
+                                      : " — tất cả filter đều phải có ít nhất 1 dòng khớp"}
+                                  </small>
+                                }
+                                checked={(c.block_body_filter_operator || "OR") === op}
+                                onChange={() => update(idx, { block_body_filter_operator: op })}
+                              />
+                            ))}
+                          </div>
+                        )}
+
+                        <small className="text-info d-block mt-1">
+                          💡 Block sẽ bị xóa toàn bộ (kể cả dòng START và END) nếu thỏa mãn điều kiện trên.
+                          Nếu không thỏa mãn → block được <strong>giữ lại</strong>.
+                        </small>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* ── Row 3: End condition ─────────────────────────── */}
               <Row className="g-2">
@@ -413,12 +481,7 @@ const OutputIgnoreRulesV2 = () => {
       case_insensitive: !!r.case_insensitive,
       line_operator:    r.line_operator    || "OR",
       block_operator:   r.block_operator   || "OR",
-      // normalize: cũ không có block_body fields → đặt null để UI render đúng
-      conditions: (r.conditions || []).map(c =>
-        c.mode === "BLOCK"
-          ? { ...c, block_body_op: c.block_body_op || null, block_body_text: c.block_body_text || "" }
-          : c
-      ),
+      conditions: (r.conditions || []).map(normalizeCondition),
       reason:           r.reason           || "",
     });
     const platVal = r.platform && r.platform !== "*" ? r.platform : null;
@@ -448,13 +511,18 @@ const OutputIgnoreRulesV2 = () => {
       ? selectedDevices.map(d => d.value)
       : ["*"];
 
-    // Normalize conditions: đảm bảo block_body_op/text là null (không phải undefined/"")
+    // Normalize conditions trước khi gửi API
     const normalizedConditions = (form.conditions || []).map(c => {
       if (c.mode !== "BLOCK") return c;
+      const filters = (c.block_body_filters || []).filter(f => f.op && f.text?.trim());
       return {
         ...c,
-        block_body_op:   c.block_body_op  || null,
-        block_body_text: c.block_body_text || null,
+        // old single filter: clear nếu đang dùng new format
+        block_body_op:   filters.length ? null : (c.block_body_op  || null),
+        block_body_text: filters.length ? null : (c.block_body_text || null),
+        // new multiple filters
+        block_body_filters:         filters,
+        block_body_filter_operator: filters.length >= 2 ? (c.block_body_filter_operator || "OR") : "OR",
       };
     });
 
