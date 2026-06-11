@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Badge, Button, Card, Col, Form, Modal, Pagination, Row, Spinner, Table, FormControl
 } from "react-bootstrap";
@@ -29,6 +29,7 @@ const HostManager = () => {
   // State
   const [showCloneModal, setShowCloneModal] = useState(false);
   const [cloneSource, setCloneSource] = useState(null);
+  const [cloneLoading, setCloneLoading] = useState(false);
   const [cloneForm, setCloneForm] = useState({
     name: "", hostname: "", username: "", password: "", port: "22",
   });
@@ -45,8 +46,6 @@ const HostManager = () => {
       userClaims?.is_staff,
     [userClaims],
   );
-  console.log("userClaims:", userClaims);
-  console.log("isAdmin:", isAdmin);
 
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -69,6 +68,7 @@ const HostManager = () => {
   const [showRaw, setShowRaw] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const [newHost, setNewHost] = useState({
     name: "",
@@ -261,10 +261,9 @@ const HostManager = () => {
   //   setShowModal(false);
   // };
 
-  const handleSaveHost = () => {
+  const handleSaveHost = async () => {
     const payload = {
       ...newHost,
-      // ✅ Nếu có platformName (tạo mới) thì gửi chuỗi chữ, ngược lại gửi ID số
       platform: newHost.platformName ? newHost.platformName : newHost.platform,
       group: newHost.group,
       department: newHost.department,
@@ -274,15 +273,19 @@ const HostManager = () => {
     if (payload.port !== "") payload.port = Number(payload.port);
     if (payload.license_throughput !== "") payload.license_throughput = Number(payload.license_throughput);
 
-    // Xóa biến tạm dùng cho UI tránh làm rối Backend
     delete payload.platformName;
 
-    if (editing) {
-      dispatch(updateHost({ name: newHost.name, data: payload }));
-    } else {
-      dispatch(addHost(payload));
+    setSaving(true);
+    try {
+      if (editing) {
+        await dispatch(updateHost({ name: newHost.name, data: payload })).unwrap();
+      } else {
+        await dispatch(addHost(payload)).unwrap();
+      }
+      setShowModal(false);
+    } finally {
+      setSaving(false);
     }
-    setShowModal(false);
   };
 
   // const handleEdit = (host) => {
@@ -377,17 +380,22 @@ const HostManager = () => {
     if (!cloneForm.hostname?.trim())
       return alert("Hostname/IP không được để trống");
 
-    await dispatch(cloneDevice({
-      sourceName: cloneSource.name,
-      payload: {
-        name: cloneForm.name.trim().toLowerCase(),
-        hostname: cloneForm.hostname.trim().toLowerCase(),
-        username: cloneForm.username,
-        password: cloneForm.password,
-        port: cloneForm.port,
-      },
-    }));
-    setShowCloneModal(false);
+    setCloneLoading(true);
+    try {
+      await dispatch(cloneDevice({
+        sourceName: cloneSource.name,
+        payload: {
+          name: cloneForm.name.trim().toLowerCase(),
+          hostname: cloneForm.hostname.trim().toLowerCase(),
+          username: cloneForm.username,
+          password: cloneForm.password,
+          port: cloneForm.port,
+        },
+      })).unwrap();
+      setShowCloneModal(false);
+    } finally {
+      setCloneLoading(false);
+    }
   };
 
 
@@ -859,8 +867,8 @@ const HostManager = () => {
           <Button variant="secondary" onClick={() => setShowModal(false)}>
             Hủy
           </Button>
-          <Button variant="primary" onClick={handleSaveHost}>
-            Lưu thay đổi
+          <Button variant="primary" onClick={handleSaveHost} disabled={saving}>
+            {saving ? <><Spinner animation="border" size="sm" className="me-1" />Đang lưu...</> : "Lưu thay đổi"}
           </Button>
         </Modal.Footer>
       </Modal>
@@ -942,77 +950,8 @@ const HostManager = () => {
           <Button variant="secondary" onClick={() => setShowCloneModal(false)}>
             Hủy
           </Button>
-          <Button variant="success" onClick={onConfirmClone}>
-            📋 Clone
-          </Button>
-        </Modal.Footer>
-      </Modal>
-
-      {/* ── CLONE MODAL ─────────────────────────────────────────────── */}
-      <Modal show={showCloneModal} onHide={() => setShowCloneModal(false)} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>
-            Clone thiết bị: <strong>{cloneSource?.name}</strong>
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Row className="g-2">
-            <Col md={6}>
-              <Form.Label className="fw-bold">
-                Tên mới <span className="text-danger">*</span>
-              </Form.Label>
-              <FormControl
-                value={cloneForm.name}
-                onChange={e => setCloneForm(p => ({ ...p, name: e.target.value }))}
-                placeholder="tên_thiết_bị_mới"
-              />
-            </Col>
-            <Col md={6}>
-              <Form.Label className="fw-bold">
-                Hostname / IP <span className="text-danger">*</span>
-              </Form.Label>
-              <FormControl
-                value={cloneForm.hostname}
-                onChange={e => setCloneForm(p => ({ ...p, hostname: e.target.value }))}
-                placeholder="192.168.1.x"
-              />
-            </Col>
-            <Col md={4}>
-              <Form.Label>Port</Form.Label>
-              <FormControl
-                value={cloneForm.port}
-                onChange={e => setCloneForm(p => ({ ...p, port: e.target.value }))}
-              />
-            </Col>
-            <Col md={4}>
-              <Form.Label>Username</Form.Label>
-              <FormControl
-                value={cloneForm.username}
-                onChange={e => setCloneForm(p => ({ ...p, username: e.target.value }))}
-                placeholder="Giữ nguyên nếu để trống"
-              />
-            </Col>
-            <Col md={4}>
-              <Form.Label>Password</Form.Label>
-              <FormControl
-                type="password"
-                value={cloneForm.password}
-                onChange={e => setCloneForm(p => ({ ...p, password: e.target.value }))}
-                placeholder="Giữ nguyên nếu để trống"
-              />
-            </Col>
-          </Row>
-          <small className="text-muted mt-2 d-block">
-            Platform, Group, Department sẽ được giữ nguyên từ thiết bị gốc.
-            Username/Password để trống = copy từ Vault của thiết bị gốc.
-          </small>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowCloneModal(false)}>
-            Hủy
-          </Button>
-          <Button variant="success" onClick={onConfirmClone}>
-            📋 Clone
+          <Button variant="success" onClick={onConfirmClone} disabled={cloneLoading}>
+            {cloneLoading ? <><Spinner animation="border" size="sm" className="me-1" />Đang clone...</> : "📋 Clone"}
           </Button>
         </Modal.Footer>
       </Modal>

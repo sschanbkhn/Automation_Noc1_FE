@@ -90,6 +90,7 @@ import PrecheckSchedule from "components/SNOC/views/forms/health/PrecheckSchedul
 import BlackoutConfigPage from "components/SNOC/views/forms/health/BlackoutConfig";
 import AnalysisParams from "components/SNOC/views/forms/health/AnalysisParams";
 import AlertConfigs from "components/SNOC/views/forms/health/AlertConfigs";
+import RetentionConfig from "components/SNOC/views/forms/health/RetentionConfig";
 import NotifChannelConfig from "components/SNOC/views/forms/health/NotifChannelConfig";
 import DhttManual from "components/SNOC/views/forms/health/DhttManual";
 import DhttDashboard from "components/SNOC/views/dashboard/DashOrigin/DhttDashboard";
@@ -411,6 +412,10 @@ const MainPageRoute = (props: Props) => {
           <Route
             path="/healthcheck/alert-config"
             element={<AlertConfigs />}
+          />
+          <Route
+            path="/healthcheck/retention-config"
+            element={<RetentionConfig />}
           />
           <Route
             path="/config-email-sms"

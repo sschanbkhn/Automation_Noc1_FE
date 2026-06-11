@@ -21,16 +21,16 @@ const SnocLoginInline: React.FC = () => {
       const token = data.token || data.access;
       if (!token) throw new Error(data?.msg || data?.message || "Login failed");
       setSnocToken(token, { persist: true });
+      setBusy(false);
       nav("/app/dashboard/origin", { replace: true });
     } catch (ex: any) {
+      setBusy(false);
       setErr(
         ex?.response?.data?.msg ||
           ex?.response?.data?.detail ||
           ex?.message ||
           "Đăng nhập thất bại"
       );
-    } finally {
-      setBusy(false);
     }
   };
 
@@ -69,7 +69,7 @@ const SnocLoginInline: React.FC = () => {
               SNOC Automation
             </div>
             <div style={{ color: "rgba(255,255,255,0.72)", fontSize: 12, marginTop: 4 }}>
-              AU Chuyển mạch · VNPT VinaPhone
+              AU Chuyển mạch
             </div>
           </div>
 

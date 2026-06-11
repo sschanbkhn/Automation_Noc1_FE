@@ -526,6 +526,27 @@ export const GenericHealthCheckView = createAsyncThunk(
 );
 
 /* =========================
+ * Thunk: fetchNokSeries
+ * ========================= */
+export const fetchNokSeries = createAsyncThunk(
+  "pscore/fetchNokSeries",
+  async ({ platform = [], hours = 24, storeKey }, { rejectWithValue }) => {
+    try {
+      const params = new URLSearchParams();
+      platform.forEach((p) => params.append("platform", p));
+      params.append("hours", String(hours));
+      params.append("bucket_minutes", "5");
+      const resp = await snocApi.get(
+        `/nornirps/healthcheck/nok-series/?${params.toString()}`,
+      );
+      return { series: resp.data, storeKey, platforms: platform };
+    } catch (err) {
+      return rejectWithValue(err?.response?.data);
+    }
+  },
+);
+
+/* =========================
  * Slice
  * ========================= */
 const psCoreSlice = createSlice({
@@ -571,6 +592,9 @@ const psCoreSlice = createSlice({
     hourlyLoadingByKey: {}, // { [storeKey]: boolean }
     hourlyByPlatform: {}, // { [platform]: HourlyItem[] }
     hourPruneHours: 24,
+    nokSeriesByKey: {}, // { [storeKey]: [{time, total_nok, by_platform, devices}] }
+    nokSeriesLoadingByKey: {}, // { [storeKey]: boolean }
+    nokSeriesStalePlatforms: [], // platforms có WS update mới, chờ re-fetch
     globalLatestItems: [], // <- 🔥 THÊM MỚI: Độc quyền cho Dashboard (không bị ghi đè)
   },
   reducers: {
@@ -616,6 +640,13 @@ const psCoreSlice = createSlice({
 
         byPlat[p] = merged;
       }
+
+      // Đánh dấu stale cho GroupNokChart để trigger re-fetch nok-series
+      const stale = state.nokSeriesStalePlatforms || [];
+      for (const p of Object.keys(grouped)) {
+        if (!stale.includes(p)) stale.push(p);
+      }
+      state.nokSeriesStalePlatforms = stale.slice(-20);
     },
     updateLastRunAt: (state, action) => {
       const { name, last_run_at, status } = action.payload;
@@ -983,6 +1014,23 @@ const psCoreSlice = createSlice({
             item.host === host ? { ...item, excluded } : item,
           );
         }
+      })
+
+      /* nok-series aggregated endpoint */
+      .addCase(fetchNokSeries.pending, (state, action) => {
+        state.nokSeriesLoadingByKey[action.meta.arg.storeKey] = true;
+      })
+      .addCase(fetchNokSeries.fulfilled, (state, action) => {
+        const { series, storeKey, platforms } = action.payload;
+        state.nokSeriesByKey[storeKey] = series;
+        state.nokSeriesLoadingByKey[storeKey] = false;
+        // Clear stale flags cho các platform đã fetch xong
+        state.nokSeriesStalePlatforms = (state.nokSeriesStalePlatforms || []).filter(
+          (p) => !platforms.includes(p),
+        );
+      })
+      .addCase(fetchNokSeries.rejected, (state, action) => {
+        state.nokSeriesLoadingByKey[action.meta.arg.storeKey] = false;
       });
   },
 });

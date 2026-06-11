@@ -4,12 +4,14 @@ import { NavLink, useLocation } from 'react-router-dom';
 import menu_config from 'assets/json/menu_config.json';
 import { Cookie } from 'helpers/cookie';
 import { IUserInfo } from 'models/Apps';
+// import { getJwtClaims } from "components/SNOC/api/snocApiWithAutoToken";
+import { getJwtClaims } from 'components/SNOC/api/snocApiWithAutoToken';
 
 interface Props {
-  Apps: any
+    Apps: any
 }
 
-const Sidebar = (props: Props) => {    
+const Sidebar = (props: Props) => {
     const location = useLocation();
     // State quản lý menu đang mở
     const [openMenus, setOpenMenus] = useState<string[]>([]);
@@ -41,14 +43,17 @@ const Sidebar = (props: Props) => {
     // Toggle menu mở/đóng
     const toggleMenu = (menuCode: string) => {
         setOpenMenus(prev =>
-            prev.includes(menuCode)
+            // prev.includes(menuCode)
+            prev.indexOf(menuCode) !== -1
                 ? prev.filter(code => code !== menuCode)
                 : [...prev, menuCode]
         );
     };
 
     // Kiểm tra menu có đang mở không
-    const isMenuOpen = (menuCode: string) => openMenus.includes(menuCode);
+    // const isMenuOpen = (menuCode: string) => openMenus.includes(menuCode);
+    const isMenuOpen = (menuCode: string) => openMenus.indexOf(menuCode) !== -1;
+
 
     // Vẽ submenu đệ quy
     const DrawSubMenu = (subMenu: any[], parentCode: string = ''): JSX.Element => {
@@ -70,7 +75,7 @@ const Sidebar = (props: Props) => {
                                     >
                                         <i className={item.icon}></i>
                                         <span>{item.name}</span>
-                                        <i className="bi bi-chevron-down ms-auto" style={{fontSize: 20, fontWeight: 700, marginLeft: 8}}></i>
+                                        <i className="bi bi-chevron-down ms-auto" style={{ fontSize: 20, fontWeight: 700, marginLeft: 8 }}></i>
                                     </a>
                                     {isMenuOpen(itemCode) && (
                                         <div>
@@ -112,7 +117,7 @@ const Sidebar = (props: Props) => {
                             >
                                 <i className={item.icon}></i>
                                 <span>{item.name}</span>
-                                <i className="bi bi-chevron-down ms-auto" style={{fontSize: 20, fontWeight: 700, marginLeft: 8}}></i>
+                                <i className="bi bi-chevron-down ms-auto" style={{ fontSize: 20, fontWeight: 700, marginLeft: 8 }}></i>
                             </a>
                             {isMenuOpen(item.code) && (
                                 <div>
@@ -134,10 +139,18 @@ const Sidebar = (props: Props) => {
         }).filter((item): item is JSX.Element => item !== null);
     };
 
-    const IsMenuOfUser = (menu: any): boolean => { 
-        let userInfo: IUserInfo = JSON.parse(Cookie.getCookie("UserInfo"));    
-        if (userInfo && userInfo.UserName === "admin") return true;   
-        if (userInfo !== null) {
+    const IsMenuOfUser = (menu: any): boolean => {
+        // let userInfo: IUserInfo = JSON.parse(Cookie.getCookie("UserInfo"));
+
+        // "User Admin Snoc" chỉ hiển thị cho SNOC super user
+        if (menu.code === 'hc-snoc-admin-dashboard') {
+            const claims = getJwtClaims();
+            return Boolean(claims?.is_superuser || claims?.role === 'super');
+        }
+
+        let userInfo: IUserInfo = JSON.parse(Cookie.getCookie("UserInfo") ?? "{}");
+        if (userInfo && userInfo.UserName == "admin") return true;
+        if (userInfo != null) {
             for (let i = 0; i < userInfo.Menus.length; i++) {
                 if (userInfo.Menus[i] === menu.code) {
                     return true;
@@ -147,7 +160,7 @@ const Sidebar = (props: Props) => {
         return false;
     };
 
-    return (      
+    return (
         <aside id="sidebar" className="sidebar">
             <ul className="sidebar-nav" id="sidebar-nav">
                 {DrawMenu()}

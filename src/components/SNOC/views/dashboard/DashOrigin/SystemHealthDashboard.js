@@ -23,8 +23,8 @@ import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
 import {
   fetchHealthcheckSchedules,
   fetchLatestHealthcheckView,
+  fetchNokSeries,
   fetchPlatformGroupSchema,
-  fetchPSCoreStatus,
   fetchSystemStatus,
   fetchSystemStatusByGroup,
   syncDeviceExcluded,
@@ -257,52 +257,67 @@ const GroupNokChart = ({
     setChartHeight(height);
   }, [height]);
 
-  const byKeyItems = useSelector((s) => s.pscore?.hourlyByKey?.[storeKey]);
+  const nokSeries = useSelector((s) => s.pscore?.nokSeriesByKey?.[storeKey]);
   const byKeyLoading = useSelector(
-    (s) => s.pscore?.hourlyLoadingByKey?.[storeKey],
+    (s) => s.pscore?.nokSeriesLoadingByKey?.[storeKey],
   );
-  const byPlatform = useSelector((s) => s.pscore?.hourlyByPlatform || {});
+  const stalePlatforms = useSelector(
+    (s) => s.pscore?.nokSeriesStalePlatforms || [],
+  );
 
   const safePlatformList = useMemo(
     () => (Array.isArray(platformList) ? platformList : []),
     [platformList],
   );
 
-  const items = useMemo(() => {
-    const out = [];
-    safePlatformList.forEach((p) => {
-      const arr = byPlatform[p] || [];
-      if (arr.length) out.push(...arr);
-    });
-    if (byKeyItems?.length) out.push(...byKeyItems);
-    return out;
-  }, [safePlatformList, byPlatform, byKeyItems]);
+  // Chuyển đổi format backend → shape Recharts ({time, Total, errorDetails, [platform]: count})
+  const chartData = useMemo(() => {
+    if (!nokSeries) return [];
+    return nokSeries.map((point) => {
+      const devices =
+        excludedHostsSet?.size
+          ? point.devices.filter(
+              (d) => !excludedHostsSet.has((d.host || "").trim().toLowerCase()),
+            )
+          : point.devices;
 
-  const chartData = useMemo(
-    () =>
-      buildMinuteSeries(items, safePlatformList, excludedHostsSet, timeRange),
-    [items, safePlatformList, excludedHostsSet, timeRange],
-  );
+      const byPlat = {};
+      devices.forEach((d) => {
+        byPlat[d.platform] = (byPlat[d.platform] || 0) + 1;
+      });
+
+      const row = {
+        time: point.time,
+        Total: devices.length > 0 ? devices.length : null,
+        errorDetails: devices,
+      };
+      Object.keys(point.by_platform).forEach((k) => {
+        row[k] = (byPlat[k] || 0) > 0 ? byPlat[k] : null;
+      });
+      return row;
+    });
+  }, [nokSeries, excludedHostsSet]);
 
   const platformKey = useMemo(
     () => JSON.stringify(safePlatformList.slice().sort()),
     [safePlatformList],
   );
 
+  // Fetch ban đầu và khi timeRange / platformList thay đổi
   useEffect(() => {
     if (!safePlatformList.length || !storeKey) return;
-    dispatch(
-      fetchPSCoreStatus({
-        platform: safePlatformList,
-        page: 1,
-        page_size: 2000,
-        hours: 24,
-        option: "",
-        storeKey,
-      }),
-    );
+    dispatch(fetchNokSeries({ platform: safePlatformList, hours: timeRange, storeKey }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dispatch, platformKey, storeKey]);
+  }, [dispatch, platformKey, storeKey, timeRange]);
+
+  // Re-fetch khi WS báo có dữ liệu mới (stale flag)
+  useEffect(() => {
+    if (!safePlatformList.length || !storeKey) return;
+    const isStale = safePlatformList.some((p) => stalePlatforms.includes(p));
+    if (!isStale) return;
+    dispatch(fetchNokSeries({ platform: safePlatformList, hours: timeRange, storeKey }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stalePlatforms]);
 
   const loading = !!byKeyLoading;
 
@@ -1239,12 +1254,9 @@ const SystemHealth = () => {
     const platforms = groupPlatformsMap[groupName] || [];
     if (platforms.length) {
       dispatch(
-        fetchPSCoreStatus({
+        fetchNokSeries({
           platform: platforms,
-          page: 1,
-          page_size: 1000,
           hours: 24,
-          option: "",
           storeKey: `hourly_${slug(groupName)}_group`,
         }),
       );

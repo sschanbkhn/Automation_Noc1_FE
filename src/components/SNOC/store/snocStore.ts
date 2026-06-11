@@ -32,10 +32,17 @@ import blackoutReducer from "../redux/Healthcheck/blackoutSlice";
 import precheckReducer from "../redux/Healthcheck/precheckSlice";
 import analysisParamReducer from "../redux/Healthcheck/analysisParamSlice";
 import alertConfigReducer from "../redux/Healthcheck/alertConfigSlice";
+import retentionConfigReducer from "../redux/Healthcheck/retentionConfigSlice";
 import notifChannelConfigReducer from "../redux/Healthcheck/notifChannelConfigSlice";
 import regionReducer from "../redux/User/regionSlice";
 import accessScopeReducer from "../redux/User/accessScopeSlice";
 const snocStore = configureStore({
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: {
+        warnAfter: 128, // mặc định 32ms, tăng lên do state lớn (5000 items)
+      },
+    }),
   reducer: {
     account: accountReducer, // KHÔNG persist ở store (token đã được API persist trong sessionStorage)
     snoc: snocReducer,
@@ -61,6 +68,7 @@ const snocStore = configureStore({
     precheck: precheckReducer,
     analysisParam: analysisParamReducer,
     alertConfig: alertConfigReducer,
+    retentionConfig: retentionConfigReducer,
     notifChannelConfig: notifChannelConfigReducer,
     region: regionReducer,
     accessScope: accessScopeReducer,
