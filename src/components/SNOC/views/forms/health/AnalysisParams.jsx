@@ -33,6 +33,7 @@ const getPlatformFiles = (platformName) => {
   if (p.includes("cudb")) return ["ssh_nornir_cudb.py"];
   if (p.includes("ims") || p.includes("sbg")) return ["ssh_nornir_ims.py"];
   if (p.includes("fda"))  return ["fda.py"];
+  if (p.includes("hlr"))  return ["healthcheck_hlr.py"];
   return null;
 };
 

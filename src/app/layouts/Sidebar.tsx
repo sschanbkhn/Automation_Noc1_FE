@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { connect } from "react-redux";
 import { NavLink, useLocation } from 'react-router-dom';
 import menu_config from 'assets/json/menu_config.json';
-import { Actions } from 'store/app/Action';
 import { Cookie } from 'helpers/cookie';
 import { IUserInfo } from 'models/Apps';
+// import { getJwtClaims } from "components/SNOC/api/snocApiWithAutoToken";
+import { getJwtClaims } from 'components/SNOC/api/snocApiWithAutoToken';
 
 interface Props {
     Apps: any
@@ -16,7 +17,7 @@ const Sidebar = (props: Props) => {
     const [openMenus, setOpenMenus] = useState<string[]>([]);
 
     // Tìm đường dẫn menu để tự động mở
-    const findMenuPathByUrl = (menus: any[], targetUrl: string, path: string[] = []): string[] => {
+    const findMenuPathByUrl = useCallback((menus: any[], targetUrl: string, path: string[] = []): string[] => {
         for (const menu of menus) {
             const currentPath = [...path, menu.code];
             if (menu.url === targetUrl) {
@@ -30,26 +31,29 @@ const Sidebar = (props: Props) => {
             }
         }
         return [];
-    };
+    }, []);
 
     // Tự động mở menu theo route hiện tại
     useEffect(() => {
         const currentPath = location.pathname;
         const autoOpenMenus = findMenuPathByUrl(menu_config.Menu, currentPath);
         setOpenMenus(autoOpenMenus);
-    }, [location.pathname]);
+    }, [location.pathname, findMenuPathByUrl]);
 
     // Toggle menu mở/đóng
     const toggleMenu = (menuCode: string) => {
         setOpenMenus(prev =>
-            prev.includes(menuCode)
+            // prev.includes(menuCode)
+            prev.indexOf(menuCode) !== -1
                 ? prev.filter(code => code !== menuCode)
                 : [...prev, menuCode]
         );
     };
 
     // Kiểm tra menu có đang mở không
-    const isMenuOpen = (menuCode: string) => openMenus.includes(menuCode);
+    // const isMenuOpen = (menuCode: string) => openMenus.includes(menuCode);
+    const isMenuOpen = (menuCode: string) => openMenus.indexOf(menuCode) !== -1;
+
 
     // Vẽ submenu đệ quy
     const DrawSubMenu = (subMenu: any[], parentCode: string = ''): JSX.Element => {
@@ -132,15 +136,23 @@ const Sidebar = (props: Props) => {
                     )}
                 </li>
             );
-        }).filter(Boolean);
+        }).filter((item): item is JSX.Element => item !== null);
     };
 
     const IsMenuOfUser = (menu: any): boolean => {
-        let userInfo: IUserInfo = JSON.parse(Cookie.getCookie("UserInfo"));
+        // let userInfo: IUserInfo = JSON.parse(Cookie.getCookie("UserInfo"));
+
+        // "User Admin Snoc" chỉ hiển thị cho SNOC super user
+        if (menu.code === 'hc-snoc-admin-dashboard') {
+            const claims = getJwtClaims();
+            return Boolean(claims?.is_superuser || claims?.role === 'super');
+        }
+
+        let userInfo: IUserInfo = JSON.parse(Cookie.getCookie("UserInfo") ?? "{}");
         if (userInfo && userInfo.UserName == "admin") return true;
         if (userInfo != null) {
             for (let i = 0; i < userInfo.Menus.length; i++) {
-                if (userInfo.Menus[i] == menu.code) {
+                if (userInfo.Menus[i] === menu.code) {
                     return true;
                 }
             }
