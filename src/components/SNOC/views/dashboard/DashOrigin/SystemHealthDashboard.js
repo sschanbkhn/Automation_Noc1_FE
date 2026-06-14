@@ -1,6 +1,6 @@
 // src/components/SNOC/views/dashboard/DashOrigin/SystemHealthDashboard.js
-import React, { useEffect, useMemo, useState } from "react";
-import { Button, Card, Col, Modal, Row, Spinner, Table } from "react-bootstrap";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Badge, Button, Card, Col, Modal, Row, Spinner, Table } from "react-bootstrap";
 import KPIExplorerCore from "../../forms/kpi/KPIExplorerCore";
 
 import { useDispatch, useSelector } from "react-redux";
@@ -32,6 +32,7 @@ import {
 import HealthcheckTable from "../../tables/health/HealthcheckTable";
 import styles from "./../../../styles/SystemHealth.module.scss";
 import TopNavbarHealth from "./TopNavbarHealth";
+import HealthDashPersonalize from "./HealthDashPersonalize";
 
 // ====== HẰNG SỐ / SELECTOR ỔN ĐỊNH ======
 const statusColorClass = {
@@ -89,6 +90,27 @@ const normalizeSubOrder = (stored, subNames) => {
   const base = Array.isArray(stored) ? stored.filter((s) => set.has(s)) : [];
   const missing = subNames.filter((s) => !base.includes(s));
   return [...base, ...missing];
+};
+
+// ====== PERSONALIZATION PREFS ======
+const LS_PREF_KEY = (userId, type) => `hc_pref_${userId}_${type}`;
+const loadPref = (userId, type) => {
+  try {
+    const raw = localStorage.getItem(LS_PREF_KEY(userId, type));
+    if (raw === null) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+};
+const savePref = (userId, type, value) => {
+  try {
+    if (value === null || value === undefined) {
+      localStorage.removeItem(LS_PREF_KEY(userId, type));
+    } else {
+      localStorage.setItem(LS_PREF_KEY(userId, type), JSON.stringify(value));
+    }
+  } catch {}
 };
 
 const formatDateShort = (dateObj) => {
@@ -227,6 +249,16 @@ const buildMinuteSeries = (
     return row;
   });
 };
+
+const TIME_OPTIONS = [
+  { value: 3, label: "3h" },
+  { value: 6, label: "6h" },
+  { value: 12, label: "12h" },
+  { value: 24, label: "24h" },
+  { value: 48, label: "2d" },
+  { value: 72, label: "3d" },
+  { value: 168, label: "7d" },
+];
 
 // ====== COMPONENT: BIỂU ĐỒ ======
 const GroupNokChart = ({
@@ -405,7 +437,13 @@ const GroupNokChart = ({
     );
   };
 
-  const tickInterval = timeRange === 3 ? 29 : timeRange === 6 ? 59 : 119;
+  const tickInterval =
+    timeRange === 3   ? 29  :
+    timeRange === 6   ? 59  :
+    timeRange <= 24   ? 119 :
+    timeRange === 48  ? 7   :
+    timeRange === 72  ? 11  :
+                        23  ;
 
   return (
     <div className="mb-0 w-100">
@@ -475,22 +513,22 @@ const GroupNokChart = ({
           </button>
 
           <div className="btn-group shadow-sm" role="group">
-            {[3, 6, 12, 24].map((hr) => (
+            {TIME_OPTIONS.map(({ value, label }) => (
               <button
-                key={hr}
+                key={value}
                 type="button"
                 className={`btn btn-sm py-0 px-2 ${
-                  timeRange === hr
+                  timeRange === value
                     ? "btn-primary fw-bold"
                     : "btn-outline-secondary"
                 }`}
                 style={{ fontSize: "0.65rem" }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  setTimeRange(hr);
+                  setTimeRange(value);
                 }}
               >
-                {hr}h
+                {label}
               </button>
             ))}
           </div>
@@ -894,6 +932,30 @@ const SystemHealth = () => {
   const [draggingSub, setDraggingSub] = useState(null);
   const [dragOverSub, setDragOverSub] = useState(null);
 
+  const userId = useSelector(
+    (s) => s.account?.user?.id ?? s.account?.user?.username ?? "guest",
+  );
+  const [showPersonalize, setShowPersonalize] = useState(false);
+  const [prefs, setPrefs] = useState({
+    group: null,
+    sub: null,
+    platforms: null,
+    show_chart: true,
+  });
+
+  // Load prefs from localStorage when userId is known / changes (login/logout)
+  // Normalize old single-string format → array to avoid .map()/.flatMap() crash in HealthDashPersonalize
+  useEffect(() => {
+    const rawGroup = loadPref(userId, "group");
+    const rawSub   = loadPref(userId, "sub");
+    setPrefs({
+      group:      Array.isArray(rawGroup) ? rawGroup : rawGroup ? [rawGroup] : null,
+      sub:        Array.isArray(rawSub)   ? rawSub   : rawSub   ? [rawSub]   : null,
+      platforms:  loadPref(userId, "platforms"),
+      show_chart: loadPref(userId, "show_chart") ?? true,
+    });
+  }, [userId]);
+
   useEffect(() => {
     dispatch(fetchPlatformGroupSchema());
     dispatch(fetchSystemStatus());
@@ -1018,6 +1080,15 @@ const SystemHealth = () => {
       if (!task.enabled || !Array.isArray(task.node_names) || !task.platform)
         return;
 
+      // Lọc theo platform nếu user đã chọn platform cụ thể
+      if (
+        Array.isArray(prefs.platforms) && prefs.platforms.length > 0 &&
+        !prefs.platforms.some(
+          (p) => p.toLowerCase() === task.platform.trim().toLowerCase(),
+        )
+      )
+        return;
+
       const platformKey = task.platform.trim().toLowerCase();
       let mapping = reverseMap[platformKey];
 
@@ -1041,6 +1112,13 @@ const SystemHealth = () => {
 
       // NẾU TÌM THẤY CHỖ ĐỂ ĐIỀN DỮ LIỆU
       if (mapping) {
+        // Lọc theo subsystem nếu user đã chọn subsystem cụ thể
+        if (
+          Array.isArray(prefs.sub) && prefs.sub.length > 0 &&
+          !prefs.sub.includes(mapping.sub)
+        )
+          return;
+
         const groupObj = newStatus[mapping.group];
         const subObj = groupObj?.children?.[mapping.sub];
 
@@ -1120,7 +1198,7 @@ const SystemHealth = () => {
     });
 
     return newStatus;
-  }, [scheduledTasks, latestItems, systemStatus, platformSchema]);
+  }, [scheduledTasks, latestItems, systemStatus, platformSchema, prefs.platforms, prefs.sub]);
 
   const displayData = calculatedSystemStatus;
 
@@ -1189,6 +1267,58 @@ const SystemHealth = () => {
     return map;
   }, [platformSchema]);
 
+  // Build effectiveSchema cho dropdown tuỳ chỉnh hiển thị:
+  // - Cấu trúc groups/subs theo cùng logic dashboard (platformSchema ưu tiên, systemStatus fallback)
+  // - Platform list từ platformSchema (static, đầy đủ) + bổ sung từ latestItems (live)
+  const effectiveSchema = useMemo(() => {
+    // Bước 1: Xây groups — cùng logic với groupNames (dòng 1170-1174)
+    const groups =
+      Object.keys(platformSchema || {}).length > 0
+        ? Object.keys(platformSchema)
+        : Object.keys(systemStatus || {}).filter((k) => k !== "last_updated");
+
+    const out = {};
+    groups.forEach((groupName) => {
+      // Bước 2: Xây subs — cùng logic với groupSubNamesMap (dòng 1198-1204)
+      const subsFromSchema = (platformSchema || {})[groupName] || {};
+      const groupChildren = ((systemStatus || {})[groupName] || {}).children || {};
+      const subsSource =
+        Object.keys(subsFromSchema).length > 0 ? subsFromSchema : groupChildren;
+
+      out[groupName] = {};
+      Object.keys(subsSource).forEach((subName) => {
+        // Platform list từ platformSchema (comprehensive static list)
+        out[groupName][subName] = Array.isArray(subsFromSchema[subName])
+          ? [...subsFromSchema[subName]]
+          : [];
+      });
+    });
+
+    // Bước 3: map host → {group, sub} từ systemStatus.devices
+    const hostToLoc = {};
+    Object.entries(systemStatus || {}).forEach(([group, groupData]) => {
+      if (group === "last_updated") return;
+      Object.entries(groupData.children || {}).forEach(([sub, subData]) => {
+        (subData.devices || []).forEach((d) => {
+          if (d.host) hostToLoc[d.host] = { group, sub };
+        });
+      });
+    });
+
+    // Bước 4: bổ sung platforms từ latestItems (host có platform chưa có trong schema)
+    (latestItems || []).forEach(({ host, platform }) => {
+      if (!host || !platform) return;
+      const loc = hostToLoc[host];
+      if (!loc) return;
+      const { group, sub } = loc;
+      if (out[group]?.[sub] !== undefined && !out[group][sub].includes(platform)) {
+        out[group][sub].push(platform);
+      }
+    });
+
+    return out;
+  }, [platformSchema, systemStatus, latestItems]);
+
   const handleSubsystemClick = (group, subsystem, platforms) => {
     setSelectedSubsystem({ group, subsystem, platform: platforms || [] });
     setModalVisible(true);
@@ -1214,8 +1344,12 @@ const SystemHealth = () => {
   const visibleGroupNames = useMemo(() => {
     const base =
       soloGroup && groupNames.includes(soloGroup) ? [soloGroup] : groupNames;
-    return base.filter((g) => !hiddenGroups.has(g));
-  }, [groupNames, soloGroup, hiddenGroups]);
+    return base.filter(
+      (g) =>
+        !hiddenGroups.has(g) &&
+        (!prefs.group?.length || prefs.group.includes(g)),
+    );
+  }, [groupNames, soloGroup, hiddenGroups, prefs.group]);
 
   const orderedVisibleGroups = useMemo(() => {
     const set = new Set(visibleGroupNames);
@@ -1280,6 +1414,63 @@ const SystemHealth = () => {
       return next;
     });
   };
+
+  // Sanitize prefs when schema changes (e.g. after login with different permissions)
+  useEffect(() => {
+    if (!effectiveSchema || Object.keys(effectiveSchema).length === 0) return;
+    const allGroups = Object.keys(effectiveSchema);
+    const allSubs = allGroups.flatMap((g) =>
+      Object.keys(effectiveSchema[g] || {}),
+    );
+    const allPlats = allGroups.flatMap((g) =>
+      Object.values(effectiveSchema[g] || {}).flat(),
+    );
+    setPrefs((prev) => {
+      // Migrate old string format → array (backward compat với localStorage cũ)
+      const prevGroups = Array.isArray(prev.group)
+        ? prev.group
+        : prev.group ? [prev.group] : [];
+      const prevSubs = Array.isArray(prev.sub)
+        ? prev.sub
+        : prev.sub ? [prev.sub] : [];
+
+      const sanitizedGroups = prevGroups.filter((g) => allGroups.includes(g));
+      const sanitizedSubs   = prevSubs.filter((s) => allSubs.includes(s));
+      const sanitizedPlats  = prev.platforms
+        ? prev.platforms.filter((p) => allPlats.includes(p))
+        : null;
+
+      const sanitized = {
+        group:      sanitizedGroups.length ? sanitizedGroups : null,
+        sub:        sanitizedSubs.length   ? sanitizedSubs   : null,
+        platforms:  sanitizedPlats?.length ? sanitizedPlats  : null,
+        show_chart: prev.show_chart,
+      };
+      savePref(userId, "group",     sanitized.group);
+      savePref(userId, "sub",       sanitized.sub);
+      savePref(userId, "platforms", sanitized.platforms);
+      return sanitized;
+    });
+  }, [effectiveSchema, userId]);
+
+  const handlePrefsChange = useCallback(
+    (newPrefs) => {
+      setPrefs(newPrefs);
+      savePref(userId, "group",      newPrefs.group);
+      savePref(userId, "sub",        newPrefs.sub);
+      savePref(userId, "platforms",  newPrefs.platforms);
+      savePref(userId, "show_chart", newPrefs.show_chart);
+    },
+    [userId],
+  );
+
+  const activeFilterCount = useMemo(
+    () =>
+      [!!prefs.group, !!prefs.sub, !!prefs.platforms, !prefs.show_chart].filter(
+        Boolean,
+      ).length,
+    [prefs],
+  );
 
   const onDragStart = (group, e) => {
     setDraggingGroup(group);
@@ -1411,7 +1602,7 @@ const SystemHealth = () => {
               platformList={detailPlatforms}
               storeKey={`hourly_${slug(soloGroup)}_${slug(soloSubsystem)}_detail`}
               height={220}
-              title={`NOK theo giờ (24h): ${soloGroup} / ${soloSubsystem}`}
+              title={`NOK trend: ${soloGroup} / ${soloSubsystem}`}
               excludedHostsSet={excludedHostsSet} // Truyền cờ exclude
             />
           )}
@@ -1437,11 +1628,28 @@ const SystemHealth = () => {
       <div className={styles.container}>
         <Row>
           <Col md={12}>
-            {systemLastUpdated && (
-              <div className="text-end mb-2" style={{ fontSize: "0.9rem" }}>
-                Last updated: {renderLastUpdatedOneLine(systemLastUpdated)}
-              </div>
-            )}
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <span style={{ fontSize: "0.9rem" }}>
+                {systemLastUpdated && (
+                  <>Last updated: {renderLastUpdatedOneLine(systemLastUpdated)}</>
+                )}
+              </span>
+              {!soloGroup && (
+                <Button
+                  variant="outline-secondary"
+                  size="sm"
+                  onClick={() => setShowPersonalize(true)}
+                  title="Tuỳ chỉnh hiển thị"
+                >
+                  ⚙ Tuỳ chỉnh
+                  {activeFilterCount > 0 && (
+                    <Badge bg="primary" className="ms-1">
+                      {activeFilterCount}
+                    </Badge>
+                  )}
+                </Button>
+              )}
+            </div>
 
             {!loading && orderedVisibleGroups.length === 0 && (
               <Card className="mb-3">
@@ -1475,13 +1683,31 @@ const SystemHealth = () => {
                     : groupChildren;
                 const groupPlatforms = groupPlatformsMap[groupName] || [];
 
+                // Platforms hiển thị sau khi áp dụng prefs.sub + prefs.platforms
+                const effectivePlatformList = (() => {
+                  let base = groupPlatforms;
+                  if (prefs.sub?.length) {
+                    const subPlats = new Set(
+                      Object.entries(subsFromSchema)
+                        .filter(([s]) => prefs.sub.includes(s))
+                        .flatMap(([, ps]) => (Array.isArray(ps) ? ps : [])),
+                    );
+                    base = base.filter((p) => subPlats.has(p));
+                  }
+                  if (prefs.platforms?.length) {
+                    base = base.filter((p) => prefs.platforms.includes(p));
+                  }
+                  return base;
+                })();
+
                 const rawSubNames = Object.keys(subsystems);
                 const hiddenSet = hiddenSubsMap[groupName] || new Set();
                 const subNamesVisible = rawSubNames.filter(
                   (s) =>
                     !hiddenSet.has(s) &&
                     (!(soloSubsystem && soloGroup === groupName) ||
-                      s === soloSubsystem),
+                      s === soloSubsystem) &&
+                    (!prefs.sub?.length || prefs.sub.includes(s)),
                 );
                 const subOrder = subOrderMap[groupName] || rawSubNames;
                 const orderedSubs = (() => {
@@ -1728,13 +1954,13 @@ const SystemHealth = () => {
 
                         {/* CHART */}
                         <div className="mt-auto border-top pt-2">
-                          {groupPlatforms.length > 0 && (
+                          {prefs.show_chart && effectivePlatformList.length > 0 && (
                             <GroupNokChart
-                              platformList={groupPlatforms}
+                              platformList={effectivePlatformList}
                               storeKey={`hourly_${slug(groupName)}_group`}
                               height={110}
                               title={null}
-                              excludedHostsSet={excludedHostsSet} // Truyền cờ exclude xuống chart
+                              excludedHostsSet={excludedHostsSet}
                             />
                           )}
                         </div>
@@ -1762,6 +1988,14 @@ const SystemHealth = () => {
           </Card>
         )}
 
+        <HealthDashPersonalize
+          show={showPersonalize}
+          onHide={() => setShowPersonalize(false)}
+          schema={effectiveSchema}
+          prefs={prefs}
+          onChange={handlePrefsChange}
+        />
+
         {/* MODAL */}
         {modalVisible && selectedSubsystem && (
           <Modal
@@ -1781,7 +2015,7 @@ const SystemHealth = () => {
                   platformList={selectedSubsystem.platform}
                   storeKey={`hourly_${slug(selectedSubsystem.group)}_${slug(selectedSubsystem.subsystem)}_modal`}
                   height={220}
-                  title={`NOK trend (24h): ${selectedSubsystem.group} / ${selectedSubsystem.subsystem}`}
+                  title={`NOK trend: ${selectedSubsystem.group} / ${selectedSubsystem.subsystem}`}
                   excludedHostsSet={excludedHostsSet}
                 />
               )}

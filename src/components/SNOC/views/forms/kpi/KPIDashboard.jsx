@@ -6,7 +6,7 @@ import WebSocketStatusBanner from "../../../components/WebSocketStatusBanner";
 import { fetchPlatformGroupSchema } from "../../../redux/Healthcheck/healthcheckSlice";
 import { fetchDevicesByPlatform } from "../../../redux/Healthcheck/platformDeviceSlice";
 import { fetchAvailableKPIs, fetchKPIChartDataBatch } from "../../../redux/KPI/kpiSlice";
-import PinnedKPISection from "../../dashboard/DashOrigin/PinnedKPISection";
+import { fetchLatestForPinnedKpis } from "../../../redux/KPI/kpiPinnedSlice";
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
 import useCausecodeWebSocket from "../../../hooks/useCausecodeWebSocket";
 import { isUsecaseAllowed } from "./platformUsecases";
@@ -137,26 +137,37 @@ export default function KPIDashboard() {
   const dispatch = useDispatch();
   const platformSchema = useSelector((s) => s.pscore.platformSchema || {});
   const pinnedByPlatform = useSelector((s) => s.kpiPinned?.pinnedByPlatform || {});
+  const savedDevicesByPlatform = useSelector((s) => s.kpiPinned?.savedDevicesByPlatform || {});
+  const userId = useSelector((s) => s.account?.user?.id ?? null);
   const pinnedRef = useRef(pinnedByPlatform);
   useEffect(() => { pinnedRef.current = pinnedByPlatform; }, [pinnedByPlatform]);
 
-  const [openTabs, setOpenTabs] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("kpidash_tabs") || "[]"); }
-    catch { return []; }
-  });
-  const [activeTab, setActiveTab] = useState(() => {
-    try { return localStorage.getItem("kpidash_active") || null; }
-    catch { return null; }
-  });
+  // State khởi tạo rỗng; được populate từ user-scoped localStorage trong useEffect bên dưới
+  const [openTabs, setOpenTabs] = useState([]);
+  const [activeTab, setActiveTab] = useState(null);
   // { [platform]: { selectedKPIs, selectedPlatform, selectedDevices, chartMode, viewMode } }
-  const [tabChartParams, setTabChartParams] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("kpidash_chart_params") || "{}"); }
-    catch { return {}; }
-  });
-  const [showPinned, setShowPinned] = useState(true);
+  const [tabChartParams, setTabChartParams] = useState({});
   const [showExplorer, setShowExplorer] = useState(false);
   const [quickRange, setQuickRange] = useState("3d");
   const [bucketOverride, setBucketOverride] = useState("auto");
+
+  // Khởi tạo state từ localStorage gắn với userId — tránh hiện data của user khác
+  const initializedForRef = useRef(null);
+  useEffect(() => {
+    if (!userId || initializedForRef.current === userId) return;
+    initializedForRef.current = userId;
+    try {
+      setOpenTabs(JSON.parse(localStorage.getItem(`kpidash_tabs_${userId}`) || "[]"));
+      setActiveTab(localStorage.getItem(`kpidash_active_${userId}`) || null);
+      setTabChartParams(JSON.parse(localStorage.getItem(`kpidash_chart_params_${userId}`) || "{}"));
+    } catch {}
+    // Xóa key cũ không gắn user
+    try {
+      localStorage.removeItem("kpidash_tabs");
+      localStorage.removeItem("kpidash_active");
+      localStorage.removeItem("kpidash_chart_params");
+    } catch {}
+  }, [userId]);
 
   // WS realtime: duy trì kết nối cho tab đang active, kể cả khi Explorer modal đóng
   const activeParams = tabChartParams[activeTab] || {};
@@ -166,19 +177,22 @@ export default function KPIDashboard() {
     selectedKPIs: activeParams.selectedKPIs || [],
   });
 
-  // Persist tabs state across refresh
+  // Persist tabs state theo user
   useEffect(() => {
-    localStorage.setItem("kpidash_tabs", JSON.stringify(openTabs));
-  }, [openTabs]);
+    if (!userId) return;
+    localStorage.setItem(`kpidash_tabs_${userId}`, JSON.stringify(openTabs));
+  }, [openTabs, userId]);
   useEffect(() => {
-    if (activeTab) localStorage.setItem("kpidash_active", activeTab);
-    else localStorage.removeItem("kpidash_active");
-  }, [activeTab]);
+    if (!userId) return;
+    if (activeTab) localStorage.setItem(`kpidash_active_${userId}`, activeTab);
+    else localStorage.removeItem(`kpidash_active_${userId}`);
+  }, [activeTab, userId]);
 
-  // Persist chart params để auto-restore sau refresh
+  // Persist chart params theo user
   useEffect(() => {
-    localStorage.setItem("kpidash_chart_params", JSON.stringify(tabChartParams));
-  }, [tabChartParams]);
+    if (!userId) return;
+    localStorage.setItem(`kpidash_chart_params_${userId}`, JSON.stringify(tabChartParams));
+  }, [tabChartParams, userId]);
 
   // Helper tính start/end từ quickRange
   const quickRangeRef = useRef(quickRange);
@@ -219,7 +233,7 @@ export default function KPIDashboard() {
         return;
       }
 
-      // Chưa có params → auto-init: fetch devices → fetch KPIs → tự chọn → fetch chart
+      // Chưa có params → load devices + KPIs sẵn cho Explorer, nhưng không tự fetch chart
       const devices = await dispatch(fetchDevicesByPlatform(activeTab)).unwrap().catch(() => []);
       if (cancelled || !devices.length) return;
 
@@ -229,9 +243,11 @@ export default function KPIDashboard() {
       })).unwrap().then((r) => r?.kpis || []).catch(() => []);
       if (cancelled || !kpis.length) return;
 
-      // Ưu tiên KPI đã ghim (kpiPinnedSlice), fallback 3 KPI đầu
+      // Chỉ hiện chart nếu user đã pin KPI — không tự chọn fallback
       const pinned = (pinnedRef.current[activeTab] || []).filter((k) => kpis.includes(k));
-      const kpiKeys = pinned.length > 0 ? pinned.slice(0, 5) : kpis.slice(0, 3);
+      if (!pinned.length) return;
+
+      const kpiKeys = pinned.slice(0, 5);
 
       dispatch(fetchKPIChartDataBatch({
         selectedPlatform: activeTab,
@@ -287,6 +303,16 @@ export default function KPIDashboard() {
   useEffect(() => {
     dispatch(fetchPlatformGroupSchema());
   }, [dispatch]);
+
+  // Fetch latest values cho pinned KPIs của tất cả tab đang mở
+  useEffect(() => {
+    if (openTabs.length === 0) return;
+    openTabs.forEach(({ platform }) => {
+      const devices = savedDevicesByPlatform[platform];
+      if (!devices?.length) return;
+      dispatch(fetchLatestForPinnedKpis({ platform, devices }));
+    });
+  }, [openTabs, savedDevicesByPlatform, dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredTree = useMemo(() => {
     const out = {};

@@ -18,7 +18,7 @@ import {
   fetchKPIChartDataBatch,
   clearEmbeddedData,
 } from "../../../redux/KPI/kpiSlice";
-import { setPinnedKPIs } from "../../../redux/KPI/kpiPinnedSlice";
+import { setPinnedKPIsAndSave } from "../../../redux/KPI/kpiPinnedSlice";
 import { addPin } from "../../../redux/KPI/pinnedKpisSlice";
 import { showTemporaryAlert } from "../../../redux/Alert/alertSlice";
 
@@ -515,7 +515,7 @@ const KPIExplorerCore = ({
     if (!selectedPlatform || selectedKPIs.length === 0) return;
     const kpis = selectedKPIs.map((k) => k.value);
     const devices = selectedDevices.map((d) => d.value);
-    dispatch(setPinnedKPIs({ platform: selectedPlatform, kpis, devices }));
+    dispatch(setPinnedKPIsAndSave({ platform: selectedPlatform, kpis, devices }));
     try {
       dispatch(
         showTemporaryAlert({

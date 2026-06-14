@@ -535,7 +535,8 @@ export const fetchNokSeries = createAsyncThunk(
       const params = new URLSearchParams();
       platform.forEach((p) => params.append("platform", p));
       params.append("hours", String(hours));
-      params.append("bucket_minutes", "5");
+      const bm = hours <= 24 ? 5 : hours <= 72 ? 30 : 60;
+      params.append("bucket_minutes", String(bm));
       const resp = await snocApi.get(
         `/nornirps/healthcheck/nok-series/?${params.toString()}`,
       );

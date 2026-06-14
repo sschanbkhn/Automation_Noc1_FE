@@ -1,39 +1,106 @@
 // src/redux/KPI/kpiPinnedSlice.js
-import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+// Pin KPI theo user, lưu trên backend (không dùng localStorage).
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import {
+  fetchAllKpiPreferences,
+  upsertKpiPreference,
+  deleteKpiPreferenceApi,
+} from "../../api/kpiPreferences";
 import { fetchKPIChartDataBatch } from "./kpiSlice";
 
-const LS_KEY = "pinned_kpis_by_platform";
-const LS_DEVICES_KEY = "pinned_devices_by_platform";
+// ─── Legacy localStorage keys (dùng 1 lần để migrate) ────────────────────────
+const LS_PIN_KEY = (uid) => `pinned_kpis_by_platform_${uid || "anon"}`;
+const LS_DEV_KEY = (uid) => `pinned_devices_by_platform_${uid || "anon"}`;
 
-const loadPinned = () => {
+function readLegacyLocalStorage(uid) {
   try {
-    const raw = localStorage.getItem(LS_KEY);
-    return raw ? JSON.parse(raw) : {};
+    const pins = JSON.parse(localStorage.getItem(LS_PIN_KEY(uid)) || "null");
+    const devs = JSON.parse(localStorage.getItem(LS_DEV_KEY(uid)) || "null");
+    return { pins, devs };
   } catch {
-    return {};
+    return { pins: null, devs: null };
   }
-};
-const savePinned = (obj) => {
-  try {
-    localStorage.setItem(LS_KEY, JSON.stringify(obj));
-  } catch {}
-};
-const loadPinnedDevices = () => {
-  try {
-    const raw = localStorage.getItem(LS_DEVICES_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-};
-const savePinnedDevices = (obj) => {
-  try {
-    localStorage.setItem(LS_DEVICES_KEY, JSON.stringify(obj));
-  } catch {}
-};
+}
 
-// Lay "latest" cho cac KPI da ghim cua 1 platform (window mac dinh 120 phut)
-// Dung fetchKPIChartDataBatch de gop tat ca KPI vao 1 request
+function clearLegacyLocalStorage(uid) {
+  try {
+    localStorage.removeItem(LS_PIN_KEY(uid));
+    localStorage.removeItem(LS_DEV_KEY(uid));
+    localStorage.removeItem("pinned_kpis_by_platform");
+    localStorage.removeItem("pinned_devices_by_platform");
+  } catch {}
+}
+
+// ─── Async thunks ─────────────────────────────────────────────────────────────
+
+// Load tất cả preferences từ backend. Nếu backend trả rỗng mà localStorage
+// còn data thì migrate lên backend (1 lần duy nhất), sau đó xóa localStorage.
+export const fetchKpiPreferences = createAsyncThunk(
+  "kpiPinned/fetchKpiPreferences",
+  async (_, { getState, rejectWithValue }) => {
+    try {
+      const prefs = await fetchAllKpiPreferences();
+      const uid = getState().account?.user?.id;
+
+      if (Array.isArray(prefs) && prefs.length === 0) {
+        // Backend rỗng → kiểm tra legacy localStorage
+        // Guard: bỏ qua migration nếu uid chưa load để tránh migrate data của user khác
+        if (!uid) return prefs;
+        const { pins, devs } = readLegacyLocalStorage(uid);
+        if (pins && Object.keys(pins).length > 0) {
+          // Migrate từng platform lên backend
+          await Promise.all(
+            Object.entries(pins).map(([platform, pinned_kpis]) =>
+              upsertKpiPreference(platform, {
+                pinned_kpis: Array.isArray(pinned_kpis) ? pinned_kpis : [],
+                pinned_devices: (devs && Array.isArray(devs[platform])) ? devs[platform] : [],
+              }).catch(() => null)
+            )
+          );
+          clearLegacyLocalStorage(uid);
+          // Trả về dữ liệu đã migrate
+          return Object.entries(pins).map(([platform, pinned_kpis]) => ({
+            platform,
+            pinned_kpis: Array.isArray(pinned_kpis) ? pinned_kpis : [],
+            pinned_devices: (devs && Array.isArray(devs[platform])) ? devs[platform] : [],
+          }));
+        }
+        clearLegacyLocalStorage(uid);
+      }
+      return prefs;
+    } catch (e) {
+      return rejectWithValue(e?.response?.data || e?.message || "fetch failed");
+    }
+  }
+);
+
+export const saveKpiPreference = createAsyncThunk(
+  "kpiPinned/saveKpiPreference",
+  async ({ platform, kpis, devices }, { rejectWithValue }) => {
+    try {
+      return await upsertKpiPreference(platform, {
+        pinned_kpis: kpis,
+        pinned_devices: devices,
+      });
+    } catch (e) {
+      return rejectWithValue(e?.response?.data || e?.message || "save failed");
+    }
+  }
+);
+
+export const clearKpiPreference = createAsyncThunk(
+  "kpiPinned/clearKpiPreference",
+  async (platform, { rejectWithValue }) => {
+    try {
+      await deleteKpiPreferenceApi(platform);
+      return platform;
+    } catch (e) {
+      return rejectWithValue(e?.response?.data || e?.message || "delete failed");
+    }
+  }
+);
+
+// Lấy giá trị latest cho các KPI đã ghim (window mặc định 120 phút)
 export const fetchLatestForPinnedKpis = createAsyncThunk(
   "kpiPinned/fetchLatestForPinnedKpis",
   async (
@@ -87,27 +154,28 @@ export const fetchLatestForPinnedKpis = createAsyncThunk(
   }
 );
 
+// ─── Slice ────────────────────────────────────────────────────────────────────
+
 const kpiPinnedSlice = createSlice({
   name: "kpiPinned",
   initialState: {
-    pinnedByPlatform: loadPinned(),
-    savedDevicesByPlatform: loadPinnedDevices(),
+    pinnedByPlatform: {},
+    savedDevicesByPlatform: {},
     latestByPlatform: {},
     loading: false,
     error: null,
   },
   reducers: {
+    // Ghi đè danh sách KPI và devices cho 1 platform, rồi save lên backend
     setPinnedKPIs: (state, action) => {
       const { platform, kpis, devices } = action.payload || {};
       if (!platform) return;
-      const uniq = Array.from(new Set((kpis || []).filter(Boolean)));
-      state.pinnedByPlatform[platform] = uniq;
-      savePinned(state.pinnedByPlatform);
+      state.pinnedByPlatform[platform] = Array.from(new Set((kpis || []).filter(Boolean)));
       if (Array.isArray(devices)) {
         state.savedDevicesByPlatform[platform] = devices;
-        savePinnedDevices(state.savedDevicesByPlatform);
       }
     },
+    // Toggle 1 KPI trong platform (optimistic)
     togglePinnedKPI: (state, action) => {
       const { platform, kpi } = action.payload || {};
       if (!platform || !kpi) return;
@@ -115,11 +183,61 @@ const kpiPinnedSlice = createSlice({
       if (cur.has(kpi)) cur.delete(kpi);
       else cur.add(kpi);
       state.pinnedByPlatform[platform] = Array.from(cur);
-      savePinned(state.pinnedByPlatform);
     },
   },
   extraReducers: (builder) => {
     builder
+      .addCase("account/LOGOUT", (state) => {
+        state.pinnedByPlatform = {};
+        state.savedDevicesByPlatform = {};
+        state.latestByPlatform = {};
+        state.loading = false;
+        state.error = null;
+      })
+
+      // fetchKpiPreferences
+      .addCase(fetchKpiPreferences.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchKpiPreferences.fulfilled, (state, action) => {
+        state.loading = false;
+        const prefs = action.payload || [];
+        const byPlatform = {};
+        const devsByPlatform = {};
+        for (const p of prefs) {
+          if (p.platform) {
+            byPlatform[p.platform] = Array.isArray(p.pinned_kpis) ? p.pinned_kpis : [];
+            devsByPlatform[p.platform] = Array.isArray(p.pinned_devices) ? p.pinned_devices : [];
+          }
+        }
+        state.pinnedByPlatform = byPlatform;
+        state.savedDevicesByPlatform = devsByPlatform;
+      })
+      .addCase(fetchKpiPreferences.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || action.error?.message || "error";
+      })
+
+      // saveKpiPreference — cập nhật lại state từ response server
+      .addCase(saveKpiPreference.fulfilled, (state, action) => {
+        const p = action.payload;
+        if (p?.platform) {
+          state.pinnedByPlatform[p.platform] = Array.isArray(p.pinned_kpis) ? p.pinned_kpis : [];
+          state.savedDevicesByPlatform[p.platform] = Array.isArray(p.pinned_devices) ? p.pinned_devices : [];
+        }
+      })
+
+      // clearKpiPreference
+      .addCase(clearKpiPreference.fulfilled, (state, action) => {
+        const platform = action.payload;
+        if (platform) {
+          delete state.pinnedByPlatform[platform];
+          delete state.savedDevicesByPlatform[platform];
+        }
+      })
+
+      // fetchLatestForPinnedKpis
       .addCase(fetchLatestForPinnedKpis.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -133,8 +251,7 @@ const kpiPinnedSlice = createSlice({
         Object.entries(results).forEach(([kpi, byDev]) => {
           Object.entries(byDev || {}).forEach(([dev, obj]) => {
             if (!dest[dev]) dest[dev] = {};
-            const devBucket = dest[dev];
-            devBucket[kpi] = obj;
+            dest[dev][kpi] = obj;
           });
         });
       })
@@ -146,4 +263,34 @@ const kpiPinnedSlice = createSlice({
 });
 
 export const { setPinnedKPIs, togglePinnedKPI } = kpiPinnedSlice.actions;
+
+// Thunks tiện lợi: cập nhật state ngay (optimistic) rồi lưu lên backend
+export const setPinnedKPIsAndSave = (payload) => (dispatch, getState) => {
+  dispatch(setPinnedKPIs(payload));
+  const { platform, kpis, devices } = payload || {};
+  if (!platform) return;
+  const state = getState().kpiPinned;
+  dispatch(
+    saveKpiPreference({
+      platform,
+      kpis: kpis ?? state.pinnedByPlatform[platform] ?? [],
+      devices: devices ?? state.savedDevicesByPlatform[platform] ?? [],
+    })
+  );
+};
+
+export const togglePinnedKPIAndSave = (payload) => (dispatch, getState) => {
+  dispatch(togglePinnedKPI(payload));
+  const { platform } = payload || {};
+  if (!platform) return;
+  const state = getState().kpiPinned;
+  dispatch(
+    saveKpiPreference({
+      platform,
+      kpis: state.pinnedByPlatform[platform] ?? [],
+      devices: state.savedDevicesByPlatform[platform] ?? [],
+    })
+  );
+};
+
 export default kpiPinnedSlice.reducer;

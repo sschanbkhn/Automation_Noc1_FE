@@ -1,6 +1,7 @@
 // src/components/SNOC/store/snocStore.ts
 import { configureStore } from "@reduxjs/toolkit";
 
+import { fetchKpiPreferences } from "../redux/KPI/kpiPinnedSlice";
 import alertReducer from "../redux/Alert/alertSlice";
 import dnsReducer from "../redux/Dns/dnsSlice";
 import psCoreReducer from "../redux/Healthcheck/healthcheckSlice";
@@ -88,6 +89,7 @@ if (bootToken) {
       // user: null, // có thể gọi API /me để lấy user sau
     })
   );
+  snocStore.dispatch(fetchKpiPreferences());
 }
 
 export type RootState = ReturnType<typeof snocStore.getState>;

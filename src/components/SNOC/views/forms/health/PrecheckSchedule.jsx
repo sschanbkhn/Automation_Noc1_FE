@@ -143,6 +143,14 @@ const PrecheckSchedule = () => {
     );
   }, [groups, form.department]);
 
+  const departmentOptions = useMemo(() =>
+    departments.map((d) => ({ label: d.name, value: String(d.id) }))
+  , [departments]);
+
+  const groupOptions = useMemo(() =>
+    displayGroups.map((g) => ({ label: g.name, value: String(g.id) }))
+  , [displayGroups]);
+
   // ── Handlers ───────────────────────────────────────────────────────────
   const handleDeviceChange = (selected) => {
     if (!selected) return setSelectedDevices([]);
@@ -265,10 +273,11 @@ const PrecheckSchedule = () => {
           <Row className="g-2 mb-2">
             <Col md={6}>
               <Form.Label className="fw-bold">Department</Form.Label>
-              <FormControl
-                as="select" value={form.department} disabled={!isAdmin}
-                onChange={(e) => {
-                  const newDept = e.target.value;
+              <Select
+                options={departmentOptions}
+                value={departmentOptions.find((o) => o.value === String(form.department)) || null}
+                onChange={(opt) => {
+                  const newDept = opt?.value || "";
                   const filtered = groups.filter((g) =>
                     String(g.department?.id || g.department) === String(newDept)
                   );
@@ -277,26 +286,23 @@ const PrecheckSchedule = () => {
                     group: filtered.length === 1 ? String(filtered[0].id) : "",
                   }));
                 }}
-              >
-                <option value="">-- Chọn Department --</option>
-                {departments.map((d) => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </FormControl>
+                placeholder="-- Chọn Department --"
+                isClearable
+                isDisabled={!isAdmin}
+                styles={MULTI_SELECT_STYLES}
+              />
             </Col>
             <Col md={6}>
               <Form.Label className="fw-bold">Group</Form.Label>
-              <FormControl
-                as="select" value={form.group} disabled={!isAdmin}
-                onChange={(e) => setForm((p) => ({ ...p, group: e.target.value }))}
-              >
-                {(isAdmin || displayGroups.length > 1) && (
-                  <option value="">-- Chọn Group --</option>
-                )}
-                {displayGroups.map((g) => (
-                  <option key={g.id} value={g.id}>{g.name}</option>
-                ))}
-              </FormControl>
+              <Select
+                options={groupOptions}
+                value={groupOptions.find((o) => o.value === String(form.group)) || null}
+                onChange={(opt) => setForm((p) => ({ ...p, group: opt?.value || "" }))}
+                placeholder="-- Chọn Group --"
+                isClearable
+                isDisabled={!isAdmin}
+                styles={MULTI_SELECT_STYLES}
+              />
             </Col>
           </Row>
 

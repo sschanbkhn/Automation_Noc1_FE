@@ -35,6 +35,12 @@ const pinnedSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
+      .addCase("account/LOGOUT", (state) => {
+        state.items = [];
+        state.lastQuery = null;
+        state.loading = false;
+        state.error = null;
+      })
       .addCase(loadPins.pending, (s, a) => {
         s.loading = true; s.error = null; s.lastQuery = a.meta.arg;
       })

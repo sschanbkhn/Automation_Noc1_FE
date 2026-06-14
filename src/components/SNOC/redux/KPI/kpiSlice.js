@@ -4,6 +4,11 @@ import snocApi from "../../api/snocApiWithAutoToken";
 
 // ====================== Thunks ======================
 
+function kpiRouterPrefix(platform = "") {
+  if (/mme/i.test(platform)) return "mme";
+  return "pgw";
+}
+
 export const fetchAvailableKPIs = createAsyncThunk(
   "kpi/fetchAvailableKPIs",
   async ({ selectedPlatform, selectedDevices = [] }, { rejectWithValue }) => {
@@ -11,7 +16,7 @@ export const fetchAvailableKPIs = createAsyncThunk(
       const params = new URLSearchParams();
       params.append("platform", selectedPlatform);
       selectedDevices.forEach((d) => params.append("device", d));
-      const url = `/fastapi/pgw/kpi-list?${params.toString()}`;
+      const url = `/fastapi/${kpiRouterPrefix(selectedPlatform)}/kpi-list?${params.toString()}`;
       const response = await snocApi.get(url);
       return response.data; // { kpis: [...] }
     } catch (error) {
@@ -39,8 +44,7 @@ export const fetchKPIChartData = createAsyncThunk(
       if (selectedDevice && selectedDevice.length > 0) {
         for (const d of selectedDevice) params.append("device", d);
       }
-      // const url = `/nornirps/kpi/query/?${params.toString()}`;
-      const url = `/fastapi/pgw/kpi-data?${params.toString()}`;
+      const url = `/fastapi/${kpiRouterPrefix(selectedPlatform)}/kpi-data?${params.toString()}`;
       const response = await snocApi.get(url);
       return { kpi: selectedKPI, data: response.data };
     } catch (error) {
@@ -65,7 +69,7 @@ export const fetchKPIChartDataBatch = createAsyncThunk(
         for (const d of selectedDevice) params.append("device", d);
       }
       if (bucket) params.append("bucket", bucket);
-      const url = `/fastapi/pgw/kpi-data?${params.toString()}`;
+      const url = `/fastapi/${kpiRouterPrefix(selectedPlatform)}/kpi-data?${params.toString()}`;
       const response = await snocApi.get(url);
       const grouped = {};
       for (const row of response.data || []) {

@@ -10,7 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { setPinnedKPIs } from "../../../redux/KPI/kpiPinnedSlice";
+import { togglePinnedKPIAndSave, setPinnedKPIsAndSave } from "../../../redux/KPI/kpiPinnedSlice";
 
 export function formatTimeLocal(ts, withDate = false) {
   const ict = new Date(+ts + 7 * 3600 * 1000);
@@ -201,10 +201,7 @@ export default function KPIChartGrid({
                     {k.label}{" "}
                     <span role="button"
                       onClick={() => {
-                        const next = pinnedSet.has(k.value)
-                          ? [...pinnedSet].filter((x) => x !== k.value)
-                          : [...pinnedSet, k.value];
-                        dispatch(setPinnedKPIs({ platform: selectedPlatform, kpis: next }));
+                        dispatch(togglePinnedKPIAndSave({ platform: selectedPlatform, kpi: k.value }));
                       }}
                       style={{ marginLeft: 6, cursor: "pointer", opacity: pinnedSet.has(k.value) ? 1 : 0.4 }}
                       title={pinnedSet.has(k.value) ? "Bỏ ghim KPI này" : "Ghim KPI này"}
