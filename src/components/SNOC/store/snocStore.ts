@@ -37,6 +37,7 @@ import retentionConfigReducer from "../redux/Healthcheck/retentionConfigSlice";
 import notifChannelConfigReducer from "../redux/Healthcheck/notifChannelConfigSlice";
 import regionReducer from "../redux/User/regionSlice";
 import accessScopeReducer from "../redux/User/accessScopeSlice";
+import kpiDashboardStateReducer from "../redux/KPI/kpiDashboardStateSlice";
 const snocStore = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -73,6 +74,7 @@ const snocStore = configureStore({
     notifChannelConfig: notifChannelConfigReducer,
     region: regionReducer,
     accessScope: accessScopeReducer,
+    kpiDashboardState: kpiDashboardStateReducer,
   },
 });
 

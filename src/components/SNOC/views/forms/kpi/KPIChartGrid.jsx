@@ -61,13 +61,22 @@ export default function KPIChartGrid({
   // embed-specific
   embed = false,
   embedKey = null,
+  embedDataKey = null, // đọc từ embeddedData[embedDataKey] nhưng render full (không giới hạn 1 KPI)
 }) {
   const dispatch = useDispatch();
   const { kpiChartData = {}, embeddedData = {} } = useSelector((s) => s.kpi || {});
   const pinnedByPlatform = useSelector((s) => s.kpiPinned?.pinnedByPlatform || {});
 
-  const groupedChartDataByKPIAndDevice = useMemo(() => {
-    const sourceData = embed && embedKey ? (embeddedData[embedKey] || {}) : kpiChartData;
+  const { groupedChartDataByKPIAndDevice, devicePlatformMap } = useMemo(() => {
+    let sourceData;
+    if (embedDataKey) {
+      sourceData = embeddedData[embedDataKey] || {};
+    } else if (embed && embedKey) {
+      sourceData = embeddedData[embedKey] || {};
+    } else {
+      sourceData = kpiChartData;
+    }
+    const dpMap = {};
     const groups = {};
     for (const kpi in sourceData) {
       const rows = Array.isArray(sourceData[kpi]) ? sourceData[kpi] : [];
@@ -76,6 +85,7 @@ export default function KPIChartGrid({
         const device = row?.device;
         const ts = Date.parse(row?.timestamp);
         if (!device || !Number.isFinite(ts)) continue;
+        if (row.platform && !dpMap[device]) dpMap[device] = row.platform;
         const tsMin = Math.floor(ts / 60000) * 60000;
         const val = Number(row?.value);
         if (!Number.isFinite(val)) continue;
@@ -88,8 +98,18 @@ export default function KPIChartGrid({
       }
       groups[kpi] = deviceObj;
     }
-    return groups;
+    return { groupedChartDataByKPIAndDevice: groups, devicePlatformMap: dpMap };
   }, [embed, embedKey, embeddedData, kpiChartData]);
+
+  const hasMultiplePlatforms = useMemo(
+    () => new Set(Object.values(devicePlatformMap)).size > 1,
+    [devicePlatformMap]
+  );
+
+  const tooltipFormatter = (value, name) => {
+    const label = hasMultiplePlatforms ? `${name} (${devicePlatformMap[name] || ""})` : name;
+    return [value, label];
+  };
 
   // ── Legend per-kpi ─────────────────────────────────────────────
   const [visibleDevices, setVisibleDevices] = useState([]);
@@ -173,7 +193,7 @@ export default function KPIChartGrid({
                 tickFormatter={(ts) => formatTimeLocal(ts)} angle={-45} textAnchor="end" tick={{ fontSize: 10 }} />
               <YAxis tick={{ fontSize: 10 }} width={42} />
               <Tooltip labelFormatter={(ts) => `⏱ ${formatTimeLocal(ts, true)} (ICT)`}
-                formatter={(value, name) => [value, name]} />
+                formatter={tooltipFormatter} />
               {Object.entries(displayData).map(([device, data], index) =>
                 visibleDevices.includes(device) ? (
                   <Line key={device} type="monotone" data={data} dataKey="value" name={device}
@@ -199,13 +219,15 @@ export default function KPIChartGrid({
                 {selectedKPIs.map((k) => (
                   <span key={k.value} className="badge text-bg-light">
                     {k.label}{" "}
-                    <span role="button"
-                      onClick={() => {
-                        dispatch(togglePinnedKPIAndSave({ platform: selectedPlatform, kpi: k.value }));
-                      }}
-                      style={{ marginLeft: 6, cursor: "pointer", opacity: pinnedSet.has(k.value) ? 1 : 0.4 }}
-                      title={pinnedSet.has(k.value) ? "Bỏ ghim KPI này" : "Ghim KPI này"}
-                    >📌</span>
+                    {!hasMultiplePlatforms && (
+                      <span role="button"
+                        onClick={() => {
+                          dispatch(togglePinnedKPIAndSave({ platform: selectedPlatform, kpi: k.value }));
+                        }}
+                        style={{ marginLeft: 6, cursor: "pointer", opacity: pinnedSet.has(k.value) ? 1 : 0.4 }}
+                        title={pinnedSet.has(k.value) ? "Bỏ ghim KPI này" : "Ghim KPI này"}
+                      >📌</span>
+                    )}
                     <span role="button" onClick={() => onRemoveKPI?.(k.value)}
                       style={{ marginLeft: 6, cursor: "pointer" }} title="Bỏ KPI này">✕</span>
                   </span>
@@ -220,7 +242,7 @@ export default function KPIChartGrid({
                       tickFormatter={(ts) => formatTimeLocal(ts)} angle={-45} textAnchor="end" />
                     <YAxis />
                     <Tooltip labelFormatter={(ts) => `⏱ ${formatTimeLocal(ts, true)} (ICT)`}
-                      formatter={(value, name) => [value, name]} />
+                      formatter={tooltipFormatter} />
                     {combinedSeries.map((s, idx) =>
                       visibleSeriesKeys.includes(s.key) ? (
                         <Line key={s.key} type="monotone" data={s.data} dataKey="value" name={s.name}
@@ -280,7 +302,16 @@ export default function KPIChartGrid({
                   style={{ position: "absolute", top: 8, right: 8, lineHeight: "1", border: "1px solid #ddd" }}
                   title="Đóng chart & bỏ chọn KPI này">✕</Button>
                 <Card.Body>
-                  <h6 className="mb-2">KPI: <i>{kpi}</i></h6>
+                  <div className="mb-2 d-flex align-items-center gap-2">
+                    <h6 className="mb-0">KPI: <i>{kpi}</i></h6>
+                    {!hasMultiplePlatforms && (
+                      <span role="button"
+                        onClick={() => dispatch(togglePinnedKPIAndSave({ platform: selectedPlatform, kpi }))}
+                        style={{ cursor: "pointer", opacity: pinnedSet.has(kpi) ? 1 : 0.4, fontSize: "1rem" }}
+                        title={pinnedSet.has(kpi) ? "Bỏ ghim KPI này" : "Ghim KPI này"}
+                      >📌</span>
+                    )}
+                  </div>
                   <ResponsiveContainer width="100%" height={260}>
                     <LineChart margin={{ top: 10, right: 20, bottom: 50, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" />
@@ -288,7 +319,7 @@ export default function KPIChartGrid({
                         tickFormatter={(ts) => formatTimeLocal(ts)} angle={-45} textAnchor="end" />
                       <YAxis />
                       <Tooltip labelFormatter={(ts) => `⏱ ${formatTimeLocal(ts, true)} (ICT)`}
-                        formatter={(value, name) => [value, name]} />
+                        formatter={tooltipFormatter} />
                       {Object.entries(displayData).map(([device, data], index) =>
                         visibleDevices.includes(device) ? (
                           <Line key={device} type="monotone" data={data} dataKey="value" name={device}
@@ -341,7 +372,16 @@ export default function KPIChartGrid({
                 style={{ position: "absolute", top: 8, right: 8, lineHeight: "1", border: "1px solid #ddd" }}
                 title="Đóng chart & bỏ chọn KPI này">✕</Button>
               <Card.Body>
-                <h6 className="mb-2">KPI: <i>{kpi}</i></h6>
+                <div className="mb-2 d-flex align-items-center gap-2">
+                  <h6 className="mb-0">KPI: <i>{kpi}</i></h6>
+                  {!hasMultiplePlatforms && (
+                    <span role="button"
+                      onClick={() => dispatch(togglePinnedKPIAndSave({ platform: selectedPlatform, kpi }))}
+                      style={{ cursor: "pointer", opacity: pinnedSet.has(kpi) ? 1 : 0.4, fontSize: "1rem" }}
+                      title={pinnedSet.has(kpi) ? "Bỏ ghim KPI này" : "Ghim KPI này"}
+                    >📌</span>
+                  )}
+                </div>
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart margin={{ top: 20, right: 20, bottom: 50 }}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -349,7 +389,7 @@ export default function KPIChartGrid({
                       tickFormatter={(ts) => formatTimeLocal(ts)} angle={-45} textAnchor="end" />
                     <YAxis />
                     <Tooltip labelFormatter={(ts) => `⏱ ${formatTimeLocal(ts, true)} (ICT)`}
-                      formatter={(value, name) => [value, name]} />
+                      formatter={tooltipFormatter} />
                     {Object.entries(displayData).map(([device, data], index) =>
                       visibleDevices.includes(device) ? (
                         <Line key={device} type="monotone" data={data} dataKey="value" name={device}

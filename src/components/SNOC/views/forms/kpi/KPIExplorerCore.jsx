@@ -9,6 +9,7 @@ import Select from "react-select";
 
 import useCausecodeWebSocket from "../../../hooks/useCausecodeWebSocket";
 import KPIChartGrid from "./KPIChartGrid";
+import { isUsecaseAllowed } from "./platformUsecases";
 
 // Redux actions/selectors
 import { fetchPlatformGroupSchema } from "../../../redux/Healthcheck/healthcheckSlice";
@@ -78,8 +79,8 @@ const KPIExplorerCore = ({
   pinGroup = null,
   hideCharts = false,
   onFetch = null,
-  initialQuickRange = "3d",
-  initialBucketOverride = "auto",
+  initialQuickRange = "12h",
+  initialBucketOverride = "raw",
 }) => {
   const dispatch = useDispatch();
   const { system: urlSystem, subsystem: urlSubsystem } = useParams();
@@ -111,8 +112,8 @@ const KPIExplorerCore = ({
   const [endTime, setEndTime] = useState("23:59");
 
   // ====== Chart controls
-  const [chartMode, setChartMode] = useState("absolute"); // 'absolute' | 'delta'
-  const [viewMode, setViewMode] = useState("per-kpi"); // 'per-kpi' | 'all-in-one'
+  const [chartMode, setChartMode] = useState("absolute");
+  const [viewMode, setViewMode] = useState("per-kpi-row");
 
   // ====== Range / bucket controls
   const [quickRange, setQuickRange] = useState(initialQuickRange);
@@ -129,7 +130,7 @@ const KPIExplorerCore = ({
   const hasFetched = useRef(false);
 
   // ====== Prefix filter
-  const [selectedPrefix, setSelectedPrefix] = useState("__all__"); // "__all__" | prefix string
+  const [selectedPrefix, setSelectedPrefix] = useState("__all__");
 
   // ====== Load schema
   useEffect(() => {
@@ -171,7 +172,6 @@ const KPIExplorerCore = ({
   }, [defaultPlatform]);
 
   // Auto-restore: khi platform đã set + devices đã load + chưa có selection nào + có KPI đã ghim
-  // Chỉ chạy cho context có defaultGroup/defaultSubsystem (HealthcheckTable), không chạy trong embed mode
   useEffect(() => {
     if (embed || !defaultGroup || !defaultSubsystem) return;
     if (autoRestoreDone.current) return;
@@ -195,8 +195,6 @@ const KPIExplorerCore = ({
 
     if (toRestore.length === 0) return;
     setSelectedDevices(toRestore);
-    // filterKey change sẽ reset selectedKPIs + allowAutoPick = true
-    // auto-pick effect sẽ pick pinned KPIs (xem bên dưới)
     autoRestoreDone.current = true;
   }, [
     embed,
@@ -210,7 +208,7 @@ const KPIExplorerCore = ({
     savedDevicesByPlatform,
   ]);
 
-  // Key duy nhất cho embed instance này, dùng để track per-pin loading state
+  // Key duy nhất cho embed instance này
   const embedKey = useMemo(
     () =>
       embed && kpiKey
@@ -318,8 +316,8 @@ const KPIExplorerCore = ({
           selectedDevices: selectedDeviceNames,
         })
       );
-      setSelectedKPIs([]); // reset mỗi lần đổi device list
-      setSelectedPrefix("__all__"); // reset prefix khi đổi context
+      setSelectedKPIs([]);
+      setSelectedPrefix("__all__");
     }
   }, [dispatch, selectedPlatform, selectedDevices]);
 
@@ -333,7 +331,6 @@ const KPIExplorerCore = ({
   }, [selectedPlatform, selectedDevices]);
 
   useEffect(() => {
-    // Embed mode tự quản lý selectedKPIs qua embedInitDone — không reset ở đây
     if (embed) return;
     setAllowAutoPick(true);
     setSelectedKPIs([]);
@@ -342,10 +339,8 @@ const KPIExplorerCore = ({
 
   useEffect(() => {
     if (!allowAutoPick) return;
-    // Embed mode tự quản lý selectedKPIs qua embedInitDone — không auto-pick ở đây
     if (embed) return;
     if (availableKPIs.kpis?.length > 0 && selectedKPIs.length === 0) {
-      // Nếu đang trong auto-restore flow (đã set devices tự động), ưu tiên pinned KPIs
       if (autoRestoreDone.current) {
         const pinned = (pinnedByPlatform[selectedPlatform] || []).filter((k) =>
           availableKPIs.kpis.includes(k)
@@ -385,15 +380,13 @@ const KPIExplorerCore = ({
       })
     );
     hasFetched.current = true;
-    // Không gọi onFetch ở đây — auto-restore là internal, không notify parent.
-    // onFetch chỉ được gọi khi user bấm "Xem" (handleCheckKPI).
     setAutoFetchPending(false);
   }, [autoFetchPending, selectedPlatform, selectedDevices, selectedKPIs, dispatch, quickRange]);
 
-  // ====== Auto-refetch khi range hoặc bucket thay đổi (chỉ sau khi đã fetch ít nhất 1 lần)
+  // ====== Auto-refetch khi range hoặc bucket thay đổi
   useEffect(() => {
     if (!hasFetched.current) return;
-    if (quickRange === "custom") return; // custom: user phải bấm "Xem" thủ công
+    if (quickRange === "custom") return;
     if (!selectedPlatform || selectedDevices.length === 0 || selectedKPIs.length === 0) return;
 
     const rangeHours = QUICK_RANGES.find((r) => r.value === quickRange)?.hours || 72;
@@ -560,7 +553,6 @@ const KPIExplorerCore = ({
   // ====== Danh sách KPI đã chọn — toggle panel
   const [showSelectedList, setShowSelectedList] = useState(false);
 
-  // Bổ sung tất cả KPI trong prefix/filter hiện tại vào selection (append, không replace)
   const handleAddAllFiltered = () => {
     const existing = new Set(selectedKPIs.map((k) => k.value));
     const toAdd = kpiOptionsFiltered
@@ -576,7 +568,7 @@ const KPIExplorerCore = ({
     setAllowAutoPick(false);
   };
 
-  // ====== Embed cleanup: xoá embeddedData khi unmount để tránh memory leak
+  // ====== Embed cleanup
   useEffect(() => {
     if (!embed || !embedKey) return;
     return () => {
@@ -671,7 +663,7 @@ const KPIExplorerCore = ({
               />
             </Col>
 
-            {/* KPI — lớn hơn, menu cao hơn */}
+            {/* KPI */}
             <Col md={4}>
               <Select
                 isMulti
@@ -735,7 +727,10 @@ const KPIExplorerCore = ({
                   size="sm"
                   variant="outline-secondary"
                   onClick={handleAddAllFiltered}
-                  disabled={selectedDevices.length === 0 || kpiOptionsFiltered.filter(o => o.value !== "__all__").length === 0}
+                  disabled={
+                    selectedDevices.length === 0
+                    || kpiOptionsFiltered.filter(o => o.value !== "__all__").length === 0
+                  }
                   title="Bổ sung tất cả KPI trong prefix hiện tại vào danh sách đã chọn"
                 >
                   + Thêm tất cả
@@ -851,7 +846,6 @@ const KPIExplorerCore = ({
                     >{b.label}</Button>
                   ))}
                 </div>
-                {/* Effective bucket preview */}
                 {bucketOverride === "auto" && (
                   <small className="text-muted ms-1" style={{ whiteSpace: "nowrap" }}>
                     →&nbsp;
@@ -864,7 +858,7 @@ const KPIExplorerCore = ({
             </Col>
           </Row>
 
-          {/* Custom date pickers — chỉ hiện khi chọn Tuỳ chỉnh */}
+          {/* Custom date pickers */}
           {quickRange === "custom" && (
             <Row className="align-items-end mb-2">
               <Col md={3}>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Modal } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import Alert from "../../../components/Alert/Alert";
@@ -7,6 +7,10 @@ import { fetchPlatformGroupSchema } from "../../../redux/Healthcheck/healthcheck
 import { fetchDevicesByPlatform } from "../../../redux/Healthcheck/platformDeviceSlice";
 import { fetchAvailableKPIs, fetchKPIChartDataBatch } from "../../../redux/KPI/kpiSlice";
 import { fetchLatestForPinnedKpis } from "../../../redux/KPI/kpiPinnedSlice";
+import {
+  fetchKpiDashboardState,
+  saveKpiDashboardState,
+} from "../../../redux/KPI/kpiDashboardStateSlice";
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
 import useCausecodeWebSocket from "../../../hooks/useCausecodeWebSocket";
 import { isUsecaseAllowed } from "./platformUsecases";
@@ -85,49 +89,52 @@ function PlatformBar({ filteredTree, openTabs, onOpenTab }) {
 function TabBar({ openTabs, activeTab, onActivate, onClose }) {
   return (
     <div
-      className="d-flex align-items-center"
+      className="d-flex align-items-stretch"
       style={{
         borderBottom: "2px solid #dee2e6",
-        padding: "0 8px",
         background: "#fff",
-        overflowX: "auto",
         flexShrink: 0,
       }}
     >
-      {openTabs.map((tab) => {
-        const isActive = activeTab === tab.platform;
-        return (
-          <div
-            key={tab.platform}
-            className="d-flex align-items-center"
-            onClick={() => onActivate(tab.platform)}
-            style={{
-              cursor: "pointer",
-              padding: "6px 12px",
-              borderBottom: isActive ? "2px solid #0d6efd" : "2px solid transparent",
-              marginBottom: -2,
-              color: isActive ? "#0d6efd" : "#495057",
-              fontWeight: isActive ? 600 : 400,
-              fontSize: "0.82rem",
-              whiteSpace: "nowrap",
-              userSelect: "none",
-            }}
-          >
-            {tab.platform}
-            <span
-              onClick={(e) => { e.stopPropagation(); onClose(tab.platform); }}
-              style={{ marginLeft: 6, fontSize: "0.7rem", color: "#adb5bd", cursor: "pointer", lineHeight: 1 }}
+      <div
+        className="d-flex align-items-center"
+        style={{ overflowX: "auto", flex: 1, padding: "0 8px" }}
+      >
+        {openTabs.map((tab) => {
+          const isActive = activeTab === tab.platform;
+          return (
+            <div
+              key={tab.platform}
+              className="d-flex align-items-center"
+              onClick={() => onActivate(tab.platform)}
+              style={{
+                cursor: "pointer",
+                padding: "6px 12px",
+                borderBottom: isActive ? "2px solid #0d6efd" : "2px solid transparent",
+                marginBottom: -2,
+                color: isActive ? "#0d6efd" : "#495057",
+                fontWeight: isActive ? 600 : 400,
+                fontSize: "0.82rem",
+                whiteSpace: "nowrap",
+                userSelect: "none",
+              }}
             >
-              ✕
-            </span>
-          </div>
-        );
-      })}
-      {openTabs.length === 0 && (
-        <span style={{ fontSize: "0.8rem", color: "#adb5bd", padding: "6px 12px" }}>
-          Click platform bên trên để mở tab
-        </span>
-      )}
+              {tab.platform}
+              <span
+                onClick={(e) => { e.stopPropagation(); onClose(tab.platform); }}
+                style={{ marginLeft: 6, fontSize: "0.7rem", color: "#adb5bd", cursor: "pointer", lineHeight: 1 }}
+              >
+                ✕
+              </span>
+            </div>
+          );
+        })}
+        {openTabs.length === 0 && (
+          <span style={{ fontSize: "0.8rem", color: "#adb5bd", padding: "6px 12px" }}>
+            Click platform bên trên để mở tab
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -142,34 +149,81 @@ export default function KPIDashboard() {
   const pinnedRef = useRef(pinnedByPlatform);
   useEffect(() => { pinnedRef.current = pinnedByPlatform; }, [pinnedByPlatform]);
 
-  // State khởi tạo rỗng; được populate từ user-scoped localStorage trong useEffect bên dưới
   const [openTabs, setOpenTabs] = useState([]);
   const [activeTab, setActiveTab] = useState(null);
-  // { [platform]: { selectedKPIs, selectedPlatform, selectedDevices, chartMode, viewMode } }
   const [tabChartParams, setTabChartParams] = useState({});
   const [showExplorer, setShowExplorer] = useState(false);
-  const [quickRange, setQuickRange] = useState("3d");
-  const [bucketOverride, setBucketOverride] = useState("auto");
+  const [quickRange, setQuickRange] = useState("12h");
+  const [bucketOverride, setBucketOverride] = useState("raw");
 
-  // Khởi tạo state từ localStorage gắn với userId — tránh hiện data của user khác
+  const { singleState, loaded: dbLoaded } = useSelector((s) => s.kpiDashboardState || {});
+
+  // Load DB state khi có userId
   const initializedForRef = useRef(null);
   useEffect(() => {
     if (!userId || initializedForRef.current === userId) return;
     initializedForRef.current = userId;
-    try {
-      setOpenTabs(JSON.parse(localStorage.getItem(`kpidash_tabs_${userId}`) || "[]"));
-      setActiveTab(localStorage.getItem(`kpidash_active_${userId}`) || null);
-      setTabChartParams(JSON.parse(localStorage.getItem(`kpidash_chart_params_${userId}`) || "{}"));
-    } catch {}
-    // Xóa key cũ không gắn user
+    dispatch(fetchKpiDashboardState());
     try {
       localStorage.removeItem("kpidash_tabs");
       localStorage.removeItem("kpidash_active");
       localStorage.removeItem("kpidash_chart_params");
     } catch {}
-  }, [userId]);
+  }, [userId, dispatch]);
 
-  // WS realtime: duy trì kết nối cho tab đang active, kể cả khi Explorer modal đóng
+  // Populate state từ DB (chạy 1 lần sau khi loaded)
+  const populatedRef = useRef(false);
+  useEffect(() => {
+    if (!dbLoaded || populatedRef.current) return;
+    populatedRef.current = true;
+
+    const tabs   = singleState?.openTabs      || [];
+    const params = singleState?.tabChartParams || {};
+
+    // Migration: nếu DB rỗng nhưng localStorage còn dữ liệu cũ
+    if (tabs.length === 0) {
+      try {
+        const legacyTabs   = JSON.parse(localStorage.getItem(`kpidash_tabs_${userId}`)         || "null");
+        const legacyActive = localStorage.getItem(`kpidash_active_${userId}`);
+        const legacyParams = JSON.parse(localStorage.getItem(`kpidash_chart_params_${userId}`) || "null");
+        if (legacyTabs?.length) {
+          dispatch(saveKpiDashboardState({
+            single_state: { openTabs: legacyTabs, activeTab: legacyActive, tabChartParams: legacyParams || {} },
+          }));
+          setOpenTabs(legacyTabs);
+          setActiveTab(legacyActive || null);
+          setTabChartParams(legacyParams || {});
+          ["tabs", "active", "chart_params"].forEach((k) =>
+            localStorage.removeItem(`kpidash_${k}_${userId}`)
+          );
+          return;
+        }
+      } catch {}
+    }
+
+    setOpenTabs(tabs);
+    setActiveTab(singleState?.activeTab || null);
+    setTabChartParams(params);
+  }, [dbLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Debounce save lên DB mỗi khi tabs/params thay đổi
+  const saveTimerRef = useRef(null);
+  useEffect(() => {
+    if (!dbLoaded || !populatedRef.current) return;
+    clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      dispatch(saveKpiDashboardState({
+        single_state: {
+          openTabs,
+          activeTab: openTabs.some((t) => t.platform === activeTab) ? activeTab : (openTabs[0]?.platform || null),
+          tabChartParams,
+        },
+      }));
+    }, 800);
+    return () => clearTimeout(saveTimerRef.current);
+  }, [openTabs, activeTab, tabChartParams, dbLoaded, dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // WS realtime
   const activeParams = tabChartParams[activeTab] || {};
   useCausecodeWebSocket({
     selectedPlatform: activeParams.selectedPlatform || activeTab || "",
@@ -177,24 +231,6 @@ export default function KPIDashboard() {
     selectedKPIs: activeParams.selectedKPIs || [],
   });
 
-  // Persist tabs state theo user
-  useEffect(() => {
-    if (!userId) return;
-    localStorage.setItem(`kpidash_tabs_${userId}`, JSON.stringify(openTabs));
-  }, [openTabs, userId]);
-  useEffect(() => {
-    if (!userId) return;
-    if (activeTab) localStorage.setItem(`kpidash_active_${userId}`, activeTab);
-    else localStorage.removeItem(`kpidash_active_${userId}`);
-  }, [activeTab, userId]);
-
-  // Persist chart params theo user
-  useEffect(() => {
-    if (!userId) return;
-    localStorage.setItem(`kpidash_chart_params_${userId}`, JSON.stringify(tabChartParams));
-  }, [tabChartParams, userId]);
-
-  // Helper tính start/end từ quickRange
   const quickRangeRef = useRef(quickRange);
   const bucketOverrideRef = useRef(bucketOverride);
   useEffect(() => { quickRangeRef.current = quickRange; }, [quickRange]);
@@ -211,7 +247,7 @@ export default function KPIDashboard() {
     return bucketOverrideRef.current === "auto" ? undefined : bucketOverrideRef.current;
   }
 
-  // Auto-init/restore khi chuyển tab — không cần click gì
+  // Auto-init/restore khi chuyển tab
   useEffect(() => {
     if (!activeTab) return;
     let cancelled = false;
@@ -219,7 +255,6 @@ export default function KPIDashboard() {
     async function run() {
       const { start, end } = buildTimeWindow();
 
-      // Nếu đã có params (từ localStorage hoặc Explorer trước đó) → chỉ re-fetch chart data
       const saved = tabChartParams[activeTab];
       if (saved?.selectedKPIs?.length) {
         dispatch(fetchKPIChartDataBatch({
@@ -233,7 +268,6 @@ export default function KPIDashboard() {
         return;
       }
 
-      // Chưa có params → load devices + KPIs sẵn cho Explorer, nhưng không tự fetch chart
       const devices = await dispatch(fetchDevicesByPlatform(activeTab)).unwrap().catch(() => []);
       if (cancelled || !devices.length) return;
 
@@ -243,7 +277,6 @@ export default function KPIDashboard() {
       })).unwrap().then((r) => r?.kpis || []).catch(() => []);
       if (cancelled || !kpis.length) return;
 
-      // Chỉ hiện chart nếu user đã pin KPI — không tự chọn fallback
       const pinned = (pinnedRef.current[activeTab] || []).filter((k) => kpis.includes(k));
       if (!pinned.length) return;
 
@@ -269,7 +302,7 @@ export default function KPIDashboard() {
               value: d.name,
             })),
             chartMode: "absolute",
-            viewMode: "per-kpi",
+            viewMode: "per-kpi-row",
           },
         }));
       }
@@ -279,7 +312,7 @@ export default function KPIDashboard() {
     return () => { cancelled = true; };
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-refetch khi range/bucket thay đổi (chỉ khi tab đang có data)
+  // Auto-refetch khi range/bucket thay đổi
   useEffect(() => {
     if (!activeTab || quickRange === "custom") return;
     const saved = tabChartParams[activeTab];
@@ -297,14 +330,12 @@ export default function KPIDashboard() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quickRange, bucketOverride]);
 
-  // Đóng modal Explorer khi đổi tab
   useEffect(() => { setShowExplorer(false); }, [activeTab]);
 
   useEffect(() => {
     dispatch(fetchPlatformGroupSchema());
   }, [dispatch]);
 
-  // Fetch latest values cho pinned KPIs của tất cả tab đang mở
   useEffect(() => {
     if (openTabs.length === 0) return;
     openTabs.forEach(({ platform }) => {
@@ -380,7 +411,12 @@ export default function KPIDashboard() {
       <Alert />
       <div className="d-flex flex-column" style={{ height: "calc(100vh - 56px)" }}>
         <PlatformBar filteredTree={filteredTree} openTabs={openTabs} onOpenTab={handleOpenTab} />
-        <TabBar openTabs={openTabs} activeTab={activeTab} onActivate={setActiveTab} onClose={handleCloseTab} />
+        <TabBar
+          openTabs={openTabs}
+          activeTab={activeTab}
+          onActivate={setActiveTab}
+          onClose={handleCloseTab}
+        />
 
         <div className="flex-grow-1" style={{ overflowY: "auto", padding: 16 }}>
           {!activeTab ? (
@@ -436,11 +472,11 @@ export default function KPIDashboard() {
               </div>
 
               {showExplorer && (
-                <Modal show onHide={() => setShowExplorer(false)} fullscreen scrollable>
+                <Modal show onHide={() => setShowExplorer(false)} size="xl">
                   <Modal.Header closeButton>
                     <Modal.Title>KPI Explorer — {activeTab}</Modal.Title>
                   </Modal.Header>
-                  <Modal.Body>
+                  <Modal.Body style={{ minHeight: "70vh" }}>
                     <KPIExplorerCore
                       key={activeTab}
                       defaultGroup={activeTabData?.group}
@@ -457,6 +493,12 @@ export default function KPIDashboard() {
                     />
                   </Modal.Body>
                 </Modal>
+              )}
+
+              {!tabChartParams[activeTab] && (
+                <div className="text-muted text-center mt-4" style={{ fontSize: "0.875rem" }}>
+                  Chưa có KPI nào được chọn. Mở <strong>KPI Explorer</strong> để chọn và xem biểu đồ.
+                </div>
               )}
 
               {tabChartParams[activeTab] && (
@@ -508,8 +550,6 @@ export default function KPIDashboard() {
                   />
                 </div>
               )}
-
-
             </>
           )}
         </div>

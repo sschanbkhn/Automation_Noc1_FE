@@ -53,26 +53,47 @@ export const fetchKPIChartData = createAsyncThunk(
   }
 );
 
+function _buildKpiDataParams(platforms, kpis, startDate, endDate, devices, bucket) {
+  const p = new URLSearchParams();
+  platforms.forEach((x) => p.append("platform", x));
+  kpis.forEach((k) => p.append("kpi", k));
+  p.append("start", startDate);
+  p.append("end", endDate);
+  if (devices?.length) devices.forEach((d) => p.append("device", d));
+  if (bucket) p.append("bucket", bucket);
+  return p.toString();
+}
+
 export const fetchKPIChartDataBatch = createAsyncThunk(
   "kpi/fetchKPIChartDataBatch",
   async (
-    { selectedPlatform, selectedDevice, selectedKPIs, startDate, endDate, bucket },
+    { selectedPlatform, selectedPlatforms, selectedDevice, selectedKPIs, startDate, endDate, bucket },
     { rejectWithValue }
   ) => {
     try {
-      const params = new URLSearchParams();
-      params.append("platform", selectedPlatform);
-      selectedKPIs.forEach((k) => params.append("kpi", k));
-      params.append("start", startDate);
-      params.append("end", endDate);
-      if (selectedDevice && selectedDevice.length > 0) {
-        for (const d of selectedDevice) params.append("device", d);
+      const platforms = selectedPlatforms || (selectedPlatform ? [selectedPlatform] : []);
+      const mmePlats = platforms.filter((p) => /mme/i.test(p));
+      const pgwPlats = platforms.filter((p) => !/mme/i.test(p));
+
+      let allRows = [];
+
+      if (mmePlats.length > 0 && pgwPlats.length > 0) {
+        // Mixed MME + non-MME: query song song cả hai bảng
+        const [pgwResp, mmeResp] = await Promise.all([
+          snocApi.get(`/fastapi/pgw/kpi-data?${_buildKpiDataParams(pgwPlats, selectedKPIs, startDate, endDate, selectedDevice, bucket)}`),
+          snocApi.get(`/fastapi/mme/kpi-data?${_buildKpiDataParams(mmePlats, selectedKPIs, startDate, endDate, selectedDevice, bucket)}`),
+        ]);
+        allRows = [...(pgwResp.data || []), ...(mmeResp.data || [])];
+      } else {
+        const prefix = mmePlats.length > 0 ? "mme" : "pgw";
+        const resp = await snocApi.get(
+          `/fastapi/${prefix}/kpi-data?${_buildKpiDataParams(platforms, selectedKPIs, startDate, endDate, selectedDevice, bucket)}`
+        );
+        allRows = resp.data || [];
       }
-      if (bucket) params.append("bucket", bucket);
-      const url = `/fastapi/${kpiRouterPrefix(selectedPlatform)}/kpi-data?${params.toString()}`;
-      const response = await snocApi.get(url);
+
       const grouped = {};
-      for (const row of response.data || []) {
+      for (const row of allRows) {
         if (!grouped[row.kpi]) grouped[row.kpi] = [];
         grouped[row.kpi].push(row);
       }

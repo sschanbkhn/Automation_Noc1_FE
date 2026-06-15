@@ -547,6 +547,18 @@ export const fetchNokSeries = createAsyncThunk(
   },
 );
 
+export const fetchLockedDevices = createAsyncThunk(
+  "pscore/fetchLockedDevices",
+  async (_, { rejectWithValue }) => {
+    try {
+      const resp = await snocApi.get("/nornirps/healthcheck/locked-devices/");
+      return Array.isArray(resp.data) ? resp.data : [];
+    } catch (err) {
+      return rejectWithValue(err?.response?.data);
+    }
+  },
+);
+
 /* =========================
  * Slice
  * ========================= */
@@ -597,6 +609,7 @@ const psCoreSlice = createSlice({
     nokSeriesLoadingByKey: {}, // { [storeKey]: boolean }
     nokSeriesStalePlatforms: [], // platforms có WS update mới, chờ re-fetch
     globalLatestItems: [], // <- 🔥 THÊM MỚI: Độc quyền cho Dashboard (không bị ghi đè)
+    lockedDevices: [],     // [{device_name, platform, last_fail_reason, locked_at, fail_count}]
   },
   reducers: {
     wsMergeHourlyItems: (state, action) => {
@@ -894,6 +907,14 @@ const psCoreSlice = createSlice({
       .addCase(fetchLatestHealthcheckView.rejected, (state) => {
         state.loading = false;
         state.lastestitems = [];
+      })
+
+      /* locked devices */
+      .addCase(fetchLockedDevices.fulfilled, (state, action) => {
+        state.lockedDevices = action.payload;
+      })
+      .addCase(fetchLockedDevices.rejected, (state) => {
+        state.lockedDevices = [];
       })
 
       /* system health */

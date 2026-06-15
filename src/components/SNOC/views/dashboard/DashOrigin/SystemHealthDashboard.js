@@ -1,6 +1,6 @@
 // src/components/SNOC/views/dashboard/DashOrigin/SystemHealthDashboard.js
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Badge, Button, Card, Col, Modal, Row, Spinner, Table } from "react-bootstrap";
+import { Badge, Button, Card, Col, Modal, OverlayTrigger, Popover, Row, Spinner, Table } from "react-bootstrap";
 import KPIExplorerCore from "../../forms/kpi/KPIExplorerCore";
 
 import { useDispatch, useSelector } from "react-redux";
@@ -23,6 +23,7 @@ import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
 import {
   fetchHealthcheckSchedules,
   fetchLatestHealthcheckView,
+  fetchLockedDevices,
   fetchNokSeries,
   fetchPlatformGroupSchema,
   fetchSystemStatus,
@@ -756,6 +757,38 @@ const GroupNokChart = ({
 };
 
 // ====== COMPONENT CON: Thẻ Subsystem (Tối ưu Re-render & Flash) ======
+const NodeListPopover = React.forwardRef(
+  ({ nodes, title, colorClass, popoverId, showReason, ...props }, ref) => (
+    <Popover id={popoverId} ref={ref} {...props} style={{ maxWidth: "300px", ...props.style }}>
+      <Popover.Header
+        className={`bg-${colorClass} text-white py-1 px-2`}
+        style={{ fontSize: "0.72rem" }}
+      >
+        {title} ({nodes.length})
+      </Popover.Header>
+      <Popover.Body className="p-1" style={{ maxHeight: "240px", overflowY: "auto" }}>
+        {nodes.length === 0 ? (
+          <span className="text-muted" style={{ fontSize: "0.7rem" }}>Không có node</span>
+        ) : (
+          <ul className="list-unstyled mb-0">
+            {nodes.map((n, i) => (
+              <li key={i} style={{ fontSize: "0.7rem", padding: "2px 4px", borderBottom: "1px solid #f0f0f0" }}>
+                <span className="fw-semibold">{n.host}</span>
+                <span className="text-muted ms-1" style={{ fontSize: "0.65rem" }}>{n.platform}</span>
+                {showReason && n.reason && (
+                  <div className="text-danger" style={{ fontSize: "0.62rem", marginTop: "1px" }}>
+                    {n.reason.length > 80 ? n.reason.slice(0, 80) + "…" : n.reason}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Popover.Body>
+    </Popover>
+  )
+);
+
 const SubsystemChip = React.memo(
   ({
     subsystemLabel,
@@ -921,6 +954,7 @@ const SystemHealth = () => {
 
   // Dòng mới:
   const latestItems = useSelector((s) => s.pscore?.globalLatestItems || []);
+  const lockedDevices = useSelector((s) => s.pscore?.lockedDevices || []);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedSubsystem, setSelectedSubsystem] = useState(null);
   const [hiddenGroups, setHiddenGroups] = useState(() => new Set());
@@ -960,6 +994,7 @@ const SystemHealth = () => {
     dispatch(fetchPlatformGroupSchema());
     dispatch(fetchSystemStatus());
     dispatch(fetchHealthcheckSchedules());
+    dispatch(fetchLockedDevices());
     dispatch(
       fetchLatestHealthcheckView({
         page_size: 5000,
@@ -1005,6 +1040,14 @@ const SystemHealth = () => {
     return set;
   }, [latestItems]);
 
+  const lockedMap = useMemo(() => {
+    const m = {};
+    (lockedDevices || []).forEach((d) => {
+      if (d.device_name) m[d.device_name.trim().toLowerCase()] = d;
+    });
+    return m;
+  }, [lockedDevices]);
+
   // 🔥 4. MEMO CALCULATIONS (ĐÃ FIX: LẤY SCHEDULE LÀM GỐC)
   const calculatedSystemStatus = useMemo(() => {
     const safeTasks = Array.isArray(scheduledTasks) ? scheduledTasks : [];
@@ -1026,6 +1069,11 @@ const SystemHealth = () => {
       newStatus[gName].nok_count = 0;
       newStatus[gName].excluded_count = 0;
       newStatus[gName].total_devices = 0;
+      newStatus[gName].ok_nodes = [];
+      newStatus[gName].nok_nodes = [];
+      newStatus[gName].exc_nodes = [];
+      newStatus[gName].locked_count = 0;
+      newStatus[gName].locked_nodes = [];
 
       if (
         newStatus[gName].children &&
@@ -1139,18 +1187,33 @@ const SystemHealth = () => {
             const hostKey = nodeName.trim().toLowerCase();
             const record = itemsMap[hostKey];
 
+            const nodeEntry = { host: nodeName.trim(), platform: task.platform.trim() };
+
             if (record) {
               if (record.excluded === true) {
                 subObj.excluded_count += 1;
                 groupObj.excluded_count += 1;
+                groupObj.exc_nodes.push(nodeEntry);
               } else if (record.status === "OK" || record.status === "Normal") {
                 subObj.ok_count += 1;
                 groupObj.ok_count += 1;
+                groupObj.ok_nodes.push(nodeEntry);
               } else {
                 // Các trạng thái NOK, Error, Warning, Timeout...
                 subObj.nok_count += 1;
                 groupObj.nok_count += 1;
+                groupObj.nok_nodes.push(nodeEntry);
               }
+            }
+
+            // Kiểm tra auth-lock (độc lập với healthcheck status)
+            const lockRecord = lockedMap[hostKey];
+            if (lockRecord) {
+              groupObj.locked_count += 1;
+              groupObj.locked_nodes.push({
+                ...nodeEntry,
+                reason: lockRecord.last_fail_reason || "",
+              });
             }
             // (Nếu không có record -> Node này được lên lịch nhưng chưa chạy bao giờ -> Kệ, chỉ tính vào Total)
           });
@@ -1198,7 +1261,7 @@ const SystemHealth = () => {
     });
 
     return newStatus;
-  }, [scheduledTasks, latestItems, systemStatus, platformSchema, prefs.platforms, prefs.sub]);
+  }, [scheduledTasks, latestItems, systemStatus, platformSchema, prefs.platforms, prefs.sub, lockedMap]);
 
   const displayData = calculatedSystemStatus;
 
@@ -1866,36 +1929,112 @@ const SystemHealth = () => {
                             style={{ fontSize: "0.75rem" }}
                           >
                             {/* NOK */}
-                            <span
-                              className={
-                                groupData.nok_count > 0
-                                  ? "text-danger fw-bold"
-                                  : "text-secondary"
-                              }
-                            >
-                              NOK: {groupData.nok_count || 0}
-                            </span>
+                            {(groupData.nok_count || 0) > 0 ? (
+                              <OverlayTrigger
+                                trigger="click"
+                                placement="bottom"
+                                rootClose
+                                overlay={
+                                  <NodeListPopover
+                                    popoverId={`nok-${groupName}`}
+                                    nodes={groupData.nok_nodes || []}
+                                    title="NOK"
+                                    colorClass="danger"
+                                  />
+                                }
+                              >
+                                <span
+                                  className="text-danger fw-bold"
+                                  style={{ cursor: "pointer", textDecoration: "underline dotted" }}
+                                  title="Click để xem danh sách node NOK"
+                                >
+                                  NOK: {groupData.nok_count}
+                                </span>
+                              </OverlayTrigger>
+                            ) : (
+                              <span className="text-secondary">NOK: 0</span>
+                            )}
+
                             {/* OK */}
-                            <span
-                              className={
-                                groupData.ok_count > 0
-                                  ? "text-success fw-bold"
-                                  : "text-secondary"
-                              }
-                            >
-                              OK: {groupData.ok_count || 0}
-                            </span>
-                            {/* 🔥 EXCLUDED */}
-                            <span
-                              className={
-                                groupData.excluded_count > 0
-                                  ? "text-warning fw-bold"
-                                  : "text-secondary"
-                              }
-                              title="Thiết bị được bỏ qua cảnh báo"
-                            >
-                              Exc: {groupData.excluded_count || 0}
-                            </span>
+                            {(groupData.ok_count || 0) > 0 ? (
+                              <OverlayTrigger
+                                trigger="click"
+                                placement="bottom"
+                                rootClose
+                                overlay={
+                                  <NodeListPopover
+                                    popoverId={`ok-${groupName}`}
+                                    nodes={groupData.ok_nodes || []}
+                                    title="OK"
+                                    colorClass="success"
+                                  />
+                                }
+                              >
+                                <span
+                                  className="text-success fw-bold"
+                                  style={{ cursor: "pointer", textDecoration: "underline dotted" }}
+                                  title="Click để xem danh sách node OK"
+                                >
+                                  OK: {groupData.ok_count}
+                                </span>
+                              </OverlayTrigger>
+                            ) : (
+                              <span className="text-secondary">OK: 0</span>
+                            )}
+
+                            {/* EXC */}
+                            {(groupData.excluded_count || 0) > 0 ? (
+                              <OverlayTrigger
+                                trigger="click"
+                                placement="bottom"
+                                rootClose
+                                overlay={
+                                  <NodeListPopover
+                                    popoverId={`exc-${groupName}`}
+                                    nodes={groupData.exc_nodes || []}
+                                    title="Excluded"
+                                    colorClass="warning"
+                                  />
+                                }
+                              >
+                                <span
+                                  className="text-warning fw-bold"
+                                  style={{ cursor: "pointer", textDecoration: "underline dotted" }}
+                                  title="Click để xem danh sách node bị Exclude"
+                                >
+                                  Exc: {groupData.excluded_count}
+                                </span>
+                              </OverlayTrigger>
+                            ) : (
+                              <span className="text-secondary">Exc: 0</span>
+                            )}
+
+                            {/* LOCKED */}
+                            {(groupData.locked_count || 0) > 0 && (
+                              <OverlayTrigger
+                                trigger="click"
+                                placement="bottom"
+                                rootClose
+                                overlay={
+                                  <NodeListPopover
+                                    popoverId={`lock-${groupName}`}
+                                    nodes={groupData.locked_nodes || []}
+                                    title="Locked"
+                                    colorClass="dark"
+                                    showReason
+                                  />
+                                }
+                              >
+                                <span
+                                  className="fw-bold"
+                                  style={{ color: "#6f42c1", cursor: "pointer", textDecoration: "underline dotted" }}
+                                  title="Click để xem danh sách node bị khóa SSH"
+                                >
+                                  🔒 {groupData.locked_count}
+                                </span>
+                              </OverlayTrigger>
+                            )}
+
                             {/* TOTAL */}
                             <span className="text-dark fw-bold border-start border-2 ps-2">
                               Total: {groupData.total_devices || 0}

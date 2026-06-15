@@ -1,17 +1,18 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Button, Card, Col, Form, Modal, Row, Spinner } from "react-bootstrap";
 import { addPin, loadPins, removePin } from "../../../redux/KPI/pinnedKpisSlice";
-// (tuỳ dự án) import KPIExplorerCore nếu muốn render đồ thị:
+import { fetchKPIChartDataBatch } from "../../../redux/KPI/kpiSlice";
+import KPIChartGrid from "../../forms/kpi/KPIChartGrid";
 import KPIExplorerCore from "../../forms/kpi/KPIExplorerCore";
 
 export default function PinnedKPISection({
   group,
-  subsystem,           // optional: nếu có → đây là Subsystem detail; nếu không → Group page
-  platform = null,     // optional: lọc theo platform cụ thể (dùng trong KPIDashboard)
-  scopes = "all",       // "subsystem,platform,device" | "platform,device" | "all"
+  subsystem,
+  platform = null,
+  scopes = "all",
   title = "Pinned KPIs",
-  showAddButton = true, // false khi context đã có KPIExplorerCore để thêm pin (vd: KPIDashboard)
+  showAddButton = true,
 }) {
   const dispatch = useDispatch();
   const { items, loading } = useSelector(s => s.pinned);
@@ -29,7 +30,7 @@ export default function PinnedKPISection({
   const [form, setForm] = useState({
     kpi_key: "",
     title: "",
-    subsystem: "",     // dùng khi đang ở Group page (không có prop subsystem)
+    subsystem: "",
     platform: "",
     device: "",
     chart_config: {},
