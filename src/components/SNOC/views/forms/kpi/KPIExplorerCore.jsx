@@ -113,7 +113,7 @@ const KPIExplorerCore = ({
 
   // ====== Chart controls
   const [chartMode, setChartMode] = useState("absolute");
-  const [viewMode, setViewMode] = useState("per-kpi-row");
+  const [viewMode, setViewMode] = useState("per-kpi");
 
   // ====== Range / bucket controls
   const [quickRange, setQuickRange] = useState(initialQuickRange);

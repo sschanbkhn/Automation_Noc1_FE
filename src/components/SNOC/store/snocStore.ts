@@ -2,6 +2,7 @@
 import { configureStore } from "@reduxjs/toolkit";
 
 import { fetchKpiPreferences } from "../redux/KPI/kpiPinnedSlice";
+import { fetchKpiDashboardState } from "../redux/KPI/kpiDashboardStateSlice";
 import alertReducer from "../redux/Alert/alertSlice";
 import dnsReducer from "../redux/Dns/dnsSlice";
 import psCoreReducer from "../redux/Healthcheck/healthcheckSlice";
@@ -92,6 +93,7 @@ if (bootToken) {
     })
   );
   snocStore.dispatch(fetchKpiPreferences());
+  snocStore.dispatch(fetchKpiDashboardState());
 }
 
 export type RootState = ReturnType<typeof snocStore.getState>;

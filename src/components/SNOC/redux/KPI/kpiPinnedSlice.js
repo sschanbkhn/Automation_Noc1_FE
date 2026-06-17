@@ -7,6 +7,7 @@ import {
   deleteKpiPreferenceApi,
 } from "../../api/kpiPreferences";
 import { fetchKPIChartDataBatch } from "./kpiSlice";
+import { showTemporaryAlert } from "../Alert/alertSlice";
 
 // ─── Legacy localStorage keys (dùng 1 lần để migrate) ────────────────────────
 const LS_PIN_KEY = (uid) => `pinned_kpis_by_platform_${uid || "anon"}`;
@@ -264,33 +265,64 @@ const kpiPinnedSlice = createSlice({
 
 export const { setPinnedKPIs, togglePinnedKPI } = kpiPinnedSlice.actions;
 
-// Thunks tiện lợi: cập nhật state ngay (optimistic) rồi lưu lên backend
-export const setPinnedKPIsAndSave = (payload) => (dispatch, getState) => {
-  dispatch(setPinnedKPIs(payload));
+// Thunks tiện lợi: cập nhật state ngay (optimistic) rồi lưu lên backend.
+// Nếu save thất bại (network/RBAC/...), ROLLBACK lại state cũ + báo lỗi —
+// tránh tình trạng UI báo "đã bỏ ghim" nhưng backend chưa nhận được, nên
+// refresh lại thấy KPI cũ quay về (silent failure, trước đây không bắt .rejected).
+export const setPinnedKPIsAndSave = (payload) => async (dispatch, getState) => {
   const { platform, kpis, devices } = payload || {};
   if (!platform) return;
+  const prevState = getState().kpiPinned;
+  const prevKpis = prevState.pinnedByPlatform[platform] ?? [];
+  const prevDevices = prevState.savedDevicesByPlatform[platform] ?? [];
+
+  dispatch(setPinnedKPIs(payload));
   const state = getState().kpiPinned;
-  dispatch(
+  const result = await dispatch(
     saveKpiPreference({
       platform,
       kpis: kpis ?? state.pinnedByPlatform[platform] ?? [],
       devices: devices ?? state.savedDevicesByPlatform[platform] ?? [],
     })
   );
+  if (saveKpiPreference.rejected.match(result)) {
+    dispatch(setPinnedKPIs({ platform, kpis: prevKpis, devices: prevDevices }));
+    dispatch(
+      showTemporaryAlert({
+        type: "danger",
+        message: "Lưu KPI ghim thất bại, vui lòng thử lại.",
+        timeout: 3000,
+      })
+    );
+  }
 };
 
-export const togglePinnedKPIAndSave = (payload) => (dispatch, getState) => {
-  dispatch(togglePinnedKPI(payload));
+export const togglePinnedKPIAndSave = (payload) => async (dispatch, getState) => {
   const { platform } = payload || {};
   if (!platform) return;
+  const prevKpis = getState().kpiPinned.pinnedByPlatform[platform] ?? [];
+
+  dispatch(togglePinnedKPI(payload));
   const state = getState().kpiPinned;
-  dispatch(
+  const result = await dispatch(
     saveKpiPreference({
       platform,
       kpis: state.pinnedByPlatform[platform] ?? [],
       devices: state.savedDevicesByPlatform[platform] ?? [],
     })
   );
+  if (saveKpiPreference.rejected.match(result)) {
+    // Rollback đúng danh sách trước khi toggle (không toggle lại — tránh lệch nếu có
+    // thay đổi khác xảy ra song song).
+    dispatch(setPinnedKPIs({ platform, kpis: prevKpis }));
+    dispatch(
+      showTemporaryAlert({
+        type: "danger",
+        message: "Bỏ ghim/Ghim KPI thất bại, vui lòng thử lại.",
+        timeout: 3000,
+      })
+    );
+  }
 };
 
 export default kpiPinnedSlice.reducer;

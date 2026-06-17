@@ -20,27 +20,15 @@ import KPIExplorerCore, {
   BUCKET_OPTIONS,
   getEffectiveBucketLabel,
 } from "./KPIExplorerCore";
+import MultiPlatformKPITab from "./MultiPlatformKPITab";
 
 const KPI_GROUP = "kpi";
+const MULTI_TAB_KEY = "__multi_pgw__";
 
 // ─── PlatformBar ─────────────────────────────────────────────────────────────
-function PlatformBar({ filteredTree, openTabs, onOpenTab }) {
+function PlatformBar({ filteredTree, openTabs, onOpenTab, onOpenMultiTab }) {
   const groups = Object.entries(filteredTree);
-  if (groups.length === 0) {
-    return (
-      <div
-        style={{
-          borderBottom: "1px solid #dee2e6",
-          background: "#f8f9fa",
-          padding: "8px 16px",
-          fontSize: "0.8rem",
-          color: "#6c757d",
-        }}
-      >
-        Không có platform KPI nào.
-      </div>
-    );
-  }
+  const isMultiOpen = openTabs.some((t) => t.platform === MULTI_TAB_KEY);
   return (
     <div
       style={{
@@ -50,37 +38,54 @@ function PlatformBar({ filteredTree, openTabs, onOpenTab }) {
         padding: "8px 16px",
       }}
     >
-      {groups.map(([group, subsystems]) => (
-        <div key={group} className="d-flex align-items-center flex-wrap gap-1 mb-1">
-          <span
-            style={{
-              fontSize: "0.72rem",
-              color: "#6c757d",
-              fontWeight: 600,
-              marginRight: 4,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {group}:
-          </span>
-          {Object.entries(subsystems).flatMap(([sub, platforms]) =>
-            platforms.map((platform) => {
-              const isOpen = openTabs.some((t) => t.platform === platform);
-              return (
-                <Button
-                  key={platform}
-                  size="sm"
-                  variant={isOpen ? "primary" : "outline-secondary"}
-                  onClick={() => onOpenTab({ group, subsystem: sub, platform })}
-                  style={{ fontSize: "0.75rem", padding: "2px 8px", whiteSpace: "nowrap" }}
-                >
-                  {platform}
-                </Button>
-              );
-            })
-          )}
-        </div>
-      ))}
+      {groups.length === 0 ? (
+        <div style={{ fontSize: "0.8rem", color: "#6c757d" }}>Không có platform KPI nào.</div>
+      ) : (
+        groups.map(([group, subsystems]) => (
+          <div key={group} className="d-flex align-items-center flex-wrap gap-1 mb-1">
+            <span
+              style={{
+                fontSize: "0.72rem",
+                color: "#6c757d",
+                fontWeight: 600,
+                marginRight: 4,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {group}:
+            </span>
+            {Object.entries(subsystems).flatMap(([sub, platforms]) =>
+              platforms.map((platform) => {
+                const isOpen = openTabs.some((t) => t.platform === platform);
+                return (
+                  <Button
+                    key={platform}
+                    size="sm"
+                    variant={isOpen ? "primary" : "outline-secondary"}
+                    onClick={() => onOpenTab({ group, subsystem: sub, platform })}
+                    style={{ fontSize: "0.75rem", padding: "2px 8px", whiteSpace: "nowrap" }}
+                  >
+                    {platform}
+                  </Button>
+                );
+              })
+            )}
+          </div>
+        ))
+      )}
+      <div className="d-flex align-items-center gap-1 mt-1">
+        <span style={{ fontSize: "0.72rem", color: "#6c757d", fontWeight: 600, marginRight: 4 }}>
+          Multi:
+        </span>
+        <Button
+          size="sm"
+          variant={isMultiOpen ? "success" : "outline-success"}
+          onClick={onOpenMultiTab}
+          style={{ fontSize: "0.75rem", padding: "2px 8px", whiteSpace: "nowrap" }}
+        >
+          📊 Multi-PGW
+        </Button>
+      </div>
     </div>
   );
 }
@@ -119,7 +124,7 @@ function TabBar({ openTabs, activeTab, onActivate, onClose }) {
                 userSelect: "none",
               }}
             >
-              {tab.platform}
+              {tab.isMulti ? "Multi-PGW" : tab.platform}
               <span
                 onClick={(e) => { e.stopPropagation(); onClose(tab.platform); }}
                 style={{ marginLeft: 6, fontSize: "0.7rem", color: "#adb5bd", cursor: "pointer", lineHeight: 1 }}
@@ -249,7 +254,7 @@ export default function KPIDashboard() {
 
   // Auto-init/restore khi chuyển tab
   useEffect(() => {
-    if (!activeTab) return;
+    if (!activeTab || activeTab === MULTI_TAB_KEY) return;
     let cancelled = false;
 
     async function run() {
@@ -302,7 +307,7 @@ export default function KPIDashboard() {
               value: d.name,
             })),
             chartMode: "absolute",
-            viewMode: "per-kpi-row",
+            viewMode: "per-kpi",
           },
         }));
       }
@@ -314,7 +319,7 @@ export default function KPIDashboard() {
 
   // Auto-refetch khi range/bucket thay đổi
   useEffect(() => {
-    if (!activeTab || quickRange === "custom") return;
+    if (!activeTab || activeTab === MULTI_TAB_KEY || quickRange === "custom") return;
     const saved = tabChartParams[activeTab];
     if (!saved?.selectedKPIs?.length) return;
 
@@ -369,6 +374,13 @@ export default function KPIDashboard() {
     setActiveTab(platform);
   };
 
+  const handleOpenMultiTab = () => {
+    if (!openTabs.find((t) => t.platform === MULTI_TAB_KEY)) {
+      setOpenTabs((prev) => [...prev, { isMulti: true, platform: MULTI_TAB_KEY }]);
+    }
+    setActiveTab(MULTI_TAB_KEY);
+  };
+
   const handleCloseTab = (platform) => {
     const remaining = openTabs.filter((t) => t.platform !== platform);
     setOpenTabs(remaining);
@@ -410,7 +422,7 @@ export default function KPIDashboard() {
       <WebSocketStatusBanner />
       <Alert />
       <div className="d-flex flex-column" style={{ height: "calc(100vh - 56px)" }}>
-        <PlatformBar filteredTree={filteredTree} openTabs={openTabs} onOpenTab={handleOpenTab} />
+        <PlatformBar filteredTree={filteredTree} openTabs={openTabs} onOpenTab={handleOpenTab} onOpenMultiTab={handleOpenMultiTab} />
         <TabBar
           openTabs={openTabs}
           activeTab={activeTab}
@@ -423,6 +435,8 @@ export default function KPIDashboard() {
             <div className="text-muted text-center mt-5">
               Click platform bên trên để xem chart KPI đã ghim.
             </div>
+          ) : activeTabData?.isMulti ? (
+            <MultiPlatformKPITab key={MULTI_TAB_KEY} />
           ) : (
             <>
               <nav>
@@ -552,6 +566,7 @@ export default function KPIDashboard() {
               )}
             </>
           )}
+
         </div>
       </div>
     </>

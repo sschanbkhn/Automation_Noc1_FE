@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Button, Card, Col, Row } from "react-bootstrap";
+import { Button, Col, Row } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import {
   CartesianGrid,
@@ -25,12 +25,35 @@ export function formatTimeLocal(ts, withDate = false) {
   return `${YY}/${mo}/${DD} ${HH}:${MM}:${SS}`;
 }
 
+// Tròn 2 số sau dấu "." cho giá trị hiển thị (tooltip/axis) — đặc biệt cần khi bucket
+// aggregation (avg theo 15m/1h) trả về số có nhiều chữ số lẻ.
+export function roundDisplayValue(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return value;
+  return Math.round(n * 100) / 100;
+}
+
+// Nút ghim/bỏ ghim KPI — chữ rõ ràng (thay icon 📌 mờ/đậm khó nhận biết là button).
+function PinToggleButton({ pinned, onClick }) {
+  return (
+    <Button
+      size="sm"
+      variant={pinned ? "outline-danger" : "outline-secondary"}
+      onClick={onClick}
+      style={{ padding: "0px 6px", fontSize: "0.7rem", lineHeight: 1.5, flexShrink: 0 }}
+      title={pinned ? "Bỏ ghim KPI này" : "Ghim KPI này"}
+    >
+      {pinned ? "✕ Bỏ ghim" : "📌 Ghim"}
+    </Button>
+  );
+}
+
 export const CHART_COLORS = [
   "#2ca02c", "#1f77b4", "#d62728", "#ff7f0e", "#9467bd",
   "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
 ];
 
-function getDeltaLineData(deviceData) {
+export function getDeltaLineData(deviceData) {
   const delta = {};
   Object.entries(deviceData).forEach(([dev, arr]) => {
     let prev = null;
@@ -108,7 +131,7 @@ export default function KPIChartGrid({
 
   const tooltipFormatter = (value, name) => {
     const label = hasMultiplePlatforms ? `${name} (${devicePlatformMap[name] || ""})` : name;
-    return [value, label];
+    return [roundDisplayValue(value), label];
   };
 
   // ── Legend per-kpi ─────────────────────────────────────────────
@@ -191,7 +214,7 @@ export default function KPIChartGrid({
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis type="number" dataKey="ts" scale="time" domain={["dataMin", "dataMax"]}
                 tickFormatter={(ts) => formatTimeLocal(ts)} angle={-45} textAnchor="end" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 10 }} width={42} />
+              <YAxis tick={{ fontSize: 10 }} width={42} tickFormatter={roundDisplayValue} />
               <Tooltip labelFormatter={(ts) => `⏱ ${formatTimeLocal(ts, true)} (ICT)`}
                 formatter={tooltipFormatter} />
               {Object.entries(displayData).map(([device, data], index) =>
@@ -211,79 +234,64 @@ export default function KPIChartGrid({
   // ── ALL-IN-ONE ──────────────────────────────────────────────────
   if (viewMode === "all-in-one") {
     return (
-      <Row className="mb-4">
-        <Col md={12}>
-          <Card>
-            <Card.Body>
-              <div className="mb-2 d-flex flex-wrap gap-2">
-                {selectedKPIs.map((k) => (
-                  <span key={k.value} className="badge text-bg-light">
-                    {k.label}{" "}
-                    {!hasMultiplePlatforms && (
-                      <span role="button"
-                        onClick={() => {
-                          dispatch(togglePinnedKPIAndSave({ platform: selectedPlatform, kpi: k.value }));
-                        }}
-                        style={{ marginLeft: 6, cursor: "pointer", opacity: pinnedSet.has(k.value) ? 1 : 0.4 }}
-                        title={pinnedSet.has(k.value) ? "Bỏ ghim KPI này" : "Ghim KPI này"}
-                      >📌</span>
-                    )}
-                    <span role="button" onClick={() => onRemoveKPI?.(k.value)}
-                      style={{ marginLeft: 6, cursor: "pointer" }} title="Bỏ KPI này">✕</span>
-                  </span>
-                ))}
-              </div>
-
-              {combinedSeries.length > 0 ? (
-                <ResponsiveContainer width="100%" height={660}>
-                  <LineChart margin={{ top: 20, right: 20, bottom: 50 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" dataKey="ts" scale="time" domain={["dataMin", "dataMax"]}
-                      tickFormatter={(ts) => formatTimeLocal(ts)} angle={-45} textAnchor="end" />
-                    <YAxis />
-                    <Tooltip labelFormatter={(ts) => `⏱ ${formatTimeLocal(ts, true)} (ICT)`}
-                      formatter={tooltipFormatter} />
-                    {combinedSeries.map((s, idx) =>
-                      visibleSeriesKeys.includes(s.key) ? (
-                        <Line key={s.key} type="monotone" data={s.data} dataKey="value" name={s.name}
-                          stroke={CHART_COLORS[idx % CHART_COLORS.length]} dot={{ r: 1 }} strokeWidth={2}
-                          isAnimationActive={false} />
-                      ) : null
-                    )}
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="text-muted">Chưa có dữ liệu để vẽ biểu đồ.</div>
+      <div className="mb-4">
+        <div className="mb-2 d-flex flex-wrap gap-2">
+          {selectedKPIs.map((k) => (
+            <span key={k.value} className="badge text-bg-light d-inline-flex align-items-center gap-1">
+              {k.label}
+              {!hasMultiplePlatforms && (
+                <PinToggleButton
+                  pinned={pinnedSet.has(k.value)}
+                  onClick={() => dispatch(togglePinnedKPIAndSave({ platform: selectedPlatform, kpi: k.value }))}
+                />
               )}
-
-              <div className="d-flex flex-wrap align-items-center gap-1 mt-3" style={{ fontSize: "12px" }}>
-                <Button size="sm" variant="outline-secondary" onClick={toggleAllSeries}
-                  title={showAllCombined ? "Ẩn tất cả" : "Hiện tất cả"}
-                  style={{ padding: "2px 6px", flexShrink: 0 }}>👁️</Button>
-                {combinedSeries.map((s, idx) => {
-                  const visible = visibleSeriesKeys.includes(s.key);
-                  const color = CHART_COLORS[idx % CHART_COLORS.length];
-                  return (
-                    <span key={s.key} onClick={() => toggleSeriesVisibility(s.key)}
-                      title={s.name}
-                      style={{
-                        cursor: "pointer",
-                        padding: "2px 8px",
-                        borderRadius: "12px",
-                        border: `1px solid ${color}`,
-                        color: visible ? "#fff" : "#999",
-                        background: visible ? color : "transparent",
-                        whiteSpace: "nowrap",
-                        userSelect: "none",
-                        transition: "all 0.15s",
-                      }}>{s.name}</span>
-                  );
-                })}
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+              <span role="button" onClick={() => onRemoveKPI?.(k.value)}
+                style={{ marginLeft: 2, cursor: "pointer" }} title="Bỏ KPI này">✕</span>
+            </span>
+          ))}
+        </div>
+        {combinedSeries.length > 0 ? (
+          <ResponsiveContainer width="100%" height={660}>
+            <LineChart margin={{ top: 20, right: 20, bottom: 50 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis type="number" dataKey="ts" scale="time" domain={["dataMin", "dataMax"]}
+                tickFormatter={(ts) => formatTimeLocal(ts)} angle={-45} textAnchor="end" />
+              <YAxis tickFormatter={roundDisplayValue} />
+              <Tooltip labelFormatter={(ts) => `⏱ ${formatTimeLocal(ts, true)} (ICT)`}
+                formatter={tooltipFormatter} />
+              {combinedSeries.map((s, idx) =>
+                visibleSeriesKeys.includes(s.key) ? (
+                  <Line key={s.key} type="monotone" data={s.data} dataKey="value" name={s.name}
+                    stroke={CHART_COLORS[idx % CHART_COLORS.length]} dot={{ r: 1 }} strokeWidth={2}
+                    isAnimationActive={false} />
+                ) : null
+              )}
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="text-muted">Chưa có dữ liệu để vẽ biểu đồ.</div>
+        )}
+        <div className="d-flex flex-wrap align-items-center gap-1 mt-2" style={{ fontSize: "12px" }}>
+          <Button size="sm" variant="outline-secondary" onClick={toggleAllSeries}
+            title={showAllCombined ? "Ẩn tất cả" : "Hiện tất cả"}
+            style={{ padding: "2px 6px", flexShrink: 0 }}>👁️</Button>
+          {combinedSeries.map((s, idx) => {
+            const visible = visibleSeriesKeys.includes(s.key);
+            const color = CHART_COLORS[idx % CHART_COLORS.length];
+            return (
+              <span key={s.key} onClick={() => toggleSeriesVisibility(s.key)}
+                title={s.name}
+                style={{
+                  cursor: "pointer", padding: "2px 8px", borderRadius: "12px",
+                  border: `1px solid ${color}`,
+                  color: visible ? "#fff" : "#999",
+                  background: visible ? color : "transparent",
+                  whiteSpace: "nowrap", userSelect: "none", transition: "all 0.15s",
+                }}>{s.name}</span>
+            );
+          })}
+        </div>
+      </div>
     );
   }
 
@@ -296,61 +304,55 @@ export default function KPIChartGrid({
           const deviceData = groupedChartDataByKPIAndDevice[kpi] || {};
           const displayData = chartMode === "delta" ? getDeltaLineData(deviceData) : deviceData;
           return (
-            <Col md={12} key={kpi} className="mb-3">
-              <Card className="position-relative">
-                <Button variant="light" size="sm" onClick={() => onRemoveKPI?.(kpi)}
-                  style={{ position: "absolute", top: 8, right: 8, lineHeight: "1", border: "1px solid #ddd" }}
-                  title="Đóng chart & bỏ chọn KPI này">✕</Button>
-                <Card.Body>
-                  <div className="mb-2 d-flex align-items-center gap-2">
-                    <h6 className="mb-0">KPI: <i>{kpi}</i></h6>
-                    {!hasMultiplePlatforms && (
-                      <span role="button"
-                        onClick={() => dispatch(togglePinnedKPIAndSave({ platform: selectedPlatform, kpi }))}
-                        style={{ cursor: "pointer", opacity: pinnedSet.has(kpi) ? 1 : 0.4, fontSize: "1rem" }}
-                        title={pinnedSet.has(kpi) ? "Bỏ ghim KPI này" : "Ghim KPI này"}
-                      >📌</span>
-                    )}
-                  </div>
-                  <ResponsiveContainer width="100%" height={260}>
-                    <LineChart margin={{ top: 10, right: 20, bottom: 50, left: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" dataKey="ts" scale="time" domain={["dataMin", "dataMax"]}
-                        tickFormatter={(ts) => formatTimeLocal(ts)} angle={-45} textAnchor="end" />
-                      <YAxis />
-                      <Tooltip labelFormatter={(ts) => `⏱ ${formatTimeLocal(ts, true)} (ICT)`}
-                        formatter={tooltipFormatter} />
-                      {Object.entries(displayData).map(([device, data], index) =>
-                        visibleDevices.includes(device) ? (
-                          <Line key={device} type="monotone" data={data} dataKey="value" name={device}
-                            stroke={CHART_COLORS[index % CHART_COLORS.length]} dot={{ r: 1 }} strokeWidth={2}
-                            isAnimationActive={false} />
-                        ) : null
-                      )}
-                    </LineChart>
-                  </ResponsiveContainer>
-                  <div className="d-flex flex-wrap align-items-center gap-1 mt-2" style={{ fontSize: "11px" }}>
-                    <Button size="sm" variant="outline-secondary" onClick={toggleAllDevices}
-                      title={showAll ? "Ẩn tất cả" : "Hiện tất cả"}
-                      style={{ padding: "2px 6px", flexShrink: 0 }}>👁️</Button>
-                    {Object.keys(deviceData).map((device, index) => {
-                      const isVisible = visibleDevices.includes(device);
-                      const color = CHART_COLORS[index % CHART_COLORS.length];
-                      return (
-                        <span key={device} onClick={() => toggleDeviceVisibility(device)}
-                          title={device}
-                          style={{
-                            cursor: "pointer", padding: "2px 8px", borderRadius: "12px",
-                            border: `1px solid ${color}`,
-                            color: isVisible ? "#fff" : "#999",
-                            background: isVisible ? color : "transparent",
-                            whiteSpace: "nowrap", userSelect: "none", transition: "all 0.15s",
-                          }}>{device}</span>
-                      );
-                    })}
-                  </div>
-                </Card.Body>
-              </Card>
+            <Col md={12} key={kpi} className="mb-3" style={{ borderBottom: "1px solid #f0f0f0", paddingBottom: "0.5rem" }}>
+              <div className="mb-1 d-flex align-items-center gap-2" style={{ fontSize: "0.82rem", fontWeight: 600, color: "#495057" }}>
+                <span>{kpi}</span>
+                {!hasMultiplePlatforms && (
+                  <PinToggleButton
+                    pinned={pinnedSet.has(kpi)}
+                    onClick={() => dispatch(togglePinnedKPIAndSave({ platform: selectedPlatform, kpi }))}
+                  />
+                )}
+                <span role="button" onClick={() => onRemoveKPI?.(kpi)}
+                  style={{ cursor: "pointer", color: "#999" }} title="Đóng chart & bỏ chọn KPI này">✕</span>
+              </div>
+              <ResponsiveContainer width="100%" height={260}>
+                <LineChart margin={{ top: 10, right: 20, bottom: 50, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" dataKey="ts" scale="time" domain={["dataMin", "dataMax"]}
+                    tickFormatter={(ts) => formatTimeLocal(ts)} angle={-45} textAnchor="end" />
+                  <YAxis tickFormatter={roundDisplayValue} />
+                  <Tooltip labelFormatter={(ts) => `⏱ ${formatTimeLocal(ts, true)} (ICT)`}
+                    formatter={tooltipFormatter} />
+                  {Object.entries(displayData).map(([device, data], index) =>
+                    visibleDevices.includes(device) ? (
+                      <Line key={device} type="monotone" data={data} dataKey="value" name={device}
+                        stroke={CHART_COLORS[index % CHART_COLORS.length]} dot={{ r: 1 }} strokeWidth={2}
+                        isAnimationActive={false} />
+                    ) : null
+                  )}
+                </LineChart>
+              </ResponsiveContainer>
+              <div className="d-flex flex-wrap align-items-center gap-1 mt-1" style={{ fontSize: "11px" }}>
+                <Button size="sm" variant="outline-secondary" onClick={toggleAllDevices}
+                  title={showAll ? "Ẩn tất cả" : "Hiện tất cả"}
+                  style={{ padding: "2px 6px", flexShrink: 0 }}>👁️</Button>
+                {Object.keys(deviceData).map((device, index) => {
+                  const isVisible = visibleDevices.includes(device);
+                  const color = CHART_COLORS[index % CHART_COLORS.length];
+                  return (
+                    <span key={device} onClick={() => toggleDeviceVisibility(device)}
+                      title={device}
+                      style={{
+                        cursor: "pointer", padding: "2px 8px", borderRadius: "12px",
+                        border: `1px solid ${color}`,
+                        color: isVisible ? "#fff" : "#999",
+                        background: isVisible ? color : "transparent",
+                        whiteSpace: "nowrap", userSelect: "none", transition: "all 0.15s",
+                      }}>{device}</span>
+                  );
+                })}
+              </div>
             </Col>
           );
         })}
@@ -358,36 +360,47 @@ export default function KPIChartGrid({
     );
   }
 
-  // ── PER-KPI (default, 3 cột) ───────────────────────────────────
+  // ── PER-KPI (lưới tối đa 3 cột — CSS Grid để luôn đúng N cột bằng nhau, không bị flex-basis "co" về 1 cột) ──
+  // Số cột co theo số KPI thực tế (1 KPI -> full width, 2 KPI -> 2 cột, ≥3 KPI -> 3 cột rồi wrap xuống hàng tiếp theo)
+  // — tránh trường hợp chart chỉ có 1 KPI bị nhét vào 1/3 màn hình, để trống 2 cột còn lại.
+  const PER_KPI_COLS = Math.max(1, Math.min(3, selectedKPIs.length));
   return (
-    <Row>
-      {selectedKPIs.map((kpiObj) => {
-        const kpi = kpiObj.value;
-        const deviceData = groupedChartDataByKPIAndDevice[kpi] || {};
-        const displayData = chartMode === "delta" ? getDeltaLineData(deviceData) : deviceData;
-        return (
-          <Col md={4} key={kpi} className="mb-4">
-            <Card className="position-relative">
-              <Button variant="light" size="sm" onClick={() => onRemoveKPI?.(kpi)}
-                style={{ position: "absolute", top: 8, right: 8, lineHeight: "1", border: "1px solid #ddd" }}
-                title="Đóng chart & bỏ chọn KPI này">✕</Button>
-              <Card.Body>
-                <div className="mb-2 d-flex align-items-center gap-2">
-                  <h6 className="mb-0">KPI: <i>{kpi}</i></h6>
+    <div style={{ display: "grid", gridTemplateColumns: `repeat(${PER_KPI_COLS}, minmax(0, 1fr))` }}>
+          {selectedKPIs.map((kpiObj, idx) => {
+            const kpi = kpiObj.value;
+            const deviceData = groupedChartDataByKPIAndDevice[kpi] || {};
+            const displayData = chartMode === "delta" ? getDeltaLineData(deviceData) : deviceData;
+            const col = idx % PER_KPI_COLS;
+            const row = Math.floor(idx / PER_KPI_COLS);
+            const totalRows = Math.ceil(selectedKPIs.length / PER_KPI_COLS);
+            return (
+              <div
+                key={kpi}
+                style={{
+                  minWidth: 0,
+                  padding: "0.6rem 0.75rem",
+                  borderRight: col < PER_KPI_COLS - 1 ? "1px solid #dee2e6" : "none",
+                  borderBottom: row < totalRows - 1 ? "1px solid #dee2e6" : "none",
+                }}
+              >
+                <div className="d-flex align-items-center gap-2" style={{ fontSize: "0.8rem", fontWeight: 600, color: "#495057", marginBottom: 2 }}>
+                  <span>{kpi}</span>
                   {!hasMultiplePlatforms && (
-                    <span role="button"
+                    <PinToggleButton
+                      pinned={pinnedSet.has(kpi)}
                       onClick={() => dispatch(togglePinnedKPIAndSave({ platform: selectedPlatform, kpi }))}
-                      style={{ cursor: "pointer", opacity: pinnedSet.has(kpi) ? 1 : 0.4, fontSize: "1rem" }}
-                      title={pinnedSet.has(kpi) ? "Bỏ ghim KPI này" : "Ghim KPI này"}
-                    >📌</span>
+                    />
                   )}
+                  <span role="button" onClick={() => onRemoveKPI?.(kpi)}
+                    style={{ cursor: "pointer", color: "#999", fontSize: "0.85rem" }} title="Đóng chart & bỏ chọn KPI này">✕</span>
                 </div>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart margin={{ top: 20, right: 20, bottom: 50 }}>
+                <ResponsiveContainer width="100%" height={240}>
+                  <LineChart margin={{ top: 6, right: 10, bottom: 44, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis type="number" dataKey="ts" scale="time" domain={["dataMin", "dataMax"]}
-                      tickFormatter={(ts) => formatTimeLocal(ts)} angle={-45} textAnchor="end" />
-                    <YAxis />
+                      tickFormatter={(ts) => formatTimeLocal(ts)} angle={-45} textAnchor="end"
+                      tick={{ fontSize: 9 }} />
+                    <YAxis tick={{ fontSize: 9 }} width={32} tickFormatter={roundDisplayValue} />
                     <Tooltip labelFormatter={(ts) => `⏱ ${formatTimeLocal(ts, true)} (ICT)`}
                       formatter={tooltipFormatter} />
                     {Object.entries(displayData).map(([device, data], index) =>
@@ -399,10 +412,10 @@ export default function KPIChartGrid({
                     )}
                   </LineChart>
                 </ResponsiveContainer>
-                <div className="d-flex flex-wrap align-items-center gap-1 mt-2" style={{ fontSize: "11px" }}>
+                <div className="d-flex flex-wrap align-items-center gap-1 mt-1" style={{ fontSize: "10px" }}>
                   <Button size="sm" variant="outline-secondary" onClick={toggleAllDevices}
                     title={showAll ? "Ẩn tất cả" : "Hiện tất cả"}
-                    style={{ padding: "2px 6px", flexShrink: 0 }}>👁️</Button>
+                    style={{ padding: "1px 5px", flexShrink: 0, fontSize: "10px" }}>👁️</Button>
                   {Object.keys(deviceData).map((device, index) => {
                     const isVisible = visibleDevices.includes(device);
                     const color = CHART_COLORS[index % CHART_COLORS.length];
@@ -411,8 +424,8 @@ export default function KPIChartGrid({
                         title={device}
                         style={{
                           cursor: "pointer",
-                          padding: "2px 8px",
-                          borderRadius: "12px",
+                          padding: "1px 5px",
+                          borderRadius: "10px",
                           border: `1px solid ${color}`,
                           color: isVisible ? "#fff" : "#999",
                           background: isVisible ? color : "transparent",
@@ -423,11 +436,9 @@ export default function KPIChartGrid({
                     );
                   })}
                 </div>
-              </Card.Body>
-            </Card>
-          </Col>
-        );
-      })}
-    </Row>
+              </div>
+            );
+          })}
+    </div>
   );
 }

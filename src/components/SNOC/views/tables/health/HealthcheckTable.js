@@ -6,6 +6,7 @@ import {
   Col,
   Form,
   Modal,
+  Nav,
   Pagination,
   Row,
   Spinner,
@@ -24,6 +25,8 @@ import {
   upsertLatestFromClient, // ✅ upsert ngay vào latest
 } from "../../../redux/Healthcheck/healthcheckSlice";
 import KPIExplorerCore from "../../forms/kpi/KPIExplorerCore";
+import MultiPlatformKPITab from "../../forms/kpi/MultiPlatformKPITab";
+import { fetchKpiDashboardState } from "../../../redux/KPI/kpiDashboardStateSlice";
 import styles from "./../../../styles/SystemHealth.module.scss";
 // ✅ Recharts cho đồ thị
 import {
@@ -93,8 +96,24 @@ const HealthcheckTable = ({
   const [selectedHour, setSelectedHour] = useState(null);
   const [selectedHourItems, setSelectedHourItems] = useState([]);
 
-  // 👉 KPI Explorer modal
-  const [kpiOpen, setKpiOpen] = useState(false);
+  // Tab KPI section (chỉ dùng khi subsystem PGW)
+  // Mặc định "multi" nếu đã có KPI Multi-PGW ghim liên quan tới platform của bảng này,
+  // ngược lại giữ "single" như cũ.
+  const isPgw = platformList.some((p) => p.toLowerCase().includes("pgw"));
+  const { multiPinned = [], loaded: multiPinLoaded = false } = useSelector(
+    (state) => state.kpiDashboardState || {}
+  );
+  useEffect(() => {
+    if (!multiPinLoaded) dispatch(fetchKpiDashboardState());
+  }, [multiPinLoaded, dispatch]);
+  const hasRelevantMultiPin = useMemo(
+    () => multiPinned.some((p) => (p.platforms || []).some((plat) => platformList.includes(plat))),
+    [multiPinned, platformList]
+  );
+  const [kpiTab, setKpiTab] = useState("single");
+  useEffect(() => {
+    if (isPgw && hasRelevantMultiPin) setKpiTab("multi");
+  }, [isPgw, hasRelevantMultiPin]);
 
   // ✅ trạng thái đang chạy healthcheck theo từng host (chỉ row đó quay)
   const [runningByHost, setRunningByHost] = useState({});
@@ -522,17 +541,6 @@ const isAdmin = useMemo(() => {
               >
                 Xuất Excel
               </Button>
-              <Button
-                type="button"
-                variant="outline-primary"
-                onClick={() => setKpiOpen(true)}
-                disabled={!platformList?.length}
-                title={
-                  platformList?.length ? "" : "Chưa có platform để xem KPI"
-                }
-              >
-                📈 KPI Explorer
-              </Button>
             </Form>
           </Card.Header>
           <Card.Body>
@@ -929,25 +937,38 @@ const isAdmin = useMemo(() => {
               </>
             )}
           </Card.Body>
-          {/* ==== KPI SECTION (inline, no modal) ==== */}
+          {/* ==== KPI SECTION (inline) ==== */}
           <div className="mt-3">
             <Card>
-              <Card.Header>
-                <Card.Title as="h6" className="mb-0">
-                  KPI charts (embedded)
-                </Card.Title>
-              </Card.Header>
+              {isPgw && (
+                <Card.Header className="py-1">
+                  <Nav variant="tabs" activeKey={kpiTab} onSelect={setKpiTab} className="border-0 mb-n1">
+                    <Nav.Item>
+                      <Nav.Link eventKey="single" style={{ fontSize: "0.8rem", padding: "3px 12px" }}>
+                        Single Platform
+                      </Nav.Link>
+                    </Nav.Item>
+                    <Nav.Item>
+                      <Nav.Link eventKey="multi" style={{ fontSize: "0.8rem", padding: "3px 12px" }}>
+                        📌 Multi-PGW
+                      </Nav.Link>
+                    </Nav.Item>
+                  </Nav>
+                </Card.Header>
+              )}
               <Card.Body>
-                <KPIExplorerCore
-                  // gán ngữ cảnh sẵn cho KPI (nếu bạn có các prop này trong component)
-                  defaultGroup={group}
-                  defaultSubsystem={subsystem}
-                  defaultPlatform={platformList?.[0] || ""}
-                  // QUAN TRỌNG: tắt realtime để không mở WS trong trang Healthcheck
-                  realtime={false}
-                  // nếu bạn có prop "embedded" hoặc "hideChrome"
-                  embedded
-                />
+                {(!isPgw || kpiTab === "single") && (
+                  <KPIExplorerCore
+                    defaultGroup={group}
+                    defaultSubsystem={subsystem}
+                    defaultPlatform={platformList?.[0] || ""}
+                    realtime={false}
+                    embedded
+                  />
+                )}
+                {isPgw && kpiTab === "multi" && (
+                  <MultiPlatformKPITab />
+                )}
               </Card.Body>
             </Card>
           </div>

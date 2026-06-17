@@ -7,9 +7,10 @@ const PARAMS_URL = "/nornirps/healthcheck/analysis-params/";
 
 export const fetchAnalysisSchema = createAsyncThunk(
   "analysisParam/fetchSchema",
-  async (_, { dispatch, rejectWithValue }) => {
+  async (platform = "", { dispatch, rejectWithValue }) => {
     try {
-      const res = await snocApi.get(SCHEMA_URL);
+      const queryParams = platform ? { platform } : {};
+      const res = await snocApi.get(SCHEMA_URL, { params: queryParams });
       return res.data;
     } catch (error) {
       const msg = error?.response?.data?.error || "Không thể tải schema";

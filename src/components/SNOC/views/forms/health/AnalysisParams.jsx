@@ -18,25 +18,6 @@ import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
 
 const draftKey = (fnKey, paramName) => `${fnKey}::${paramName}`;
 
-// Returns list of SSH files relevant to a platform name, or null = show all.
-const getPlatformFiles = (platformName) => {
-  if (!platformName || platformName === "*") return null;
-  const p = platformName.toLowerCase().replace(/-/g, "_");
-  if (p.includes("pgw"))  return ["ssh_nornir.py"];
-  if (p.includes("mme"))  return ["sshmmee.py"];
-  if (p.includes("pcrf")) return ["ssh_nornir_pcrf.py"];
-  if (p.includes("mss"))  return ["ssh_nornir_mss.py"];
-  if (p.includes("tss"))  return ["ssh_nornir_tss.py"];
-  if (p.includes("hss"))  return ["ssh_nornir_hss.py"];
-  if (p.includes("sbc"))  return ["ssh_sbc.py"];
-  if (p.includes("dns"))  return ["dns.py"];
-  if (p.includes("cudb")) return ["ssh_nornir_cudb.py"];
-  if (p.includes("ims") || p.includes("sbg")) return ["ssh_nornir_ims.py"];
-  if (p.includes("fda"))  return ["fda.py"];
-  if (p.includes("hlr"))  return ["healthcheck_hlr.py"];
-  return null;
-};
-
 const fmtValue = (val) => {
   if (val === null || val === undefined) return "—";
   if (Array.isArray(val)) return val.join(", ");
@@ -77,15 +58,15 @@ const AnalysisParams = () => {
   const [drafts, setDrafts] = useState({});
   const [search, setSearch]   = useState("");
 
-  // load schema + platforms once
+  // load platforms once
   useEffect(() => {
-    dispatch(fetchAnalysisSchema());
     dispatch(fetchPlatforms());
   }, [dispatch]);
 
-  // load params when platform changes, clear drafts
+  // load schema + params when platform changes, clear drafts
   useEffect(() => {
     if (selectedPlatform) {
+      dispatch(fetchAnalysisSchema(selectedPlatform));
       dispatch(fetchAnalysisParams(selectedPlatform));
       setDrafts({});
     }
@@ -110,17 +91,14 @@ const AnalysisParams = () => {
     [platformOptions, selectedPlatform]
   );
 
-  // all functions for the selected platform, filtered by platform + search
+  // all functions for the selected platform (schema already filtered by backend), then by search
   const fnEntries = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const relevantFiles = getPlatformFiles(selectedPlatform);
-    return Object.entries(schema)
-      .filter(([, s]) => !relevantFiles || relevantFiles.includes(s.file))
-      .filter(([key, s]) => {
-        if (!q) return true;
-        return key.toLowerCase().includes(q) || s.label.toLowerCase().includes(q);
-      });
-  }, [schema, search, selectedPlatform]);
+    return Object.entries(schema).filter(([key, s]) => {
+      if (!q) return true;
+      return key.toLowerCase().includes(q) || s.label.toLowerCase().includes(q);
+    });
+  }, [schema, search]);
 
   const overrideCount = useMemo(
     () => params.filter((r) => r.override_id !== null).length,

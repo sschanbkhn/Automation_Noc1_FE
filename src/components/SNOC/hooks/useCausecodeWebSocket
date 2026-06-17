@@ -17,10 +17,23 @@ const RECONNECT_INTERVAL = 5000;
  * Chỉ merge khi khớp filter hiện tại (platform/devices/kpis) và
  * khi đã có ít nhất 1 KPI được chọn.
  */
+function _toPlatformSet(selectedPlatform, selectedPlatforms) {
+  if (selectedPlatforms?.length) {
+    return new Set(
+      selectedPlatforms
+        .map((p) => (typeof p === "string" ? p : p?.value))
+        .filter(Boolean)
+    );
+  }
+  return new Set(selectedPlatform ? [selectedPlatform] : []);
+}
+
 export default function useCausecodeWebSocket({
   selectedPlatform,
+  selectedPlatforms, // optional: nhiều platform cùng lúc (Multi-PGW) — ưu tiên hơn selectedPlatform nếu có
   selectedDevices,
   selectedKPIs,
+  global = true, // false: chỉ merge vào embeddedData (theo embedFilters), không merge vào kpiChartData chung
 } = {}) {
   const dispatch = useDispatch();
 
@@ -29,7 +42,7 @@ export default function useCausecodeWebSocket({
   const closedRef = useRef(false);
 
   // ====== Filter refs (tránh stale-closure) ======
-  const platRef = useRef(selectedPlatform || "");
+  const platSetRef = useRef(_toPlatformSet(selectedPlatform, selectedPlatforms));
   const devSetRef = useRef(
     new Set(
       (selectedDevices || [])
@@ -44,11 +57,16 @@ export default function useCausecodeWebSocket({
         .filter(Boolean)
     )
   );
+  const globalRef = useRef(global);
 
   // Cập nhật refs mỗi khi props đổi
   useEffect(() => {
-    platRef.current = selectedPlatform || "";
-  }, [selectedPlatform]);
+    platSetRef.current = _toPlatformSet(selectedPlatform, selectedPlatforms);
+  }, [selectedPlatform, selectedPlatforms]);
+
+  useEffect(() => {
+    globalRef.current = global;
+  }, [global]);
 
   useEffect(() => {
     devSetRef.current = new Set(
@@ -93,7 +111,7 @@ export default function useCausecodeWebSocket({
           }
 
           const msgPlatform = data.platform || "";
-          const curPlatform = platRef.current;
+          const curPlatSet = platSetRef.current;
           const curDevSet = devSetRef.current;
           const curKpiSet = kpiSetRef.current;
 
@@ -105,11 +123,11 @@ export default function useCausecodeWebSocket({
             return;
           }
 
-          // Lọc sớm theo platform (nếu UI đã chọn platform)
-          if (curPlatform && msgPlatform && curPlatform !== msgPlatform) {
+          // Lọc sớm theo platform (nếu UI đã chọn platform — có thể nhiều platform với Multi-PGW)
+          if (curPlatSet.size > 0 && msgPlatform && !curPlatSet.has(msgPlatform)) {
             if (process.env.NODE_ENV !== "production") {
               console.log("[WS CauseCode] skip: platform mismatch", {
-                ui: curPlatform,
+                ui: Array.from(curPlatSet),
                 ws: msgPlatform,
               });
             }
@@ -123,7 +141,7 @@ export default function useCausecodeWebSocket({
               const v = Number(p?.value);
               return {
                 device: p?.device,
-                platform: p?.platform || msgPlatform || curPlatform || "",
+                platform: p?.platform || msgPlatform || "",
                 kpi: p?.kpi,
                 value: Number.isFinite(v) ? v : null,
                 timestamp: p?.timestamp || null, // ISO
@@ -158,11 +176,12 @@ export default function useCausecodeWebSocket({
             const sample = normalized[0];
             console.log("[WS CauseCode] merge:", {
               count: normalized.length,
-              platform: msgPlatform || curPlatform,
+              platform: msgPlatform || Array.from(curPlatSet).join(","),
               filter: {
-                platform: curPlatform,
+                platforms: Array.from(curPlatSet),
                 devices: Array.from(curDevSet),
                 kpis: Array.from(curKpiSet),
+                global: globalRef.current,
               },
               sample: {
                 device: sample.device,
@@ -179,13 +198,13 @@ export default function useCausecodeWebSocket({
           // Merge vào store (slice sẽ dedup/sort theo phút)
           dispatch(
             wsMergeKpiPoints({
-              platform: msgPlatform || curPlatform,
+              platform: msgPlatform || Array.from(curPlatSet)[0] || "",
               points: normalized,
-              // filter để debug/trace nếu cần ở reducer (không bắt buộc)
               filter: {
-                platform: curPlatform,
+                platforms: Array.from(curPlatSet),
                 devices: Array.from(curDevSet),
                 kpis: Array.from(curKpiSet),
+                global: globalRef.current,
               },
             })
           );
