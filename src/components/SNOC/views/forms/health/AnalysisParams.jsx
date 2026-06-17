@@ -58,7 +58,7 @@ const AnalysisParams = () => {
 
   const isAdmin = useMemo(() => {
     const claims = getJwtClaims();
-    return claims?.is_superuser === true;
+    return claims?.is_superuser === true || claims?.role === "admin";
   }, []);
 
   const [drafts, setDrafts]           = useState({});
@@ -380,7 +380,7 @@ const AnalysisParams = () => {
                   />
                   {!isAdmin && selectedPlatform && (
                     <small className="text-muted">
-                      Chế độ xem — chỉ super user mới có thể sửa
+                      Chế độ xem — chỉ admin trở lên mới có thể sửa
                     </small>
                   )}
                 </Col>
