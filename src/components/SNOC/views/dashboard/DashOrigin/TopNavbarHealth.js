@@ -20,6 +20,7 @@ const BREADCRUMB_MAP = {
   "/healthcheck/blackout":             { section: "Healthcheck", label: "Blackout Config" },
   "/healthcheck/analysis-params":      { section: "Healthcheck", label: "Analysis Params" },
   "/healthcheck/alert-config":         { section: "Healthcheck", label: "Alert Config" },
+  "/healthcheck/external/stats":       { label: "External Stats" },
   "/precheck":                         { section: "Precheck",   label: "Dashboard" },
   "/precheck/manual":                  { section: "Precheck",   label: "Manual" },
   "/healthcheck/precheck-external":    { section: "Precheck",   label: "Manual External" },
@@ -229,6 +230,12 @@ const TopNavbar = () => {
             <NavLink to="/healthcheck/devices" className={getLinkClass}>
               Devices
             </NavLink>
+
+            {/* ── 5. EXTERNAL STATS ────────────────────────────────── */}
+            <NavLink to="/healthcheck/external/stats" className={getLinkClass}>
+              📊 External Stats
+            </NavLink>
+
             {/* ── Admin Monitor (admin only) ── */}
             {isAdmin && (
               <NavDropdown

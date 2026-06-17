@@ -87,6 +87,7 @@ import PrecheckManual from "components/SNOC/views/forms/health/PrecheckManual";
 import SystemMonitorPage from "components/SNOC/Admin/SystemMonitorPage";
 import PrecheckExternal from "components/SNOC/views/forms/health/PrecheckExternal";
 import HealthcheckExternal from "components/SNOC/views/forms/health/HealthcheckExternal";
+import HealthcheckExternalStats from "components/SNOC/views/tables/health/HealthcheckExternalStats";
 ///snoc end
 interface Props {
   Apps: any;
@@ -264,6 +265,7 @@ const MainPageRoute = (props: Props) => {
           <Route path="/healthcheck/schedule" element={<Schedule />} />
           <Route path="/healthcheck/checks" element={<Healthcheck />} />
           <Route path="/healthcheck/healthcheck-external" element={<HealthcheckExternal />} />
+          <Route path="/healthcheck/external/stats" element={<HealthcheckExternalStats />} />
           <Route
             path="/healthcheck/OutputIgnoreRules"
             element={<OutputIgnoreRules />}
