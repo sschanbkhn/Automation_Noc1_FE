@@ -2,8 +2,9 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import snocApi from "../../api/snocApiWithAutoToken";
 import { showTemporaryAlert } from "../Alert/alertSlice";
 
-const SCHEMA_URL = "/nornirps/healthcheck/analysis-params/schema/";
-const PARAMS_URL = "/nornirps/healthcheck/analysis-params/";
+const SCHEMA_URL        = "/nornirps/healthcheck/analysis-params/schema/";
+const PARAMS_URL        = "/nornirps/healthcheck/analysis-params/";
+const DEVICE_SUMMARY_URL = "/nornirps/healthcheck/analysis-params/device-summary/";
 
 export const fetchAnalysisSchema = createAsyncThunk(
   "analysisParam/fetchSchema",
@@ -20,11 +21,14 @@ export const fetchAnalysisSchema = createAsyncThunk(
   }
 );
 
+// payload: { platform, device_name? }
 export const fetchAnalysisParams = createAsyncThunk(
   "analysisParam/fetchParams",
-  async (platform, { dispatch, rejectWithValue }) => {
+  async ({ platform, device_name = "" } = {}, { dispatch, rejectWithValue }) => {
     try {
-      const res = await snocApi.get(PARAMS_URL, { params: { platform } });
+      const params = { platform };
+      if (device_name) params.device_name = device_name;
+      const res = await snocApi.get(PARAMS_URL, { params });
       return res.data;
     } catch (error) {
       const msg = error?.response?.data?.error || "Không thể tải params";
@@ -34,6 +38,20 @@ export const fetchAnalysisParams = createAsyncThunk(
   }
 );
 
+// Returns [{device_name, count}] — devices with device-level overrides for the given platform
+export const fetchDeviceSummary = createAsyncThunk(
+  "analysisParam/fetchDeviceSummary",
+  async (platform, { rejectWithValue }) => {
+    try {
+      const res = await snocApi.get(DEVICE_SUMMARY_URL, { params: { platform } });
+      return res.data;
+    } catch {
+      return rejectWithValue([]);
+    }
+  }
+);
+
+// payload: { platform, device_name?, function_name, param_name, value }
 export const saveAnalysisParam = createAsyncThunk(
   "analysisParam/save",
   async (payload, { dispatch, rejectWithValue }) => {
@@ -69,15 +87,23 @@ const analysisParamSlice = createSlice({
   initialState: {
     schema: {},
     params: [],
+    deviceSummary: [],
     selectedPlatform: "",
+    selectedDevice: "",
     loadingSchema: false,
     loadingParams: false,
+    loadingDeviceSummary: false,
     saving: false,
     error: null,
   },
   reducers: {
     setSelectedPlatform(state, action) {
       state.selectedPlatform = action.payload;
+      state.selectedDevice = ""; // reset device khi đổi platform
+      state.deviceSummary = [];  // clear summary khi đổi platform
+    },
+    setSelectedDevice(state, action) {
+      state.selectedDevice = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -90,6 +116,10 @@ const analysisParamSlice = createSlice({
       .addCase(fetchAnalysisParams.fulfilled, (s, a) => { s.loadingParams = false; s.params = a.payload; })
       .addCase(fetchAnalysisParams.rejected,  (s, a) => { s.loadingParams = false; s.error = a.payload; })
 
+      .addCase(fetchDeviceSummary.pending,   (s) => { s.loadingDeviceSummary = true; })
+      .addCase(fetchDeviceSummary.fulfilled, (s, a) => { s.loadingDeviceSummary = false; s.deviceSummary = a.payload; })
+      .addCase(fetchDeviceSummary.rejected,  (s) => { s.loadingDeviceSummary = false; s.deviceSummary = []; })
+
       .addCase(saveAnalysisParam.pending,   (s) => { s.saving = true; })
       .addCase(saveAnalysisParam.fulfilled, (s) => { s.saving = false; })
       .addCase(saveAnalysisParam.rejected,  (s) => { s.saving = false; })
@@ -100,5 +130,5 @@ const analysisParamSlice = createSlice({
   },
 });
 
-export const { setSelectedPlatform } = analysisParamSlice.actions;
+export const { setSelectedPlatform, setSelectedDevice } = analysisParamSlice.actions;
 export default analysisParamSlice.reducer;
