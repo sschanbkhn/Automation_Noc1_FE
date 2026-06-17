@@ -24,11 +24,11 @@ const KPIChartDashboard = () => {
         </div>
 
         {showExplorer && (
-          <Modal show onHide={() => setShowExplorer(false)} size="xl" scrollable>
+          <Modal show onHide={() => setShowExplorer(false)} size="xl">
             <Modal.Header closeButton>
               <Modal.Title>KPI Explorer</Modal.Title>
             </Modal.Header>
-            <Modal.Body>
+            <Modal.Body style={{ minHeight: "70vh" }}>
               <KPIExplorerCore pinGroup={KPI_GROUP} />
             </Modal.Body>
           </Modal>

@@ -1,6 +1,8 @@
 // src/components/SNOC/store/snocStore.ts
 import { configureStore } from "@reduxjs/toolkit";
 
+import { fetchKpiPreferences } from "../redux/KPI/kpiPinnedSlice";
+import { fetchKpiDashboardState } from "../redux/KPI/kpiDashboardStateSlice";
 import alertReducer from "../redux/Alert/alertSlice";
 import dnsReducer from "../redux/Dns/dnsSlice";
 import psCoreReducer from "../redux/Healthcheck/healthcheckSlice";
@@ -36,6 +38,7 @@ import retentionConfigReducer from "../redux/Healthcheck/retentionConfigSlice";
 import notifChannelConfigReducer from "../redux/Healthcheck/notifChannelConfigSlice";
 import regionReducer from "../redux/User/regionSlice";
 import accessScopeReducer from "../redux/User/accessScopeSlice";
+import kpiDashboardStateReducer from "../redux/KPI/kpiDashboardStateSlice";
 const snocStore = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -72,6 +75,7 @@ const snocStore = configureStore({
     notifChannelConfig: notifChannelConfigReducer,
     region: regionReducer,
     accessScope: accessScopeReducer,
+    kpiDashboardState: kpiDashboardStateReducer,
   },
 });
 
@@ -88,6 +92,8 @@ if (bootToken) {
       // user: null, // có thể gọi API /me để lấy user sau
     })
   );
+  snocStore.dispatch(fetchKpiPreferences());
+  snocStore.dispatch(fetchKpiDashboardState());
 }
 
 export type RootState = ReturnType<typeof snocStore.getState>;

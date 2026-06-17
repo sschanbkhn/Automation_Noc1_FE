@@ -1,6 +1,6 @@
 // src/components/SNOC/views/dashboard/DashOrigin/SystemHealthDashboard.js
-import React, { useEffect, useMemo, useState } from "react";
-import { Button, Card, Col, Modal, Row, Spinner, Table } from "react-bootstrap";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Badge, Button, Card, Col, Modal, OverlayTrigger, Popover, Row, Spinner, Table } from "react-bootstrap";
 import KPIExplorerCore from "../../forms/kpi/KPIExplorerCore";
 
 import { useDispatch, useSelector } from "react-redux";
@@ -23,6 +23,7 @@ import useScheduleWebSocket from "../../../hooks/useScheduleWebSocket";
 import {
   fetchHealthcheckSchedules,
   fetchLatestHealthcheckView,
+  fetchLockedDevices,
   fetchNokSeries,
   fetchPlatformGroupSchema,
   fetchSystemStatus,
@@ -32,6 +33,7 @@ import {
 import HealthcheckTable from "../../tables/health/HealthcheckTable";
 import styles from "./../../../styles/SystemHealth.module.scss";
 import TopNavbarHealth from "./TopNavbarHealth";
+import HealthDashPersonalize from "./HealthDashPersonalize";
 
 // ====== HẰNG SỐ / SELECTOR ỔN ĐỊNH ======
 const statusColorClass = {
@@ -89,6 +91,27 @@ const normalizeSubOrder = (stored, subNames) => {
   const base = Array.isArray(stored) ? stored.filter((s) => set.has(s)) : [];
   const missing = subNames.filter((s) => !base.includes(s));
   return [...base, ...missing];
+};
+
+// ====== PERSONALIZATION PREFS ======
+const LS_PREF_KEY = (userId, type) => `hc_pref_${userId}_${type}`;
+const loadPref = (userId, type) => {
+  try {
+    const raw = localStorage.getItem(LS_PREF_KEY(userId, type));
+    if (raw === null) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+};
+const savePref = (userId, type, value) => {
+  try {
+    if (value === null || value === undefined) {
+      localStorage.removeItem(LS_PREF_KEY(userId, type));
+    } else {
+      localStorage.setItem(LS_PREF_KEY(userId, type), JSON.stringify(value));
+    }
+  } catch {}
 };
 
 const formatDateShort = (dateObj) => {
@@ -227,6 +250,16 @@ const buildMinuteSeries = (
     return row;
   });
 };
+
+const TIME_OPTIONS = [
+  { value: 3, label: "3h" },
+  { value: 6, label: "6h" },
+  { value: 12, label: "12h" },
+  { value: 24, label: "24h" },
+  { value: 48, label: "2d" },
+  { value: 72, label: "3d" },
+  { value: 168, label: "7d" },
+];
 
 // ====== COMPONENT: BIỂU ĐỒ ======
 const GroupNokChart = ({
@@ -405,7 +438,13 @@ const GroupNokChart = ({
     );
   };
 
-  const tickInterval = timeRange === 3 ? 29 : timeRange === 6 ? 59 : 119;
+  const tickInterval =
+    timeRange === 3   ? 29  :
+    timeRange === 6   ? 59  :
+    timeRange <= 24   ? 119 :
+    timeRange === 48  ? 7   :
+    timeRange === 72  ? 11  :
+                        23  ;
 
   return (
     <div className="mb-0 w-100">
@@ -475,22 +514,22 @@ const GroupNokChart = ({
           </button>
 
           <div className="btn-group shadow-sm" role="group">
-            {[3, 6, 12, 24].map((hr) => (
+            {TIME_OPTIONS.map(({ value, label }) => (
               <button
-                key={hr}
+                key={value}
                 type="button"
                 className={`btn btn-sm py-0 px-2 ${
-                  timeRange === hr
+                  timeRange === value
                     ? "btn-primary fw-bold"
                     : "btn-outline-secondary"
                 }`}
                 style={{ fontSize: "0.65rem" }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  setTimeRange(hr);
+                  setTimeRange(value);
                 }}
               >
-                {hr}h
+                {label}
               </button>
             ))}
           </div>
@@ -718,6 +757,38 @@ const GroupNokChart = ({
 };
 
 // ====== COMPONENT CON: Thẻ Subsystem (Tối ưu Re-render & Flash) ======
+const NodeListPopover = React.forwardRef(
+  ({ nodes, title, colorClass, popoverId, showReason, ...props }, ref) => (
+    <Popover id={popoverId} ref={ref} {...props} style={{ maxWidth: "300px", ...props.style }}>
+      <Popover.Header
+        className={`bg-${colorClass} text-white py-1 px-2`}
+        style={{ fontSize: "0.72rem" }}
+      >
+        {title} ({nodes.length})
+      </Popover.Header>
+      <Popover.Body className="p-1" style={{ maxHeight: "240px", overflowY: "auto" }}>
+        {nodes.length === 0 ? (
+          <span className="text-muted" style={{ fontSize: "0.7rem" }}>Không có node</span>
+        ) : (
+          <ul className="list-unstyled mb-0">
+            {nodes.map((n, i) => (
+              <li key={i} style={{ fontSize: "0.7rem", padding: "2px 4px", borderBottom: "1px solid #f0f0f0" }}>
+                <span className="fw-semibold">{n.host}</span>
+                <span className="text-muted ms-1" style={{ fontSize: "0.65rem" }}>{n.platform}</span>
+                {showReason && n.reason && (
+                  <div className="text-danger" style={{ fontSize: "0.62rem", marginTop: "1px" }}>
+                    {n.reason.length > 80 ? n.reason.slice(0, 80) + "…" : n.reason}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Popover.Body>
+    </Popover>
+  )
+);
+
 const SubsystemChip = React.memo(
   ({
     subsystemLabel,
@@ -883,6 +954,7 @@ const SystemHealth = () => {
 
   // Dòng mới:
   const latestItems = useSelector((s) => s.pscore?.globalLatestItems || []);
+  const lockedDevices = useSelector((s) => s.pscore?.lockedDevices || []);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedSubsystem, setSelectedSubsystem] = useState(null);
   const [hiddenGroups, setHiddenGroups] = useState(() => new Set());
@@ -894,10 +966,35 @@ const SystemHealth = () => {
   const [draggingSub, setDraggingSub] = useState(null);
   const [dragOverSub, setDragOverSub] = useState(null);
 
+  const userId = useSelector(
+    (s) => s.account?.user?.id ?? s.account?.user?.username ?? "guest",
+  );
+  const [showPersonalize, setShowPersonalize] = useState(false);
+  const [prefs, setPrefs] = useState({
+    group: null,
+    sub: null,
+    platforms: null,
+    show_chart: true,
+  });
+
+  // Load prefs from localStorage when userId is known / changes (login/logout)
+  // Normalize old single-string format → array to avoid .map()/.flatMap() crash in HealthDashPersonalize
+  useEffect(() => {
+    const rawGroup = loadPref(userId, "group");
+    const rawSub   = loadPref(userId, "sub");
+    setPrefs({
+      group:      Array.isArray(rawGroup) ? rawGroup : rawGroup ? [rawGroup] : null,
+      sub:        Array.isArray(rawSub)   ? rawSub   : rawSub   ? [rawSub]   : null,
+      platforms:  loadPref(userId, "platforms"),
+      show_chart: loadPref(userId, "show_chart") ?? true,
+    });
+  }, [userId]);
+
   useEffect(() => {
     dispatch(fetchPlatformGroupSchema());
     dispatch(fetchSystemStatus());
     dispatch(fetchHealthcheckSchedules());
+    dispatch(fetchLockedDevices());
     dispatch(
       fetchLatestHealthcheckView({
         page_size: 5000,
@@ -943,6 +1040,14 @@ const SystemHealth = () => {
     return set;
   }, [latestItems]);
 
+  const lockedMap = useMemo(() => {
+    const m = {};
+    (lockedDevices || []).forEach((d) => {
+      if (d.device_name) m[d.device_name.trim().toLowerCase()] = d;
+    });
+    return m;
+  }, [lockedDevices]);
+
   // 🔥 4. MEMO CALCULATIONS (ĐÃ FIX: LẤY SCHEDULE LÀM GỐC)
   const calculatedSystemStatus = useMemo(() => {
     const safeTasks = Array.isArray(scheduledTasks) ? scheduledTasks : [];
@@ -964,6 +1069,11 @@ const SystemHealth = () => {
       newStatus[gName].nok_count = 0;
       newStatus[gName].excluded_count = 0;
       newStatus[gName].total_devices = 0;
+      newStatus[gName].ok_nodes = [];
+      newStatus[gName].nok_nodes = [];
+      newStatus[gName].exc_nodes = [];
+      newStatus[gName].locked_count = 0;
+      newStatus[gName].locked_nodes = [];
 
       if (
         newStatus[gName].children &&
@@ -1018,6 +1128,15 @@ const SystemHealth = () => {
       if (!task.enabled || !Array.isArray(task.node_names) || !task.platform)
         return;
 
+      // Lọc theo platform nếu user đã chọn platform cụ thể
+      if (
+        Array.isArray(prefs.platforms) && prefs.platforms.length > 0 &&
+        !prefs.platforms.some(
+          (p) => p.toLowerCase() === task.platform.trim().toLowerCase(),
+        )
+      )
+        return;
+
       const platformKey = task.platform.trim().toLowerCase();
       let mapping = reverseMap[platformKey];
 
@@ -1041,6 +1160,13 @@ const SystemHealth = () => {
 
       // NẾU TÌM THẤY CHỖ ĐỂ ĐIỀN DỮ LIỆU
       if (mapping) {
+        // Lọc theo subsystem nếu user đã chọn subsystem cụ thể
+        if (
+          Array.isArray(prefs.sub) && prefs.sub.length > 0 &&
+          !prefs.sub.includes(mapping.sub)
+        )
+          return;
+
         const groupObj = newStatus[mapping.group];
         const subObj = groupObj?.children?.[mapping.sub];
 
@@ -1061,18 +1187,33 @@ const SystemHealth = () => {
             const hostKey = nodeName.trim().toLowerCase();
             const record = itemsMap[hostKey];
 
+            const nodeEntry = { host: nodeName.trim(), platform: task.platform.trim() };
+
             if (record) {
               if (record.excluded === true) {
                 subObj.excluded_count += 1;
                 groupObj.excluded_count += 1;
+                groupObj.exc_nodes.push(nodeEntry);
               } else if (record.status === "OK" || record.status === "Normal") {
                 subObj.ok_count += 1;
                 groupObj.ok_count += 1;
+                groupObj.ok_nodes.push(nodeEntry);
               } else {
                 // Các trạng thái NOK, Error, Warning, Timeout...
                 subObj.nok_count += 1;
                 groupObj.nok_count += 1;
+                groupObj.nok_nodes.push(nodeEntry);
               }
+            }
+
+            // Kiểm tra auth-lock (độc lập với healthcheck status)
+            const lockRecord = lockedMap[hostKey];
+            if (lockRecord) {
+              groupObj.locked_count += 1;
+              groupObj.locked_nodes.push({
+                ...nodeEntry,
+                reason: lockRecord.last_fail_reason || "",
+              });
             }
             // (Nếu không có record -> Node này được lên lịch nhưng chưa chạy bao giờ -> Kệ, chỉ tính vào Total)
           });
@@ -1120,7 +1261,7 @@ const SystemHealth = () => {
     });
 
     return newStatus;
-  }, [scheduledTasks, latestItems, systemStatus, platformSchema]);
+  }, [scheduledTasks, latestItems, systemStatus, platformSchema, prefs.platforms, prefs.sub, lockedMap]);
 
   const displayData = calculatedSystemStatus;
 
@@ -1189,6 +1330,58 @@ const SystemHealth = () => {
     return map;
   }, [platformSchema]);
 
+  // Build effectiveSchema cho dropdown tuỳ chỉnh hiển thị:
+  // - Cấu trúc groups/subs theo cùng logic dashboard (platformSchema ưu tiên, systemStatus fallback)
+  // - Platform list từ platformSchema (static, đầy đủ) + bổ sung từ latestItems (live)
+  const effectiveSchema = useMemo(() => {
+    // Bước 1: Xây groups — cùng logic với groupNames (dòng 1170-1174)
+    const groups =
+      Object.keys(platformSchema || {}).length > 0
+        ? Object.keys(platformSchema)
+        : Object.keys(systemStatus || {}).filter((k) => k !== "last_updated");
+
+    const out = {};
+    groups.forEach((groupName) => {
+      // Bước 2: Xây subs — cùng logic với groupSubNamesMap (dòng 1198-1204)
+      const subsFromSchema = (platformSchema || {})[groupName] || {};
+      const groupChildren = ((systemStatus || {})[groupName] || {}).children || {};
+      const subsSource =
+        Object.keys(subsFromSchema).length > 0 ? subsFromSchema : groupChildren;
+
+      out[groupName] = {};
+      Object.keys(subsSource).forEach((subName) => {
+        // Platform list từ platformSchema (comprehensive static list)
+        out[groupName][subName] = Array.isArray(subsFromSchema[subName])
+          ? [...subsFromSchema[subName]]
+          : [];
+      });
+    });
+
+    // Bước 3: map host → {group, sub} từ systemStatus.devices
+    const hostToLoc = {};
+    Object.entries(systemStatus || {}).forEach(([group, groupData]) => {
+      if (group === "last_updated") return;
+      Object.entries(groupData.children || {}).forEach(([sub, subData]) => {
+        (subData.devices || []).forEach((d) => {
+          if (d.host) hostToLoc[d.host] = { group, sub };
+        });
+      });
+    });
+
+    // Bước 4: bổ sung platforms từ latestItems (host có platform chưa có trong schema)
+    (latestItems || []).forEach(({ host, platform }) => {
+      if (!host || !platform) return;
+      const loc = hostToLoc[host];
+      if (!loc) return;
+      const { group, sub } = loc;
+      if (out[group]?.[sub] !== undefined && !out[group][sub].includes(platform)) {
+        out[group][sub].push(platform);
+      }
+    });
+
+    return out;
+  }, [platformSchema, systemStatus, latestItems]);
+
   const handleSubsystemClick = (group, subsystem, platforms) => {
     setSelectedSubsystem({ group, subsystem, platform: platforms || [] });
     setModalVisible(true);
@@ -1214,8 +1407,12 @@ const SystemHealth = () => {
   const visibleGroupNames = useMemo(() => {
     const base =
       soloGroup && groupNames.includes(soloGroup) ? [soloGroup] : groupNames;
-    return base.filter((g) => !hiddenGroups.has(g));
-  }, [groupNames, soloGroup, hiddenGroups]);
+    return base.filter(
+      (g) =>
+        !hiddenGroups.has(g) &&
+        (!prefs.group?.length || prefs.group.includes(g)),
+    );
+  }, [groupNames, soloGroup, hiddenGroups, prefs.group]);
 
   const orderedVisibleGroups = useMemo(() => {
     const set = new Set(visibleGroupNames);
@@ -1280,6 +1477,63 @@ const SystemHealth = () => {
       return next;
     });
   };
+
+  // Sanitize prefs when schema changes (e.g. after login with different permissions)
+  useEffect(() => {
+    if (!effectiveSchema || Object.keys(effectiveSchema).length === 0) return;
+    const allGroups = Object.keys(effectiveSchema);
+    const allSubs = allGroups.flatMap((g) =>
+      Object.keys(effectiveSchema[g] || {}),
+    );
+    const allPlats = allGroups.flatMap((g) =>
+      Object.values(effectiveSchema[g] || {}).flat(),
+    );
+    setPrefs((prev) => {
+      // Migrate old string format → array (backward compat với localStorage cũ)
+      const prevGroups = Array.isArray(prev.group)
+        ? prev.group
+        : prev.group ? [prev.group] : [];
+      const prevSubs = Array.isArray(prev.sub)
+        ? prev.sub
+        : prev.sub ? [prev.sub] : [];
+
+      const sanitizedGroups = prevGroups.filter((g) => allGroups.includes(g));
+      const sanitizedSubs   = prevSubs.filter((s) => allSubs.includes(s));
+      const sanitizedPlats  = prev.platforms
+        ? prev.platforms.filter((p) => allPlats.includes(p))
+        : null;
+
+      const sanitized = {
+        group:      sanitizedGroups.length ? sanitizedGroups : null,
+        sub:        sanitizedSubs.length   ? sanitizedSubs   : null,
+        platforms:  sanitizedPlats?.length ? sanitizedPlats  : null,
+        show_chart: prev.show_chart,
+      };
+      savePref(userId, "group",     sanitized.group);
+      savePref(userId, "sub",       sanitized.sub);
+      savePref(userId, "platforms", sanitized.platforms);
+      return sanitized;
+    });
+  }, [effectiveSchema, userId]);
+
+  const handlePrefsChange = useCallback(
+    (newPrefs) => {
+      setPrefs(newPrefs);
+      savePref(userId, "group",      newPrefs.group);
+      savePref(userId, "sub",        newPrefs.sub);
+      savePref(userId, "platforms",  newPrefs.platforms);
+      savePref(userId, "show_chart", newPrefs.show_chart);
+    },
+    [userId],
+  );
+
+  const activeFilterCount = useMemo(
+    () =>
+      [!!prefs.group, !!prefs.sub, !!prefs.platforms, !prefs.show_chart].filter(
+        Boolean,
+      ).length,
+    [prefs],
+  );
 
   const onDragStart = (group, e) => {
     setDraggingGroup(group);
@@ -1411,7 +1665,7 @@ const SystemHealth = () => {
               platformList={detailPlatforms}
               storeKey={`hourly_${slug(soloGroup)}_${slug(soloSubsystem)}_detail`}
               height={220}
-              title={`NOK theo giờ (24h): ${soloGroup} / ${soloSubsystem}`}
+              title={`NOK trend: ${soloGroup} / ${soloSubsystem}`}
               excludedHostsSet={excludedHostsSet} // Truyền cờ exclude
             />
           )}
@@ -1437,11 +1691,28 @@ const SystemHealth = () => {
       <div className={styles.container}>
         <Row>
           <Col md={12}>
-            {systemLastUpdated && (
-              <div className="text-end mb-2" style={{ fontSize: "0.9rem" }}>
-                Last updated: {renderLastUpdatedOneLine(systemLastUpdated)}
-              </div>
-            )}
+            <div className="d-flex align-items-center justify-content-between mb-2">
+              <span style={{ fontSize: "0.9rem" }}>
+                {systemLastUpdated && (
+                  <>Last updated: {renderLastUpdatedOneLine(systemLastUpdated)}</>
+                )}
+              </span>
+              {!soloGroup && (
+                <Button
+                  variant="outline-secondary"
+                  size="sm"
+                  onClick={() => setShowPersonalize(true)}
+                  title="Tuỳ chỉnh hiển thị"
+                >
+                  ⚙ Tuỳ chỉnh
+                  {activeFilterCount > 0 && (
+                    <Badge bg="primary" className="ms-1">
+                      {activeFilterCount}
+                    </Badge>
+                  )}
+                </Button>
+              )}
+            </div>
 
             {!loading && orderedVisibleGroups.length === 0 && (
               <Card className="mb-3">
@@ -1475,13 +1746,31 @@ const SystemHealth = () => {
                     : groupChildren;
                 const groupPlatforms = groupPlatformsMap[groupName] || [];
 
+                // Platforms hiển thị sau khi áp dụng prefs.sub + prefs.platforms
+                const effectivePlatformList = (() => {
+                  let base = groupPlatforms;
+                  if (prefs.sub?.length) {
+                    const subPlats = new Set(
+                      Object.entries(subsFromSchema)
+                        .filter(([s]) => prefs.sub.includes(s))
+                        .flatMap(([, ps]) => (Array.isArray(ps) ? ps : [])),
+                    );
+                    base = base.filter((p) => subPlats.has(p));
+                  }
+                  if (prefs.platforms?.length) {
+                    base = base.filter((p) => prefs.platforms.includes(p));
+                  }
+                  return base;
+                })();
+
                 const rawSubNames = Object.keys(subsystems);
                 const hiddenSet = hiddenSubsMap[groupName] || new Set();
                 const subNamesVisible = rawSubNames.filter(
                   (s) =>
                     !hiddenSet.has(s) &&
                     (!(soloSubsystem && soloGroup === groupName) ||
-                      s === soloSubsystem),
+                      s === soloSubsystem) &&
+                    (!prefs.sub?.length || prefs.sub.includes(s)),
                 );
                 const subOrder = subOrderMap[groupName] || rawSubNames;
                 const orderedSubs = (() => {
@@ -1640,36 +1929,112 @@ const SystemHealth = () => {
                             style={{ fontSize: "0.75rem" }}
                           >
                             {/* NOK */}
-                            <span
-                              className={
-                                groupData.nok_count > 0
-                                  ? "text-danger fw-bold"
-                                  : "text-secondary"
-                              }
-                            >
-                              NOK: {groupData.nok_count || 0}
-                            </span>
+                            {(groupData.nok_count || 0) > 0 ? (
+                              <OverlayTrigger
+                                trigger="click"
+                                placement="bottom"
+                                rootClose
+                                overlay={
+                                  <NodeListPopover
+                                    popoverId={`nok-${groupName}`}
+                                    nodes={groupData.nok_nodes || []}
+                                    title="NOK"
+                                    colorClass="danger"
+                                  />
+                                }
+                              >
+                                <span
+                                  className="text-danger fw-bold"
+                                  style={{ cursor: "pointer", textDecoration: "underline dotted" }}
+                                  title="Click để xem danh sách node NOK"
+                                >
+                                  NOK: {groupData.nok_count}
+                                </span>
+                              </OverlayTrigger>
+                            ) : (
+                              <span className="text-secondary">NOK: 0</span>
+                            )}
+
                             {/* OK */}
-                            <span
-                              className={
-                                groupData.ok_count > 0
-                                  ? "text-success fw-bold"
-                                  : "text-secondary"
-                              }
-                            >
-                              OK: {groupData.ok_count || 0}
-                            </span>
-                            {/* 🔥 EXCLUDED */}
-                            <span
-                              className={
-                                groupData.excluded_count > 0
-                                  ? "text-warning fw-bold"
-                                  : "text-secondary"
-                              }
-                              title="Thiết bị được bỏ qua cảnh báo"
-                            >
-                              Exc: {groupData.excluded_count || 0}
-                            </span>
+                            {(groupData.ok_count || 0) > 0 ? (
+                              <OverlayTrigger
+                                trigger="click"
+                                placement="bottom"
+                                rootClose
+                                overlay={
+                                  <NodeListPopover
+                                    popoverId={`ok-${groupName}`}
+                                    nodes={groupData.ok_nodes || []}
+                                    title="OK"
+                                    colorClass="success"
+                                  />
+                                }
+                              >
+                                <span
+                                  className="text-success fw-bold"
+                                  style={{ cursor: "pointer", textDecoration: "underline dotted" }}
+                                  title="Click để xem danh sách node OK"
+                                >
+                                  OK: {groupData.ok_count}
+                                </span>
+                              </OverlayTrigger>
+                            ) : (
+                              <span className="text-secondary">OK: 0</span>
+                            )}
+
+                            {/* EXC */}
+                            {(groupData.excluded_count || 0) > 0 ? (
+                              <OverlayTrigger
+                                trigger="click"
+                                placement="bottom"
+                                rootClose
+                                overlay={
+                                  <NodeListPopover
+                                    popoverId={`exc-${groupName}`}
+                                    nodes={groupData.exc_nodes || []}
+                                    title="Excluded"
+                                    colorClass="warning"
+                                  />
+                                }
+                              >
+                                <span
+                                  className="text-warning fw-bold"
+                                  style={{ cursor: "pointer", textDecoration: "underline dotted" }}
+                                  title="Click để xem danh sách node bị Exclude"
+                                >
+                                  Exc: {groupData.excluded_count}
+                                </span>
+                              </OverlayTrigger>
+                            ) : (
+                              <span className="text-secondary">Exc: 0</span>
+                            )}
+
+                            {/* LOCKED */}
+                            {(groupData.locked_count || 0) > 0 && (
+                              <OverlayTrigger
+                                trigger="click"
+                                placement="bottom"
+                                rootClose
+                                overlay={
+                                  <NodeListPopover
+                                    popoverId={`lock-${groupName}`}
+                                    nodes={groupData.locked_nodes || []}
+                                    title="Locked"
+                                    colorClass="dark"
+                                    showReason
+                                  />
+                                }
+                              >
+                                <span
+                                  className="fw-bold"
+                                  style={{ color: "#6f42c1", cursor: "pointer", textDecoration: "underline dotted" }}
+                                  title="Click để xem danh sách node bị khóa SSH"
+                                >
+                                  🔒 {groupData.locked_count}
+                                </span>
+                              </OverlayTrigger>
+                            )}
+
                             {/* TOTAL */}
                             <span className="text-dark fw-bold border-start border-2 ps-2">
                               Total: {groupData.total_devices || 0}
@@ -1728,13 +2093,13 @@ const SystemHealth = () => {
 
                         {/* CHART */}
                         <div className="mt-auto border-top pt-2">
-                          {groupPlatforms.length > 0 && (
+                          {prefs.show_chart && effectivePlatformList.length > 0 && (
                             <GroupNokChart
-                              platformList={groupPlatforms}
+                              platformList={effectivePlatformList}
                               storeKey={`hourly_${slug(groupName)}_group`}
                               height={110}
                               title={null}
-                              excludedHostsSet={excludedHostsSet} // Truyền cờ exclude xuống chart
+                              excludedHostsSet={excludedHostsSet}
                             />
                           )}
                         </div>
@@ -1762,6 +2127,14 @@ const SystemHealth = () => {
           </Card>
         )}
 
+        <HealthDashPersonalize
+          show={showPersonalize}
+          onHide={() => setShowPersonalize(false)}
+          schema={effectiveSchema}
+          prefs={prefs}
+          onChange={handlePrefsChange}
+        />
+
         {/* MODAL */}
         {modalVisible && selectedSubsystem && (
           <Modal
@@ -1781,7 +2154,7 @@ const SystemHealth = () => {
                   platformList={selectedSubsystem.platform}
                   storeKey={`hourly_${slug(selectedSubsystem.group)}_${slug(selectedSubsystem.subsystem)}_modal`}
                   height={220}
-                  title={`NOK trend (24h): ${selectedSubsystem.group} / ${selectedSubsystem.subsystem}`}
+                  title={`NOK trend: ${selectedSubsystem.group} / ${selectedSubsystem.subsystem}`}
                   excludedHostsSet={excludedHostsSet}
                 />
               )}

@@ -12,6 +12,7 @@ import {
   resetAlertConfigState, testAlertConfig, updateAlertConfig,
 } from "../../../redux/Healthcheck/alertConfigSlice";
 import { fetchAnalysisSchema } from "../../../redux/Healthcheck/analysisParamSlice";
+import { fetchDevicesByPlatform } from "../../../redux/Healthcheck/platformDeviceSlice";
 import { fetchDepartments } from "../../../redux/User/departmentSlice";
 import { fetchGroups } from "../../../redux/User/groupSlice";
 import snocApi, { getJwtClaims } from "../../../api/snocApiWithAutoToken";
@@ -19,10 +20,16 @@ import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
+const SELECT_STYLES = {
+  valueContainer: (b) => ({ ...b, maxHeight: "38px", overflowX: "auto", flexWrap: "nowrap" }),
+  multiValue:     (b) => ({ ...b, margin: "1px 2px" }),
+};
+
 const EMPTY_FORM = {
   label: "",
   function_name: "",
   platform: "",
+  device_names: [],
   department: null,
   group: null,
   send_sms: false,
@@ -47,6 +54,7 @@ const configToForm = (cfg) => ({
   label:                   cfg.label || "",
   function_name:           cfg.function_name || "",
   platform:                cfg.platform || "",
+  device_names:            cfg.device_names || [],
   department:              cfg.department ?? null,
   group:                   cfg.group ?? null,
   send_sms:                cfg.send_sms || false,
@@ -65,6 +73,7 @@ const formToPayload = (form) => ({
   label:                   form.label.trim(),
   function_name:           form.function_name,
   platform:                form.platform.trim(),
+  device_names:            form.device_names,
   department:              form.department,
   group:                   form.group,
   send_sms:                form.send_sms,
@@ -117,6 +126,7 @@ const AlertConfigs = () => {
   const { schema } = useSelector((s) => s.analysisParam);
   const departments = useSelector((s) => s.department.departments);
   const groups      = useSelector((s) => s.group.groups);
+  const { devicesByPlatform } = useSelector((s) => s.platformDevice);
 
   const claims = useMemo(() => getJwtClaims(), []);
   const isSuper = useMemo(() =>
@@ -133,6 +143,10 @@ const AlertConfigs = () => {
   const [form, setForm]             = useState(EMPTY_FORM);
   const [modalTab, setModalTab]     = useState("config");
   const [confirmDelete, setConfirmDelete] = useState(null);
+
+  // List-level filters
+  const [filterPlatform, setFilterPlatform] = useState("");
+  const [filterEnabled, setFilterEnabled]   = useState("all"); // "all" | "enabled" | "disabled"
 
   // Platform options — fetched dynamically, filtered by dept/group when selected
   const [availablePlatforms, setAvailablePlatforms] = useState([]);
@@ -174,6 +188,24 @@ const AlertConfigs = () => {
     if (!showModal) return;
     fetchAvailablePlatforms(form.department, form.group);
   }, [showModal, form.department, form.group, fetchAvailablePlatforms]);
+
+  // Fetch devices when platform is selected in form (for device_names multi-select)
+  useEffect(() => {
+    if (showModal && form.platform) {
+      dispatch(fetchDevicesByPlatform(form.platform));
+    }
+  }, [dispatch, showModal, form.platform]);
+
+  // ── device_names options (filtered by selected platform in form) ──────────
+  const deviceNameOptions = useMemo(() => {
+    const devs = (form.platform && devicesByPlatform[form.platform]) || [];
+    return devs.map((d) => ({ value: d.name, label: d.name }));
+  }, [devicesByPlatform, form.platform]);
+
+  const deviceNamesSelected = useMemo(
+    () => (form.device_names || []).map((n) => ({ value: n, label: n })),
+    [form.device_names]
+  );
 
   // ── function_name options from analysis schema ─────────────────────────────
   const fnOptions = useMemo(
@@ -254,6 +286,22 @@ const AlertConfigs = () => {
     await dispatch(deleteAlertConfig(id));
     setConfirmDelete(null);
   };
+
+  // ── list-level filter derived data ────────────────────────────────────────
+
+  const platformsInConfigs = useMemo(() => {
+    const seen = new Set();
+    return configs
+      .filter((c) => c.platform && !seen.has(c.platform) && seen.add(c.platform))
+      .map((c) => ({ value: c.platform, label: c.platform }));
+  }, [configs]);
+
+  const filteredConfigs = useMemo(() => {
+    let result = configs;
+    if (filterPlatform) result = result.filter((c) => c.platform === filterPlatform);
+    if (filterEnabled !== "all") result = result.filter((c) => c.enabled === (filterEnabled === "enabled"));
+    return result;
+  }, [configs, filterPlatform, filterEnabled]);
 
   // ── channel badge summary ──────────────────────────────────────────────────
   const renderChannelBadges = (cfg) => (
@@ -505,13 +553,61 @@ const AlertConfigs = () => {
                   )}
                 </div>
               ) : (
-                <Table responsive hover className="mb-0 small align-middle">
+                <>
+                  {/* ── Filter bar ────────────────────────────────────────── */}
+                  <div className="d-flex gap-2 align-items-center px-3 py-2 border-bottom flex-wrap bg-light">
+                    <span className="text-muted small fw-semibold text-nowrap">Lọc:</span>
+                    <div style={{ minWidth: 180 }}>
+                      <Select
+                        styles={SELECT_STYLES}
+                        options={[{ value: "", label: "Tất cả platform" }, ...platformsInConfigs]}
+                        value={{ value: filterPlatform, label: filterPlatform || "Tất cả platform" }}
+                        onChange={(opt) => setFilterPlatform(opt?.value ?? "")}
+                        placeholder="Platform..."
+                        isClearable
+                      />
+                    </div>
+                    <div className="d-flex gap-1">
+                      {[
+                        { v: "all",      label: "Tất cả" },
+                        { v: "enabled",  label: "Đang ON" },
+                        { v: "disabled", label: "Đang OFF" },
+                      ].map(({ v, label }) => (
+                        <Button
+                          key={v}
+                          size="sm"
+                          variant={filterEnabled === v ? "primary" : "outline-secondary"}
+                          onClick={() => setFilterEnabled(v)}
+                        >
+                          {label}
+                        </Button>
+                      ))}
+                    </div>
+                    {(filterPlatform || filterEnabled !== "all") && (
+                      <>
+                        <Badge bg="warning" text="dark" className="small">
+                          {filteredConfigs.length}/{configs.length}
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="link"
+                          className="p-0 text-muted small"
+                          onClick={() => { setFilterPlatform(""); setFilterEnabled("all"); }}
+                        >
+                          ✕ Xóa filter
+                        </Button>
+                      </>
+                    )}
+                  </div>
+
+                  <Table responsive hover className="mb-0 small align-middle">
                   <thead className="table-light">
                     <tr>
                       <th>Label</th>
                       <th>Scope</th>
                       <th>Function</th>
                       <th>Platform</th>
+                      <th>Devices</th>
                       <th>Channels</th>
                       <th>Trigger</th>
                       <th>Clear</th>
@@ -520,7 +616,13 @@ const AlertConfigs = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {configs.map((cfg) => (
+                    {filteredConfigs.length === 0 ? (
+                      <tr>
+                        <td colSpan={10} className="text-center text-muted py-4">
+                          Không có config nào khớp với bộ lọc
+                        </td>
+                      </tr>
+                    ) : filteredConfigs.map((cfg) => (
                       <tr key={cfg.id} className={!cfg.enabled ? "opacity-50" : ""}>
                         <td className="fw-semibold">{cfg.label}</td>
                         <td><ScopeBadge cfg={cfg} /></td>
@@ -530,6 +632,17 @@ const AlertConfigs = () => {
                         <td>
                           {cfg.platform ? (
                             <Badge bg="info" text="dark">{cfg.platform}</Badge>
+                          ) : (
+                            <span className="text-muted">Tất cả</span>
+                          )}
+                        </td>
+                        <td>
+                          {cfg.device_names?.length > 0 ? (
+                            <div className="d-flex flex-wrap gap-1">
+                              {cfg.device_names.map((n) => (
+                                <Badge key={n} bg="success" className="small">{n}</Badge>
+                              ))}
+                            </div>
                           ) : (
                             <span className="text-muted">Tất cả</span>
                           )}
@@ -598,6 +711,7 @@ const AlertConfigs = () => {
                     ))}
                   </tbody>
                 </Table>
+                </>
               )}
             </Card.Body>
           </Card>
@@ -669,6 +783,31 @@ const AlertConfigs = () => {
                     </Form.Group>
                   </Col>
                 </Row>
+
+                {form.platform && (
+                  <Form.Group className="mb-3">
+                    <Form.Label className="fw-bold">
+                      Thiết bị cụ thể{" "}
+                      <span className="text-muted fw-normal">(tùy chọn — để trống = áp dụng tất cả)</span>
+                    </Form.Label>
+                    <Select
+                      styles={SELECT_STYLES}
+                      options={deviceNameOptions}
+                      value={deviceNamesSelected}
+                      onChange={(opts) => setField("device_names", (opts || []).map((o) => o.value))}
+                      placeholder="Tất cả thiết bị trong platform này..."
+                      isMulti
+                      closeMenuOnSelect={false}
+                      isClearable
+                      noOptionsMessage={() => form.platform ? "Không có thiết bị nào" : "Chọn platform trước"}
+                    />
+                    {form.device_names?.length > 0 && (
+                      <small className="text-warning">
+                        Alert chỉ fire cho {form.device_names.length} thiết bị được chọn
+                      </small>
+                    )}
+                  </Form.Group>
+                )}
 
                 <Form.Group className="mb-3">
                   <Form.Label className="fw-bold">Hàm phân tích <span className="text-danger">*</span></Form.Label>

@@ -3,18 +3,22 @@
 // accountSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { snocLogin, setSnocToken, snocApi } from './../../api/snocApiWithAutoToken';
+import { fetchKpiPreferences } from '../KPI/kpiPinnedSlice';
 
-
+const USER_ID_KEY = "snoc_current_user_id";
 
 // LOGIN
 export const loginUser = createAsyncThunk(
   'auth/loginUser',
-  async ({ email, password }, { rejectWithValue }) => {
+  async ({ email, password }, { dispatch, rejectWithValue }) => {
     try {
       const data = await snocLogin(email, password); // POST {BASE}/login
       const token = data?.token || data?.access;
       if (!token) return rejectWithValue(data?.msg || data?.message || 'Login failed');
       setSnocToken(token, { persist: true });        // muốn sống qua reload -> persist:true
+      const userId = data.user?.id ?? data.user?.username ?? data.user?.email;
+      if (userId != null) localStorage.setItem(USER_ID_KEY, String(userId));
+      dispatch(fetchKpiPreferences());
       return { user: data.user, token };
     } catch (error) {
       return rejectWithValue(error?.response?.data?.msg || error?.message || 'Login failed');
@@ -70,6 +74,7 @@ export const accountSlice = createSlice({
       state.status = 'idle';
       state.error = null;
       setSnocToken(null, { persist: true });
+      try { localStorage.removeItem(USER_ID_KEY); } catch {}
     },
   },
   extraReducers: (builder) => {

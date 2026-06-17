@@ -12,6 +12,7 @@ export const PLATFORM_USECASE_RULES = [
   // Ví dụ: mọi platform chứa "pgw" (không phân biệt hoa thường)
   { match: /pgw/i, usecases: ["causecode", "kpi"] },
   { match: /pcrf/i, usecases: ["causecode", "kpi"] },
+  { match: /mme/i, usecases: ["kpi"] },
   // Ví dụ mẫu khác (bạn có thể bật dùng khi cần):
   // { match: /ims_sbg/i, usecases: ["kpi"] },
   // { match: /^dra$/i, usecases: ["causecode"] },

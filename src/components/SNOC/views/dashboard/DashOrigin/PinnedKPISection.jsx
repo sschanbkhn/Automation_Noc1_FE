@@ -1,17 +1,18 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Button, Card, Col, Form, Modal, Row, Spinner } from "react-bootstrap";
 import { addPin, loadPins, removePin } from "../../../redux/KPI/pinnedKpisSlice";
-// (tuỳ dự án) import KPIExplorerCore nếu muốn render đồ thị:
+import { fetchKPIChartDataBatch } from "../../../redux/KPI/kpiSlice";
+import KPIChartGrid from "../../forms/kpi/KPIChartGrid";
 import KPIExplorerCore from "../../forms/kpi/KPIExplorerCore";
 
 export default function PinnedKPISection({
   group,
-  subsystem,           // optional: nếu có → đây là Subsystem detail; nếu không → Group page
-  platform = null,     // optional: lọc theo platform cụ thể (dùng trong KPIDashboard)
-  scopes = "all",       // "subsystem,platform,device" | "platform,device" | "all"
+  subsystem,
+  platform = null,
+  scopes = "all",
   title = "Pinned KPIs",
-  showAddButton = true, // false khi context đã có KPIExplorerCore để thêm pin (vd: KPIDashboard)
+  showAddButton = true,
 }) {
   const dispatch = useDispatch();
   const { items, loading } = useSelector(s => s.pinned);
@@ -25,34 +26,54 @@ export default function PinnedKPISection({
 
   // Modal add
   const [show, setShow] = useState(false);
+  const [formError, setFormError] = useState(null);
   const [form, setForm] = useState({
     kpi_key: "",
     title: "",
-    subsystem: "",     // dùng khi đang ở Group page (không có prop subsystem)
+    subsystem: "",
     platform: "",
     device: "",
     chart_config: {},
   });
 
-  const onChange = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+  const onChange = (e) => {
+    setFormError(null);
+    setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+  };
+
+  const handleClose = () => {
+    setShow(false);
+    setFormError(null);
+    setForm({ kpi_key: "", title: "", subsystem: "", platform: "", device: "", chart_config: {} });
+  };
 
   const handleAdd = async () => {
     if (!form.kpi_key.trim()) return;
 
     const resolvedSubsystem = subsystem || form.subsystem || null;
+    const resolvedPlatform = form.platform || platform || null;
+    const resolvedDevice = form.device || null;
+
+    if (!resolvedSubsystem && !resolvedPlatform && !resolvedDevice) {
+      setFormError("Cần nhập ít nhất một trong: Subsystem, Platform hoặc Device.");
+      return;
+    }
 
     const payload = {
       group,
       subsystem: resolvedSubsystem,
-      platform: form.platform || platform || null,
-      device: form.device || null,
+      platform: resolvedPlatform,
+      device: resolvedDevice,
       kpi_key: form.kpi_key.trim(),
       title: form.title || "",
       chart_config: form.chart_config || {},
     };
-    await dispatch(addPin(payload));
-    setShow(false);
-    setForm({ kpi_key: "", title: "", subsystem: "", platform: "", device: "", chart_config: {} });
+    const result = await dispatch(addPin(payload));
+    if (addPin.rejected.match(result)) {
+      setFormError("Lưu thất bại. Kiểm tra lại thông tin.");
+      return;
+    }
+    handleClose();
   };
 
   const handleUnpin = async (id) => {
@@ -70,9 +91,11 @@ export default function PinnedKPISection({
       </Card.Header>
 
       <Card.Body>
-        {/* {items.length === 0 && (
-          <div className="text-muted">Chưa có KPI nào được pin.</div>
-        )} */}
+        {items.length === 0 && !loading && (
+          <div className="text-muted text-center py-3">
+            Chưa có KPI nào được pin. Bấm "+ Pin KPI" để thêm.
+          </div>
+        )}
 
         <Row className="g-3">
           {items.map(pin => (
@@ -133,7 +156,7 @@ export default function PinnedKPISection({
       </Card.Body>
 
       {/* Modal Add */}
-      <Modal show={show} onHide={() => setShow(false)}>
+      <Modal show={show} onHide={handleClose}>
         <Modal.Header closeButton><Modal.Title>Pin KPI mới</Modal.Title></Modal.Header>
         <Modal.Body>
           {!subsystem && (
@@ -143,7 +166,7 @@ export default function PinnedKPISection({
             </Form.Group>
           )}
           <Form.Group className="mb-3">
-            <Form.Label>KPI Key</Form.Label>
+            <Form.Label>KPI Key <span className="text-danger">*</span></Form.Label>
             <Form.Control name="kpi_key" value={form.kpi_key} onChange={onChange} placeholder="vd: pgw.causecode.topn" />
           </Form.Group>
           <Form.Group className="mb-3">
@@ -170,10 +193,12 @@ export default function PinnedKPISection({
               </Form.Group>
             </Col>
           </Row>
-          {/* Nếu bạn muốn cấu hình chart nâng cao, có thể thêm JSON editor cho chart_config */}
+          {formError && (
+            <div className="text-danger small">{formError}</div>
+          )}
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShow(false)}>Đóng</Button>
+          <Button variant="secondary" onClick={handleClose}>Đóng</Button>
           <Button onClick={handleAdd} disabled={!group || !form.kpi_key.trim()}>Pin</Button>
         </Modal.Footer>
       </Modal>

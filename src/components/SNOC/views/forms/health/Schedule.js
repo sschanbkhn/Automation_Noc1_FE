@@ -26,6 +26,11 @@ import Alert from "../../../components/Alert/Alert";
 // ✅ Import hàm giải mã Token
 import { getJwtClaims } from "../../../api/snocApiWithAutoToken";
 
+const SELECT_STYLES = {
+  valueContainer: (b) => ({ ...b, maxHeight: "38px", overflowX: "auto", flexWrap: "nowrap" }),
+  multiValue:     (b) => ({ ...b, margin: "1px 2px" }),
+};
+
 const StatusBadge = ({ status }) => {
   const map = {
     success: { label: "All OK",        color: "success",  icon: "✅" },
@@ -97,6 +102,18 @@ const Schedule = () => {
   }, [devices]);
 
   const combinedOptions = [{ label: "-- Chọn tất cả --", value: "__all__" }, ...deviceOptions];
+
+  const platformOptions = useMemo(() =>
+    platforms.map((p) => ({ label: p.name, value: p.name }))
+  , [platforms]);
+
+  const departmentOptions = useMemo(() =>
+    departments.map((d) => ({ label: d.name, value: String(d.id) }))
+  , [departments]);
+
+  const groupOptions = useMemo(() =>
+    displayGroups.map((g) => ({ label: g.name, value: String(g.id) }))
+  , [displayGroups]);
 
   const handleDeviceChange = (selected) => {
     if (!selected) return setFormData({ ...formData, node_names: [] });
@@ -444,45 +461,53 @@ const SortTh = ({ colKey, label, sortConfig, setSortConfig }) => (
             <Row className="mb-3">
               <Col md={6}>
                 <Form.Label className="fw-bold">Department</Form.Label>
-                <Form.Select 
-                  value={formData.department} 
-                  onChange={e => setFormData({...formData, department: e.target.value, group: ""})}
-                  disabled={!isAdmin} // Chỉ Admin mới được chọn Dept
-                >
-                  <option value="">-- Chọn Department --</option>
-                  {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                </Form.Select>
+                <Select
+                  options={departmentOptions}
+                  value={departmentOptions.find(o => o.value === String(formData.department)) || null}
+                  onChange={opt => setFormData({...formData, department: opt?.value || "", group: ""})}
+                  placeholder="-- Chọn Department --"
+                  isClearable
+                  isDisabled={!isAdmin}
+                  styles={SELECT_STYLES}
+                />
               </Col>
               <Col md={6}>
                 <Form.Label className="fw-bold">Group sở hữu (Phân quyền)</Form.Label>
-                <Form.Select 
-                  value={formData.group} 
-                  onChange={e => setFormData({...formData, group: e.target.value})}
-                  disabled={!isAdmin} // Chỉ Admin mới được chọn Group
-                >
-                  <option value="">-- Chọn Group --</option>
-                  {displayGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                </Form.Select>
+                <Select
+                  options={groupOptions}
+                  value={groupOptions.find(o => o.value === String(formData.group)) || null}
+                  onChange={opt => setFormData({...formData, group: opt?.value || ""})}
+                  placeholder="-- Chọn Group --"
+                  isClearable
+                  isDisabled={!isAdmin}
+                  styles={SELECT_STYLES}
+                />
               </Col>
             </Row>
 
             <Row className="mb-3">
               <Col md={4}>
                 <Form.Label className="fw-bold">Platform</Form.Label>
-                <Form.Select value={formData.platform} onChange={e => setFormData({...formData, platform: e.target.value})}>
-                  <option value="">-- Chọn Platform --</option>
-                  {platforms.map((p, idx) => <option key={idx} value={p.name}>{p.name}</option>)}
-                </Form.Select>
+                <Select
+                  options={platformOptions}
+                  value={platformOptions.find(o => o.value === formData.platform) || null}
+                  onChange={opt => setFormData({...formData, platform: opt?.value || ""})}
+                  placeholder="-- Chọn Platform --"
+                  isClearable
+                  styles={SELECT_STYLES}
+                />
               </Col>
               <Col md={8}>
                 <Form.Label className="fw-bold">Thiết bị</Form.Label>
-                <Select 
-                  isMulti 
-                  options={combinedOptions} 
-                  value={formData.node_names} 
-                  onChange={handleDeviceChange} 
+                <Select
+                  isMulti
+                  options={combinedOptions}
+                  value={formData.node_names}
+                  onChange={handleDeviceChange}
                   placeholder="Chọn thiết bị..."
                   isDisabled={!formData.platform}
+                  closeMenuOnSelect={false}
+                  styles={SELECT_STYLES}
                 />
               </Col>
             </Row>

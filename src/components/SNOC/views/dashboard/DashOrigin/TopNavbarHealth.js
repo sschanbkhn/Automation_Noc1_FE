@@ -1,5 +1,5 @@
 import React from "react";
-import { Container, Nav, Navbar, NavDropdown } from "react-bootstrap";
+import { Breadcrumb, Container, Nav, Navbar, NavDropdown } from "react-bootstrap";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import Clock from "../../../components/Clock";
 import { getSnocToken, setSnocToken, snocApiNoAuth, getJwtClaims } from "../../../api/snocApiWithAutoToken";
@@ -8,6 +8,58 @@ import { getSnocToken, setSnocToken, snocApiNoAuth, getJwtClaims } from "../../.
 const LINK_BASE   = "fw-semibold px-2 py-1 mx-1 rounded text-decoration-none";
 const LINK_ACTIVE = `${LINK_BASE} bg-white text-primary`;
 const LINK_IDLE   = `${LINK_BASE} text-white`;
+
+// ── Breadcrumb config ──────────────────────────────────────────────────────
+const BREADCRUMB_MAP = {
+  "/app/dashboard/origin":             { section: "Healthcheck", label: "Dashboard" },
+  "/healthcheck/checks":               { section: "Healthcheck", label: "Manual Check" },
+  "/healthcheck/healthcheck-external": { section: "Healthcheck", label: "Manual External" },
+  "/healthcheck/schedule":             { section: "Healthcheck", label: "Schedule" },
+  "/healthcheck/history":              { section: "Healthcheck", label: "History" },
+  "/healthcheck/OutputIgnoreRulesV2":  { section: "Healthcheck", label: "Ignore Rules" },
+  "/healthcheck/blackout":             { section: "Healthcheck", label: "Blackout Config" },
+  "/healthcheck/analysis-params":      { section: "Healthcheck", label: "Analysis Params" },
+  "/healthcheck/alert-config":         { section: "Healthcheck", label: "Alert Config" },
+  "/healthcheck/external/stats":       { label: "External Stats" },
+  "/precheck":                         { section: "Precheck",   label: "Dashboard" },
+  "/precheck/manual":                  { section: "Precheck",   label: "Manual" },
+  "/healthcheck/precheck-external":    { section: "Precheck",   label: "Manual External" },
+  "/precheck/schedule":                { section: "Precheck",   label: "Schedule" },
+  "/precheck/history":                 { section: "Precheck",   label: "History" },
+  "/dhtt/dashboard":                   { section: "Bảo Dưỡng", label: "Dashboard" },
+  "/dhtt/manual":                      { section: "Bảo Dưỡng", label: "Manual" },
+  "/healthcheck/kpischedule":          { section: "Bảo Dưỡng", label: "Schedule" },
+  "/dhtt/history":                     { section: "Bảo Dưỡng", label: "History" },
+  "/healthcheck/devices":              { label: "Devices" },
+  "/healthcheck/monitor":              { section: "System",     label: "System Monitor" },
+  "/config-email-sms":                 { section: "System",     label: "Kênh thông báo" },
+  "/healthcheck/retention-config":     { section: "System",     label: "Cấu hình lưu giữ" },
+  "/healthcheck/kpi":                  { section: "KPI",        label: "KPI Explorer" },
+  "/kpi/dashboard":                    { section: "KPI",        label: "KPI Dashboard" },
+  "/kpi/schedule":                     { section: "KPI",        label: "Quản lý Schedule" },
+};
+
+const SECTION_URLS = {
+  "Healthcheck": "/app/dashboard/origin",
+  "Precheck":    "/precheck",
+  "Bảo Dưỡng":  "/dhtt/dashboard",
+  "System":      "/healthcheck/monitor",
+  "KPI":         "/kpi/dashboard",
+};
+
+const getBreadcrumb = (pathname) => {
+  if (BREADCRUMB_MAP[pathname]) return BREADCRUMB_MAP[pathname];
+  // /healthcheck/:group/:subsystem
+  const hcSub = pathname.match(/^\/healthcheck\/([^/]+)\/(.+)$/);
+  if (hcSub) return { section: "Healthcheck", label: "Dashboard", extra: `${hcSub[1]} › ${hcSub[2]}` };
+  // /healthcheck/:group  (only if not matching a known key above)
+  const hcGrp = pathname.match(/^\/healthcheck\/([^/]+)$/);
+  if (hcGrp) return { section: "Healthcheck", label: `Dashboard — ${hcGrp[1]}` };
+  // /kpi/:system/:subsystem
+  const kpiSub = pathname.match(/^\/kpi\/([^/]+)\/(.+)$/);
+  if (kpiSub) return { section: "KPI", label: "KPI Explorer", extra: `${kpiSub[1]} › ${kpiSub[2]}` };
+  return null;
+};
 
 const TopNavbar = () => {
   const navigate = useNavigate();
@@ -72,7 +124,10 @@ const TopNavbar = () => {
     "/kpi/",
   ];
 
+  const breadcrumb = getBreadcrumb(pathname);
+
   return (
+    <>
     <Navbar bg="primary" variant="dark" expand="lg" className="px-3 py-1 shadow-sm">
       <Container fluid>
         <Navbar.Brand className="fw-bold me-0" style={{ fontSize: "1rem" }}>
@@ -175,6 +230,12 @@ const TopNavbar = () => {
             <NavLink to="/healthcheck/devices" className={getLinkClass}>
               Devices
             </NavLink>
+
+            {/* ── 5. EXTERNAL STATS ────────────────────────────────── */}
+            <NavLink to="/healthcheck/external/stats" className={getLinkClass}>
+              📊 External Stats
+            </NavLink>
+
             {/* ── Admin Monitor (admin only) ── */}
             {isAdmin && (
               <NavDropdown
@@ -244,6 +305,25 @@ const TopNavbar = () => {
         </Navbar.Collapse>
       </Container>
     </Navbar>
+    {breadcrumb && (
+      <nav aria-label="breadcrumb" style={{ background: "#f8f9fa", borderBottom: "1px solid #dee2e6", padding: "4px 16px" }}>
+        <Breadcrumb className="mb-0" style={{ fontSize: "0.8rem" }}>
+          <Breadcrumb.Item linkAs={NavLink} linkProps={{ to: "/app/dashboard/origin" }}>
+            Automation Healthcheck
+          </Breadcrumb.Item>
+          {breadcrumb.section && (
+            <Breadcrumb.Item linkAs={NavLink} linkProps={{ to: SECTION_URLS[breadcrumb.section] || "/app/dashboard/origin" }}>
+              {breadcrumb.section}
+            </Breadcrumb.Item>
+          )}
+          <Breadcrumb.Item active>{breadcrumb.label}</Breadcrumb.Item>
+          {breadcrumb.extra && (
+            <Breadcrumb.Item active>{breadcrumb.extra}</Breadcrumb.Item>
+          )}
+        </Breadcrumb>
+      </nav>
+    )}
+    </>
   );
 };
 
