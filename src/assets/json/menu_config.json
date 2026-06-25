@@ -230,6 +230,12 @@
           "name": "T001 Ciena 6500",
           "url": "/tnoc1-t001",
           "icon": "bi bi-grid"
+        },
+        {
+          "code": "tnoc1-t002",
+          "name": "CienaDB Temperature",
+          "url": "/CienaDBTemp",
+          "icon": "bi bi-thermometer-half"
         }
       ]
     },

@@ -30,6 +30,7 @@ import {
     NetworkLinks,
 } from "components/Network";
 import Tnoc1T001 from "components/TNOC1/T001/index";
+import CienaDBTemp from "components/TNOC1/CienaDBTemp/index";
 import Charts from "uielements/charts/Charts";
 import CenterDashboard from "../DashboardAutomation/CenterDashboard";
 import RoomDashboard from "../DashboardAutomation/RoomDashboard";
@@ -233,6 +234,8 @@ const MainPageRoute = (props: Props) => {
             //TNOC1
             case "tnoc1-t001":
                 return <Tnoc1T001 />;
+            case "tnoc1-t002":
+                return <CienaDBTemp />;
             //
         // menu ANM
             case "anm_uc1":
