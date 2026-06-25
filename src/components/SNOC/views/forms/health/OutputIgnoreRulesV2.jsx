@@ -495,6 +495,34 @@ const OutputIgnoreRulesV2 = () => {
     setShowModal(true);
   };
 
+  const openClone = (r) => {
+    isEditingRef.current = false;
+    setEditingId(null);
+    const deptObj  = departments.find(d => d.name === r.department);
+    const groupObj = groups.find(g => g.name === r.group);
+    setForm({
+      name:             `Copy of ${r.name}`,
+      department:       deptObj?.id        || (!isAdmin ? (userClaims?.department_id ?? "") : ""),
+      group:            groupObj?.id       || (!isAdmin ? (userClaims?.group_id      ?? "") : ""),
+      platform:         r.platform         || "*",
+      usecase:          r.usecase          || "healthcheck",
+      command_prefix:   r.command_prefix   || "*",
+      enabled:          true,
+      case_insensitive: !!r.case_insensitive,
+      line_operator:    r.line_operator    || "OR",
+      block_operator:   r.block_operator   || "OR",
+      conditions: (r.conditions || []).map(normalizeCondition),
+      reason:           r.reason           || "",
+    });
+    const platVal = r.platform && r.platform !== "*" ? r.platform : null;
+    setSelectedPlatformOption(platVal ? { label: platVal, value: platVal } : null);
+    setSelectedDevices(
+      (r.hosts || []).filter(h => h !== "*").map(h => ({ label: h, value: h }))
+    );
+    if (platVal) dispatch(fetchDevicesByPlatform(platVal));
+    setShowModal(true);
+  };
+
   const openDelete = (r) => { setDeletingRule(r); setShowDeleteModal(true); };
 
   const handleDeviceChange = (selected) => {
@@ -575,7 +603,11 @@ const OutputIgnoreRulesV2 = () => {
       <Modal show={showModal} onHide={() => setShowModal(false)} size="xl" centered>
         <Modal.Header closeButton>
           <Modal.Title>
-            {editingId ? `Sửa Rule: ${form.name}` : "Tạo Ignore Rule V2"}
+            {editingId
+              ? `Sửa Rule: ${form.name}`
+              : form.name.startsWith("Copy of ")
+                ? "Clone Rule"
+                : "Tạo Ignore Rule V2"}
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -992,6 +1024,12 @@ const OutputIgnoreRulesV2 = () => {
                                 disabled={saving || !canAct}
                                 title={!canAct ? "Không có quyền" : "Sửa"}>
                                 ✏️
+                              </Button>
+                              <Button size="sm" variant="outline-secondary"
+                                onClick={() => openClone(r)}
+                                disabled={saving}
+                                title="Clone rule này">
+                                📋
                               </Button>
                               <Button size="sm"
                                 variant={r.enabled ? "outline-secondary" : "outline-success"}

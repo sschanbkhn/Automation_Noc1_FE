@@ -811,54 +811,79 @@ const KPIExplorerCore = ({
             </Row>
           )}
 
-          {/* Hàng 3: Quick range + Bucket override */}
-          <Row className="align-items-center mb-2">
-            <Col className="d-flex flex-wrap align-items-center gap-3">
-              {/* Quick range */}
-              <div className="d-flex align-items-center gap-1">
-                <small className="text-muted" style={{ whiteSpace: "nowrap" }}>Range:</small>
-                <div className="btn-group btn-group-sm">
-                  {QUICK_RANGES.map((r) => (
-                    <Button
-                      key={r.value}
-                      variant={quickRange === r.value ? "primary" : "outline-primary"}
-                      onClick={() => setQuickRange(r.value)}
-                    >{r.label}</Button>
-                  ))}
+          {/* Compact single-row toolbar: Range + Bucket + Chart mode + View mode */}
+          <div
+            className="d-flex align-items-center flex-nowrap gap-2 mb-2"
+            style={{ overflowX: "auto", paddingBottom: 2 }}
+          >
+            <small className="text-muted" style={{ whiteSpace: "nowrap" }}>Range:</small>
+            <div className="btn-group btn-group-sm" style={{ flexShrink: 0 }}>
+              {QUICK_RANGES.map((r) => (
+                <Button
+                  key={r.value}
+                  variant={quickRange === r.value ? "primary" : "outline-primary"}
+                  onClick={() => setQuickRange(r.value)}
+                >{r.label}</Button>
+              ))}
+              <Button
+                variant={quickRange === "custom" ? "primary" : "outline-primary"}
+                onClick={() => setQuickRange("custom")}
+              >Tuỳ chỉnh</Button>
+            </div>
+
+            <div style={{ width: 1, height: 22, background: "#dee2e6", flexShrink: 0 }} />
+
+            <small className="text-muted" style={{ whiteSpace: "nowrap" }}>Bucket:</small>
+            <div className="btn-group btn-group-sm" style={{ flexShrink: 0 }}>
+              {BUCKET_OPTIONS.map((b) => (
+                <Button
+                  key={b.value}
+                  variant={bucketOverride === b.value ? "success" : "outline-success"}
+                  onClick={() => setBucketOverride(b.value)}
+                >{b.label}</Button>
+              ))}
+            </div>
+            {bucketOverride === "auto" && (
+              <small className="text-muted" style={{ whiteSpace: "nowrap" }}>
+                →&nbsp;
+                {quickRange !== "custom"
+                  ? getEffectiveBucketLabel(QUICK_RANGES.find((r) => r.value === quickRange)?.hours || 72, "auto")
+                  : "auto"}
+              </small>
+            )}
+
+            {!hideCharts && (
+              <>
+                <div style={{ width: 1, height: 22, background: "#dee2e6", flexShrink: 0 }} />
+                <div className="btn-group btn-group-sm" role="group" style={{ flexShrink: 0 }}>
                   <Button
-                    variant={quickRange === "custom" ? "primary" : "outline-primary"}
-                    onClick={() => setQuickRange("custom")}
-                  >Tuỳ chỉnh</Button>
+                    variant={chartMode === "absolute" ? "primary" : "outline-primary"}
+                    onClick={() => setChartMode("absolute")}
+                  >Absolute</Button>
+                  <Button
+                    variant={chartMode === "delta" ? "primary" : "outline-primary"}
+                    onClick={() => setChartMode("delta")}
+                  >Delta</Button>
                 </div>
-              </div>
-
-              <div style={{ width: 1, height: 26, background: "#dee2e6", flexShrink: 0 }} />
-
-              {/* Bucket override */}
-              <div className="d-flex align-items-center gap-1">
-                <small className="text-muted" style={{ whiteSpace: "nowrap" }}>Bucket:</small>
-                <div className="btn-group btn-group-sm">
-                  {BUCKET_OPTIONS.map((b) => (
-                    <Button
-                      key={b.value}
-                      variant={bucketOverride === b.value ? "success" : "outline-success"}
-                      onClick={() => setBucketOverride(b.value)}
-                    >{b.label}</Button>
-                  ))}
+                <div className="btn-group btn-group-sm" role="group" style={{ flexShrink: 0 }}>
+                  <Button
+                    variant={viewMode === "per-kpi" ? "success" : "outline-success"}
+                    onClick={() => setViewMode("per-kpi")}
+                  >Riêng lẻ</Button>
+                  <Button
+                    variant={viewMode === "all-in-one" ? "success" : "outline-success"}
+                    onClick={() => setViewMode("all-in-one")}
+                  >Gộp chung</Button>
+                  <Button
+                    variant={viewMode === "per-kpi-row" ? "success" : "outline-success"}
+                    onClick={() => setViewMode("per-kpi-row")}
+                  >Mỗi hàng</Button>
                 </div>
-                {bucketOverride === "auto" && (
-                  <small className="text-muted ms-1" style={{ whiteSpace: "nowrap" }}>
-                    →&nbsp;
-                    {quickRange !== "custom"
-                      ? getEffectiveBucketLabel(QUICK_RANGES.find((r) => r.value === quickRange)?.hours || 72, "auto")
-                      : "auto"}
-                  </small>
-                )}
-              </div>
-            </Col>
-          </Row>
+              </>
+            )}
+          </div>
 
-          {/* Custom date pickers */}
+          {/* Custom date pickers — chỉ hiện khi chọn Tuỳ chỉnh */}
           {quickRange === "custom" && (
             <Row className="align-items-end mb-2">
               <Col md={3}>
@@ -890,53 +915,6 @@ const KPIExplorerCore = ({
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
                 />
-              </Col>
-            </Row>
-          )}
-
-          {!hideCharts && (
-            <Row className="mb-2">
-              <Col className="d-flex flex-wrap gap-2">
-                <div className="btn-group" role="group" aria-label="Chart value mode">
-                  <Button
-                    size="sm"
-                    variant={chartMode === "absolute" ? "primary" : "outline-primary"}
-                    onClick={() => setChartMode("absolute")}
-                  >
-                    Absolute
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={chartMode === "delta" ? "primary" : "outline-primary"}
-                    onClick={() => setChartMode("delta")}
-                  >
-                    Delta
-                  </Button>
-                </div>
-
-                <div className="btn-group" role="group" aria-label="View mode">
-                  <Button
-                    size="sm"
-                    variant={viewMode === "per-kpi" ? "success" : "outline-success"}
-                    onClick={() => setViewMode("per-kpi")}
-                  >
-                    Mỗi KPI 1 đồ thị
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={viewMode === "all-in-one" ? "success" : "outline-success"}
-                    onClick={() => setViewMode("all-in-one")}
-                  >
-                    1 đồ thị tất cả KPI
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={viewMode === "per-kpi-row" ? "success" : "outline-success"}
-                    onClick={() => setViewMode("per-kpi-row")}
-                  >
-                    Mỗi KPI 1 hàng
-                  </Button>
-                </div>
               </Col>
             </Row>
           )}

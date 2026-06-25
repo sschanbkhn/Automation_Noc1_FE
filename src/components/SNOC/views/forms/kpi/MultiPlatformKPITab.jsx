@@ -28,9 +28,9 @@ const SELECT_STYLES = {
 };
 
 const VIEW_MODES = [
-  { label: "Mỗi KPI 1 hàng",        value: "per-kpi-row", title: "Mỗi KPI 1 hàng (full width)" },
-  { label: "Mỗi KPI 1 đồ thị",      value: "per-kpi",     title: "Mỗi KPI 1 đồ thị (3 cột)" },
-  { label: "1 đồ thị tất cả KPI",   value: "all-in-one",  title: "Gộp tất cả KPI vào 1 đồ thị" },
+  { label: "Riêng lẻ",   value: "per-kpi",     title: "Mỗi KPI 1 đồ thị (3 cột)" },
+  { label: "Gộp chung",  value: "all-in-one",  title: "Gộp tất cả KPI vào 1 đồ thị" },
+  { label: "Mỗi hàng",   value: "per-kpi-row", title: "Mỗi KPI 1 hàng (full width)" },
 ];
 
 // Style cho 1 "card" (chart đang vẽ HOẶC 1 chart đã ghim) khi viewMode = "per-kpi" — luôn cố định ~1/3
@@ -478,76 +478,69 @@ export default function MultiPlatformKPITab() {
   return (
     <div style={{ padding: "12px 16px" }}>
 
-      <div className="mb-2">
-        <Button variant="outline-primary" onClick={() => setShowModal(true)}>
-          📊 Mở Multi-PGW Explorer
+      {/* Compact single-row toolbar */}
+      <div
+        className="d-flex align-items-center flex-nowrap gap-2 mb-3"
+        style={{ overflowX: "auto", paddingBottom: 2 }}
+      >
+        <Button size="sm" variant="outline-primary" onClick={() => setShowModal(true)} style={{ whiteSpace: "nowrap" }}>
+          📊 Multi-PGW Explorer
         </Button>
+
+        <div style={{ width: 1, height: 22, background: "#dee2e6", flexShrink: 0 }} />
+
+        <small className="text-muted" style={{ whiteSpace: "nowrap" }}>Range:</small>
+        <div className="btn-group btn-group-sm" style={{ flexShrink: 0 }}>
+          {QUICK_RANGES.map((r) => (
+            <Button
+              key={r.value}
+              variant={quickRange === r.value ? "primary" : "outline-primary"}
+              onClick={() => setQuickRange(r.value)}
+            >{r.label}</Button>
+          ))}
+        </div>
+
+        <div style={{ width: 1, height: 22, background: "#dee2e6", flexShrink: 0 }} />
+
+        <small className="text-muted" style={{ whiteSpace: "nowrap" }}>Bucket:</small>
+        <div className="btn-group btn-group-sm" style={{ flexShrink: 0 }}>
+          {BUCKET_OPTIONS.map((b) => (
+            <Button
+              key={b.value}
+              variant={bucketOverride === b.value ? "success" : "outline-success"}
+              onClick={() => setBucketOverride(b.value)}
+            >{b.label}</Button>
+          ))}
+        </div>
+        {bucketOverride === "auto" && (
+          <small className="text-muted" style={{ whiteSpace: "nowrap" }}>
+            → {getEffectiveBucketLabel(QUICK_RANGES.find((r) => r.value === quickRange)?.hours || 24, "auto")}
+          </small>
+        )}
+
+        <div style={{ width: 1, height: 22, background: "#dee2e6", flexShrink: 0 }} />
+
+        <div className="btn-group btn-group-sm" role="group" style={{ flexShrink: 0 }}>
+          <Button
+            variant={chartMode === "absolute" ? "primary" : "outline-primary"}
+            onClick={() => setChartMode("absolute")}
+          >Absolute</Button>
+          <Button
+            variant={chartMode === "delta" ? "primary" : "outline-primary"}
+            onClick={() => setChartMode("delta")}
+          >Delta</Button>
+        </div>
+        <div className="btn-group btn-group-sm" role="group" style={{ flexShrink: 0 }}>
+          {VIEW_MODES.map((v) => (
+            <Button
+              key={v.value}
+              variant={viewMode === v.value ? "success" : "outline-success"}
+              onClick={() => setViewMode(v.value)}
+              title={v.title}
+            >{v.label}</Button>
+          ))}
+        </div>
       </div>
-
-      {/* Range + Bucket */}
-      <Row className="align-items-center mb-2">
-        <Col className="d-flex flex-wrap align-items-center gap-3">
-          <div className="d-flex align-items-center gap-1">
-            <small className="text-muted" style={{ whiteSpace: "nowrap" }}>Range:</small>
-            <div className="btn-group btn-group-sm">
-              {QUICK_RANGES.map((r) => (
-                <Button
-                  key={r.value}
-                  variant={quickRange === r.value ? "primary" : "outline-primary"}
-                  onClick={() => setQuickRange(r.value)}
-                >{r.label}</Button>
-              ))}
-            </div>
-          </div>
-          <div style={{ width: 1, height: 26, background: "#dee2e6", flexShrink: 0 }} />
-          <div className="d-flex align-items-center gap-1">
-            <small className="text-muted" style={{ whiteSpace: "nowrap" }}>Bucket:</small>
-            <div className="btn-group btn-group-sm">
-              {BUCKET_OPTIONS.map((b) => (
-                <Button
-                  key={b.value}
-                  variant={bucketOverride === b.value ? "success" : "outline-success"}
-                  onClick={() => setBucketOverride(b.value)}
-                >{b.label}</Button>
-              ))}
-            </div>
-            {bucketOverride === "auto" && (
-              <small className="text-muted ms-1" style={{ whiteSpace: "nowrap" }}>
-                →&nbsp;{getEffectiveBucketLabel(QUICK_RANGES.find((r) => r.value === quickRange)?.hours || 24, "auto")}
-              </small>
-            )}
-          </div>
-        </Col>
-      </Row>
-
-      {/* Absolute/Delta + View mode */}
-      <Row className="mb-3">
-        <Col className="d-flex flex-wrap gap-2">
-          <div className="btn-group" role="group" aria-label="Chart value mode">
-            <Button
-              size="sm"
-              variant={chartMode === "absolute" ? "primary" : "outline-primary"}
-              onClick={() => setChartMode("absolute")}
-            >Absolute</Button>
-            <Button
-              size="sm"
-              variant={chartMode === "delta" ? "primary" : "outline-primary"}
-              onClick={() => setChartMode("delta")}
-            >Delta</Button>
-          </div>
-          <div className="btn-group" role="group" aria-label="View mode">
-            {VIEW_MODES.map((v) => (
-              <Button
-                key={v.value}
-                size="sm"
-                variant={viewMode === v.value ? "success" : "outline-success"}
-                onClick={() => setViewMode(v.value)}
-                title={v.title}
-              >{v.label}</Button>
-            ))}
-          </div>
-        </Col>
-      </Row>
 
       <Modal show={showModal} onHide={() => setShowModal(false)} size="xl">
         <Modal.Header closeButton>
