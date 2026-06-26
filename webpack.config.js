@@ -112,7 +112,19 @@ const config = {
     new MiniCssExtractPlugin({ filename: devMode ? '[name].css' : 'assets/css/[name].css' }),
     new ESLintPlugin(),
     new CleanWebpackPlugin({ cleanStaleWebpackAssets: false }),    
-    new Dotenv(),
+    // new Dotenv(),
+    
+    // new Dotenv({
+  // path: devMode ? './.env' : './.env.production',
+  // systemvars: true
+// }),
+
+new Dotenv({
+  path: process.env.DOTENV_PATH || (devMode ? './.env' : './.env.production'),
+  systemvars: true
+}),
+
+
     new webpack.ProvidePlugin({
       process: 'process/browser',
     })

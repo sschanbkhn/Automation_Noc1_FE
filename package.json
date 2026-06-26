@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=development webpack --color --progress",
     "build": "cross-env NODE_ENV=production webpack --color --progress",
+    "build:env": "cross-env NODE_ENV=production DOTENV_PATH=.env webpack --color --progress",
     "start": "cross-env NODE_ENV=development webpack serve --open",
     "watch": "webpack --watch"
   },
