@@ -1,7 +1,7 @@
 // File: Schedule.js
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Button, Card, Col, FormControl, Row, Table, Badge, Spinner, Modal, Form
+  Alert as BsAlert, Button, ButtonGroup, Card, Col, FormControl, Row, Table, Badge, Spinner, Modal, Form
 } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import Select from "react-select";
@@ -17,6 +17,7 @@ import {
   fetchDevicesByPlatform,
   fetchPlatforms,
 } from "../../../redux/Healthcheck/platformDeviceSlice";
+import { fetchHosts, fetchAllDeviceApps } from "../../../redux/Hosts/hostsSlice";
 import { fetchDepartments } from "../../../redux/User/departmentSlice";
 import { fetchGroups } from "../../../redux/User/groupSlice";
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
@@ -48,6 +49,7 @@ const Schedule = () => {
   // Selectors từ Store
   const { platforms = [], devices = [] } = useSelector((state) => state.platformDevice || {});
   const { scheduleCreating, scheduledTasks = [] } = useSelector((state) => state.pscore || {});
+  const { devices: allHosts = [], allDeviceApps = [] } = useSelector((state) => state.hosts || {});
   const { departments = [] } = useSelector((state) => state.department || {});
   const { groups = [] } = useSelector((state) => state.group || {});
 
@@ -63,6 +65,11 @@ const Schedule = () => {
   const [editingTask, setEditingTask] = useState(null);
   const [searchText, setSearchText] = useState("");
   const [sortConfig, setSortConfig] = useState({ key: "name", direction: "asc" });
+
+  // State cho mode chọn thiết bị đại diện
+  const [deviceMode, setDeviceMode] = useState("manual"); // "manual" | "representative"
+  const [repDevice, setRepDevice] = useState(null);
+  const [repAlert, setRepAlert] = useState(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -80,6 +87,8 @@ const Schedule = () => {
     dispatch(fetchHealthcheckSchedules());
     dispatch(fetchDepartments());
     dispatch(fetchGroups());
+    dispatch(fetchHosts());
+    dispatch(fetchAllDeviceApps());
   }, [dispatch]);
 
   useEffect(() => {
@@ -102,6 +111,51 @@ const Schedule = () => {
   }, [devices]);
 
   const combinedOptions = [{ label: "-- Chọn tất cả --", value: "__all__" }, ...deviceOptions];
+
+  const deviceNamesWithApps = useMemo(() =>
+    new Set(allDeviceApps.map(app => app.device_name)),
+  [allDeviceApps]);
+
+  const representativeDeviceOptions = useMemo(() =>
+    allHosts
+      .filter(d => deviceNamesWithApps.has(d.name))
+      .map(d => ({
+        value: d.name,
+        label: d.hostname
+          ? `${d.name} (${d.platform || "?"}) — có IP`
+          : `${d.name} (${d.platform || "?"}) — chỉ apps`,
+      })),
+  [allHosts, deviceNamesWithApps]);
+
+  const handleRepDeviceChange = (opt) => {
+    setRepDevice(opt);
+    setRepAlert(null);
+    if (!opt) {
+      setFormData(f => ({ ...f, platform: "", node_names: [] }));
+      return;
+    }
+    const apps = allDeviceApps.filter(a => a.device_name === opt.value);
+    if (apps.length === 0) {
+      setRepAlert({ variant: "warning", message: `"${opt.value}" không có app nào được cấu hình.` });
+      return;
+    }
+    const parentDevice = allHosts.find(d => d.name === opt.value);
+    const hasIp = !!parentDevice?.hostname;
+    const platformName = hasIp
+      ? (parentDevice?.platform || apps[0]?.platform)
+      : apps[0]?.platform;
+    if (!platformName) {
+      setRepAlert({ variant: "danger", message: `Không xác định được platform của "${opt.value}".` });
+      return;
+    }
+    const appNames = apps.map(a => `${opt.value}__${a.app_name.toLowerCase()}`);
+    const deviceList = hasIp ? [opt.value, ...appNames] : appNames;
+    setFormData(f => ({
+      ...f,
+      platform: platformName,
+      node_names: deviceList.map(n => ({ label: n, value: n })),
+    }));
+  };
 
   const platformOptions = useMemo(() =>
     platforms.map((p) => ({ label: p.name, value: p.name }))
@@ -126,9 +180,12 @@ const Schedule = () => {
 
   const handleAddNew = () => {
     setEditingTask(null);
-    
+    setDeviceMode("manual");
+    setRepDevice(null);
+    setRepAlert(null);
+
     // Nếu không phải admin, bóc ID từ token để set cứng
-    const defDept = !isAdmin ? userClaims?.department_id : ""; 
+    const defDept = !isAdmin ? userClaims?.department_id : "";
     const defGroup = !isAdmin ? userClaims?.group_id : "";
 
     setFormData({
@@ -140,6 +197,10 @@ const Schedule = () => {
   };
 
   const handleEdit = (task) => {
+    setDeviceMode("manual");
+    setRepDevice(null);
+    setRepAlert(null);
+
     // Tìm ID từ Name trả về từ list
     const deptObj = departments.find(d => d.name === task.department);
     const groupObj = groups.find(g => g.name === task.owner_group);
@@ -485,32 +546,100 @@ const SortTh = ({ colKey, label, sortConfig, setSortConfig }) => (
               </Col>
             </Row>
 
-            <Row className="mb-3">
-              <Col md={4}>
-                <Form.Label className="fw-bold">Platform</Form.Label>
-                <Select
-                  options={platformOptions}
-                  value={platformOptions.find(o => o.value === formData.platform) || null}
-                  onChange={opt => setFormData({...formData, platform: opt?.value || ""})}
-                  placeholder="-- Chọn Platform --"
-                  isClearable
-                  styles={SELECT_STYLES}
-                />
-              </Col>
-              <Col md={8}>
-                <Form.Label className="fw-bold">Thiết bị</Form.Label>
-                <Select
-                  isMulti
-                  options={combinedOptions}
-                  value={formData.node_names}
-                  onChange={handleDeviceChange}
-                  placeholder="Chọn thiết bị..."
-                  isDisabled={!formData.platform}
-                  closeMenuOnSelect={false}
-                  styles={SELECT_STYLES}
-                />
-              </Col>
-            </Row>
+            {/* ── Toggle mode chọn thiết bị ── */}
+            <div className="mb-3">
+              <Form.Label className="fw-bold d-block">Chế độ chọn thiết bị</Form.Label>
+              <ButtonGroup size="sm">
+                <Button
+                  variant={deviceMode === "manual" ? "primary" : "outline-primary"}
+                  onClick={() => {
+                    setDeviceMode("manual");
+                    setRepDevice(null);
+                    setRepAlert(null);
+                    setFormData(f => ({ ...f, platform: "", node_names: [] }));
+                  }}
+                >
+                  Thủ công
+                </Button>
+                <Button
+                  variant={deviceMode === "representative" ? "primary" : "outline-primary"}
+                  onClick={() => {
+                    setDeviceMode("representative");
+                    setFormData(f => ({ ...f, platform: "", node_names: [] }));
+                  }}
+                >
+                  Thiết bị đại diện
+                </Button>
+              </ButtonGroup>
+            </div>
+
+            {deviceMode === "manual" && (
+              <Row className="mb-3">
+                <Col md={4}>
+                  <Form.Label className="fw-bold">Platform</Form.Label>
+                  <Select
+                    options={platformOptions}
+                    value={platformOptions.find(o => o.value === formData.platform) || null}
+                    onChange={opt => setFormData({...formData, platform: opt?.value || ""})}
+                    placeholder="-- Chọn Platform --"
+                    isClearable
+                    styles={SELECT_STYLES}
+                  />
+                </Col>
+                <Col md={8}>
+                  <Form.Label className="fw-bold">Thiết bị</Form.Label>
+                  <Select
+                    isMulti
+                    options={combinedOptions}
+                    value={formData.node_names}
+                    onChange={handleDeviceChange}
+                    placeholder="Chọn thiết bị..."
+                    isDisabled={!formData.platform}
+                    closeMenuOnSelect={false}
+                    styles={SELECT_STYLES}
+                  />
+                </Col>
+              </Row>
+            )}
+
+            {deviceMode === "representative" && (
+              <>
+                <Row className="mb-2">
+                  <Col md={6}>
+                    <Form.Label className="fw-bold">Thiết bị đại diện</Form.Label>
+                    <Select
+                      options={representativeDeviceOptions}
+                      value={repDevice}
+                      onChange={handleRepDeviceChange}
+                      isClearable
+                      placeholder="Chọn thiết bị đại diện..."
+                      styles={SELECT_STYLES}
+                    />
+                  </Col>
+                  {formData.platform && formData.node_names.length > 0 && (
+                    <Col md={6} className="d-flex align-items-end">
+                      <div className="text-muted small">
+                        Platform: <Badge bg="info" text="dark">{formData.platform}</Badge>
+                        {" "}— <strong>{formData.node_names.length}</strong> node(s):{" "}
+                        <span className="font-monospace">
+                          {formData.node_names.map(n => n.value).join(", ")}
+                        </span>
+                      </div>
+                    </Col>
+                  )}
+                </Row>
+                {repAlert && (
+                  <BsAlert
+                    variant={repAlert.variant}
+                    className="py-1 px-2 small mb-2"
+                    dismissible
+                    onClose={() => setRepAlert(null)}
+                  >
+                    {repAlert.message}
+                  </BsAlert>
+                )}
+              </>
+            )}
 
             <Form.Group>
               <Form.Label className="fw-bold">Biểu thức Cron</Form.Label>

@@ -149,7 +149,12 @@ const PrecheckExternal = () => {
     [platforms]
   );
   const deviceOptions = useMemo(
-    () => devices.map((d) => ({ label: `${d.name} (${d.ip || "—"})`, value: d.name })),
+    () => devices.map((d) => ({
+      label: d.is_app
+        ? `↳ ${d.display_name || d.name} (${d.ip || "—"})`
+        : `${d.name} (${d.ip || "—"})`,
+      value: d.name,
+    })),
     [devices]
   );
   const combinedOptions = useMemo(
