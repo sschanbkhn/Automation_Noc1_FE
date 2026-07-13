@@ -149,6 +149,12 @@
           "name": "R008 - Tiết kiệm điện tự động",
           "url": "/r008-power-saving",
           "icon": "bi bi-lightning-charge-fill"
+        },
+        {
+          "code": "R012NQMProactiveCC4G",
+          "name": "R012 - NQM Proactive CC 4G",
+          "url": "/R012-NQMProactiveCC-4G",
+          "icon": "bi bi-broadcast"
         }
       ]
     },
