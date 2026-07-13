@@ -6,7 +6,7 @@
       "url": "/",
       "icon": "bi bi-grid"
     },
-     {
+    {
       "code": "support",
       "name": "Hỗ trợ",
       "url": "/support",
@@ -108,7 +108,6 @@
           "url": "/dashboardrnoc",
           "icon": "bi bi-grid"
         },
-
         {
           "code": "audit-cau-hinh-vo-tuyen",
           "name": "Audit cấu hình vô tuyến",
@@ -153,7 +152,7 @@
         }
       ]
     },
-      {
+    {
       "code": "NetworkSnoc",
       "name": "AU Chuyển mạch",
       "url": "/user",
@@ -186,88 +185,6 @@
       ]
     },
     {
-      "code": "NetworkInoc",
-      "name": "AU IP",
-      "url": "/user",
-      "icon": "bi bi-globe",
-      "subMenu": [
-        {
-          "code": "ClearThuebaoDaphien",
-          "name": "Kiểm soát các phiên PPPoE",
-          "url": "/ClearThuebaoDaphien",
-          "icon": "bi bi-grid"
-        },
-        {
-          "code": "IPTPolicerAndASNCounter",
-          "name": "Tự động Policer IPT và ASN Counter",
-          "url": "/IPTPolicerAndASNCounter",
-          "icon": "bi bi-grid"
-        },
-        {
-            "code": "LspQuocte",
-          "name": "Kiểm soát LSP quốc tế",
-          "url": "/LspQuocte",
-          "icon": "bi bi-grid"
-
-            },
-        {
-          "code": "HardwareAlarms",
-          "name": "Xử lý cảnh báo phần cứng",
-          "url": "/HardwareAlarms",
-          "icon": "bi bi-grid"
-        }
-      ]
-    },
-
-   {
-      "code": "NetworkTnoc",
-      "name": "AU truyền dẫn",
-      "url": "/user",
-      "icon": "bi bi-tools",
-      "subMenu": [
-        {
-          "code": "tnoc1-t001",
-          "name": "T001 Ciena 6500",
-          "url": "/tnoc1-t001",
-          "icon": "bi bi-grid"
-        }
-      ]
-    },
-     
-    {
-            "code": "Anm",
-            "name" : "AU ANM",
-            "url": "/user",
-            "icon": "bi bi-tools",
-            "subMenu": [
-                {
-                    "code": "anm_uc1",
-                    "name" : "GPON - OLT",
-                    "url": "/OLT",
-                    "icon": "bi bi-grid"
-                },
-                {
-                    "code": "anm3_uc1",
-                    "name" : "GPON - ONU",
-                    "url": "/link-uc3",
-                    "icon": "bi bi-grid"
-                },
-                {
-                    "code": "anm2_uc1",
-                    "name" : "VN2/MANE",
-                    "url": "/link-uc2",
-                    "icon": "bi bi-grid"
-                },
-                {
-                    "code": "anm4_uc1",
-                    "name" : "Server",
-                    "url": "/link-uc4",
-                    "icon": "bi bi-grid"
-                }
-               
-            ]
-        },
-    {
       "code": "SOC1",
       "name": "AU SOC1",
       "url": "/user",
@@ -285,19 +202,19 @@
           "url": "/s002-SipTrunk",
           "icon": "bi bi-grid"
         },
-                {
+        {
           "code": "soc1_uc3",
           "name": "S003 18001900",
           "url": "/SOC-18001900",
           "icon": "bi bi-grid"
         },
-                {
+        {
           "code": "soc1_uc4",
           "name": "S004 SMPP",
           "url": "/SOC-SMPP",
           "icon": "bi bi-grid"
         },
-                 {
+        {
           "code": "soc1_uc5",
           "name": "S005 USSD",
           "url": "/SOC-USSD",

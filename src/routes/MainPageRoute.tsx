@@ -29,28 +29,18 @@ import {
     Manufacturers,
     NetworkLinks,
 } from "components/Network";
-import Tnoc1T001 from "components/TNOC1/T001/index";
 import Charts from "uielements/charts/Charts";
 import CenterDashboard from "../DashboardAutomation/CenterDashboard";
 import RoomDashboard from "../DashboardAutomation/RoomDashboard";
 import DashboardRnocSummary from "../DashboardAutomation/DashboardRnoc/DashboardRnocSummary";
 import DashboardRnocRoom from "../DashboardAutomation/DashboardRnoc/DashboardRnocRoom";
 import ScheduleTriggerForm from "components/RNOC1/R009";
-import Ucppoe from "components/INOC1/I003";
-import I004_1List from "components/I004_1";
-import Hardware_Alarm from "components/INOC1/I002/index";
-import IPTPolicerAndASNCounter from "components/INOC1/I001";
 
 import PSCoreTable from "components/SNOC/views/tables/health/PSCoreTable";
 import CsTable from "components/SNOC/views/tables/health/CsTable";
 import SignalTable from "components/SNOC/views/tables/health/SignalTable";
 import OcsTable from "components/SNOC/views/tables/health/OcsTable";
 
-// INOC start
-import HardwareAlarms from "components/INOC1/I002";
-import ClearThuebaoDaphien from "components/INOC1/I003";
-import LspQuocte from "components/INOC1/I004";
-import DataLspQuocte from "components/INOC1/I004_1";
 import ConfigReport from "components/RNOC1/R009";
 
 import DashboardAudit from "components/RNOC1/R001";
@@ -81,13 +71,6 @@ import KPISelectorPage from "components/SNOC/views/forms/kpi/KPISelectorPage";
 import ScheduleGeneric from "components/SNOC/views/forms/kpi/ScheduleCausecode";
 import ConnectionConfigList from "components/SNOC/views/tables/sbc/ConnectionConfigList";
 ///snoc end
-// ANM
-import AnmTabs from 'components/ANM/Anmtabs';
-import AnmTabs2 from 'components/ANM2/Anmtabs';
-import AnmTabs3 from 'components/ANM3/Anmtabs';
-import AnmTabs4 from 'components/ANM3/Anmtabs2';
-
-
 
 // phan RNOC
 import HomeSleepingCell from "components/RNOC1/R005-SleepingCell/R005HomeSleepingCell";
@@ -151,8 +134,6 @@ const MainPageRoute = (props: Props) => {
                 return <CableManagement />;
             case "ConfigurationLogs":
                 return <ConfigurationLogs />;
-            case "HardwareAlarms":
-                return <HardwareAlarms />;
             case "CurenAlarm":
                 return <CurenAlarm />;
             case "HistoryCurenAlarm":
@@ -193,14 +174,6 @@ const MainPageRoute = (props: Props) => {
               // Tạm thời dùng DashboardR001, sau này thay bằng component thực tế
             case "ScheduleTriggerForm":
                 return <ScheduleTriggerForm />;
-            // case "anm_uc1":
-            //     return <Anm_uc1 goToTab={() => {}} setFilters={() => {}} />;
-            case "ucppoe":
-                return <Ucppoe />;
-            case "i004_1":
-                return <I004_1List />;
-            case "IPTPolicerAndASNCounter":
-                return <IPTPolicerAndASNCounter />;
             // snoc start
             case "hc-dashboard":
                 return <DashOrigin />;
@@ -208,8 +181,6 @@ const MainPageRoute = (props: Props) => {
                 return <DnsConfigDashboard />;
             case "hc-dashboard-sbc":
                 return <SbcDashboardWithNavbar />;
-            case "ClearThuebaoDaphien":
-                return <ClearThuebaoDaphien />;
                 //snoc end
 
             case "hc-schedule":
@@ -223,28 +194,6 @@ const MainPageRoute = (props: Props) => {
                 return <TACConfigPanel />;
             case "hc-lacracrnc":
                 return <DnsLacracrnc />;
-           
-            case "ClearThuebaoDaphien":
-                return <ClearThuebaoDaphien />;
-            case "LspQuocte":
-                return <LspQuocte />;
-            case "DataLspQuocte":
-                return <DataLspQuocte />;
-            //TNOC1
-            case "tnoc1-t001":
-                return <Tnoc1T001 />;
-            //
-        // menu ANM
-            case "anm_uc1":
-                return <AnmTabs />;
-            case "anm2_uc1":
-                return <AnmTabs2 />;
-            case "anm3_uc1":
-                return <AnmTabs3 />;
-            case "anm4_uc1":
-                return <AnmTabs4 />;
-                // end menu ANM
-
 
                 // phan RNOC1
       //========================================================================
