@@ -18,6 +18,7 @@ import {
   fetchDevicesByPlatform,
   fetchPlatforms,
 } from "../../../redux/Healthcheck/platformDeviceSlice";
+import { fetchHosts, fetchDeviceApps, fetchAllDeviceApps } from "../../../redux/Hosts/hostsSlice";
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
 import { SERVER_MEDIA } from "../../../config/constant";
 
@@ -102,13 +103,24 @@ const PrecheckManual = () => {
     paramConfig = [], paramConfigReady = false,
   } = useSelector((s) => s.precheck || {});
 
+  const { devices: allHosts = [], allDeviceApps = [] } = useSelector((s) => s.hosts || {});
+
   const [selectedPlatform, setSelectedPlatform] = useState(null);
   const [selectedDevices,  setSelectedDevices]  = useState([]);
   const [expandedHosts,    setExpandedHosts]    = useState({});
   const isEditingRef = useRef(false);
 
+  // Thiết bị đại diện state
+  const [deviceForApps, setDeviceForApps] = useState(null);
+  const [loadingApps,   setLoadingApps]   = useState(false);
+  const [appsAlert,     setAppsAlert]     = useState(null);
+
   // Fetch on mount
-  useEffect(() => { dispatch(fetchPlatforms()); }, [dispatch]);
+  useEffect(() => {
+    dispatch(fetchPlatforms());
+    dispatch(fetchHosts());
+    dispatch(fetchAllDeviceApps());
+  }, [dispatch]);
 
   useEffect(() => {
     const val = selectedPlatform?.value;
@@ -142,6 +154,18 @@ const PrecheckManual = () => {
     [deviceOptions]
   );
 
+  const deviceNamesWithApps = useMemo(
+    () => new Set(allDeviceApps.map((a) => a.device_name)),
+    [allDeviceApps]
+  );
+  const representativeOptions = useMemo(
+    () =>
+      allHosts
+        .filter((d) => deviceNamesWithApps.has(d.name))
+        .map((d) => ({ value: d.name, label: `${d.name} (${d.platform || "?"})` })),
+    [allHosts, deviceNamesWithApps]
+  );
+
   // Handlers
   const handleDeviceChange = (sel) => {
     if (!sel) return setSelectedDevices([]);
@@ -155,6 +179,31 @@ const PrecheckManual = () => {
       platform:   selectedPlatform.value,
       node_names: selectedDevices.map((d) => d.value),
     }));
+  };
+
+  const handlePrecheckByDevice = async () => {
+    if (!deviceForApps) return;
+    setAppsAlert(null);
+    setLoadingApps(true);
+    try {
+      const result = await dispatch(fetchDeviceApps(deviceForApps.value)).unwrap();
+      const apps = result.apps || [];
+      if (!apps.length) {
+        setAppsAlert({ variant: "warning", message: `Thiết bị "${deviceForApps.value}" không có app nào được cấu hình.` });
+        return;
+      }
+      const platformName = apps[0]?.platform;
+      if (!platformName) {
+        setAppsAlert({ variant: "danger", message: `Không xác định được platform của thiết bị "${deviceForApps.value}".` });
+        return;
+      }
+      const appNames = apps.map((a) => `${deviceForApps.value}__${a.app_name.toLowerCase()}`);
+      dispatch(runManualPrecheck({ platform: platformName, node_names: appNames }));
+    } catch (e) {
+      setAppsAlert({ variant: "danger", message: e?.message || "Lỗi fetch apps." });
+    } finally {
+      setLoadingApps(false);
+    }
   };
 
   const expandAll = () => {
@@ -266,6 +315,46 @@ const PrecheckManual = () => {
                 </>
               )}
             </Row>
+
+            {/* ── Thiết bị đại diện ──────────────────────────────────────── */}
+            <hr className="my-2" />
+            <Row className="align-items-center g-2">
+              <Col md="auto">
+                <span className="text-muted small fw-semibold">Precheck theo thiết bị đại diện:</span>
+              </Col>
+              <Col md={4}>
+                <Select
+                  options={representativeOptions}
+                  value={deviceForApps}
+                  onChange={setDeviceForApps}
+                  placeholder="Chọn thiết bị đại diện..."
+                  isClearable
+                  styles={SELECT_STYLES}
+                />
+              </Col>
+              <Col md="auto">
+                <Button
+                  variant="outline-primary"
+                  size="sm"
+                  onClick={handlePrecheckByDevice}
+                  disabled={!deviceForApps || loadingApps || running}
+                >
+                  {loadingApps
+                    ? <><Spinner size="sm" animation="border" className="me-1"/> Đang lấy apps...</>
+                    : "▶ Chạy"}
+                </Button>
+              </Col>
+            </Row>
+            {appsAlert && (
+              <Alert
+                variant={appsAlert.variant}
+                className="mt-2 mb-0 py-1 px-2 small"
+                dismissible
+                onClose={() => setAppsAlert(null)}
+              >
+                {appsAlert.message}
+              </Alert>
+            )}
           </Card.Body>
         </Card>
 

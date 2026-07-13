@@ -75,6 +75,8 @@ import KPIChartDashboard from "components/SNOC/views/forms/kpi/KPIChartDashboard
 import KPIDashboard from "components/SNOC/views/forms/kpi/KPIDashboard";
 import ScheduleGeneric from "components/SNOC/views/forms/kpi/ScheduleGeneric";
 import PrecheckHistory from "components/SNOC/views/tables/health/PrecheckHistory";
+import FaultPrecheckExternal from "components/SNOC/views/forms/health/FaultPrecheckExternal";
+import FaultPrecheckHistory from "components/SNOC/views/tables/health/FaultPrecheckHistory";
 import PrecheckSchedule from "components/SNOC/views/forms/health/PrecheckSchedule";
 import BlackoutConfigPage from "components/SNOC/views/forms/health/BlackoutConfig";
 import AnalysisParams from "components/SNOC/views/forms/health/AnalysisParams";
@@ -83,6 +85,10 @@ import RetentionConfig from "components/SNOC/views/forms/health/RetentionConfig"
 import NotifChannelConfig from "components/SNOC/views/forms/health/NotifChannelConfig";
 import DhttManual from "components/SNOC/views/forms/health/DhttManual";
 import DhttDashboard from "components/SNOC/views/dashboard/DashOrigin/DhttDashboard";
+import DhttHcSimple from "components/SNOC/views/forms/health/DhttHcSimple";
+import DhttHcSimpleSchedule from "components/SNOC/views/forms/health/DhttHcSimpleSchedule";
+import DhttHcSimpleHistory from "components/SNOC/views/tables/health/DhttHcSimpleHistory";
+import DhttHcSimpleDashboard from "components/SNOC/views/dashboard/DashOrigin/DhttHcSimpleDashboard";
 import PrecheckManual from "components/SNOC/views/forms/health/PrecheckManual";
 import SystemMonitorPage from "components/SNOC/Admin/SystemMonitorPage";
 import PrecheckExternal from "components/SNOC/views/forms/health/PrecheckExternal";
@@ -303,12 +309,18 @@ const MainPageRoute = (props: Props) => {
           <Route path="/healthcheck/precheck-external" element={<PrecheckExternal />} />
           <Route path="/precheck/schedule" element={<PrecheckSchedule/>}/>
           <Route path="/precheck/history"  element={<PrecheckHistory/>}/>
+          <Route path="/fcp"              element={<FaultPrecheckExternal/>}/>
+          <Route path="/fcp/history"      element={<FaultPrecheckHistory/>}/>
           <Route path="/healthcheck/monitor" element={<SystemMonitorPage />} />
           <Route
             path="/dhtt/history"
             element={<DhttHistoricalReporting />}
           />
           <Route path="/dhtt/manual" element={<DhttManual />} />
+          <Route path="/hc-simple/manual" element={<DhttHcSimple />} />
+          <Route path="/hc-simple/schedule" element={<DhttHcSimpleSchedule />} />
+          <Route path="/hc-simple/history" element={<DhttHcSimpleHistory />} />
+          <Route path="/hc-simple/dashboard" element={<DhttHcSimpleDashboard />} />
           <Route path="/healthcheck/kpi" element={<KPIChartDashboard />} />
           <Route path="/dhtt/dashboard" element={<DhttDashboard />} />
           <Route

@@ -23,12 +23,14 @@ const MODULE_OPTIONS = [
   { value: "precheck",    label: "🔍 Precheck" },
   { value: "healthcheck", label: "❤️ Healthcheck" },
   { value: "dhtt",        label: "🔧 Bảo dưỡng (DHTT)" },
+  { value: "fcp",         label: "⚡ Fault Code Precheck" },
 ];
 
 const MODULE_BADGE_COLOR = {
   precheck:    "primary",
   healthcheck: "success",
   dhtt:        "warning",
+  fcp:         "danger",
 };
 
 const DEFAULT_FORM = {

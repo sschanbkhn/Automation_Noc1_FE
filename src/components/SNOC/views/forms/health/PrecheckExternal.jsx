@@ -14,6 +14,7 @@ import {
   fetchDevicesByPlatform,
   fetchPlatforms,
 } from "../../../redux/Healthcheck/platformDeviceSlice";
+import { fetchHosts, fetchAllDeviceApps } from "../../../redux/Hosts/hostsSlice";
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
 import { SERVER_MEDIA } from "../../../config/constant";
 import snocApi from "../../../api/snocApiWithAutoToken";
@@ -104,11 +105,13 @@ const PrecheckExternal = () => {
 
   const { platforms = [], devices = [], loadingDevices = false } =
     useSelector((s) => s.platformDevice || {});
+  const { devices: allHosts = [], allDeviceApps = [] } = useSelector((s) => s.hosts || {});
 
   // ── Form state ──────────────────────────────────────────────────────────────
   const [selectedPlatform, setSelectedPlatform] = useState(null);
   const [selectedDevices,  setSelectedDevices]  = useState([]);
   const [webhookUrl,       setWebhookUrl]       = useState("");
+  const [repDevice,        setRepDevice]        = useState(null);
   const isEditingRef = useRef(false);
 
   // ── Job / poll state ────────────────────────────────────────────────────────
@@ -129,8 +132,12 @@ const PrecheckExternal = () => {
   const [blocked,      setBlocked]      = useState([]);
   const [expandedHosts,setExpandedHosts]= useState({});
 
-  // ── Fetch platforms on mount ─────────────────────────────────────────────
-  useEffect(() => { dispatch(fetchPlatforms()); }, [dispatch]);
+  // ── Fetch on mount ───────────────────────────────────────────────────────
+  useEffect(() => {
+    dispatch(fetchPlatforms());
+    dispatch(fetchHosts());
+    dispatch(fetchAllDeviceApps());
+  }, [dispatch]);
 
   useEffect(() => {
     const val = selectedPlatform?.value;
@@ -162,9 +169,30 @@ const PrecheckExternal = () => {
     [deviceOptions]
   );
 
+  const deviceNamesWithApps = useMemo(
+    () => new Set(allDeviceApps.map((a) => a.device_name)),
+    [allDeviceApps]
+  );
+  const representativeOptions = useMemo(
+    () =>
+      allHosts
+        .filter((d) => deviceNamesWithApps.has(d.name))
+        .map((d) => ({ value: d.name, label: `${d.name} (${d.platform || "?"})` })),
+    [allHosts, deviceNamesWithApps]
+  );
+
   const handleDeviceChange = (sel) => {
     if (!sel) return setSelectedDevices([]);
     setSelectedDevices(sel.find((o) => o.value === "__all__") ? deviceOptions : sel);
+  };
+
+  const handleAddRepDevice = () => {
+    if (!repDevice) return;
+    setSelectedDevices((prev) => {
+      if (prev.find((d) => d.value === repDevice.value)) return prev;
+      return [...prev, { label: repDevice.value, value: repDevice.value }];
+    });
+    setRepDevice(null);
   };
 
   // ── Poll job ────────────────────────────────────────────────────────────────
@@ -433,6 +461,42 @@ const PrecheckExternal = () => {
                   </>
                 )}
               </Col>
+            </Row>
+
+            {/* ── Thiết bị đại diện ─────────────────────────────────────── */}
+            <hr className="my-2" />
+            <Row className="align-items-center g-2">
+              <Col md="auto">
+                <span className="text-muted small fw-semibold">Thiết bị đại diện:</span>
+              </Col>
+              <Col md={4}>
+                <Select
+                  options={representativeOptions}
+                  value={repDevice}
+                  onChange={setRepDevice}
+                  placeholder="Chọn thiết bị đại diện..."
+                  isClearable
+                  styles={SELECT_STYLES}
+                  isDisabled={isRunning}
+                />
+              </Col>
+              <Col md="auto">
+                <Button
+                  variant="outline-secondary"
+                  size="sm"
+                  onClick={handleAddRepDevice}
+                  disabled={!repDevice || isRunning}
+                >
+                  + Thêm
+                </Button>
+              </Col>
+              {selectedDevices.length > 0 && (
+                <Col md="auto">
+                  <span className="text-muted small">
+                    Đã chọn: {selectedDevices.map((d) => d.value).join(", ")}
+                  </span>
+                </Col>
+              )}
             </Row>
           </Card.Body>
         </Card>
