@@ -10,15 +10,15 @@ import ConfirmTriggerModal from "./TimTram/ConfirmTriggerModal";
 import NetworkMap from "./BanDoMang/NetworkMap";
 // khu vuc ket qua CR theo tung huong va log tien trinh CR - tuong ung Zone C trong UI_DESIGN.md
 // doi ten tu ZoneC sang KetQuaCR cho dung chuc nang hien thi
+// QosSparkline (Widget F33) va QoeQosCharts (Zone E) KHONG import truc tiep o day nua - da nhung san
+// BEN TRONG CrResultsByDirection.tsx (hien sau khi co ket qua CR), tranh render trung 2 lan cung du lieu
 import CrResultsByDirection from "./KetQuaCR/CrResultsByDirection";
 import SseProgressLog from "./KetQuaCR/SseProgressLog";
-// widget hien chi so QoS dang sparkline - tuong ung Widget F33 trong UI_DESIGN.md
-// doi ten tu WidgetF33 sang ChiSoQos cho dung chuc nang hien thi
-import QosSparkline from "./ChiSoQos/QosSparkline";
-// khu vuc bieu do danh gia chat luong QoE/QoS truoc-sau CR - tuong ung Zone E trong UI_DESIGN.md
-// doi ten tu ZoneE sang DanhGiaChatLuong cho dung chuc nang hien thi
-import QoeQosCharts from "./DanhGiaChatLuong/QoeQosCharts";
 import { StationItem } from "../types";
+// goi useSseStream DUY NHAT 1 LAN o cap TacDongTram nay, KHONG goi rieng trong tung component con cua Zone C -
+// neu goi nhieu lan se mo nhieu ket noi EventSource trung lap toi CUNG 1 session_id, gay lang phi tai nguyen
+// va co the loi (nhieu socket cung tranh nhau doc/dong 1 session tren BE)
+import useSseStream from "../hooks/useSseStream";
 
 const TacDongTram: React.FC = () => {
   // state duoc nang len TacDongTram (thay vi de rieng trong StationSearchGrid) vi ca 2 component con
@@ -36,10 +36,25 @@ const TacDongTram: React.FC = () => {
   // va modal xac nhan tram B van con hien) - neu dung chung 1 state se lam sai lech ca 2 luong nghiep vu
   const [selectedStationForView, setSelectedStationForView] = useState<StationItem | null>(null);
 
+  // session_id cua phien CR dang duoc theo doi SSE realtime (Zone C - KetQuaCR) - null nghia la chua trigger
+  // CR nao trong phien lam viec nay, hoac chua co ket qua tu ConfirmTriggerModal
+  const [activeCrSessionId, setActiveCrSessionId] = useState<number | null>(null);
+
+  // goi useSseStream 1 LAN DUY NHAT tai day (xem comment o import phia tren), ca SseProgressLog va
+  // CrResultsByDirection deu nhan logs/status tu KET QUA CHUNG nay qua props, khong tu ket noi rieng
+  const { logs, status } = useSseStream(activeCrSessionId);
+
   // ham nay truyen xuong StationSearchGrid qua prop onTriggerCr - goi khi NOC bam nut Trigger CR cho 1 tram
   const handleTriggerCr = (station: StationItem) => {
     setStationToTrigger(station);
     setIsTriggerModalOpen(true);
+  };
+
+  // ham nay truyen xuong ConfirmTriggerModal qua prop onTriggerSuccess - goi khi trigger CR thanh cong,
+  // nhan duoc session_id moi thi bat dau theo doi SSE cho session do (useSseStream se tu dong ket noi lai
+  // vi sessionId trong dependency array cua no doi)
+  const handleTriggerSuccess = (sessionId: number) => {
+    setActiveCrSessionId(sessionId);
   };
 
   // ham nay truyen xuong StationSearchGrid qua prop onSelectStation - goi moi lan NOC click 1 dong trong bang,
@@ -67,6 +82,7 @@ const TacDongTram: React.FC = () => {
         open={isTriggerModalOpen}
         station={stationToTrigger}
         onClose={handleCloseTriggerModal}
+        onTriggerSuccess={handleTriggerSuccess}
       />
       <div id="zone-b">
         <Row gutter={16}>
@@ -79,18 +95,12 @@ const TacDongTram: React.FC = () => {
       <div id="zone-c">
         <Row gutter={16}>
           <Col span={12}>
-            <CrResultsByDirection />
+            <CrResultsByDirection sessionId={activeCrSessionId} status={status} />
           </Col>
           <Col span={12}>
-            <SseProgressLog />
+            <SseProgressLog logs={logs} status={status} />
           </Col>
         </Row>
-      </div>
-      <div id="widget-f33">
-        <QosSparkline />
-      </div>
-      <div id="zone-e">
-        <QoeQosCharts />
       </div>
     </div>
   );

@@ -1,7 +1,8 @@
 import React from "react";
 import StatsStrip from "./StatsStrip";
+// EvaluationDetail KHONG render rieng o day nua - da nhung san BEN TRONG Modal cua SessionHistoryList.tsx,
+// tu mo khi NOC click 1 dong session (nhan sessionId dong do), khong con la 1 khoi tinh doc lap tren trang
 import SessionHistoryList from "./SessionHistoryList";
-import EvaluationDetail from "./EvaluationDetail";
 
 const LichSuCR: React.FC = () => {
   return (
@@ -11,9 +12,6 @@ const LichSuCR: React.FC = () => {
       </div>
       <div id="session-history-list">
         <SessionHistoryList />
-      </div>
-      <div id="evaluation-detail">
-        <EvaluationDetail />
       </div>
     </div>
   );

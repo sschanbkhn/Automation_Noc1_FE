@@ -133,6 +133,22 @@ export interface SessionDetailResponse {
   qos_snapshots: QosSnapshotItem[]; // danh sach diem QoS theo thoi gian, mac dinh mang rong theo schema
 }
 
+// dung cho SSE stream GET /api/v1/cr/stream/{session_id} - doc truc tiep tu source code BE that
+// (application/trigger_cr_use_case.py ham _emit()/_fail(), va api/routers/sse.py dong 36 cho truong hop timeout)
+// MOI KHAC HOAN TOAN voi CrLogItem o tren (CrLogItem la cr_logs tu DB, BE hien LUON tra ve mang rong -
+// xem api/routers/sessions.py dong 92: cr_logs=[], vi BE chua co persist cr_log - TODO rieng cua BE)
+// BE KHONG dat ten "event:" rieng, chi gui "data: {json}\n\n" nen FE doc bang onmessage mac dinh, khong can event ten rieng
+export interface CrStreamEvent {
+  step?: number; // buoc thu may (1-18), KHONG co trong truong hop status="timeout" (sse.py dong 36 chi gui {"status": "timeout"})
+  step_name?: string; // ten buoc, khong co trong truong hop status="timeout"
+  pct?: number; // phan tram tien do, khong co trong truong hop status="timeout"
+  status: string; // "running" | "success" | "failed" | "timeout" - dung string vi BE khong khai bao enum rieng cho SSE
+  msg?: string; // thong diep chi tiet buoc, khong co trong truong hop status="timeout"
+  detail?: Record<string, unknown>; // BE hien luon emit {} rong (TODO cua BE, xem _emit() dong 423 trigger_cr_use_case.py)
+  done?: boolean; // true khi CR ket thuc (thanh cong buoc 17/18 hoac that bai qua _fail()), khong co trong truong hop timeout
+  error?: string | null; // thong diep loi khi that bai (_fail()), null khi khong loi, khong co trong truong hop timeout
+}
+
 // dung cho GET /api/v1/qos/{cell_name} - BE khai bao additionalProperties true, chua co field co dinh trong schema
 // giu kieu Record de khong tu bia field khong ton tai trong schema that
 export type QosMetrics = Record<string, unknown>;

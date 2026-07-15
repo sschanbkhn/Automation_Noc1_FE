@@ -9,6 +9,9 @@ interface ConfirmTriggerModalProps {
   open: boolean;
   station: StationItem | null;
   onClose: () => void;
+  // goi khi trigger CR thanh cong, truyen session_id ra ngoai cho TacDongTram.tsx set vao activeCrSessionId
+  // de noi sang KetQuaCR (SseProgressLog/CrResultsByDirection) theo doi realtime qua SSE
+  onTriggerSuccess: (sessionId: number) => void;
 }
 
 // lay dung 3 gia tri enum that tu type TriggerCrRequest trong types/index.ts, khong tu bia them ten action khac
@@ -18,7 +21,7 @@ const ACTION_OPTIONS: { label: string; value: TriggerCrRequest["action"] }[] = [
   { label: "Relocate", value: "relocate" },
 ];
 
-const ConfirmTriggerModal: React.FC<ConfirmTriggerModalProps> = ({ open, station, onClose }) => {
+const ConfirmTriggerModal: React.FC<ConfirmTriggerModalProps> = ({ open, station, onClose, onTriggerSuccess }) => {
   // state luu action dang chon trong radio group - mac dinh chon action dau tien de form luon co gia tri hop le khi mo modal
   const [action, setAction] = useState<TriggerCrRequest["action"]>("shutdown");
 
@@ -40,9 +43,9 @@ const ConfirmTriggerModal: React.FC<ConfirmTriggerModalProps> = ({ open, station
         action,
       });
 
-      // session_id nhan duoc se dung de noi sang Zone C (theo doi SSE) o buoc sau, chua lam trong pham vi nay
-      // se noi sang Zone C SSE o buoc sau
-      console.log(response.session_id);
+      // bao session_id ra ngoai cho TacDongTram.tsx, thay the console.log truoc day - de TacDongTram.tsx
+      // set vao activeCrSessionId va noi sang KetQuaCR (SseProgressLog/CrResultsByDirection) theo doi SSE realtime
+      onTriggerSuccess(response.session_id);
 
       message.success(response.message || "Da kich hoat CR thanh cong");
       onClose();
