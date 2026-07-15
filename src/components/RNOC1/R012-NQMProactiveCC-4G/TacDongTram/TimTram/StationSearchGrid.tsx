@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Input, Pagination, Button, Alert, Spin } from "antd";
 import {
   createColumnHelper,
@@ -6,6 +6,9 @@ import {
   getCoreRowModel,
   flexRender,
 } from "@tanstack/react-table";
+// dung debounce co san tu lodash (da la dependency co san trong package.json) thay vi tu viet lai
+// setTimeout/clearTimeout, tranh trung lap logic da duoc thu vien xu ly va test san
+import debounce from "lodash/debounce";
 import { useStations } from "../../hooks/useStations";
 import { StationItem } from "../../types";
 
@@ -23,18 +26,43 @@ interface StationSearchGridProps {
 const columnHelper = createColumnHelper<StationItem>();
 
 const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSelectStation }) => {
-  // state cho tu khoa tim kiem - dung 1 state duy nhat vi thiet ke da chot dung 1 o search chung
-  // thay vi nhieu input rieng cho tung field (ID/ten/dia danh/CSHT), tranh UI room roi va giam so lan goi API
-  // khi go nhieu input cung luc; nguoi dung go 1 cho, BE tu tim theo bat ky field nao khop
+  // searchInput: gia tri hien thi TRUC TIEP tren o Input.Search, cap nhat ngay khi go phim
+  // de nguoi dung thay ky tu minh vua go ngay lap tuc, khong bi cam giac lag do cho debounce
+  const [searchInput, setSearchInput] = useState<string>("");
+
+  // searchTerm: gia tri THAT SU dung de goi API, chi doi sau khi nguoi dung ngung go 400ms (xem debouncedApplySearch ben duoi)
+  // tach rieng 2 state nay de UI go phim muot nhung API khong bi goi lien tuc tung phim
   const [searchTerm, setSearchTerm] = useState<string>("");
 
   // state phan trang - can gui dung len BE qua param page/size cua GET /api/v1/stations
   const [page, setPage] = useState<number>(1);
-  const [size, setSize] = useState<number>(50); // 50 la default cua BE theo schema StationsQueryParams
+  // doi default tu 50 xuong 10 theo yeu cau UX - giam tai du lieu tai lan render dau va bang de doc hon,
+  // nguoi dung van doi duoc len 20/50 qua UI Pagination (showSizeChanger) nhu binh thuong
+  const [size, setSize] = useState<number>(10);
 
   // state luu station dang duoc chon (bang click vao 1 dong) - chi la local state trong component nay,
   // dung de hien nut "Trigger CR" cho dung tram vua click, chua can Context/Redux vi pham vi dung chi trong Zone A
   const [selectedStation, setSelectedStation] = useState<StationItem | null>(null);
+
+  // tao ham debounce 1 LAN DUY NHAT qua useMemo (deps rong) - neu tao moi moi lan render se mat tac dung debounce
+  // vi ham cu bi thay the lien tuc truoc khi kip cho du 400ms
+  // 400ms: du de khong goi API lien tuc tung phim go (giam tai BE + tranh nhap nhay ket qua),
+  // nhung van du nhanh de nguoi dung khong cam thay cham/lag sau khi ngung go
+  const debouncedApplySearch = useMemo(
+    () =>
+      debounce((value: string) => {
+        setSearchTerm(value);
+        setPage(1); // reset ve trang 1 khi doi tu khoa tim kiem, tranh hien thi trang cu voi bo loc moi gay hieu lam khong con du lieu
+      }, 400),
+    []
+  );
+
+  // huy debounce dang cho khi component unmount, tranh goi setState tren component da unmount gay canh bao/memory leak
+  useEffect(() => {
+    return () => {
+      debouncedApplySearch.cancel();
+    };
+  }, [debouncedApplySearch]);
 
   // goi hook that, truyen dung q/page/size khop voi StationsQueryParams va tham so ma getStations dang nhan
   const { data, isLoading, isError, error } = useStations({
@@ -101,10 +129,13 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
       <Input.Search
         placeholder="Tim theo ma tram / ten tram / dia danh / CSHT"
         allowClear
-        onSearch={(value) => {
-          // reset ve trang 1 khi doi tu khoa tim kiem, tranh hien thi trang cu voi bo loc moi gay hieu lam khong con du lieu
-          setSearchTerm(value);
-          setPage(1);
+        // value dieu khien boi searchInput (cap nhat ngay lap tuc) chu KHONG phai searchTerm (cap nhat tre 400ms),
+        // de o input luon hien dung ky tu nguoi dung vua go, khong bi giat/tre do cho debounce
+        value={searchInput}
+        onChange={(e) => {
+          const value = e.target.value;
+          setSearchInput(value); // cap nhat UI ngay, khong qua debounce
+          debouncedApplySearch(value); // chi goi API that sau khi ngung go 400ms
         }}
         style={{ marginBottom: "1rem" }}
       />
