@@ -13,12 +13,16 @@ import { StationItem } from "../../types";
 // TacDongTram.tsx se dung ham nay de mo ConfirmTriggerModal va truyen dung station da chon xuong modal
 interface StationSearchGridProps {
   onTriggerCr: (station: StationItem) => void;
+  // ham nay duoc goi MOI LAN click 1 dong trong bang (khac voi onTriggerCr chi goi khi bam nut Trigger CR)
+  // TacDongTram.tsx dung ham nay de cap nhat tram dang "xem tren ban do" (selectedStationForView),
+  // tach biet voi tram dang "lam CR" vi 2 muc dich khac nhau (vd dang xem tram A nhung truoc do da trigger tram B)
+  onSelectStation: (station: StationItem) => void;
 }
 
 // khoi tao column helper rieng cho kieu StationItem, giup TanStack Table bao dam kieu du lieu dung ngay luc khai bao cot
 const columnHelper = createColumnHelper<StationItem>();
 
-const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr }) => {
+const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSelectStation }) => {
   // state cho tu khoa tim kiem - dung 1 state duy nhat vi thiet ke da chot dung 1 o search chung
   // thay vi nhieu input rieng cho tung field (ID/ten/dia danh/CSHT), tranh UI room roi va giam so lan goi API
   // khi go nhieu input cung luc; nguoi dung go 1 cho, BE tu tim theo bat ky field nao khop
@@ -87,6 +91,9 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr }) =>
   // ham xu ly khi click 1 dong - luu station vao local state de hien nut Trigger CR cho dung tram do
   const handleRowClick = (station: StationItem) => {
     setSelectedStation(station);
+    // bao ra ngoai cho TacDongTram.tsx biet tram nao dang duoc xem, DE RIENG voi luong Trigger CR ben duoi
+    // (chi goi khi bam nut), vi xem tram tren map khong bat buoc phai dan den hanh dong trigger CR
+    onSelectStation(station);
   };
 
   return (

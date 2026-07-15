@@ -6,8 +6,8 @@ import StationSearchGrid from "./TimTram/StationSearchGrid";
 import ConfirmTriggerModal from "./TimTram/ConfirmTriggerModal";
 // khu vuc ban do mang va huong song - tuong ung Zone B trong UI_DESIGN.md
 // doi ten tu ZoneB sang BanDoMang cho dung chuc nang hien thi
+// SectorBeam KHONG import truc tiep o day nua - da nam ben trong NetworkMap (ve chung 1 MapContainer)
 import NetworkMap from "./BanDoMang/NetworkMap";
-import SectorBeam from "./BanDoMang/SectorBeam";
 // khu vuc ket qua CR theo tung huong va log tien trinh CR - tuong ung Zone C trong UI_DESIGN.md
 // doi ten tu ZoneC sang KetQuaCR cho dung chuc nang hien thi
 import CrResultsByDirection from "./KetQuaCR/CrResultsByDirection";
@@ -29,10 +29,23 @@ const TacDongTram: React.FC = () => {
   const [stationToTrigger, setStationToTrigger] = useState<StationItem | null>(null);
   const [isTriggerModalOpen, setIsTriggerModalOpen] = useState<boolean>(false);
 
+  // state RIENG cho tram dang "xem tren ban do" (Zone B - BanDoMang), TACH BIET voi stationToTrigger o tren:
+  // - stationToTrigger: tram dang lam CR, chi doi khi NOC bam nut "Trigger CR"
+  // - selectedStationForView: tram dang hien tren NetworkMap, doi MOI LAN NOC click 1 dong trong bang
+  // 2 state nay co the KHAC NHAU cung luc (vd NOC dang xem tram A tren map nhung truoc do da trigger CR cho tram B
+  // va modal xac nhan tram B van con hien) - neu dung chung 1 state se lam sai lech ca 2 luong nghiep vu
+  const [selectedStationForView, setSelectedStationForView] = useState<StationItem | null>(null);
+
   // ham nay truyen xuong StationSearchGrid qua prop onTriggerCr - goi khi NOC bam nut Trigger CR cho 1 tram
   const handleTriggerCr = (station: StationItem) => {
     setStationToTrigger(station);
     setIsTriggerModalOpen(true);
+  };
+
+  // ham nay truyen xuong StationSearchGrid qua prop onSelectStation - goi moi lan NOC click 1 dong trong bang,
+  // CHI de cap nhat tram hien tren map, khong lien quan gi den luong Trigger CR o tren
+  const handleSelectStationForView = (station: StationItem) => {
+    setSelectedStationForView(station);
   };
 
   // ham nay truyen xuong ConfirmTriggerModal qua prop onClose - goi khi dong modal (huy hoac sau khi trigger xong)
@@ -45,7 +58,7 @@ const TacDongTram: React.FC = () => {
       <div id="zone-a">
         <Row gutter={16}>
           <Col span={24}>
-            <StationSearchGrid onTriggerCr={handleTriggerCr} />
+            <StationSearchGrid onTriggerCr={handleTriggerCr} onSelectStation={handleSelectStationForView} />
           </Col>
         </Row>
       </div>
@@ -57,11 +70,9 @@ const TacDongTram: React.FC = () => {
       />
       <div id="zone-b">
         <Row gutter={16}>
-          <Col span={12}>
-            <NetworkMap />
-          </Col>
-          <Col span={12}>
-            <SectorBeam />
+          {/* mot cot day du (span 24) vi SectorBeam da nam trong long NetworkMap, khong con la 2 khoi rieng canh nhau */}
+          <Col span={24}>
+            <NetworkMap station={selectedStationForView} />
           </Col>
         </Row>
       </div>
