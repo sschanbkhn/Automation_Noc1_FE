@@ -92,6 +92,10 @@ interface NetworkElementPatchResponse {
   error?: string;
 }
 
+interface NetworkManagementProps {
+  onRequireAuth?: () => void;
+}
+
 const mapNetworkStructureItem = (item: any): NetworkStructureItem => {
   const attrs = item.attributes ?? item;
   const shelves = Array.isArray(attrs.memberShelvesData) ? attrs.memberShelvesData : [];
@@ -150,7 +154,7 @@ const buildPatchPayload = (
   return Object.keys(payload).length > 0 ? payload : null;
 };
 
-const NetworkStructurePanel: React.FC = () => {
+const NetworkStructurePanel: React.FC<NetworkManagementProps> = ({ onRequireAuth }) => {
   const [items, setItems] = useState<NetworkStructureItem[]>([]);
   const [searchText, setSearchText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -159,8 +163,17 @@ const NetworkStructurePanel: React.FC = () => {
     setLoading(true);
     try {
       const response = await fetch(STRUCTURE_API_URL);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
+      if (!response.ok){ 
+        if (response.status === 401) {
+          message.warning('Phiên đăng nhập đã hết hạn. Vui lòng xác thực lại hệ thống MCP.');
+          // Gọi callback để hiển thị form xác thực MCP
+          if (onRequireAuth) {
+            onRequireAuth();
+          }
+          return;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const result = await response.json();
       const rawItems = Array.isArray(result)
         ? result
@@ -171,7 +184,8 @@ const NetworkStructurePanel: React.FC = () => {
 
       setItems(data);
       message.success(`Tải ${data.length} thiết bị mạng thành công`);
-    } catch (error) {
+    }
+    catch (error) {
       console.error('Error fetching network constructs:', error);
       message.warning('Chưa kết nối được API cấu trúc mạng.');
       setItems([]);
@@ -618,7 +632,7 @@ const NetworkElementPanel: React.FC = () => {
   );
 };
 
-const NetworkManagement: React.FC = () => {
+const NetworkManagement: React.FC<NetworkManagementProps> = ({ onRequireAuth }) => {
   const [activeSubTab, setActiveSubTab] = useState('structure');
 
   const items = [
@@ -630,7 +644,7 @@ const NetworkManagement: React.FC = () => {
           Dữ liệu trên MCP
         </span>
       ),
-      children: <NetworkStructurePanel />,
+      children: <NetworkStructurePanel onRequireAuth={onRequireAuth} />,
     },
     {
       key: 'element',
@@ -650,7 +664,7 @@ const NetworkManagement: React.FC = () => {
           So sánh dữ liệu
         </span>
       ),
-      children: <NetworkCompare />,
+      children: <NetworkCompare onRequireAuth={onRequireAuth} />,
     },
   ];
 

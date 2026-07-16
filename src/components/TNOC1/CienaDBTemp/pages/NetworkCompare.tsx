@@ -20,6 +20,7 @@ import {
   ReloadOutlined,
   SwapOutlined,
 } from '@ant-design/icons';
+import MCPAuth from '../../../TNOC1/T001/pages/MCPAuth';
 
 const COMPARE_API_URL =
   'http://10.155.43.200:8001/api/cienatemp/networkelements/?action=compare';
@@ -66,6 +67,10 @@ interface ModifiedDiffRow {
   api: unknown;
 }
 
+interface NetworkCompareProps {
+  onRequireAuth?: () => void;
+}
+
 const toDisplayText = (value: unknown): string => {
   if (typeof value === 'boolean') return value ? 'Active' : 'Inactive';
   const text = value == null ? '' : String(value).trim();
@@ -81,7 +86,7 @@ const getModifiedDiffRows = (item: ModifiedNetworkElement): ModifiedDiffRow[] =>
     return rows;
   }, []);
 
-const NetworkCompare: React.FC = () => {
+const NetworkCompare: React.FC<NetworkCompareProps> = ({ onRequireAuth }) => {
   const [compareData, setCompareData] = useState<CompareData>({
     new_NE: [],
     modified_NE: [],
@@ -94,6 +99,15 @@ const NetworkCompare: React.FC = () => {
     try {
       const response = await fetch(COMPARE_API_URL);
       if (!response.ok) {
+        // Xử lý lỗi 401 Unauthorized
+        if (response.status === 401) {
+          message.warning('Phiên đăng nhập đã hết hạn. Vui lòng xác thực lại hệ thống MCP.');
+          // Gọi callback để hiển thị form xác thực MCP
+          if (onRequireAuth) {
+            onRequireAuth();
+          }
+          return;
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
@@ -126,6 +140,15 @@ const NetworkCompare: React.FC = () => {
       const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
+        // Xử lý lỗi 401 Unauthorized
+        if (response.status === 401) {
+          message.warning('Phiên đăng nhập đã hết hạn. Vui lòng xác thực lại hệ thống MCP.');
+          // Gọi callback để hiển thị form xác thực MCP
+          if (onRequireAuth) {
+            onRequireAuth();
+          }
+          return;
+        }
         throw new Error(result.error || result.message || `HTTP error! status: ${response.status}`);
       }
 
