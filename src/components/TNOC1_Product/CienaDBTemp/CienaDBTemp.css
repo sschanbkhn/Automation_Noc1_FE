@@ -1,0 +1,72 @@
+.cienadb-container {
+  padding: 20px;
+  background: #f5f5f5;
+  min-height: 100vh;
+}
+
+.cienadb-header {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  padding: 24px 28px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(245, 87, 108, 0.3);
+  transition: all 0.3s ease;
+}
+
+.cienadb-header:hover {
+  box-shadow: 0 6px 16px rgba(245, 87, 108, 0.4);
+  transform: translateY(-2px);
+}
+
+.cienadb-header h3 {
+  margin: 0;
+  color: white;
+  font-size: 22px;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cienadb-content {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  padding: 24px;
+  transition: all 0.3s ease;
+}
+
+.cienadb-content:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.temperature-row-warning > td {
+  background: #fff7e6 !important;
+}
+
+.temperature-row-warning:hover > td {
+  background: #ffe7ba !important;
+}
+
+.temperature-row-critical > td {
+  background: #fff1f0 !important;
+}
+
+.temperature-row-critical:hover > td {
+  background: #ffccc7 !important;
+}
+
+@media (max-width: 768px) {
+  .cienadb-container {
+    padding: 10px;
+  }
+
+  .cienadb-header {
+    padding: 16px 20px;
+  }
+
+  .cienadb-header h3 {
+    font-size: 18px;
+  }
+}
