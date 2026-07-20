@@ -1,6 +1,6 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Alert, Descriptions, Spin } from "antd";
+import { Alert, Card, Descriptions, Divider, Spin, Tag } from "antd";
 import { getSessionDetail } from "../services/R012Service";
 import { SessionDetailResponse } from "../types";
 // tai su dung LAI QoeQosCharts tu Phan B (TacDongTram/DanhGiaChatLuong), KHONG viet lai logic chart -
@@ -14,6 +14,39 @@ import CellParamsByHuong from "../TacDongTram/KetQuaCR/CellParamsByHuong";
 interface EvaluationDetailProps {
   sessionId: number | null;
 }
+
+// token mau xanh duong DUNG LAI nguyen tu Designer/R012Header.tsx (chinh file do da ghi ro lay tu
+// R005Header.tsx - module RNOC1 dang hoat dong on dinh), KHONG bia mau moi, de dong bo giao dien toan module
+const HEADER_GRADIENT = "linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #93c5fd 100%)";
+const ACCENT_BLUE = "#1e40af";
+const ACCENT_BLUE_LIGHT = "#3b82f6";
+const DIVIDER_BLUE = "#dbeafe";
+
+// mau badge trang thai: DONE/EVALUATED dung xanh duong de dong bo voi theme chung cua modal.
+// FAILED CO Y GIU MAU DO (khong doi thanh xanh) vi day la trang thai loi can NOC nhan biet ngay bang mat -
+// neu doi thanh xanh se mat tin hieu canh bao, phan tac dung voi muc dich cua mau badge trang thai
+const STATUS_TAG_COLOR: Record<string, string> = {
+  DONE: "blue",
+  EVALUATED: "blue",
+  FAILED: "red",
+  RUNNING: "processing",
+  EVAL_PENDING: "warning",
+  EVALUATING: "processing",
+};
+
+// tieu de section dung chung accent trai mau xanh duong, de phan tach ro 3 khoi noi dung theo yeu cau redesign
+const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <h4
+    style={{
+      borderLeft: `4px solid ${ACCENT_BLUE_LIGHT}`,
+      paddingLeft: "10px",
+      margin: "0 0 12px 0",
+      color: ACCENT_BLUE,
+    }}
+  >
+    {children}
+  </h4>
+);
 
 const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
   // tu goi API rieng theo sessionId (khong nhan du lieu san tu SessionHistoryList) - giu component doc lap,
@@ -37,32 +70,52 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
   }
 
   return (
-    <div>
-      {/* thong tin co ban cua session - dung DUNG field that tu SessionDetailResponse, khong bia them field */}
-      <Descriptions column={2} bordered size="small" style={{ marginBottom: "1.5rem" }}>
+    <Card
+      title={<span style={{ color: "#fff", fontWeight: 600 }}>Chi tiet session CR</span>}
+      bordered
+      // header Card dong bo mau xanh duong voi R012Header - dung "styles" (antd v5) thay vi headStyle/bodyStyle
+      // vi 2 prop do da deprecated tu antd 5.25, dung ban cu se ra warning luc build
+      styles={{
+        header: {
+          background: HEADER_GRADIENT,
+          borderRadius: "8px 8px 0 0",
+          border: "none",
+        },
+        body: { padding: "20px 24px" },
+      }}
+    >
+      {/* 1. Thong tin tram - giu nguyen noi dung, gon spacing, dat dau tien theo dung thu tu doc tu tren xuong */}
+      <SectionTitle>1. Thong tin tram</SectionTitle>
+      <Descriptions column={2} bordered size="small">
         <Descriptions.Item label="Ma tram">{data.tram_id}</Descriptions.Item>
         <Descriptions.Item label="Ten tram">{data.tram_name ?? "-"}</Descriptions.Item>
         <Descriptions.Item label="Hanh dong">{data.action}</Descriptions.Item>
-        <Descriptions.Item label="Trang thai">{data.status}</Descriptions.Item>
+        {/* badge mau thay cho text thuong, dung DUNG gia tri status that tu BE (khong bia them gia tri) */}
+        <Descriptions.Item label="Trang thai">
+          <Tag color={STATUS_TAG_COLOR[data.status] ?? "default"}>{data.status}</Tag>
+        </Descriptions.Item>
         <Descriptions.Item label="Ke hoach">{data.plan_name ?? "-"}</Descriptions.Item>
         <Descriptions.Item label="Thoi gian thuc thi">
           {data.executed_at ? new Date(data.executed_at).toLocaleString("vi-VN") : "-"}
         </Descriptions.Item>
       </Descriptions>
 
-      {/* danh sach cell da tac dong theo huong, DAT TRUOC chart danh gia - doc tu tren xuong: ket qua CR
+      <Divider style={{ borderColor: DIVIDER_BLUE }} />
+
+      {/* 2. Ket qua CR theo huong (CellParamsByHuong) - TRUOC chart danh gia, dung theo thu tu doc: ket qua CR
           truoc, danh gia chat luong sau. Chi hien loai tham so (rsboost/qrxlevmin) nao THAT SU co du lieu,
           KHONG ep hien ca 2 cot neu 1 trong 2 rong - day co the la dac diem du lieu that cua tram (da xac
           nhan qua session that: co tram chi co rsboost, khong co qrxlevmin nao, khong phai loi) */}
-      <div style={{ marginBottom: "1.5rem" }}>
-        <h4>Ket qua CR theo huong</h4>
-        <CellParamsByHuong cellParams={data.cell_params} />
-      </div>
+      <SectionTitle>2. Ket qua CR theo huong</SectionTitle>
+      <CellParamsByHuong cellParams={data.cell_params} />
 
-      {/* tai su dung QoeQosCharts (Phan B) - component tu goi lai API session detail (dung chung cache
-          voi query o tren vi cung queryKey, KHONG goi API lan thu 2) roi tu ve chart tu du lieu do */}
+      <Divider style={{ borderColor: DIVIDER_BLUE }} />
+
+      {/* 3. Danh gia chat luong (QoeQosCharts) - cuoi cung, tai su dung LAI component Phan B, component tu
+          goi lai API session detail (dung chung cache voi query o tren vi cung queryKey, KHONG goi API lan 2) */}
+      <SectionTitle>3. Danh gia chat luong</SectionTitle>
       <QoeQosCharts sessionId={sessionId} />
-    </div>
+    </Card>
   );
 };
 

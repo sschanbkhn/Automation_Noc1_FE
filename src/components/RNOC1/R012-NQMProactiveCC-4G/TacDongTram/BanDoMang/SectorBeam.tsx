@@ -10,7 +10,8 @@ interface SectorBeamProps {
 }
 
 // ban kinh co dinh minh hoa (met) - khong lay tu du lieu that vi khong co field ban kinh phu song trong schema
-const RADIUS_METERS = 200;
+// tang tu 200 len 320 de sector to hon, de nhin ro tren ban do khi zoom muc thuong dung
+const RADIUS_METERS = 320;
 
 // so diem lay mau tren cung 1 cung tron - nhieu diem hon cho duong cong sector muot hon khi ve tren ban do
 const ARC_SAMPLE_POINTS = 12;
@@ -82,7 +83,8 @@ const SectorBeam: React.FC<SectorBeamProps> = ({ center }) => {
           pathOptions={{
             color: sector.color,
             fillColor: sector.color,
-            fillOpacity: 0.35, // de mo de khong che khuat tile ban do ben duoi
+            // tang tu 0.35 len 0.55: mau dam hon de nhin ro tren nen map sang, van du mo de thay duong pho ben duoi
+            fillOpacity: 0.55,
             weight: 1,
           }}
         />

@@ -9,7 +9,9 @@ import { Cookie } from 'helpers/cookie'
 // without breaking the response interceptor.
 const r012Request = axios.create({
   baseURL: process.env.R012_API_URL || 'http://127.0.0.1:8000/api/v1',
-  timeout: 60000
+  // giam tu 60000ms xuong 15000ms: BE gio tra 202 NGAY khi trigger CR (khong con block cho SSH chay het),
+  // response chi mang session_id de FE theo doi tiep qua SSE - 15s la du du cho 1 response 202 tra ve ngay
+  timeout: 15000
 })
 
 r012Request.interceptors.request.use(
