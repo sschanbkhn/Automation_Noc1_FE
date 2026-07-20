@@ -10,17 +10,13 @@ import QoeQosCharts from "../TacDongTram/DanhGiaChatLuong/QoeQosCharts";
 // theo huong (giong Tab1 sau CR), o day la XEM LAI session da DONE nen chi truyen thang cell_params tinh,
 // khong can sessionId/status SSE gi ca
 import CellParamsByHuong from "../TacDongTram/KetQuaCR/CellParamsByHuong";
+// token mau xanh duong dung CHUNG toan module - da trich tu R012Header.tsx sang theme.ts, KHONG con
+// dinh nghia hex rieng trong file nay nua, xem chi tiet tung token trong theme.ts
+import { R012_COLORS } from "../theme";
 
 interface EvaluationDetailProps {
   sessionId: number | null;
 }
-
-// token mau xanh duong DUNG LAI nguyen tu Designer/R012Header.tsx (chinh file do da ghi ro lay tu
-// R005Header.tsx - module RNOC1 dang hoat dong on dinh), KHONG bia mau moi, de dong bo giao dien toan module
-const HEADER_GRADIENT = "linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #93c5fd 100%)";
-const ACCENT_BLUE = "#1e40af";
-const ACCENT_BLUE_LIGHT = "#3b82f6";
-const DIVIDER_BLUE = "#dbeafe";
 
 // mau badge trang thai: DONE/EVALUATED dung xanh duong de dong bo voi theme chung cua modal.
 // FAILED CO Y GIU MAU DO (khong doi thanh xanh) vi day la trang thai loi can NOC nhan biet ngay bang mat -
@@ -38,10 +34,10 @@ const STATUS_TAG_COLOR: Record<string, string> = {
 const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <h4
     style={{
-      borderLeft: `4px solid ${ACCENT_BLUE_LIGHT}`,
+      borderLeft: `4px solid ${R012_COLORS.primary}`,
       paddingLeft: "10px",
       margin: "0 0 12px 0",
-      color: ACCENT_BLUE,
+      color: R012_COLORS.primaryDark,
     }}
   >
     {children}
@@ -73,11 +69,14 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
     <Card
       title={<span style={{ color: "#fff", fontWeight: 600 }}>Chi tiet session CR</span>}
       bordered
+      // boxShadow mem dat o root Card (khong phai styles.body) de bao quanh toan bo khoi Card - gia tri
+      // cardShadow hoc tu khao sat R003, xem ly do chon trong theme.ts
+      style={{ boxShadow: R012_COLORS.cardShadow, borderRadius: "8px" }}
       // header Card dong bo mau xanh duong voi R012Header - dung "styles" (antd v5) thay vi headStyle/bodyStyle
       // vi 2 prop do da deprecated tu antd 5.25, dung ban cu se ra warning luc build
       styles={{
         header: {
-          background: HEADER_GRADIENT,
+          background: R012_COLORS.headerGradient,
           borderRadius: "8px 8px 0 0",
           border: "none",
         },
@@ -100,16 +99,18 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
         </Descriptions.Item>
       </Descriptions>
 
-      <Divider style={{ borderColor: DIVIDER_BLUE }} />
+      <Divider style={{ borderColor: R012_COLORS.primaryPale }} />
 
       {/* 2. Ket qua CR theo huong (CellParamsByHuong) - TRUOC chart danh gia, dung theo thu tu doc: ket qua CR
           truoc, danh gia chat luong sau. Chi hien loai tham so (rsboost/qrxlevmin) nao THAT SU co du lieu,
           KHONG ep hien ca 2 cot neu 1 trong 2 rong - day co the la dac diem du lieu that cua tram (da xac
           nhan qua session that: co tram chi co rsboost, khong co qrxlevmin nao, khong phai loi) */}
       <SectionTitle>2. Ket qua CR theo huong</SectionTitle>
-      <CellParamsByHuong cellParams={data.cell_params} />
+      {/* sessionId chac chan la number (khong null) tai day - da qua guard "if (sessionId === null) return null"
+          o dau ham, truyen xuong de CellParamsByHuong dat dung ten file export */}
+      <CellParamsByHuong cellParams={data.cell_params} sessionId={sessionId} />
 
-      <Divider style={{ borderColor: DIVIDER_BLUE }} />
+      <Divider style={{ borderColor: R012_COLORS.primaryPale }} />
 
       {/* 3. Danh gia chat luong (QoeQosCharts) - cuoi cung, tai su dung LAI component Phan B, component tu
           goi lai API session detail (dung chung cache voi query o tren vi cung queryKey, KHONG goi API lan 2) */}

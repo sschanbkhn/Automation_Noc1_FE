@@ -11,6 +11,8 @@ import {
 import debounce from "lodash/debounce";
 import { useStations } from "../../hooks/useStations";
 import { StationItem } from "../../types";
+// token mau dung chung toan module - xem theme.ts de biet ly do chon tung gia tri
+import { R012_COLORS } from "../../theme";
 
 // props nhan tu TacDongTram.tsx: ham nay duoc goi khi NOC bam nut "Trigger CR" cho 1 tram
 // TacDongTram.tsx se dung ham nay de mo ConfirmTriggerModal va truyen dung station da chon xuong modal
@@ -155,15 +157,36 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
 
       {!isLoading && !isError && (
         <>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          {/* CSS scoped rieng cho bang nay (class r012-station-table) - dong bo hoa toan voi
+              SessionHistoryList.tsx (cung dung TanStack Table + <table> thuong, cung 1 nguon token theme.ts).
+              Dong "dang chon" van dung inline backgroundColor (uu tien hon CSS ngoai vi la style rieng cua
+              tung dong theo du lieu dong), rieng hover dat SAU 2 rule nth-child de thang o dong KHONG chon,
+              nhung khong dung !important nen hover se KHONG de len mau cua dong dang chon - dung y muon */}
+          <style>{`
+            .r012-station-table { width: 100%; border-collapse: collapse; }
+            .r012-station-table thead th {
+              text-align: left;
+              padding: 10px 8px;
+              background-color: ${R012_COLORS.tableHeaderBg};
+              color: #ffffff;
+              font-weight: 700;
+              border: 1px solid ${R012_COLORS.primary};
+            }
+            .r012-station-table tbody td {
+              padding: 8px;
+              border-bottom: 1px solid ${R012_COLORS.tableBorder};
+            }
+            .r012-station-table tbody tr { cursor: pointer; }
+            .r012-station-table tbody tr:nth-child(odd) { background-color: #ffffff; }
+            .r012-station-table tbody tr:nth-child(even) { background-color: ${R012_COLORS.tableRowAlt}; }
+            .r012-station-table tbody tr:hover { background-color: ${R012_COLORS.rowHoverBg}; }
+          `}</style>
+          <table className="r012-station-table">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
-                    <th
-                      key={header.id}
-                      style={{ textAlign: "left", borderBottom: "1px solid #e2e8f0", padding: "8px" }}
-                    >
+                    <th key={header.id}>
                       {flexRender(header.column.columnDef.header, header.getContext())}
                     </th>
                   ))}
@@ -176,16 +199,14 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
                   key={row.id}
                   onClick={() => handleRowClick(row.original)}
                   style={{
-                    cursor: "pointer",
-                    // highlight dong dang chon de NOC biet ro minh vua click tram nao truoc khi bam Trigger CR
+                    // highlight dong dang chon de NOC biet ro minh vua click tram nao truoc khi bam Trigger CR -
+                    // inline style nay luon thang CSS ben ngoai (kha ca hover), gia tri lay tu theme.ts
                     backgroundColor:
-                      selectedStation?.tram_id === row.original.tram_id ? "#e6f7ff" : undefined,
+                      selectedStation?.tram_id === row.original.tram_id ? R012_COLORS.rowSelectedBg : undefined,
                   }}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} style={{ borderBottom: "1px solid #f1f5f9", padding: "8px" }}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
+                    <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
                   ))}
                 </tr>
               ))}

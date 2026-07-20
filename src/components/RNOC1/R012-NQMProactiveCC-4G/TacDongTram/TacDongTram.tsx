@@ -92,16 +92,22 @@ const TacDongTram: React.FC = () => {
           </Col>
         </Row>
       </div>
-      <div id="zone-c">
-        <Row gutter={16}>
-          <Col span={12}>
-            <CrResultsByDirection sessionId={activeCrSessionId} status={status} />
-          </Col>
-          <Col span={12}>
-            <SseProgressLog logs={logs} status={status} />
-          </Col>
-        </Row>
-      </div>
+      {/* CHI render zone-c khi da co activeCrSessionId (da trigger CR) - truoc day zone-c luon hien du
+          chua trigger, dan den CA CrResultsByDirection LAN SseProgressLog cung hien text "Chua co phien CR..."
+          giong het nhau ngay trong luc chua co loi gi, de gay hieu lam la dang bi loi/trung lap. An han
+          (khong render) thay vi chi an bang CSS de KHONG chiem layout khi chua co CR nao duoc trigger */}
+      {activeCrSessionId && (
+        <div id="zone-c">
+          <Row gutter={16}>
+            <Col span={12}>
+              <CrResultsByDirection sessionId={activeCrSessionId} status={status} />
+            </Col>
+            <Col span={12}>
+              <SseProgressLog logs={logs} status={status} />
+            </Col>
+          </Row>
+        </div>
+      )}
     </div>
   );
 };

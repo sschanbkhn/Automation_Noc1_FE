@@ -1,19 +1,20 @@
 import React from "react";
 import { Container } from "react-bootstrap";
+import { R012_COLORS } from "../theme";
 
 const R012Header: React.FC = () => {
   return (
     <div
       style={{
         // doi tu xanh teal (#0f766e/#14b8a6/#5eead4) sang xanh duong de dong bo mau voi cac module RNOC1 khac -
-        // lay DUNG token mau tu R005-SleepingCell/Designer/R005Header.tsx (module RNOC1 dang hoat dong on dinh,
-        // co ghi chu ro "Blue Background" trong chinh file do) de sau nay doi theme chung thi doi dong loat theo cung nguon
-        background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #93c5fd 100%)",
+        // gia tri goc lay tu R005-SleepingCell/Designer/R005Header.tsx, nay da trich sang theme.ts (R012_COLORS)
+        // de toan bo file trong R012 dung CHUNG 1 nguon mau, khong con dinh nghia hex rieng le tung noi
+        background: R012_COLORS.headerGradient,
         padding: "1rem 0",
         marginBottom: "0.75rem",
         borderRadius: "8px",
-        // boxShadow doi mau tuong ung theo #1e40af (RGB 30,64,175), lay tu cung nguon R005Header.tsx o tren
-        boxShadow: "0 8px 32px rgba(30, 64, 175, 0.3)",
+        // boxShadow tuong ung primaryDark (#1e40af / RGB 30,64,175) - xem chi tiet nguon goc mau trong theme.ts
+        boxShadow: R012_COLORS.headerShadow,
       }}
     >
       <Container fluid>

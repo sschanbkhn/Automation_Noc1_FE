@@ -57,7 +57,9 @@ const CrResultsByDirection: React.FC<CrResultsByDirectionProps> = ({ sessionId, 
 
   return (
     <div>
-      <CellParamsByHuong cellParams={data.cell_params} />
+      {/* sessionId chac chan la number (khong null) tai day - da qua guard "if (sessionId === null) return ..."
+          o tren, truyen xuong de CellParamsByHuong dat dung ten file export */}
+      <CellParamsByHuong cellParams={data.cell_params} sessionId={sessionId} />
 
       {/* QosSparkline (Widget F33) va QoeQosCharts (Zone E) chi hien SAU KHI co ket qua CR (status="done" -
           diem nay chac chan dung vi return o tren da loc het cac truong hop status khac), dat CUOI CUNG
