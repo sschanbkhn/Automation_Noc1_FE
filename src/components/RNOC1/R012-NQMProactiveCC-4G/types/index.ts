@@ -147,6 +147,9 @@ export interface CrStreamEvent {
   detail?: Record<string, unknown>; // BE hien luon emit {} rong (TODO cua BE, xem _emit() dong 423 trigger_cr_use_case.py)
   done?: boolean; // true khi CR ket thuc (thanh cong buoc 17/18 hoac that bai qua _fail()), khong co trong truong hop timeout
   error?: string | null; // thong diep loi khi that bai (_fail()), null khi khong loi, khong co trong truong hop timeout
+  // DA XAC NHAN tu source that (trigger_cr_use_case.py::_emit_heartbeat_loop dong 511-525): event heartbeat
+  // dung field "type"="heartbeat" (KHONG dung "status"), va CHI co "type"+"msg" - khong co status/step/done/error
+  type?: string;
 }
 
 // dung cho GET /api/v1/qos/{cell_name} - BE khai bao additionalProperties true, chua co field co dinh trong schema
