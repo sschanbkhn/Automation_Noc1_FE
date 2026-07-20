@@ -13,11 +13,11 @@ import {
 import { ReloadOutlined, ThunderboltOutlined } from '@ant-design/icons';
 
 const ACTIVE_NE_API_URL =
-  'http://10.155.43.200:8001/api/cienatemp/networkelements/?action=active';
-const SHELF_API_URL = 'http://10.155.43.200:8001/api/cienatemp/neshelfs/?filter=';
-const SLOT_API_URL = 'http://10.155.43.200:8001/api/cienatemp/slotsequip/';
+  'http://10.147.50.102:8001/api/cienatemp/networkelements/?action=active';
+const SHELF_API_URL = 'http://10.147.50.102:8001/api/cienatemp/neshelfs/?filter=';
+const SLOT_API_URL = 'http://10.147.50.102:8001/api/cienatemp/slotsequip/';
 const TEMPERATURE_API_URL =
-  'http://10.155.43.200:8001/api/cienatemp/temperaturestatistics/';
+  'http://10.147.50.102:8001/api/cienatemp/temperaturestatistics/';
 
 interface ActiveNeOption {
   id: number;

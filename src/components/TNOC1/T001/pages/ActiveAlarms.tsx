@@ -45,7 +45,7 @@ const ActiveAlarms: React.FC<ActiveAlarmsProps> = ({ onSelectAlarm, onRequireAut
   const fetchAlarms = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://10.155.43.200:8001/api/v1/activealarms/');
+      const response = await fetch('http://10.147.50.102:8001/api/v1/activealarms/');
       if (!response.ok) {
         // Xử lý lỗi 401 Unauthorized
         if (response.status === 401) {
@@ -85,7 +85,7 @@ const ActiveAlarms: React.FC<ActiveAlarmsProps> = ({ onSelectAlarm, onRequireAut
 
   const fetchAutoRestartList = useCallback(async () => {
     try {
-      const response = await fetch('http://10.155.43.200:8001/api/v1/alarmautorestart/');
+      const response = await fetch('http://10.147.50.102:8001/api/v1/alarmautorestart/');
       if (!response.ok) {
         // Xử lý lỗi 401 Unauthorized
         if (response.status === 401) {
@@ -125,7 +125,7 @@ const ActiveAlarms: React.FC<ActiveAlarmsProps> = ({ onSelectAlarm, onRequireAut
 
   const fetchN8NTasks = useCallback(async () => {
     try {
-      const response = await fetch('http://10.155.43.200:8001/api/v1/n8ntask/');
+      const response = await fetch('http://10.147.50.102:8001/api/v1/n8ntask/');
       if (!response.ok) {
         // Xử lý lỗi 401 Unauthorized
         if (response.status === 401) {

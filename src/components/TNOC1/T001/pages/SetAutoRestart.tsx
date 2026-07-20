@@ -18,7 +18,7 @@ const SetAutoRestart: React.FC = () => {
   const fetchNodeList = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://10.155.43.200:8001/api/v1/managenode');
+      const response = await fetch('http://10.147.50.102:8001/api/v1/managenode');
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -81,7 +81,7 @@ const SetAutoRestart: React.FC = () => {
 
         console.log('Submitting payload:', payload);
 
-        const response = await fetch('http://10.155.43.200:8001/api/v1/alarmautorestart/', {
+        const response = await fetch('http://10.147.50.102:8001/api/v1/alarmautorestart/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

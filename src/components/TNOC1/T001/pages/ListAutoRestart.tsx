@@ -20,7 +20,7 @@ const ListAutoRestart: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://10.155.43.200:8001/api/v1/alarmautorestart/');
+      const response = await fetch('http://10.147.50.102:8001/api/v1/alarmautorestart/');
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -77,7 +77,7 @@ const ListAutoRestart: React.FC = () => {
       
       // Gọi API DELETE cho từng id được chọn
       const deletePromises = selectedItems.map(async (id) => {
-        const response = await fetch(`http://10.155.43.200:8001/api/v1/alarmautorestart/${id}`, {
+        const response = await fetch(`http://10.147.50.102:8001/api/v1/alarmautorestart/${id}`, {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',

@@ -23,8 +23,8 @@ import {
 import MCPAuth from '../../../TNOC1/T001/pages/MCPAuth';
 
 const COMPARE_API_URL =
-  'http://10.155.43.200:8001/api/cienatemp/networkelements/?action=compare';
-const SYNC_API_URL = 'http://10.155.43.200:8001/api/cienatemp/networkelements/';
+  'http://10.147.50.102:8001/api/cienatemp/networkelements/?action=compare';
+const SYNC_API_URL = 'http://10.147.50.102:8001/api/cienatemp/networkelements/';
 
 const COMPARE_FIELDS = ['name', 'ipAddress', 'isActive'] as const;
 

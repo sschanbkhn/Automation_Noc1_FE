@@ -25,7 +25,7 @@ interface TemperatureItem {
   timestamp?: string;
 }
 
-const API_URL = 'http://10.155.43.200:8001/api/cienatemp/temperaturestatistics/';
+const API_URL = 'http://10.147.50.102:8001/api/cienatemp/temperaturestatistics/';
 
 const getStatusTag = (status: TemperatureItem['status']) => {
   switch (status) {

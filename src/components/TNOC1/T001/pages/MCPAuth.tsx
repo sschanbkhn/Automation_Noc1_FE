@@ -15,7 +15,7 @@ const MCPAuth: React.FC<MCPAuthProps> = ({ onSuccess }) => {
     setLoading(true);
     try {
       // Gửi POST request đến backend để xác thực MCP và lấy token
-      const response = await fetch('http://10.155.43.200:8001/api/v1/authenticate/token/', {
+      const response = await fetch('http://10.147.50.102:8001/api/v1/authenticate/token/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -30,8 +30,8 @@ import {
 } from '@ant-design/icons';
 import NetworkCompare from './NetworkCompare';
 
-const STRUCTURE_API_URL = 'http://10.155.43.200:8001/api/cienatemp/networkconstructs/';
-const ELEMENT_API_URL = 'http://10.155.43.200:8001/api/cienatemp/networkelements/';
+const STRUCTURE_API_URL = 'http://10.147.50.102:8001/api/cienatemp/networkconstructs/';
+const ELEMENT_API_URL = 'http://10.147.50.102:8001/api/cienatemp/networkelements/';
 
 const getElementUpdateUrl = (id: number) => `${ELEMENT_API_URL}${id}/`;
 

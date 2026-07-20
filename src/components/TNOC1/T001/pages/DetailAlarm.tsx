@@ -51,7 +51,7 @@ const DetailAlarm: React.FC<DetailAlarmProps> = ({ visible, alarmId, onClose }) 
     try {
       // Encode alarmId để tránh lỗi với các ký tự đặc biệt
       const encodedAlarmId = encodeURIComponent(String(alarmId).trim());
-      const apiUrl = `http://10.155.43.200:8001/api/v1/manualrestart/${encodedAlarmId}`;
+      const apiUrl = `http://10.147.50.102:8001/api/v1/manualrestart/${encodedAlarmId}`;
       
       console.log('=== Fetch Alarm Detail ===');
       console.log('alarmId prop:', alarmId);
@@ -133,7 +133,7 @@ const DetailAlarm: React.FC<DetailAlarmProps> = ({ visible, alarmId, onClose }) 
       // Một số backend có thể yêu cầu alarm_id là số nguyên không encode
       const isNumeric = /^\d+$/.test(alarmIdStr);
       const finalAlarmIdForUrl = isNumeric ? alarmIdStr : encodeURIComponent(alarmIdStr);
-      const apiUrl = `http://10.155.43.200:8001/api/v1/manualrestart/${finalAlarmIdForUrl}`;
+      const apiUrl = `http://10.147.50.102:8001/api/v1/manualrestart/${finalAlarmIdForUrl}`;
       
       // Log thông tin để debug
       console.log('=== Manual Restart API Call ===');
