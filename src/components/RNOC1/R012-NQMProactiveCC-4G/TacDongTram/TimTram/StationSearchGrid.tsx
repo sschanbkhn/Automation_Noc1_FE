@@ -10,7 +10,8 @@ import {
 // setTimeout/clearTimeout, tranh trung lap logic da duoc thu vien xu ly va test san
 import debounce from "lodash/debounce";
 import { useStations } from "../../hooks/useStations";
-import { StationItem } from "../../types";
+import { usePreview } from "../../hooks/usePreview";
+import { StationItem, PreviewCrResponse } from "../../types";
 // token mau dung chung toan module - xem theme.ts de biet ly do chon tung gia tri
 import { R012_COLORS } from "../../theme";
 
@@ -22,12 +23,15 @@ interface StationSearchGridProps {
   // TacDongTram.tsx dung ham nay de cap nhat tram dang "xem tren ban do" (selectedStationForView),
   // tach biet voi tram dang "lam CR" vi 2 muc dich khac nhau (vd dang xem tram A nhung truoc do da trigger tram B)
   onSelectStation: (station: StationItem) => void;
+  // ham nay duoc goi khi bam "Xem truoc anh huong" thanh cong (data), hoac voi null khi doi sang tram khac
+  // (preview cu khong con dung cho tram moi) - TacDongTram.tsx dung de cap nhat previewData truyen vao NetworkMap
+  onPreviewResult: (data: PreviewCrResponse | null) => void;
 }
 
 // khoi tao column helper rieng cho kieu StationItem, giup TanStack Table bao dam kieu du lieu dung ngay luc khai bao cot
 const columnHelper = createColumnHelper<StationItem>();
 
-const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSelectStation }) => {
+const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSelectStation, onPreviewResult }) => {
   // searchInput: gia tri hien thi TRUC TIEP tren o Input.Search, cap nhat ngay khi go phim
   // de nguoi dung thay ky tu minh vua go ngay lap tuc, khong bi cam giac lag do cho debounce
   const [searchInput, setSearchInput] = useState<string>("");
@@ -77,6 +81,10 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
   const stations = data?.data ?? [];
   const total = data?.total ?? 0;
 
+  // usePreview la useMutation (khong tu fetch) - chi goi khi NOC bam nut "Xem truoc anh huong" ben duoi,
+  // isLoading/isError/error dung de hien loading/error state ngay canh nut, khong can state rieng
+  const previewMutation = usePreview();
+
   // khai bao cot bang dung DUNG cac field co that trong StationItem (types/index.ts) - khong bia them cot
   // STT khong phai field tu BE, chi la so thu tu hien thi tinh theo vi tri dong + trang hien tai
   const columns = useMemo(
@@ -124,6 +132,30 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
     // bao ra ngoai cho TacDongTram.tsx biet tram nao dang duoc xem, DE RIENG voi luong Trigger CR ben duoi
     // (chi goi khi bam nut), vi xem tram tren map khong bat buoc phai dan den hanh dong trigger CR
     onSelectStation(station);
+    // doi sang tram khac thi preview cu (neu co, cua tram truoc do) khong con dung cho tram vua chon - reset
+    // ve che do 1 marker binh thuong, tranh hien nham ket qua preview cua tram khac tren map cho den khi NOC
+    // bam "Xem truoc" lai cho dung tram nay
+    previewMutation.reset();
+    onPreviewResult(null);
+  };
+
+  // ham xu ly khi bam nut "Xem truoc anh huong" - goi usePreview voi dung tram dang chon, action co dinh
+  // "shutdown" vi day la action DA VERIFY qua goi that o Buoc 0 va la truong hop nghiep vu chinh can xem truoc
+  // (chua co UI chon action rieng cho preview trong luot nay - se bo sung cung luc voi Bang/Chart o buoc sau)
+  const handlePreviewClick = () => {
+    if (!selectedStation) {
+      return;
+    }
+    previewMutation.mutate(
+      {
+        tram_id: selectedStation.tram_id,
+        tram_name: selectedStation.tram_name,
+        action: "shutdown",
+      },
+      {
+        onSuccess: (result) => onPreviewResult(result),
+      }
+    );
   };
 
   return (
@@ -227,12 +259,35 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
         </>
       )}
 
-      {/* nut Trigger CR chi hien khi da chon 1 tram, tranh NOC bam nham khi chua xac dinh tram nao */}
+      {/* nut Trigger CR + Xem truoc anh huong chi hien khi da chon 1 tram, tranh NOC bam nham khi chua xac dinh tram nao */}
       {selectedStation && (
         <div style={{ marginTop: "1rem" }}>
-          <Button type="primary" onClick={() => onTriggerCr(selectedStation)}>
-            Trigger CR cho tram {selectedStation.tram_name}
-          </Button>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+            <Button type="primary" onClick={() => onTriggerCr(selectedStation)}>
+              Trigger CR cho tram {selectedStation.tram_name}
+            </Button>
+            {/* loading state: CDS co the mat vai giay de tra ve tram_lan_can, dung loading co san cua antd Button
+                thay vi tu ve Spin rieng, NOC van thay ro nut dang xu ly va khong bam trung lap duoc (antd tu disable) */}
+            <Button loading={previewMutation.isLoading} onClick={handlePreviewClick}>
+              Xem truoc anh huong
+            </Button>
+          </div>
+          {/* error state: preview that bai (vd tram khong co tram lan can / CDS loi - da xac nhan qua goi that
+              tram_id khong hop le tra HTTP 502 CDS_API_ERROR o Buoc 0) - hien ro cho NOC, KHONG de im lang.
+              Toast loi chung da co san qua interceptor r012Request.ts, Alert nay THEM chi tiet ngay tai cho
+              bam nut de NOC khong phai nhin ra ngoai toast (toast se tu bien mat sau vai giay) */}
+          {previewMutation.isError && (
+            <Alert
+              type="warning"
+              message="Khong xem truoc duoc anh huong"
+              description={
+                (previewMutation.error as Error)?.message ||
+                "Tram co the khong co tram lan can, hoac CDS khong tra du lieu. Vui long thu lai."
+              }
+              style={{ marginTop: "0.5rem" }}
+              showIcon
+            />
+          )}
         </div>
       )}
     </div>

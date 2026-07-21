@@ -152,6 +152,48 @@ export interface CrStreamEvent {
   type?: string;
 }
 
+// dung cho POST /api/v1/cr/preview - 1 cell bi anh huong trong danh sach cells cua 1 tram lan can (hoac
+// chinh tram goc, xem PreviewTramItem). Lay dung tu OpenAPI schema PreviewCellItem, KHONG doan field -
+// luu y ten field rsboost_cu/rsboost_moi/qrxlevmin_cu/qrxlevmin_moi KHAC voi CellParamDetailItem
+// (rsboost_before_cr/rsboost_new) vi 2 endpoint /sessions/{id} va /cr/preview dung ten field rieng biet
+export interface PreviewCellItem {
+  cell_name: string; // ten cell, bat buoc theo schema
+  huong_id: string | null; // id huong cua cell, co the null theo schema
+  priority: number | null; // do uu tien, co the null theo schema
+  action_type: string | null; // loai hanh dong ap dung cho cell, co the null theo schema
+  rsboost_cu: number | null; // gia tri rsboost hien tai (truoc CR), co the null theo schema
+  rsboost_moi: number | null; // gia tri rsboost du kien sau CR, co the null theo schema
+  qrxlevmin_cu: number | null; // gia tri qrxlevmin hien tai (truoc CR), co the null theo schema
+  qrxlevmin_moi: number | null; // gia tri qrxlevmin du kien sau CR, co the null theo schema
+}
+
+// dung cho POST /api/v1/cr/preview - tram goc (tram bi tac dong CR truc tiep). KHONG co field "cells" rieng
+// theo schema PreviewTramGoc that (khac PreviewTramItem ben duoi) - neu can so cell anh huong cua chinh
+// tram goc, phai tim tram co cung tram_id trong mang tram_lan_can (BE tra tram goc lap lai o do kem cells)
+export interface PreviewTramGoc {
+  tram_id: string; // ma tram, bat buoc theo schema
+  tram_name: string | null; // ten tram, co the null theo schema
+  longitude: number | null; // kinh do, co the null theo schema - co the null neu tram khong join duoc toa do
+  latitude: number | null; // vi do, co the null theo schema
+}
+
+// dung cho POST /api/v1/cr/preview - 1 tram lan can bi anh huong, kem danh sach cells cua tram do.
+// DA XAC NHAN qua goi that: mang tram_lan_can LUON chua ca chinh tram_goc (kem cells cua tram_goc),
+// khong chi cac tram khac xung quanh - FE phai tu loc trung khi ve marker (xem NetworkMap.tsx)
+export interface PreviewTramItem {
+  tram_id: string; // ma tram, bat buoc theo schema
+  tram_name: string | null; // ten tram, co the null theo schema
+  longitude: number | null; // kinh do, co the null theo schema - ~0.4% tram khong join duoc toa do (null)
+  latitude: number | null; // vi do, co the null theo schema
+  cells: PreviewCellItem[]; // danh sach cell bi anh huong cua tram nay, mac dinh mang rong theo schema
+}
+
+// dung cho POST /api/v1/cr/preview - response chinh, request body dung chung TriggerCrRequest (tram_id + action)
+export interface PreviewCrResponse {
+  tram_goc: PreviewTramGoc; // tram bi tac dong CR truc tiep, bat buoc theo schema
+  tram_lan_can: PreviewTramItem[]; // danh sach tram bi anh huong (kem ca tram_goc, xem comment PreviewTramItem), bat buoc theo schema
+}
+
 // dung cho GET /api/v1/qos/{cell_name} - BE khai bao additionalProperties true, chua co field co dinh trong schema
 // giu kieu Record de khong tu bia field khong ton tai trong schema that
 export type QosMetrics = Record<string, unknown>;

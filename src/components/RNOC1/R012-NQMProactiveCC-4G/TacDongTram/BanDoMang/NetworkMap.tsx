@@ -7,8 +7,9 @@ import markerIconUrl from "leaflet/dist/images/marker-icon.png";
 import markerIcon2xUrl from "leaflet/dist/images/marker-icon-2x.png";
 import markerShadowUrl from "leaflet/dist/images/marker-shadow.png";
 import "leaflet/dist/leaflet.css"; // css goc cua Leaflet - bat buoc phai co de ban do/marker hien dung vi tri, khong bi vo layout
-import { StationItem } from "../../types";
+import { StationItem, PreviewCrResponse } from "../../types";
 import SectorBeam from "./SectorBeam";
+import { R012_COLORS } from "../../theme";
 
 // gan lai icon mac dinh bang anh da import qua webpack, thay vi de Leaflet tu doan duong dan (se sai khi bundle)
 // chi can lam 1 lan khi module duoc load, khong can lam lai moi lan render
@@ -27,11 +28,34 @@ L.Marker.prototype.options.icon = defaultIcon; // ap dung cho moi Marker trong f
 // khong qua gan gay mat ngu canh khu vuc, cung khong qua xa lam mat chi tiet vi tri tram
 const SINGLE_STATION_ZOOM = 15;
 
+// icon dang cham tron mau ve bang L.divIcon (KHONG can them file anh moi) de phan biet tram_goc (do) va
+// tram_lan_can (xanh duong) tren cung 1 ban do preview - marker mac dinh cua Leaflet (defaultIcon o tren)
+// chi co 1 mau xanh duong nen khong dung truc tiep duoc cho ca 2 vai tro cung luc
+const buildDotIcon = (color: string, sizePx: number) =>
+  L.divIcon({
+    className: "", // ghi de rong de bo class mac dinh "leaflet-div-icon" (co nen/border vuong trang xau), tu ve toan bo qua html
+    html: `<div style="background:${color};width:${sizePx}px;height:${sizePx}px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 4px rgba(0,0,0,0.6);"></div>`,
+    iconSize: [sizePx, sizePx],
+    iconAnchor: [sizePx / 2, sizePx / 2],
+  });
+
+const tramGocIcon = buildDotIcon(R012_COLORS.dangerRed, 18); // do, lon hon 1 chut de noi bat la tram chinh bi tat
+const tramLanCanIcon = buildDotIcon(R012_COLORS.primary, 14); // xanh duong - dung DUNG token primary chung cua module
+
 interface NetworkMapProps {
   station: StationItem | null; // tram dang duoc chon de xem tren ban do, null khi chua chon tram nao
+  // ket qua preview CR (tram_goc + tram_lan_can) - CO gia tri thi UU TIEN hien che do nhieu marker (preview),
+  // BO QUA prop "station" o tren; null/undefined thi quay lai che do 1 marker binh thuong nhu truoc
+  previewData?: PreviewCrResponse | null;
 }
 
-const NetworkMap: React.FC<NetworkMapProps> = ({ station }) => {
+const NetworkMap: React.FC<NetworkMapProps> = ({ station, previewData }) => {
+  // uu tien che do preview khi co du lieu - tach rieng component PreviewMap ben duoi de giu nhanh logic
+  // 1-marker (station) o day khong bi roi, de doc theo tung che do rieng biet
+  if (previewData) {
+    return <PreviewMap data={previewData} />;
+  }
+
   // khong ve map khi chua co tram hoac tram thieu toa do (longitude/latitude co the null theo schema StationItem)
   // - tranh render 1 cai MapContainer rong vo nghia (khong biet center o dau) gay nham lan cho NOC
   const hasValidCoordinates =
@@ -86,6 +110,141 @@ const NetworkMap: React.FC<NetworkMapProps> = ({ station }) => {
       {/* sector la hinh minh hoa trang tri, xem canh bao chi tiet trong SectorBeam.tsx - khong phai huong song that */}
       <SectorBeam center={centerObj} />
     </MapContainer>
+  );
+};
+
+// tram da loc: chi giu tram CO du toa do (longitude/latitude khac null) va da tinh san so cell anh huong,
+// dung chung cho ca tram_goc va tung phan tu tram_lan_can khi ve marker/tinh bounds ben duoi
+interface ValidCoordTram {
+  tram_id: string;
+  tram_name: string | null;
+  lat: number;
+  lng: number;
+  soCellAnhHuong: number;
+}
+
+// tach rieng component cho che do preview (nhieu marker) - giu NetworkMap chinh o tren gon, de doc theo tung che do
+const PreviewMap: React.FC<{ data: PreviewCrResponse }> = ({ data }) => {
+  // so cell anh huong cua CHINH tram_goc: PreviewTramGoc KHONG co field "cells" rieng theo schema that (BUOC 0
+  // cua task nay), phai tim tram trung tram_id trong mang tram_lan_can (BE tra tram_goc lap lai o do, KEM cells)
+  const tramGocTrongDsLanCan = data.tram_lan_can.find((t) => t.tram_id === data.tram_goc.tram_id);
+
+  const tramGocValid: ValidCoordTram | null =
+    data.tram_goc.longitude !== null && data.tram_goc.latitude !== null
+      ? {
+          tram_id: data.tram_goc.tram_id,
+          tram_name: data.tram_goc.tram_name,
+          lat: data.tram_goc.latitude,
+          lng: data.tram_goc.longitude,
+          soCellAnhHuong: tramGocTrongDsLanCan?.cells.length ?? 0,
+        }
+      : null;
+
+  // loc tram_lan_can theo 2 buoc:
+  // 1) BO tram trung tram_id voi tram_goc - DA XAC NHAN qua goi that (tram 111139, Buoc 0): BE tra tram_goc
+  //    LAP LAI trong chinh mang tram_lan_can. Neu khong loc se ve 2 marker (do + xanh) chong khit len nhau
+  //    tai CUNG 1 toa do, marker do luon nam tren che khuat marker xanh, gay nham lan tuong tram_goc khong
+  //    nam trong danh sach anh huong (du lieu cell cua no van duoc gom vao tramGocValid o tren roi).
+  // 2) BO tram KHONG co toa do (longitude/latitude null, ~0.4% khong join duoc theo yeu cau nghiep vu) - KHONG
+  //    ve marker cho truong hop nay de tranh crash Leaflet khi truyen toa do null, chi dem lai so luong de
+  //    ghi chu cho NOC biet con thieu du lieu, tranh hieu lam preview chi co bay nhieu do la TOAN BO anh huong.
+  let soTramKhongCoToaDo = 0;
+  const tramLanCanValid: ValidCoordTram[] = [];
+  data.tram_lan_can.forEach((t) => {
+    if (t.tram_id === data.tram_goc.tram_id) {
+      return;
+    }
+    if (t.longitude === null || t.latitude === null) {
+      soTramKhongCoToaDo += 1;
+      return;
+    }
+    tramLanCanValid.push({
+      tram_id: t.tram_id,
+      tram_name: t.tram_name,
+      lat: t.latitude,
+      lng: t.longitude,
+      soCellAnhHuong: t.cells.length,
+    });
+  });
+
+  const allMarkers = tramGocValid ? [tramGocValid, ...tramLanCanValid] : tramLanCanValid;
+
+  // khong co marker nao du toa do de ve (ca tram_goc lan toan bo tram_lan_can deu thieu toa do) - bao ro cho
+  // NOC thay vi render MapContainer voi bounds rong (Leaflet se loi/crash khi fitBounds mang rong)
+  if (allMarkers.length === 0) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "400px",
+          border: "1px dashed #d9d9d9",
+          borderRadius: "4px",
+          color: "#8c8c8c",
+          textAlign: "center",
+          padding: "0 16px",
+        }}
+      >
+        Khong co tram nao du toa do de hien tren ban do (tat ca tram thieu longitude/latitude)
+      </div>
+    );
+  }
+
+  const bounds: [number, number][] = allMarkers.map((m) => [m.lat, m.lng]);
+
+  return (
+    <div>
+      <MapContainer
+        // dung "bounds" thay "center/zoom" co dinh - MapOptions cua Leaflet coi center/zoom la optional
+        // (da kiem tra type MapContainerProps that trong node_modules/react-leaflet), nen chi truyen bounds
+        // la du de Leaflet TU fit vua khung nhin quanh het marker, khong can tu tinh center/zoom thu cong
+        bounds={bounds}
+        boundsOptions={{ padding: [40, 40] }} // chua khoang trong quanh marker ria, tranh marker nam sat vien khung ban do
+        style={{ height: "400px", width: "100%" }}
+        // key doi theo tram_goc de ep react-leaflet remount khi NOC xem preview cho 1 tram KHAC, giong cach
+        // lam o che do 1 marker phia tren (tranh loi map khong tu fit lai bounds moi luc component da mount san)
+        key={`preview-${data.tram_goc.tram_id}`}
+      >
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        />
+
+        {tramGocValid && (
+          <Marker position={[tramGocValid.lat, tramGocValid.lng]} icon={tramGocIcon}>
+            <Popup>
+              <div>
+                <strong>{tramGocValid.tram_name ?? tramGocValid.tram_id}</strong> (tram goc - bi tat)
+              </div>
+              <div>Ma tram: {tramGocValid.tram_id}</div>
+              <div>So cell bi anh huong: {tramGocValid.soCellAnhHuong}</div>
+            </Popup>
+          </Marker>
+        )}
+
+        {tramLanCanValid.map((t) => (
+          <Marker key={t.tram_id} position={[t.lat, t.lng]} icon={tramLanCanIcon}>
+            <Popup>
+              <div>
+                <strong>{t.tram_name ?? t.tram_id}</strong> (tram lan can)
+              </div>
+              <div>Ma tram: {t.tram_id}</div>
+              <div>So cell bi anh huong: {t.soCellAnhHuong}</div>
+            </Popup>
+          </Marker>
+        ))}
+      </MapContainer>
+
+      {/* ghi chu so tram khong hien duoc tren map do thieu toa do - de NOC biet con thieu du lieu, khong
+          tuong nham la preview chi co bay nhieu do la TOAN BO tram bi anh huong (EDGE CASE theo yeu cau) */}
+      {soTramKhongCoToaDo > 0 && (
+        <div style={{ marginTop: "8px", color: "#8c8c8c", fontSize: "0.85rem" }}>
+          Luu y: {soTramKhongCoToaDo} tram lan can khong co toa do (longitude/latitude null), khong the hien
+          tren ban do.
+        </div>
+      )}
+    </div>
   );
 };
 

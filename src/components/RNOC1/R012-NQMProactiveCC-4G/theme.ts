@@ -22,4 +22,10 @@ export const R012_COLORS = {
 
   // ---- token cho Card/panel ----
   cardShadow: "0 2px 8px rgba(0,0,0,0.08)", // shadow mem - hoc tu khao sat R003 (Monitor/Configuration dung chung gia tri nay cho card), ap dung cho Card R012 de nhin nhe nhang hon boxShadow dam cua header
+
+  // ---- token rieng cho marker "tram goc" tren map preview (NetworkMap.tsx) ----
+  // day la mau NGOAI ho blue cua module - CO Y dung do vi tram_goc (tram bi tat CR) can phan biet ro rang
+  // voi cac tram_lan_can (van dung primary blue) tren cung 1 ban do, dung chung 1 mau se khong the
+  // phan biet duoc marker nao la tram bi tat truc tiep khi nhin luot qua
+  dangerRed: "#dc2626",
 };

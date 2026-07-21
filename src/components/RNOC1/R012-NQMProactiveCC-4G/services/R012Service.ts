@@ -9,6 +9,7 @@ import {
   SessionsQueryParams,
   SessionListResponse,
   SessionDetailResponse,
+  PreviewCrResponse,
   QosMetrics,
   SyncRimsResponse,
   SyncNetactResponse,
@@ -45,6 +46,18 @@ export const getSessions = async (params?: SessionsQueryParams): Promise<Session
   try {
     const data: any = await r012Request.get('/sessions', { params });
     return data as SessionListResponse;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// ham goi POST /api/v1/cr/preview - xem truoc anh huong CR (tram_goc + tram_lan_can kem cells) TRUOC KHI
+// trigger that, dung chung body TriggerCrRequest voi triggerCr o tren (tram_id/tram_name/action)
+// chi goi API va tra ve dung raw response theo type PreviewCrResponse
+export const getPreview = async (payload: TriggerCrRequest): Promise<PreviewCrResponse> => {
+  try {
+    const data: any = await r012Request.post('/cr/preview', payload);
+    return data as PreviewCrResponse;
   } catch (error) {
     throw error;
   }

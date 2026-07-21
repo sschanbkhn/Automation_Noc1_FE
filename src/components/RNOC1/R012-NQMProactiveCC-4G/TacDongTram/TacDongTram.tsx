@@ -14,7 +14,7 @@ import NetworkMap from "./BanDoMang/NetworkMap";
 // BEN TRONG CrResultsByDirection.tsx (hien sau khi co ket qua CR), tranh render trung 2 lan cung du lieu
 import CrResultsByDirection from "./KetQuaCR/CrResultsByDirection";
 import SseProgressLog from "./KetQuaCR/SseProgressLog";
-import { StationItem } from "../types";
+import { StationItem, PreviewCrResponse } from "../types";
 // goi useSseStream DUY NHAT 1 LAN o cap TacDongTram nay, KHONG goi rieng trong tung component con cua Zone C -
 // neu goi nhieu lan se mo nhieu ket noi EventSource trung lap toi CUNG 1 session_id, gay lang phi tai nguyen
 // va co the loi (nhieu socket cung tranh nhau doc/dong 1 session tren BE)
@@ -35,6 +35,11 @@ const TacDongTram: React.FC = () => {
   // 2 state nay co the KHAC NHAU cung luc (vd NOC dang xem tram A tren map nhung truoc do da trigger CR cho tram B
   // va modal xac nhan tram B van con hien) - neu dung chung 1 state se lam sai lech ca 2 luong nghiep vu
   const [selectedStationForView, setSelectedStationForView] = useState<StationItem | null>(null);
+
+  // ket qua "Xem truoc anh huong" (Buoc 1 tinh nang preview) - null nghia la chua xem truoc hoac vua doi
+  // sang tram khac (StationSearchGrid tu reset ve null khi doi tram, xem comment handleRowClick trong do).
+  // CO gia tri thi NetworkMap uu tien hien che do nhieu marker (tram_goc + tram_lan_can) thay vi 1 marker
+  const [previewData, setPreviewData] = useState<PreviewCrResponse | null>(null);
 
   // session_id cua phien CR dang duoc theo doi SSE realtime (Zone C - KetQuaCR) - null nghia la chua trigger
   // CR nao trong phien lam viec nay, hoac chua co ket qua tu ConfirmTriggerModal
@@ -63,6 +68,13 @@ const TacDongTram: React.FC = () => {
     setSelectedStationForView(station);
   };
 
+  // ham nay truyen xuong StationSearchGrid qua prop onPreviewResult - goi khi "Xem truoc anh huong" thanh cong
+  // (data) hoac khi NOC doi sang tram khac (null, StationSearchGrid tu reset) - cap nhat state de NetworkMap
+  // doi qua che do nhieu marker (hoac quay lai 1 marker khi null)
+  const handlePreviewResult = (data: PreviewCrResponse | null) => {
+    setPreviewData(data);
+  };
+
   // ham nay truyen xuong ConfirmTriggerModal qua prop onClose - goi khi dong modal (huy hoac sau khi trigger xong)
   const handleCloseTriggerModal = () => {
     setIsTriggerModalOpen(false);
@@ -73,7 +85,11 @@ const TacDongTram: React.FC = () => {
       <div id="zone-a">
         <Row gutter={16}>
           <Col span={24}>
-            <StationSearchGrid onTriggerCr={handleTriggerCr} onSelectStation={handleSelectStationForView} />
+            <StationSearchGrid
+              onTriggerCr={handleTriggerCr}
+              onSelectStation={handleSelectStationForView}
+              onPreviewResult={handlePreviewResult}
+            />
           </Col>
         </Row>
       </div>
@@ -88,7 +104,7 @@ const TacDongTram: React.FC = () => {
         <Row gutter={16}>
           {/* mot cot day du (span 24) vi SectorBeam da nam trong long NetworkMap, khong con la 2 khoi rieng canh nhau */}
           <Col span={24}>
-            <NetworkMap station={selectedStationForView} />
+            <NetworkMap station={selectedStationForView} previewData={previewData} />
           </Col>
         </Row>
       </div>
