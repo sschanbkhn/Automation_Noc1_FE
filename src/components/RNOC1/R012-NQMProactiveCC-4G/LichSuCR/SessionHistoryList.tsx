@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, Button, DatePicker, Input, Modal, Pagination, Spin, Tag } from "antd";
+import { Alert, Button, DatePicker, Input, Modal, Pagination, Select, Spin, Tag } from "antd";
 import dayjs, { Dayjs } from "dayjs";
 import {
   createColumnHelper,
@@ -35,6 +35,16 @@ const STATUS_COLORS: Record<string, string> = {
   EVALUATING: "processing",
 };
 
+// options loc theo trang thai - CHI 3 gia tri DONE/FAILED/RUNNING theo yeu cau nghiep vu (khong dua het
+// tat ca status trong STATUS_COLORS o tren vao, vi EVAL_PENDING/EVALUATED/EVALUATING la trang thai danh gia
+// sau CR, ngoai pham vi bo loc nay). value "" nghia la "Tat ca" - KHONG gui param status len BE khi chon muc nay
+const STATUS_FILTER_OPTIONS = [
+  { value: "", label: "Tat ca" },
+  { value: "DONE", label: "DONE" },
+  { value: "FAILED", label: "FAILED" },
+  { value: "RUNNING", label: "RUNNING" },
+];
+
 const SessionHistoryList: React.FC = () => {
   const [page, setPage] = useState<number>(1);
   const [size, setSize] = useState<number>(20); // 20 la default cua BE theo schema SessionsQueryParams
@@ -50,6 +60,9 @@ const SessionHistoryList: React.FC = () => {
 
   // khoang ngay dang loc (RangePicker) - null nghia la khong loc theo ngay
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(null);
+
+  // trang thai dang loc (Select) - "" nghia la "Tat ca", khong gui param status len BE
+  const [statusFilter, setStatusFilter] = useState<string>("");
 
   const debouncedApplySearch = useMemo(
     () =>
@@ -87,19 +100,26 @@ const SessionHistoryList: React.FC = () => {
     setPage(1);
   };
 
-  // nut "Xoa loc" dua tat ca bo loc (q/from/to) ve mac dinh va ve lai trang 1, giup NOC thoat nhanh khoi
+  // doi Select trang thai -> reset ve trang 1, giong cach xu ly cua handleDateRangeChange o tren
+  const handleStatusFilterChange = (value: string) => {
+    setStatusFilter(value);
+    setPage(1);
+  };
+
+  // nut "Xoa loc" dua tat ca bo loc (q/from/to/status) ve mac dinh va ve lai trang 1, giup NOC thoat nhanh khoi
   // 1 bo loc dang khong ra ket qua ma khong can xoa tung o thu cong
   const handleClearFilters = () => {
     setSearchInput("");
     setSearchTerm("");
     setDateRange(null);
+    setStatusFilter("");
     setPage(1);
   };
 
   const { data, isLoading, isError, error } = useQuery<SessionListResponse>({
-    // dua ca searchTerm/fromParam/toParam vao queryKey de TanStack Query TU goi lai API moi khi doi bo loc,
-    // khong can effect/handler goi refetch thu cong
-    queryKey: ["r012", "sessions", page, size, searchTerm, fromParam, toParam],
+    // dua ca searchTerm/fromParam/toParam/statusFilter vao queryKey de TanStack Query TU goi lai API moi khi
+    // doi bo loc, khong can effect/handler goi refetch thu cong
+    queryKey: ["r012", "sessions", page, size, searchTerm, fromParam, toParam, statusFilter],
     queryFn: () =>
       getSessions({
         page,
@@ -107,6 +127,7 @@ const SessionHistoryList: React.FC = () => {
         q: searchTerm || undefined, // khong gui q rong de tranh BE phai xu ly filter rong khong can thiet
         from: fromParam,
         to: toParam,
+        status: statusFilter || undefined, // "" (Tat ca) khong gui param status, de BE tra ve tat ca trang thai
       }),
   });
 
@@ -187,6 +208,16 @@ const SessionHistoryList: React.FC = () => {
             debouncedApplySearch(value);
           }}
           style={{ width: "260px" }}
+        />
+        {/* Select loc trang thai - dung options tinh san (STATUS_FILTER_OPTIONS). KHONG tu style border rieng:
+            RangePicker/Input.Search canh ben cung dang de mau xanh duong mac dinh cua antd theme (chua co
+            ConfigProvider tuy chinh trong app), giu Select nhu vay la DONG BO voi 2 o loc con lai, tu them
+            borderColor vao day se lam RIENG Select noi bat khac mau thay vi giong nhau */}
+        <Select
+          value={statusFilter}
+          onChange={handleStatusFilterChange}
+          options={STATUS_FILTER_OPTIONS}
+          style={{ width: "160px" }}
         />
         <Button onClick={handleClearFilters}>Xoa loc</Button>
       </div>
