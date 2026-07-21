@@ -8,6 +8,10 @@ import ConfirmTriggerModal from "./TimTram/ConfirmTriggerModal";
 // doi ten tu ZoneB sang BanDoMang cho dung chuc nang hien thi
 // SectorBeam KHONG import truc tiep o day nua - da nam ben trong NetworkMap (ve chung 1 MapContainer)
 import NetworkMap from "./BanDoMang/NetworkMap";
+// bang tram + bang cell bi anh huong (Buoc 2 tinh nang preview) - hien NGAY DUOI map trong cung Zone B,
+// dung chung previewData da co san, KHONG tu goi API rieng
+import AffectedStationsTable from "./XemTruocAnhHuong/AffectedStationsTable";
+import AffectedCellsTable from "./XemTruocAnhHuong/AffectedCellsTable";
 // khu vuc ket qua CR theo tung huong va log tien trinh CR - tuong ung Zone C trong UI_DESIGN.md
 // doi ten tu ZoneC sang KetQuaCR cho dung chuc nang hien thi
 // QosSparkline (Widget F33) va QoeQosCharts (Zone E) KHONG import truc tiep o day nua - da nhung san
@@ -107,6 +111,23 @@ const TacDongTram: React.FC = () => {
             <NetworkMap station={selectedStationForView} previewData={previewData} />
           </Col>
         </Row>
+        {/* bang tram + bang cell CHI hien khi da co previewData (da bam "Xem truoc anh huong" thanh cong) -
+            an han (khong render) khi chua co, tranh chiem layout voi 2 bang rong vo nghia truoc do.
+            Thu tu Map -> Bang tram -> Bang cell (tu tong quan den chi tiet) theo dung yeu cau bo tri */}
+        {previewData && (
+          <>
+            <Row gutter={16} style={{ marginTop: "1rem" }}>
+              <Col span={24}>
+                <AffectedStationsTable previewData={previewData} />
+              </Col>
+            </Row>
+            <Row gutter={16} style={{ marginTop: "1rem" }}>
+              <Col span={24}>
+                <AffectedCellsTable previewData={previewData} />
+              </Col>
+            </Row>
+          </>
+        )}
       </div>
       {/* CHI render zone-c khi da co activeCrSessionId (da trigger CR) - truoc day zone-c luon hien du
           chua trigger, dan den CA CrResultsByDirection LAN SseProgressLog cung hien text "Chua co phien CR..."
