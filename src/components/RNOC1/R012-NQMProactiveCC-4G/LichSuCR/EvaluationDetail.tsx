@@ -13,6 +13,8 @@ import CellParamsByHuong from "../TacDongTram/KetQuaCR/CellParamsByHuong";
 // token mau xanh duong dung CHUNG toan module - da trich tu R012Header.tsx sang theme.ts, KHONG con
 // dinh nghia hex rieng trong file nay nua, xem chi tiet tung token trong theme.ts
 import { R012_COLORS } from "../theme";
+// dinh dang thoi gian dung CHUNG toan module (ep UTC->GMT+7) - xem ly do trong file helper
+import { formatDateTime } from "../helpers/formatDateTime";
 
 interface EvaluationDetailProps {
   sessionId: number | null;
@@ -94,9 +96,7 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
           <Tag color={STATUS_TAG_COLOR[data.status] ?? "default"}>{data.status}</Tag>
         </Descriptions.Item>
         <Descriptions.Item label="Ke hoach">{data.plan_name ?? "-"}</Descriptions.Item>
-        <Descriptions.Item label="Thoi gian thuc thi">
-          {data.executed_at ? new Date(data.executed_at).toLocaleString("vi-VN") : "-"}
-        </Descriptions.Item>
+        <Descriptions.Item label="Thoi gian thuc thi">{formatDateTime(data.executed_at)}</Descriptions.Item>
       </Descriptions>
 
       <Divider style={{ borderColor: R012_COLORS.primaryPale }} />

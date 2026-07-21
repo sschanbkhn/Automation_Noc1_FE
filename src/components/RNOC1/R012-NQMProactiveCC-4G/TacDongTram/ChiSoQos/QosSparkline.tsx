@@ -5,6 +5,9 @@ import { Empty, Spin, Alert } from "antd";
 import { getQos, getSessionDetail } from "../../services/R012Service";
 import { CellParamDetailItem, SessionDetailResponse } from "../../types";
 import { CrStreamStatus } from "../../hooks/useSseStream";
+// dinh dang thoi gian dung CHUNG toan module (ep UTC->GMT+7, khong phu thuoc TZ trinh duyet) - xem ly do
+// trong file helper
+import { formatDateTime } from "../../helpers/formatDateTime";
 
 // GIA DINH TU CHON - GHI RO O DAY: UI_DESIGN.md muc 10 "WIDGET F33" mo ta widget nay "trigger load: khi
 // user select tram" va lay "cells lan can cua tram dang select". Da kiem tra TOAN BO BE (main.py chi co 6
@@ -101,7 +104,7 @@ const SingleCellSparkline: React.FC<{ cellName: string }> = ({ cellName }) => {
           {/* sparkline style dung theo UI_DESIGN.md muc 10: khong truc, khong luoi, chi 1 duong */}
           <Tooltip
             formatter={(value: number) => [`${value} diem`, "QoS"]}
-            labelFormatter={(label: string) => new Date(label).toLocaleString("vi-VN")}
+            labelFormatter={(label: string) => formatDateTime(label)}
           />
           <Line type="monotone" dataKey="qos" stroke="#3b82f6" strokeWidth={2} dot={false} isAnimationActive={false} />
         </LineChart>

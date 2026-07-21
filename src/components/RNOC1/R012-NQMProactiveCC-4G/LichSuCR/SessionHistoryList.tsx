@@ -16,6 +16,8 @@ import { SessionListItem, SessionListResponse } from "../types";
 import EvaluationDetail from "./EvaluationDetail";
 // token mau dung chung toan module - xem theme.ts de biet ly do chon tung gia tri
 import { R012_COLORS } from "../theme";
+// dinh dang thoi gian dung CHUNG toan module (ep UTC->GMT+7) - xem ly do trong file helper
+import { formatDateTime } from "../helpers/formatDateTime";
 
 const { RangePicker } = DatePicker;
 
@@ -32,10 +34,6 @@ const STATUS_COLORS: Record<string, string> = {
   EVALUATED: "success",
   EVALUATING: "processing",
 };
-
-// dinh dang thoi gian ISO tu BE sang gio dia phuong de NOC de doc, tra "-" khi null (executed_at/evaluated_at
-// co the null theo schema - session chua thuc thi/chua danh gia)
-const formatDateTime = (value: string | null): string => (value ? new Date(value).toLocaleString("vi-VN") : "-");
 
 const SessionHistoryList: React.FC = () => {
   const [page, setPage] = useState<number>(1);
