@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Alert, Card, Collapse, Descriptions, Empty, Spin, Tag, Tooltip } from "antd";
+import { Alert, Card, Collapse, Descriptions, Empty, Spin, Tag } from "antd";
 import type { CollapseProps } from "antd";
 import { getSessionDetail } from "../services/R012Service";
 import { SessionDetailResponse } from "../types";
@@ -84,16 +84,28 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
       key: "thong-tin-tram",
       label: "1. Thong tin tram",
       children: (
-        // Viec 4: FIX bo cuc vo dong xau - nguyen nhan la Descriptions "bordered" mac dinh KHONG co
-        // labelStyle/contentStyle co dinh nen chieu rong tung o tu tinh theo NOI DUNG, lam cot "Hanh dong"
-        // (gia tri ngan) bi ep chung hang voi cot co gia tri dai hon gay lech/vo dong. Co dinh labelStyle
-        // (chieu rong + khong wrap chu label) va contentStyle (cho phep wrap noi dung neu dai) de MOI hang
-        // deu nhau, khong con phu thuoc do dai tung gia tri cu the
+        // FIX (Viec 1, 23072026 - phat hien tu anh chup that): ban truoc "Ke hoach" nam CHUNG 1 hang voi
+        // "Thoi gian thuc thi" (Descriptions column=2 tu ghep item 5+6 vao 1 hang) - ten plan THAT co the
+        // dai toi 43 ky tu (vd "R012_NQMProactiveCC_112721_20260722_134431"), chiem het nua trai cua hang,
+        // ep cot phai ("Thoi gian thuc thi") con qua hep -> trinh duyet phai NGAT gia tri NGAN o cot do
+        // thanh nhieu dong roi rac ("22/07/2" / "026" / "20:44:31") du contentStyle da co "wordBreak:
+        // break-word" (chinh thuoc tinh nay gay ngat giua tu khi cot bi ep hep, KHONG phai do gia tri do
+        // tu no dai). Ellipsis+Tooltip da thu truoc do CUNG KHONG an toan: Descriptions dung table-layout
+        // auto, <td> tu gian theo NOI DUNG con ellipsis chi hoat dong khi phan tu co chieu rong CO DINH -
+        // "maxWidth:100%" tren 1 td auto-rong la vo nghia (100% cua 1 gia tri auto).
+        // SUA TAN GOC: dat "Ke hoach" o HANG RIENG voi span={2} (chiem tron ca hang, KHONG con ghep chung
+        // voi field nao khac) - luc nay content co du be rong ngang toan bo modal, 43 ky tu thua suc nam
+        // gon 1 dong, KHONG can ellipsis/Tooltip nua. Doi cho "Thoi gian danh gia" (evaluated_at - co san
+        // trong SessionDetailResponse nhung truoc day CHUA hien o dau) ghep cung hang voi "Thoi gian thuc
+        // thi" cho DU CAP, tranh 1 hang le chi co 1 o
         <Descriptions
           column={2}
           bordered
           labelStyle={{ width: 140, whiteSpace: "nowrap", fontWeight: 600 }}
-          contentStyle={{ wordBreak: "break-word" }}
+          // wordBreak "normal" (KHONG phai "break-word" nhu ban cu) - cac gia tri o day (ma tram/ten tram/
+          // hanh dong/ngay gio) DEU ngan, khong bao gio can ngat giua tu; rieng "Ke hoach" (co the dai) da
+          // duoc tach rieng span={2} o duoi, tu xu ly wrap rieng khong dung chung contentStyle nay
+          contentStyle={{ wordBreak: "normal" }}
         >
           <Descriptions.Item label="Ma tram">{data.tram_id}</Descriptions.Item>
           <Descriptions.Item label="Ten tram">{data.tram_name ?? "-"}</Descriptions.Item>
@@ -102,29 +114,14 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
           <Descriptions.Item label="Trang thai">
             <Tag color={STATUS_TAG_COLOR[data.status] ?? "default"}>{data.status}</Tag>
           </Descriptions.Item>
-          {/* Ke hoach: ten plan co the RAT DAI (vd "R012_NQMProactiveCC_111129_20260721_091703") - rut gon
-              bang ellipsis + Tooltip hien day du khi hover, tranh 1 gia tri dai lam vo layout ca hang (Viec 4) */}
-          <Descriptions.Item label="Ke hoach">
-            {data.plan_name ? (
-              <Tooltip title={data.plan_name}>
-                <span
-                  style={{
-                    display: "inline-block",
-                    maxWidth: "100%",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                    verticalAlign: "bottom",
-                  }}
-                >
-                  {data.plan_name}
-                </span>
-              </Tooltip>
-            ) : (
-              "-"
-            )}
-          </Descriptions.Item>
           <Descriptions.Item label="Thoi gian thuc thi">{formatDateTime(data.executed_at)}</Descriptions.Item>
+          <Descriptions.Item label="Thoi gian danh gia">{formatDateTime(data.evaluated_at)}</Descriptions.Item>
+          {/* span={2}: chiem tron 1 hang rieng (xem ly do day du o comment dau khoi Descriptions) - hien
+              NGUYEN VEN ten plan, cho phep xuong dong TU NHIEN (chi ngat o khoang trang/dau "_" that su
+              can thiet) neu van dai hon 1 hang, khong can rut gon */}
+          <Descriptions.Item label="Ke hoach" span={2}>
+            <span style={{ overflowWrap: "break-word" }}>{data.plan_name ?? "-"}</span>
+          </Descriptions.Item>
         </Descriptions>
       ),
     },
