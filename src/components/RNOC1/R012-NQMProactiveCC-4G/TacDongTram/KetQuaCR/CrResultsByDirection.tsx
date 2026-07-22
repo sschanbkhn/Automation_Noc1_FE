@@ -4,13 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import { getSessionDetail } from "../../services/R012Service";
 import { SessionDetailResponse } from "../../types";
 import { CrStreamStatus } from "../../hooks/useSseStream";
-// QoeQosCharts (Zone E) hien SAU KHI co ket qua CR, theo dung yeu cau ghep "vao dung vi tri (sau khi co
-// ket qua CR)" - component TU goi API rieng (nhan sessionId qua props), khong can CrResultsByDirection
-// truyen du lieu cell_params/session detail xuong, tranh phu thuoc component cha
 // XOA QosSparkline (Widget F33, Viec 1, 22072026 xac nhan voi user): CTS chi ho tro granularity NGAY, 48h
 // chi ra toi da 2 diem -> duong thang vo nghia, khong the sua cho dung duoc. Da co CellQosHistoryChart
-// (7 ngay, preview) va QosEvaluationChart (15 ngay, danh gia) day du hon thay the
-import QoeQosCharts from "../DanhGiaChatLuong/QoeQosCharts";
+// (7 ngay, preview) va QosEvaluationChart (15 ngay, danh gia) day du hon thay the.
+// XOA QoeQosCharts (23072026, xac nhan voi user - day la noi CUOI CUNG con dung component nay, da bo khoi
+// EvaluationDetail.tsx tu truoc): khoi "QoE (nguon: SOC)"/"QoS (nguon: CTS)" phu thuoc qoe_snapshot/
+// qos_snapshot, ma job evaluate_cr_use_case CHI chay khi session du 21 ngay (EVALUATION_DAYS) - nen LUON
+// rong ngay khi CR vua chay xong (o day, Zone C), chiem cho vo ich. Da co CellQosHistoryChart (7 ngay) va
+// QosEvaluationChart (15 ngay, tinh truc tiep tu /qos/{cell}?from=&to=, KHONG phu thuoc job 21 ngay) thay the
 // phan hien thi bang cell_params theo huong tach rieng thanh component dung CHUNG voi EvaluationDetail.tsx
 // (LichSuCR - xem lai session da DONE), tranh viet lai cung 1 logic nhom/render o 2 noi
 import CellParamsByHuong from "./CellParamsByHuong";
@@ -62,16 +63,9 @@ const CrResultsByDirection: React.FC<CrResultsByDirectionProps> = ({ sessionId, 
       {/* sessionId chac chan la number (khong null) tai day - da qua guard "if (sessionId === null) return ..."
           o tren, truyen xuong de CellParamsByHuong dat dung ten file export */}
       <CellParamsByHuong cellParams={data.cell_params} sessionId={sessionId} />
-
-      {/* QoeQosCharts (Zone E) chi hien SAU KHI co ket qua CR (status="done" - diem nay chac chan dung vi
-          return o tren da loc het cac truong hop status khac), dat CUOI CUNG sau bang ket qua theo huong,
-          dung vi tri "sau khi co ket qua CR" theo yeu cau. QosSparkline (Widget F33) da XOA (Viec 1) -
-          xem comment o import phia tren. QosEvaluationSection cung KHONG dat o day (Viec 2, phien truoc) -
-          chi giu o EvaluationDetail.tsx de tranh trung noi dung */}
-      <div style={{ marginTop: "1.5rem" }}>
-        <h4>Danh gia chat luong QoE/QoS (Zone E)</h4>
-        <QoeQosCharts sessionId={sessionId} />
-      </div>
+      {/* QoeQosCharts (Zone E) da XOA - xem ly do o comment import dau file. QosSparkline (Widget F33)
+          cung da XOA truoc do. QosEvaluationSection/QosEvaluationChart+Table KHONG dat o day (giu chi o
+          EvaluationDetail.tsx) - tranh trung noi dung giua khu vuc Tac dong tram va Lich su CR */}
     </div>
   );
 };

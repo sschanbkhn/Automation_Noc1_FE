@@ -18,9 +18,9 @@ import CrCellsTable from "./XemTruocAnhHuong/CrCellsTable";
 import CellQosHistoryChart from "./XemTruocAnhHuong/CellQosHistoryChart";
 // khu vuc ket qua CR theo tung huong va log tien trinh CR - tuong ung Zone C trong UI_DESIGN.md
 // doi ten tu ZoneC sang KetQuaCR cho dung chuc nang hien thi
-// QoeQosCharts (Zone E) KHONG import truc tiep o day nua - da nhung san BEN TRONG CrResultsByDirection.tsx
-// (hien sau khi co ket qua CR), tranh render trung 2 lan cung du lieu. QosSparkline (Widget F33) da XOA
-// (Viec 1) - CTS chi ho tro granularity ngay nen chart 48h vo nghia, thay bang CellQosHistoryChart/QosEvaluationChart
+// QosSparkline (Widget F33) va QoeQosCharts (Zone E) da XOA HAN (khong con dung o dau trong module) - CTS
+// chi ho tro granularity ngay nen chart 48h vo nghia (QosSparkline), QoeQosCharts luon rong vi phu thuoc
+// job evaluate 21 ngay - thay bang CellQosHistoryChart (7 ngay preview) va QosEvaluationChart (15 ngay danh gia)
 import CrResultsByDirection from "./KetQuaCR/CrResultsByDirection";
 import SseProgressLog from "./KetQuaCR/SseProgressLog";
 import { StationItem, PreviewCrResponse } from "../types";
