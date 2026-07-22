@@ -43,8 +43,10 @@ export type QosConclusion = "PASS" | "FAIL" | "INSUFFICIENT";
 export type QosActionNeeded = "YES" | "NO" | "INSUFFICIENT";
 
 export interface QosEvalResult {
-  avgBefore: number | null; // null neu INSUFFICIENT rieng cho Tieu chi 2
-  avgAfter: number | null; // null neu INSUFFICIENT rieng cho Tieu chi 2
+  // FIX (Viec 3): avgBefore CHI phu thuoc du lieu 7 ngay TRUOC CR (da la qua khu, luon san sang) - null CHI
+  // khi CTS hoan toan KHONG co diem nao trong 7 ngay do, KHONG con phu thuoc gi vao du lieu SAU CR nua
+  avgBefore: number | null;
+  avgAfter: number | null; // null neu INSUFFICIENT rieng cho Tieu chi 2 (chua du 7 ngay sau CR troi qua/co du lieu)
   diff: number | null; // avgBefore - avgAfter, null neu INSUFFICIENT rieng cho Tieu chi 2
   badDaysAfter: number | null; // so ngay QoS<=3 trong 7 ngay SAU CR, null neu INSUFFICIENT rieng cho Tieu chi 1
   conclusion: QosConclusion; // TIEU CHI 1 - DOC LAP voi actionNeeded
@@ -102,8 +104,18 @@ export function buildQosEvaluation(crDateGmt7: Dayjs, points: QosHistoryPoint[])
     .map((p) => p.qos as number);
   const afterValues = chartData.filter((p) => p.group === "after" && p.qos !== null).map((p) => p.qos as number);
 
-  // dieu kien chung cho CA 2 tieu chi: cua so 7 ngay SAU CR phai da troi qua HOAN TOAN theo lich - neu con
-  // ngay tuong lai chua toi thi KHONG THE co du lieu that cho cac ngay do, ket luan som se sai
+  // FIX (Viec 3 Buoc 0/1, 23072026 - dieu tra tu session that #553 tram 112721): TB truoc TRUOC DAY bi ep
+  // phai cho CA du lieu SAU CR moi tinh (hasEnoughDataForAction doi ca beforeValues VA afterValues, xem
+  // git blame ban cu), nen 1 CR VUA chay xong (chua qua 7 ngay) LUON hien "-" cho TB truoc DU CTS DA CO DU
+  // DATA 7 ngay truoc that (da verify goi that /qos/{cell}?from=2026-07-15&to=2026-07-21 tra ve 4 diem that
+  // cho cell cua session #553). TB truoc la du lieu HOAN TOAN QUA KHU (tinh tu executed_at tro ve truoc),
+  // KHONG phu thuoc gi vao viec 7 ngay SAU da troi qua hay chua - phai tach tinh RIENG, hien NGAY khi co
+  // >=1 ngay du lieu truoc, khong cho tieu chi nao khac
+  const avgBefore = beforeValues.length > 0 ? beforeValues.reduce((sum, v) => sum + v, 0) / beforeValues.length : null;
+
+  // dieu kien rieng cho phan con lai (Tieu chi 1 + avgAfter/diff cua Tieu chi 2): cua so 7 ngay SAU CR
+  // phai da troi qua HOAN TOAN theo lich - neu con ngay tuong lai chua toi thi KHONG THE co du lieu that
+  // cho cac ngay do, ket luan som se sai. Khac voi avgBefore o tren, day CHI ap dung cho phan lien quan sau CR
   const todayGmt7 = dayjs().tz("Asia/Ho_Chi_Minh").startOf("day");
   const windowFullyElapsed = todayGmt7.diff(crDateGmt7.add(7, "day"), "day") >= 0;
 
@@ -118,16 +130,15 @@ export function buildQosEvaluation(crDateGmt7: Dayjs, points: QosHistoryPoint[])
     conclusion = badDaysAfter >= QOS_BAD_DAYS_FAIL_THRESHOLD ? "FAIL" : "PASS";
   }
 
-  // TIEU CHI 2 (Can xu ly) - can CA 2 phia truoc/sau co du lieu de so sanh, DOC LAP voi Tieu chi 1 o tren
-  const hasEnoughDataForAction = windowFullyElapsed && beforeValues.length > 0 && afterValues.length > 0;
+  // TIEU CHI 2 (Can xu ly) - avgAfter/diff/actionNeeded van can CA avgBefore (da tinh o tren) VA 7 ngay sau
+  // da troi qua het + co du lieu that, GIU RIENG voi Tieu chi 1 nhu truoc, nhung KHONG con lam tre avgBefore
+  const hasEnoughDataForAction = windowFullyElapsed && avgBefore !== null && afterValues.length > 0;
   let actionNeeded: QosActionNeeded = "INSUFFICIENT";
-  let avgBefore: number | null = null;
   let avgAfter: number | null = null;
   let diff: number | null = null;
   if (hasEnoughDataForAction) {
-    avgBefore = beforeValues.reduce((sum, v) => sum + v, 0) / beforeValues.length;
     avgAfter = afterValues.reduce((sum, v) => sum + v, 0) / afterValues.length;
-    diff = avgBefore - avgAfter;
+    diff = (avgBefore as number) - avgAfter;
     // chenh lech > 0.2 = QoS tut nhieu so voi truoc CR -> can can thiep them
     actionNeeded = diff > QOS_DIFF_ACTION_THRESHOLD ? "YES" : "NO";
   }

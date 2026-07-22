@@ -1,12 +1,14 @@
-import React, { useMemo, useState } from "react";
-import { Button } from "antd";
+import React, { useEffect, useMemo, useState } from "react";
+import { Button, Pagination } from "antd";
 import {
   createColumnHelper,
   useReactTable,
   getCoreRowModel,
   getSortedRowModel,
+  getPaginationRowModel,
   flexRender,
   SortingState,
+  PaginationState,
 } from "@tanstack/react-table";
 // dung xlsx (SheetJS) co san trong package.json (^0.17.5) - KHONG cai them dependency moi. Du an co ca
 // exceljs lan xlsx san, chon xlsx vi API json_to_sheet/writeFile don gian, du dung cho 1 export co ban
@@ -66,6 +68,13 @@ const CellParamsByHuong: React.FC<CellParamsByHuongProps> = ({ cellParams, sessi
     { id: "huong_id", desc: false },
     { id: "priority", desc: false },
   ]);
+  // Viec 5: phan trang mac dinh 5 dong/trang, selector 5/10/20/50 - giong cac bang khac trong module
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 5 });
+  // reset ve trang 1 khi doi cellParams (vd xem session khac) - tranh dung o trang cu co the vuot qua so
+  // trang cua danh sach moi
+  useEffect(() => {
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }, [cellParams]);
 
   // xuat TAT CA cell chung 1 sheet theo dung yeu cau - moi dong ung voi 1 cell, cot lay dung ten field yeu
   // cau: huong_id, cell_name, param_type, gia_tri_cu, gia_tri_moi, priority
@@ -96,7 +105,9 @@ const CellParamsByHuong: React.FC<CellParamsByHuongProps> = ({ cellParams, sessi
         id: "stt",
         header: "STT",
         enableSorting: false, // STT chi la vi tri hien thi theo thu tu DANG SAP XEP, sort cot nay khong co y nghia
-        cell: (info) => info.row.index + 1,
+        // STT tinh theo vi tri TUYET DOI (khong reset moi trang) - info.row.index la vi tri TRONG TRANG
+        // hien tai (getPaginationRowModel, Viec 5), nen phai cong them offset cua trang
+        cell: (info) => pagination.pageIndex * pagination.pageSize + info.row.index + 1,
       }),
       columnHelper.accessor("huong_id", {
         header: "Huong",
@@ -130,18 +141,19 @@ const CellParamsByHuong: React.FC<CellParamsByHuongProps> = ({ cellParams, sessi
         },
       }),
     ],
-    []
+    [pagination]
   );
 
-  // KHONG can phan trang - cellParams cua 1 session thuong chi vai chuc cell (toi da ~12-47 theo du lieu
-  // that da xac nhan), du de hien 1 trang, chi them sort (Viec 2/Phan 4)
+  // Viec 5: them phan trang (truoc day KHONG phan trang, cellParams co the toi 47 cell se rat dai)
   const table = useReactTable({
     data: cellParams,
     columns,
-    state: { sorting },
+    state: { sorting, pagination },
     onSortingChange: setSorting,
+    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
   });
 
   // nut export dat CHUNG cho ca 2 truong hop (co/khong co cell) - disable khi rong thay vi an han, de NOC
@@ -215,6 +227,20 @@ const CellParamsByHuong: React.FC<CellParamsByHuongProps> = ({ cellParams, sessi
           </tbody>
         </table>
       </div>
+
+      {/* Viec 5: Pagination cua antd chi la UI dieu khien - state that nam trong TanStack Table (bien
+          "pagination"), giong cach da lam o AffectedStationsTable.tsx/QosEvaluationTable.tsx */}
+      <Pagination
+        current={pagination.pageIndex + 1}
+        pageSize={pagination.pageSize}
+        total={cellParams.length}
+        pageSizeOptions={["5", "10", "20", "50"]}
+        showSizeChanger
+        onChange={(newPage, newPageSize) => {
+          setPagination({ pageIndex: newPage - 1, pageSize: newPageSize });
+        }}
+        style={{ marginTop: "1rem" }}
+      />
     </div>
   );
 };

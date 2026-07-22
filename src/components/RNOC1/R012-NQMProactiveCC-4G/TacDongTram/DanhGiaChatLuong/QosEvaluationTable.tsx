@@ -1,12 +1,14 @@
-import React, { useMemo, useState } from "react";
-import { Button, Progress, Select, Tag } from "antd";
+import React, { useEffect, useMemo, useState } from "react";
+import { Button, Pagination, Progress, Select, Tag } from "antd";
 import {
   createColumnHelper,
   useReactTable,
   getCoreRowModel,
   getSortedRowModel,
+  getPaginationRowModel,
   flexRender,
   SortingState,
+  PaginationState,
 } from "@tanstack/react-table";
 // dung xlsx (SheetJS) co san trong package.json - KHONG cai them dependency moi, giong cac bang preview khac
 import * as XLSX from "xlsx";
@@ -83,6 +85,9 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
   const [conclusionFilter, setConclusionFilter] = useState<string>("");
   const [actionFilter, setActionFilter] = useState<string>("");
   const [sorting, setSorting] = useState<SortingState>([]);
+  // Viec 3: phan trang mac dinh 5 dong/trang (giong 3 bang preview AffectedStationsTable/AffectedCellsTable/
+  // CrCellsTable da lam) - bang nay co the toi 47 dong, chua co phan trang truoc day se rat dai
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 5 });
 
   const handleRunEvaluation = async () => {
     setIsRunning(true);
@@ -102,8 +107,22 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
     );
   }, [rows, conclusionFilter, actionFilter]);
 
+  // reset ve trang 1 khi doi bo loc/chay lai danh gia - tranh dung o trang cu co the vuot qua so trang cua
+  // danh sach da loc moi (vd dang o trang 5 roi loc con 2 dong thi se khong thay gi)
+  useEffect(() => {
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }, [conclusionFilter, actionFilter, rows]);
+
   const columns = useMemo(
     () => [
+      columnHelper.display({
+        id: "stt",
+        header: "STT",
+        enableSorting: false, // STT chi la vi tri hien thi, sort cot nay khong co y nghia
+        // STT tinh theo vi tri TUYET DOI (khong reset moi trang) - info.row.index la vi tri TRONG TRANG
+        // hien tai (getPaginationRowModel), nen phai cong them offset cua trang
+        cell: (info) => pagination.pageIndex * pagination.pageSize + info.row.index + 1,
+      }),
       columnHelper.accessor("cell_name", { header: "Cell" }),
       columnHelper.accessor("tram_id", {
         header: "Ma tram",
@@ -155,14 +174,16 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
         },
       }),
     ],
-    []
+    [pagination]
   );
 
   const table = useReactTable({
     data: filteredRows,
     columns,
-    state: { sorting },
+    state: { sorting, pagination },
     onSortingChange: setSorting,
+    onPaginationChange: setPagination,
+    getPaginationRowModel: getPaginationRowModel(),
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
   });
@@ -285,6 +306,22 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
                     </tbody>
                   </table>
                 </div>
+              )}
+              {/* Viec 3: Pagination cua antd chi la UI dieu khien - state that nam trong TanStack Table
+                  (bien "pagination"), giong cach da lam o AffectedStationsTable.tsx/AffectedCellsTable.tsx/
+                  CrCellsTable.tsx. Mac dinh 5 dong/trang theo yeu cau */}
+              {filteredRows.length > 0 && (
+                <Pagination
+                  current={pagination.pageIndex + 1}
+                  pageSize={pagination.pageSize}
+                  total={filteredRows.length}
+                  pageSizeOptions={["5", "10", "20", "50"]}
+                  showSizeChanger
+                  onChange={(newPage, newPageSize) => {
+                    setPagination({ pageIndex: newPage - 1, pageSize: newPageSize });
+                  }}
+                  style={{ marginTop: "1rem" }}
+                />
               )}
             </>
           )}

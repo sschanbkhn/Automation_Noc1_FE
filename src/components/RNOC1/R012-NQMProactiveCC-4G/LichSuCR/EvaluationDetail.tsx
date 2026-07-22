@@ -1,14 +1,15 @@
 import React, { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Alert, Card, Collapse, Descriptions, Empty, Spin, Tag } from "antd";
+import { Alert, Card, Collapse, Descriptions, Empty, Spin, Tag, Tooltip } from "antd";
 import type { CollapseProps } from "antd";
 import { getSessionDetail } from "../services/R012Service";
 import { SessionDetailResponse } from "../types";
-// tai su dung LAI QoeQosCharts tu Phan B (TacDongTram/DanhGiaChatLuong), KHONG viet lai logic chart -
-// component do da tu goi API rieng theo sessionId, dung chung duoc o ca Tab1 (sau CR) va Tab2 (lich su) nay
-import QoeQosCharts from "../TacDongTram/DanhGiaChatLuong/QoeQosCharts";
-// Phan 3 - danh gia QoS THAT dua tren /qos/{cell}?from=&to= + affected_cells (KHAC QoeQosCharts, phu thuoc
-// qos_snapshots hien van rong cho session cu - xem BUOC 0 da xac nhan). Viec 6 (22072026, xac nhan voi
+// XOA QoeQosCharts (Viec 2, 23072026 xac nhan voi user): 2 khoi "QoE (nguon: SOC)"/"QoS (nguon: CTS)" LUON
+// rong vi phu thuoc qoe_snapshot/qos_snapshot - job evaluate_cr_use_case CHI chay sau khi session du 21
+// ngay (EVALUATION_DAYS), nen component nay chiem cho vo ich trong toan bo thoi gian truoc do. Da co chart
+// 15 ngay (QosEvaluationChart) + bang danh gia (QosEvaluationTable) thay the day du hon, tinh truc tiep tu
+// /qos/{cell}?from=&to=, KHONG phu thuoc job 21 ngay
+// Phan 3 - danh gia QoS THAT dua tren /qos/{cell}?from=&to= + affected_cells. Viec 6 (22072026, xac nhan voi
 // user): goi THANG 2 component con QosEvaluationChart/QosEvaluationTable (thay vi qua wrapper
 // QosEvaluationSection nhu truoc) de moi cai nam RIENG 1 muc Collapse ("Danh gia chat luong" / "Bang danh
 // gia chi tiet") - can tu tinh crDateGmt7 o day (giong QosEvaluationSection da lam) vi 2 component con deu
@@ -83,7 +84,17 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
       key: "thong-tin-tram",
       label: "1. Thong tin tram",
       children: (
-        <Descriptions column={2} bordered size="small">
+        // Viec 4: FIX bo cuc vo dong xau - nguyen nhan la Descriptions "bordered" mac dinh KHONG co
+        // labelStyle/contentStyle co dinh nen chieu rong tung o tu tinh theo NOI DUNG, lam cot "Hanh dong"
+        // (gia tri ngan) bi ep chung hang voi cot co gia tri dai hon gay lech/vo dong. Co dinh labelStyle
+        // (chieu rong + khong wrap chu label) va contentStyle (cho phep wrap noi dung neu dai) de MOI hang
+        // deu nhau, khong con phu thuoc do dai tung gia tri cu the
+        <Descriptions
+          column={2}
+          bordered
+          labelStyle={{ width: 140, whiteSpace: "nowrap", fontWeight: 600 }}
+          contentStyle={{ wordBreak: "break-word" }}
+        >
           <Descriptions.Item label="Ma tram">{data.tram_id}</Descriptions.Item>
           <Descriptions.Item label="Ten tram">{data.tram_name ?? "-"}</Descriptions.Item>
           <Descriptions.Item label="Hanh dong">{data.action}</Descriptions.Item>
@@ -91,7 +102,28 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
           <Descriptions.Item label="Trang thai">
             <Tag color={STATUS_TAG_COLOR[data.status] ?? "default"}>{data.status}</Tag>
           </Descriptions.Item>
-          <Descriptions.Item label="Ke hoach">{data.plan_name ?? "-"}</Descriptions.Item>
+          {/* Ke hoach: ten plan co the RAT DAI (vd "R012_NQMProactiveCC_111129_20260721_091703") - rut gon
+              bang ellipsis + Tooltip hien day du khi hover, tranh 1 gia tri dai lam vo layout ca hang (Viec 4) */}
+          <Descriptions.Item label="Ke hoach">
+            {data.plan_name ? (
+              <Tooltip title={data.plan_name}>
+                <span
+                  style={{
+                    display: "inline-block",
+                    maxWidth: "100%",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    verticalAlign: "bottom",
+                  }}
+                >
+                  {data.plan_name}
+                </span>
+              </Tooltip>
+            ) : (
+              "-"
+            )}
+          </Descriptions.Item>
           <Descriptions.Item label="Thoi gian thuc thi">{formatDateTime(data.executed_at)}</Descriptions.Item>
         </Descriptions>
       ),
@@ -115,22 +147,17 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
     {
       key: "danh-gia-chat-luong",
       label: "4. Danh gia chat luong",
-      children: (
-        <>
-          <QoeQosCharts sessionId={sessionId} />
-          {/* CellQosHistoryChart (7 ngay) da KHONG dat o day (Viec 5) - trung noi dung voi chart 15 ngay
-              QosEvaluationChart ben duoi, chart 7 ngay CHI giu o khu vuc preview (TacDongTram.tsx) */}
-          <div style={{ marginTop: "1.5rem" }}>
-            {crDateGmt7 !== null ? (
-              <QosEvaluationChart affectedCells={data.affected_cells} crDateGmt7={crDateGmt7} />
-            ) : (
-              // giong pattern QoeQosCharts.tsx - CR chua thuc thi xong (status DONE/RUNNING nhung chua co
-              // executed_at) thi chua co moc ngay CR de tinh window 15 ngay, khong the danh gia
-              <Empty description="Cho CR thuc thi xong moi co the danh gia chat luong QoS" />
-            )}
-          </div>
-        </>
-      ),
+      // QoeQosCharts da XOA (Viec 2) - xem ly do o comment import dau file. CellQosHistoryChart (7 ngay)
+      // cung KHONG dat o day (task truoc) - trung noi dung voi chart 15 ngay QosEvaluationChart ben duoi,
+      // chart 7 ngay CHI giu o khu vuc preview (TacDongTram.tsx)
+      children:
+        crDateGmt7 !== null ? (
+          <QosEvaluationChart affectedCells={data.affected_cells} crDateGmt7={crDateGmt7} />
+        ) : (
+          // CR chua thuc thi xong (status DONE/RUNNING nhung chua co executed_at) thi chua co moc ngay CR
+          // de tinh window 15 ngay, khong the danh gia
+          <Empty description="Cho CR thuc thi xong moi co the danh gia chat luong QoS" />
+        ),
     },
     {
       key: "bang-danh-gia-chi-tiet",
