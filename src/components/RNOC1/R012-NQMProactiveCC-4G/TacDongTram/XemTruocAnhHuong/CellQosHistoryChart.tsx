@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Select, Spin, Alert, Empty } from "antd";
-import { Bar, BarChart, Cell as RechartsCell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { Bar, BarChart, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -17,35 +17,11 @@ import { formatDateTime } from "../../helpers/formatDateTime";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-// so ngay GUI LEN BE khi goi GET /qos/{cell_name}?days=N - DA XAC NHAN qua goi that (curl): gia tri 1/3/7
-// deu cho KET QUA GIONG HET NHAU tren du lieu test hien co (BE co ve chi loc theo N ngay GAN NHAT tu "now",
-// khong lien quan gi den 8 ngay HIEN THI ben duoi) - giu 7 (gia tri da test on dinh) de co du bien do, code
-// hien thi tu loc lai theo dung 8 ngay can qua QOS_DISPLAY_OFFSETS, KHONG phu thuoc gia tri nay phai khop chinh xac
-const QOS_QUERY_DAYS = 7;
-
-// hien 8 ngay: 2 ngay TRUOC ngay CR (-2,-1) + NGAY CR (0) + 5 ngay SAU (1..5) - dung DUNG so ngay yeu cau
-// nghiep vu (Buoc 2b). Day la OFFSET tinh theo ngay lich (KHONG phai so ngay goi BE o tren)
-const QOS_DISPLAY_OFFSETS = [-2, -1, 0, 1, 2, 3, 4, 5];
-
-type DayGroup = "before" | "cr_day" | "after";
-
-const GROUP_COLOR: Record<DayGroup, string> = {
-  before: R012_COLORS.chartBeforeCr,
-  cr_day: R012_COLORS.chartCrDay,
-  after: R012_COLORS.chartAfterCr,
-};
-
-const GROUP_LABEL: Record<DayGroup, string> = {
-  before: "Truoc CR",
-  cr_day: "Ngay CR (du kien)",
-  after: "Sau CR",
-};
-
-function resolveGroup(offset: number): DayGroup {
-  if (offset < 0) return "before";
-  if (offset === 0) return "cr_day";
-  return "after";
-}
+// SUA (Viec 1, 22072026, xac nhan voi user): preview la XEM TRUOC KHI CR chay - "ngay CR" (gia dinh = hom
+// nay) va cac ngay SAU deu CHUA CO du lieu that (CR chua xay ra), ve them cac cot do chi ra cot rong vo
+// nghia. BO 8 ngay (2 truoc+CR+5 sau) + 3 mau, THAY BANG DUNG 7 NGAY TRUOC hom nay - cho NOC thay ro xu
+// huong QoS HIEN TAI cua cell truoc khi quyet dinh trigger CR
+const QOS_DISPLAY_DAYS = 7;
 
 interface CellQosHistoryChartProps {
   previewData: PreviewCrResponse;
@@ -58,17 +34,25 @@ interface CellOption {
 
 interface QosChartPoint {
   dateKey: string; // "DD/MM/YYYY" theo GMT+7 - dung de gop du lieu that vao dung ngay, khong hien truc tiep
-  label: string; // "DD/MM" hien tren truc X (rieng ngay CR co them hau to "(CR)")
-  qos: number | null; // null nghia la CHUA co du lieu ngay do (CTS chua co, hoac la ngay TUONG LAI chua toi -
-  // xem comment buildQosChartData) - GIU LAI diem null de cot do hien RONG (Buoc 2b), khong bo qua ngay
-  group: DayGroup;
+  label: string; // "DD/MM" hien tren truc X
+  qos: number | null; // null nghia la CHUA co du lieu ngay do (CTS thieu ngay) - GIU LAI diem null de cot do
+  // hien RONG, khong bo qua ngay (giu truc X du 7 ngay lien tiep)
 }
 
-// GIA DINH QUAN TRONG (Buoc 2b): day la man hinh PREVIEW, tuc XEM TRUOC KHI CR thuc su duoc trigger - CHUA
-// he co executed_at/session that nao de lam moc "ngay CR" nhu QoeQosCharts.tsx (component do dung cho session
-// DA chay xong). Vi vay o day GIA DINH "ngay CR" = HOM NAY (ngay NOC dang xem preview, cung la ngay du kien
-// se bam trigger) - day CHI LA GIA DINH de co truc thoi gian hien thi, KHONG PHAI ngay CR that (co the NOC
-// xem preview hom nay nhung vai ngay sau moi thuc su trigger)
+// window [hom nay-7, hom nay-1] (Viec 1) - "hom nay" la ngay du kien CR (preview, CHUA trigger that), nen
+// CHI lay 7 ngay TRUOC do, KHONG lay den "hom nay" (ngay CR gia dinh chua co du lieu, lay vao se ra cot rong
+// vo nghia dung nhu ly do doi cua Viec 1)
+function resolveQosWindow(): { from: string; to: string } {
+  const todayGmt7 = dayjs().tz("Asia/Ho_Chi_Minh").startOf("day");
+  return {
+    from: todayGmt7.subtract(QOS_DISPLAY_DAYS, "day").format("YYYY-MM-DD"),
+    to: todayGmt7.subtract(1, "day").format("YYYY-MM-DD"),
+  };
+}
+
+// gop 7 ngay TRUOC hom nay voi du lieu QoS that tra ve tu BE (qua from/to, KHONG con dung "days" neo vao
+// "hom qua" nhu ban cu - 2 cach nay thuc ra cho CUNG 1 window nhung dung from/to de RO RANG y do "7 ngay
+// truoc ngay du kien CR", khop dung ten bien/comment voi Viec 1)
 function buildQosChartData(points: QosHistoryPoint[]): QosChartPoint[] {
   // gop du lieu that theo khoa ngay "DD/MM/YYYY" GMT+7 - lay 10 ky tu dau cua formatDateTime (dang
   // "DD/MM/YYYY HH:mm:ss") de dung CHUNG 1 nguon convert UTC->GMT+7 voi phan sinh truc ngay ben duoi
@@ -78,29 +62,26 @@ function buildQosChartData(points: QosHistoryPoint[]): QosChartPoint[] {
   });
 
   const todayGmt7 = dayjs().tz("Asia/Ho_Chi_Minh").startOf("day");
-
-  return QOS_DISPLAY_OFFSETS.map((offset) => {
-    const d = todayGmt7.add(offset, "day");
+  const result: QosChartPoint[] = [];
+  // offset -7..-1 (7 ngay truoc hom nay, KHONG bao gom hom nay - xem resolveQosWindow)
+  for (let offset = QOS_DISPLAY_DAYS; offset >= 1; offset -= 1) {
+    const d = todayGmt7.subtract(offset, "day");
     const dateKey = d.format("DD/MM/YYYY");
-    const group = resolveGroup(offset);
-    return {
+    result.push({
       dateKey,
-      label: group === "cr_day" ? `${d.format("DD/MM")} (CR)` : d.format("DD/MM"),
-      // 5 ngay SAU ngay CR la ngay TUONG LAI (chua toi) - CHAC CHAN se khong co du lieu that (BE khong the
-      // co QoS cua ngay chua xay ra), nen cac cot nay se LUON rong cho toi khi NOC thuc su quay lai xem sau
-      // khi CR da chay - DAY LA HANH VI DUNG, khong phai loi thieu du lieu
+      label: d.format("DD/MM"),
       qos: byDateKey.has(dateKey) ? (byDateKey.get(dateKey) as number) : null,
-      group,
-    };
-  });
+    });
+  }
+  return result;
 }
 
-// chart QoS 8 ngay (2 truoc + ngay CR + 5 sau) cho 1 cell bi anh huong trong preview - Buoc 2 (Phan 2).
+// chart QoS 7 ngay GAN NHAT (truoc ngay du kien trigger CR) cho 1 cell bi anh huong trong preview - Viec 1.
 // Component nay CHI nhan previewData da co san tu state cua TacDongTram.tsx (khong tu goi API preview),
 // chi tu goi rieng API lich su QoS (qua useQosHistory) khi NOC chon 1 cell tu dropdown
 const CellQosHistoryChart: React.FC<CellQosHistoryChartProps> = ({ previewData }) => {
-  // dropdown lay THANG tu cells_bi_anh_huong (Buoc 2d, DA XAC NHAN mang nay la TOAN BO cell bi anh huong
-  // trong preview - xem types/index.ts). Dung Set loc trung theo cell_name phong truong hop trung ten
+  // dropdown lay THANG tu cells_bi_anh_huong (TOAN BO cell bi anh huong trong preview - xem types/index.ts).
+  // Dung Set loc trung theo cell_name phong truong hop trung ten
   const cellOptions: CellOption[] = useMemo(() => {
     const seen = new Set<string>();
     const options: CellOption[] = [];
@@ -116,7 +97,11 @@ const CellQosHistoryChart: React.FC<CellQosHistoryChartProps> = ({ previewData }
   // null nghia la chua chon cell nao - dropdown "1 cell/lan" nen chi can 1 state don, khong phai mang
   const [selectedCell, setSelectedCell] = useState<string | null>(null);
 
-  const { data, isLoading, isError, error } = useQosHistory(selectedCell, { days: QOS_QUERY_DAYS });
+  // window tinh 1 LAN moi lan render (khong doi theo cell dang chon) - dung {from,to} (Gap 1 BE) thay vi
+  // {days} de neo DUNG "hom nay-7 -> hom nay-1", KHONG phu thuoc dinh nghia "days neo vao hom qua" cua BE
+  const { from, to } = useMemo(() => resolveQosWindow(), []);
+
+  const { data, isLoading, isError, error } = useQosHistory(selectedCell, { from, to });
 
   const chartData = useMemo(() => (data ? buildQosChartData(data.data) : []), [data]);
 
@@ -124,9 +109,8 @@ const CellQosHistoryChart: React.FC<CellQosHistoryChartProps> = ({ previewData }
 
   return (
     <div>
-      <h4 style={{ margin: "0 0 0.5rem 0" }}>Chart QoS 8 ngay (2 truoc CR + ngay CR + 5 sau CR)</h4>
+      <h4 style={{ margin: "0 0 0.5rem 0" }}>Chart QoS 7 ngay gan nhat</h4>
 
-      {/* Buoc 2c: them label ro rang cho dropdown (truoc day chi co placeholder, chua co label rieng) */}
       <label htmlFor="r012-qos-cell-select" style={{ display: "block", fontWeight: 600, marginBottom: "4px" }}>
         Chon cell de xem QoS:
       </label>
@@ -160,54 +144,29 @@ const CellQosHistoryChart: React.FC<CellQosHistoryChartProps> = ({ previewData }
 
       {selectedCell !== null && !isLoading && !isError && !hasAnyData && (
         <Empty
-          description={`Chua co du lieu QoS cho ${selectedCell} trong khoang 8 ngay nay`}
+          description={`Chua co du lieu QoS cho ${selectedCell} trong 7 ngay gan day`}
           image={Empty.PRESENTED_IMAGE_SIMPLE}
         />
       )}
 
       {selectedCell !== null && !isLoading && !isError && hasAnyData && (
-        <>
-          <ResponsiveContainer width="100%" height={280}>
-            {/* BarChart (Buoc 2a) thay cho LineChart truoc day - moi cot la 1 ngay doc lap, hop ly hon LineChart
-                vi 5/8 cot ben phai la ngay TUONG LAI CHUA CO du lieu (xem comment buildQosChartData), noi lien
-                cac diem rieng le bang duong Line se de gay hieu lam la co xu huong lien tuc */}
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="label" />
-              {/* domain co dinh [0,5] theo dung thang diem QoS (yeu cau nghiep vu) */}
-              <YAxis domain={[0, 5]} allowDecimals />
-              <Tooltip
-                formatter={(value: number | null) => [value === null ? "Chua co du lieu" : `${value} diem`, "QoS"]}
-              />
-              {/* Ngay chua co du lieu (qos=null) -> Recharts KHONG ve shape cho cot do (Buoc 2b "cot rong"),
-                  khong can xu ly gi them ngoai viec giu gia tri null trong du lieu */}
-              <Bar dataKey="qos">
-                {chartData.map((entry) => (
-                  <RechartsCell key={entry.dateKey} fill={GROUP_COLOR[entry.group]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-
-          {/* chu thich mau thu cong (Recharts Legend mac dinh chi hien theo dataKey, khong phan biet duoc
-              mau rieng tung <Cell>) - dung DUNG 3 mau token trong theme.ts, giai thich ro cho NOC 3 nhom ngay */}
-          <div style={{ display: "flex", gap: "16px", marginTop: "8px", fontSize: "0.85rem" }}>
-            {(Object.keys(GROUP_LABEL) as DayGroup[]).map((group) => (
-              <div key={group} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <span
-                  style={{
-                    display: "inline-block",
-                    width: "12px",
-                    height: "12px",
-                    borderRadius: "2px",
-                    backgroundColor: GROUP_COLOR[group],
-                  }}
-                />
-                {GROUP_LABEL[group]}
-              </div>
-            ))}
-          </div>
-        </>
+        <ResponsiveContainer width="100%" height={280}>
+          <BarChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="label" />
+            {/* domain co dinh [0,5] theo dung thang diem QoS (yeu cau nghiep vu) */}
+            <YAxis domain={[0, 5]} allowDecimals />
+            <Tooltip
+              formatter={(value: number | null) => [value === null ? "Chua co du lieu" : `${value} diem`, "QoS"]}
+            />
+            {/* Ngay chua co du lieu (qos=null) -> Recharts KHONG ve shape cho cot do (cot rong), khong can
+                xu ly gi them ngoai viec giu gia tri null trong du lieu.
+                Viec 1: BO phan to 3 mau (khong con phan biet truoc/CR/sau vi preview CHUA co ngay CR/sau
+                CR nao co du lieu) - dung 1 mau THONG NHAT (chartBeforeCr - dung lai token "truoc CR" co
+                san trong theme.ts, phu hop ngu nghia vi TOAN BO 7 cot o day deu la "truoc CR") */}
+            <Bar dataKey="qos" fill={R012_COLORS.chartBeforeCr} />
+          </BarChart>
+        </ResponsiveContainer>
       )}
     </div>
   );

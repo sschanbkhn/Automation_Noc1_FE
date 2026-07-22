@@ -76,8 +76,8 @@ const AffectedStationsTable: React.FC<AffectedStationsTableProps> = ({ previewDa
   // thay vi chi sort trong pham vi 1 trang dang xem (khac voi StationSearchGrid/SessionHistoryList o cho
   // du lieu preview nay da co san DAY DU trong bo nho, khong bi gioi han boi phan trang server-side)
   const [sorting, setSorting] = useState<SortingState>([]);
-  // mac dinh 10 dong/trang, cho doi 10/20/50 theo yeu cau
-  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  // mac dinh 5 dong/trang (Viec 3, giam tu 10 xuong 5), cho doi 5/10/20/50 theo yeu cau
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 5 });
   // reset ve trang 1 moi khi previewData doi (NOC xem preview tram khac) de tranh dung o trang cu co the
   // vuot qua so trang cua du lieu moi
   useEffect(() => {
@@ -226,7 +226,7 @@ const AffectedStationsTable: React.FC<AffectedStationsTableProps> = ({ previewDa
             current={pagination.pageIndex + 1}
             pageSize={pagination.pageSize}
             total={rows.length}
-            pageSizeOptions={["10", "20", "50"]}
+            pageSizeOptions={["5", "10", "20", "50"]}
             showSizeChanger
             onChange={(newPage, newPageSize) => {
               setPagination({ pageIndex: newPage - 1, pageSize: newPageSize });

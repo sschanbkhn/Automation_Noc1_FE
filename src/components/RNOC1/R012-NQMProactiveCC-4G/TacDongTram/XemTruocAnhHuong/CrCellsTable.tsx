@@ -73,7 +73,8 @@ const CrCellsTable: React.FC<CrCellsTableProps> = ({ previewData }) => {
   // sort + phan trang deu xu ly qua TanStack Table (getSortedRowModel chay TRUOC getPaginationRowModel) -
   // giong AffectedStationsTable.tsx/AffectedCellsTable.tsx, xem comment giai thich chi tiet o AffectedStationsTable.tsx
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  // mac dinh 5 dong/trang (Viec 3, giam tu 10 xuong 5)
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 5 });
   useEffect(() => {
     setPagination((p) => ({ ...p, pageIndex: 0 }));
   }, [previewData]);
@@ -226,7 +227,7 @@ const CrCellsTable: React.FC<CrCellsTableProps> = ({ previewData }) => {
             current={pagination.pageIndex + 1}
             pageSize={pagination.pageSize}
             total={rows.length}
-            pageSizeOptions={["10", "20", "50"]}
+            pageSizeOptions={["5", "10", "20", "50"]}
             showSizeChanger
             onChange={(newPage, newPageSize) => {
               setPagination({ pageIndex: newPage - 1, pageSize: newPageSize });

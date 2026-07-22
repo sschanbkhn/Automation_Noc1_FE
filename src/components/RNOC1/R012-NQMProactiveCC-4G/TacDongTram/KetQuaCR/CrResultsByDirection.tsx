@@ -9,10 +9,6 @@ import { CrStreamStatus } from "../../hooks/useSseStream";
 // khong can CrResultsByDirection truyen du lieu cell_params/session detail xuong, tranh phu thuoc component cha
 import QosSparkline from "../ChiSoQos/QosSparkline";
 import QoeQosCharts from "../DanhGiaChatLuong/QoeQosCharts";
-// Phan 3 (Danh gia chat luong QoS - khu vuc SAU CR, KHAC man hinh preview truoc CR o TacDongTram/
-// XemTruocAnhHuong/CellQosHistoryChart.tsx) - tu goi API session detail rieng (dung chung queryKey ben duoi
-// nen KHONG goi API 2 lan), tinh QoS 15 ngay quanh ngay CR that (executed_at) tu affected_cells cua session
-import QosEvaluationSection from "../DanhGiaChatLuong/QosEvaluationSection";
 // phan hien thi bang cell_params theo huong tach rieng thanh component dung CHUNG voi EvaluationDetail.tsx
 // (LichSuCR - xem lai session da DONE), tranh viet lai cung 1 logic nhom/render o 2 noi
 import CellParamsByHuong from "./CellParamsByHuong";
@@ -76,12 +72,11 @@ const CrResultsByDirection: React.FC<CrResultsByDirectionProps> = ({ sessionId, 
         <h4>Danh gia chat luong QoE/QoS (Zone E)</h4>
         <QoeQosCharts sessionId={sessionId} />
       </div>
-      {/* Phan 3 - danh gia QoS THAT dua tren /qos/{cell}?from=&to= + affected_cells, KHONG phu thuoc
-          qos_snapshots (hien van rong cho session cu, xem BUOC 0 da xac nhan truoc do) - dat SAU
-          QoeQosCharts, la phan bo sung/thay the du lieu day du hon cho cung khu vuc "Danh gia chat luong" */}
-      <div style={{ marginTop: "1.5rem" }}>
-        <QosEvaluationSection sessionId={sessionId} />
-      </div>
+      {/* SUA (Viec 2, 22072026, xac nhan voi user): BO QosEvaluationSection khoi day - truoc do hien CA
+          o day LAN o EvaluationDetail.tsx (Lich su CR) gay TRUNG NOI DUNG. QosEvaluationSection (chart
+          15 ngay + bang danh gia DAT/KHONG DAT) CHI giu lai o EvaluationDetail.tsx (xem lai session DONE
+          trong Lich su CR) - khu vuc preview/sau-CR ngay tai luc trigger nay CHI can CellQosHistoryChart
+          (7 ngay, Viec 1) de NOC xem nhanh xu huong, chua can danh gia DAT/KHONG DAT day du ngay */}
     </div>
   );
 };

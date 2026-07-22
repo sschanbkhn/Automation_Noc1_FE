@@ -7,7 +7,9 @@ import { SessionAffectedCellItem } from "../../types";
 import { R012_COLORS } from "../../theme";
 import {
   DayGroup,
-  QosEvalVerdict,
+  QosConclusion,
+  QosActionNeeded,
+  QOS_BAD_DAY_THRESHOLD,
   buildQosEvaluation,
   resolveQosWindow,
 } from "./qosEvaluation";
@@ -24,11 +26,19 @@ const GROUP_LABEL: Record<DayGroup, string> = {
   after: "Sau CR",
 };
 
-// mau/nhan Tag cho ket luan DAT/KHONG DAT/Chua du du lieu - dung DUNG 3 gia tri that co the tra ve tu
-// buildQosEvaluation() (types QosEvalVerdict), khong bia them gia tri
-const VERDICT_DISPLAY: Record<QosEvalVerdict, { label: string; color: string }> = {
+// mau/nhan Tag cho Tieu chi 1 (Ket luan DAT/KHONG DAT) - dung DUNG 3 gia tri co the tra ve tu
+// buildQosEvaluation() (type QosConclusion), khong bia them gia tri
+const CONCLUSION_DISPLAY: Record<QosConclusion, { label: string; color: string }> = {
   PASS: { label: "DAT", color: "green" },
   FAIL: { label: "KHONG DAT", color: "red" },
+  INSUFFICIENT: { label: "Chua du du lieu", color: "default" },
+};
+
+// mau/nhan Tag cho Tieu chi 2 (Can xu ly) - DOC LAP voi CONCLUSION_DISPLAY o tren (Viec 4: 2 tieu chi
+// RIENG BIET, khong gop chung 1 ket luan nhu ban cu)
+const ACTION_DISPLAY: Record<QosActionNeeded, { label: string; color: string }> = {
+  YES: { label: "Can xu ly", color: "red" },
+  NO: { label: "Khong can xu ly", color: "green" },
   INSUFFICIENT: { label: "Chua du du lieu", color: "default" },
 };
 
@@ -140,37 +150,62 @@ const QosEvaluationChart: React.FC<QosEvaluationChartProps> = ({ affectedCells, 
             </>
           )}
 
-          {/* Buoc 3: hien RO ket qua cho cell dang chon - TB truoc, TB sau, chenh lech, ket luan.
-              CHI hien so lieu khi verdict KHAC "INSUFFICIENT" (avgBefore/avgAfter/diff deu null luc do) */}
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "24px",
-              alignItems: "center",
-              padding: "12px",
-              backgroundColor: R012_COLORS.tableRowAlt,
-              border: `1px solid ${R012_COLORS.primaryPale}`,
-              borderRadius: "8px",
-            }}
-          >
-            <div>
-              <div style={{ fontSize: "0.8rem", color: "#595959" }}>TB QoS truoc CR (7 ngay)</div>
-              <strong>{evaluation.avgBefore !== null ? evaluation.avgBefore.toFixed(2) : "-"}</strong>
+          {/* Viec 4: hien RO 2 TIEU CHI DOC LAP cho cell dang chon - moi tieu chi co the "Chua du du lieu"
+              RIENG (INSUFFICIENT) ma KHONG anh huong tieu chi con lai, vi 2 tieu chi dung 2 tap du lieu
+              khac nhau (Tieu chi 1 chi can du lieu sau CR, Tieu chi 2 can ca truoc lan sau) */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div
+              style={{
+                padding: "12px",
+                backgroundColor: R012_COLORS.tableRowAlt,
+                border: `1px solid ${R012_COLORS.primaryPale}`,
+                borderRadius: "8px",
+              }}
+            >
+              <div style={{ fontWeight: 600, marginBottom: "6px" }}>Tieu chi 1 - Ket luan (dua tren so ngay QoS kem sau CR)</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "24px", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: "0.8rem", color: "#595959" }}>So ngay khong dat (QoS &lt;= {QOS_BAD_DAY_THRESHOLD})</div>
+                  <strong>{evaluation.badDaysAfter !== null ? `${evaluation.badDaysAfter}/7 ngay` : "-"}</strong>
+                </div>
+                <div>
+                  <div style={{ fontSize: "0.8rem", color: "#595959" }}>Ket luan</div>
+                  <Tag color={CONCLUSION_DISPLAY[evaluation.conclusion].color} style={{ fontSize: "0.9rem" }}>
+                    {CONCLUSION_DISPLAY[evaluation.conclusion].label}
+                  </Tag>
+                </div>
+              </div>
             </div>
-            <div>
-              <div style={{ fontSize: "0.8rem", color: "#595959" }}>TB QoS sau CR (7 ngay)</div>
-              <strong>{evaluation.avgAfter !== null ? evaluation.avgAfter.toFixed(2) : "-"}</strong>
-            </div>
-            <div>
-              <div style={{ fontSize: "0.8rem", color: "#595959" }}>Chenh lech (truoc - sau)</div>
-              <strong>{evaluation.diff !== null ? evaluation.diff.toFixed(2) : "-"}</strong>
-            </div>
-            <div>
-              <div style={{ fontSize: "0.8rem", color: "#595959" }}>Ket luan</div>
-              <Tag color={VERDICT_DISPLAY[evaluation.verdict].color} style={{ fontSize: "0.9rem" }}>
-                {VERDICT_DISPLAY[evaluation.verdict].label}
-              </Tag>
+
+            <div
+              style={{
+                padding: "12px",
+                backgroundColor: R012_COLORS.tableRowAlt,
+                border: `1px solid ${R012_COLORS.primaryPale}`,
+                borderRadius: "8px",
+              }}
+            >
+              <div style={{ fontWeight: 600, marginBottom: "6px" }}>Tieu chi 2 - Can xu ly (dua tren chenh lech TB truoc/sau)</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "24px", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: "0.8rem", color: "#595959" }}>TB QoS truoc CR (7 ngay)</div>
+                  <strong>{evaluation.avgBefore !== null ? evaluation.avgBefore.toFixed(2) : "-"}</strong>
+                </div>
+                <div>
+                  <div style={{ fontSize: "0.8rem", color: "#595959" }}>TB QoS sau CR (7 ngay)</div>
+                  <strong>{evaluation.avgAfter !== null ? evaluation.avgAfter.toFixed(2) : "-"}</strong>
+                </div>
+                <div>
+                  <div style={{ fontSize: "0.8rem", color: "#595959" }}>Chenh lech (truoc - sau)</div>
+                  <strong>{evaluation.diff !== null ? evaluation.diff.toFixed(2) : "-"}</strong>
+                </div>
+                <div>
+                  <div style={{ fontSize: "0.8rem", color: "#595959" }}>Can xu ly</div>
+                  <Tag color={ACTION_DISPLAY[evaluation.actionNeeded].color} style={{ fontSize: "0.9rem" }}>
+                    {ACTION_DISPLAY[evaluation.actionNeeded].label}
+                  </Tag>
+                </div>
+              </div>
             </div>
           </div>
         </>
