@@ -114,15 +114,19 @@ const QosEvaluationChart: React.FC<QosEvaluationChartProps> = ({ affectedCells, 
           ) : (
             <>
               <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={evaluation.chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="label" />
-                  <YAxis domain={[0, 5]} allowDecimals />
+                {/* Viec 3: ve dep hon - barCategoryGap chua khoang cach vua phai giua 15 cot (khong dinh
+                    nhau), grid nhe + truc gon (tickLine/axisLine tat), cursor hover nhe khi ru chuot */}
+                <BarChart data={evaluation.chartData} barCategoryGap="20%">
+                  <CartesianGrid strokeDasharray="3 3" stroke={R012_COLORS.tableBorder} vertical={false} />
+                  <XAxis dataKey="label" tickLine={false} axisLine={{ stroke: R012_COLORS.tableBorder }} />
+                  <YAxis domain={[0, 5]} allowDecimals tickLine={false} axisLine={{ stroke: R012_COLORS.tableBorder }} />
                   <Tooltip
                     formatter={(value: number | null) => [value === null ? "Chua co du lieu" : `${value} diem`, "QoS"]}
+                    cursor={{ fill: R012_COLORS.primaryPale }}
                   />
-                  {/* Ngay chua co du lieu (qos=null) -> Recharts KHONG ve shape cho cot do (Buoc 1 "cot rong") */}
-                  <Bar dataKey="qos">
+                  {/* Ngay chua co du lieu (qos=null) -> Recharts KHONG ve shape cho cot do ("cot rong").
+                      radius: bo goc TREN cot cho mem mai hon cot vuong mac dinh cua Recharts (Viec 3) */}
+                  <Bar dataKey="qos" radius={[6, 6, 0, 0]} maxBarSize={40}>
                     {evaluation.chartData.map((entry) => (
                       <RechartsCell key={entry.dateKey} fill={GROUP_COLOR[entry.group]} />
                     ))}
@@ -130,7 +134,8 @@ const QosEvaluationChart: React.FC<QosEvaluationChartProps> = ({ affectedCells, 
                 </BarChart>
               </ResponsiveContainer>
 
-              {/* chu thich mau thu cong (Recharts Legend mac dinh khong phan biet duoc mau rieng tung <Cell>) */}
+              {/* chu thich mau thu cong (Recharts Legend mac dinh khong phan biet duoc mau rieng tung <Cell>) -
+                  co 3 nhom mau nen giu legend theo dung yeu cau Viec 3 */}
               <div style={{ display: "flex", gap: "16px", marginTop: "8px", marginBottom: "1rem", fontSize: "0.85rem" }}>
                 {(Object.keys(GROUP_LABEL) as DayGroup[]).map((group) => (
                   <div key={group} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
@@ -139,7 +144,7 @@ const QosEvaluationChart: React.FC<QosEvaluationChartProps> = ({ affectedCells, 
                         display: "inline-block",
                         width: "12px",
                         height: "12px",
-                        borderRadius: "2px",
+                        borderRadius: "3px",
                         backgroundColor: GROUP_COLOR[group],
                       }}
                     />

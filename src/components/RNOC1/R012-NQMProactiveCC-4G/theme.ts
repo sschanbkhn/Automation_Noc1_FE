@@ -29,11 +29,17 @@ export const R012_COLORS = {
   // phan biet duoc marker nao la tram bi tat truc tiep khi nhin luot qua
   dangerRed: "#dc2626",
 
-  // ---- token cho bieu do cot QoS/QoE preview (CellQosHistoryChart.tsx, Phan 2) ----
-  // 3 mau PHAN BIET RO 3 nhom ngay (truoc CR / ngay CR / sau CR) - CO Y dung 3 mau khac han nhau (khong
-  // chi khac do dam cua CUNG 1 mau) de NOC nhin luot qua bieu do la phan biet ngay dang thuoc nhom nao,
-  // khong phai doc tung label truc X
-  chartBeforeCr: "#94a3b8", // xam-xanh trung tinh - 2 ngay TRUOC ngay CR, la du lieu tham khao, chua phai trong tam theo doi
+  // ---- token cho bieu do cot QoS (CellQosHistoryChart.tsx preview + QosEvaluationChart.tsx danh gia) ----
+  // SUA (Viec 3, 22072026, xac nhan voi user): ban cu dung chartBeforeCr = xam-xanh (#94a3b8) qua nhat,
+  // kho nhin tren nen trang. Doi ca 3 token sang CUNG 1 tong mau XANH DUONG da co san (primaryLight/
+  // primary/primaryDark) thay vi mau xam trung tinh - dam bao dong bo voi toan bo giao dien module (header,
+  // nut, bang deu dung tong mau nay), CHI khac nhau ve DO DAM de phan biet 3 nhom, rieng "ngay CR" giu mau
+  // cam/amber (tuong phan tot voi ca 3 sac xanh, de nhin thay ngay ranh gioi truoc/sau)
+  chartBeforeCr: "#93c5fd", // = primaryLight - nhat hon, 7 ngay TRUOC ngay CR la du lieu tham khao, chua phai trong tam theo doi
   chartCrDay: "#f59e0b", // cam/amber - dung mau nong nhat cho DUNG 1 cot "ngay CR" (gia dinh = hom nay trong preview), de noi bat nhat
-  chartAfterCr: "#3b82f6", // xanh duong - dung lai token primary, 5 ngay SAU ngay CR la khoang thoi gian se theo doi hieu qua CR
+  chartAfterCr: "#1e40af", // = primaryDark - dam nhat, 7 ngay SAU ngay CR la khoang thoi gian TRONG TAM theo doi hieu qua CR
+  // mau cot DUY NHAT cho chart preview 7 ngay (CellQosHistoryChart.tsx) - khong con nhom truoc/CR/sau nen
+  // dung 1 mau o GIUA thang do dam (= primary, khac ca chartBeforeCr lan chartAfterCr), tranh nham lan
+  // voi 2 token tren neu sau nay 2 chart dung chung 1 hang muc trong bao cao/screenshot
+  chartPreview: "#3b82f6", // = primary
 };

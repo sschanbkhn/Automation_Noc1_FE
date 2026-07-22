@@ -235,7 +235,10 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
           {rows !== null && !isRunning && (
             <>
               <style>{`
-                .r012-qos-eval-table { width: 100%; border-collapse: collapse; }
+                /* Viec 4: BO "width: 100%" (ban cu) - ep bang co dung 100% chieu rong container se lam
+                   cac cot bi BOP lai qua nho khi co qua nhieu cot (8 cot), MAU THUAN voi div overflow-x:auto
+                   vua boc ben ngoai (muon bang GIU DUNG do rong tu nhien theo noi dung roi CUON, khong bop) */
+                .r012-qos-eval-table { border-collapse: collapse; white-space: nowrap; }
                 .r012-qos-eval-table thead th {
                   text-align: left;
                   padding: 10px 8px;
@@ -255,26 +258,33 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
               {filteredRows.length === 0 ? (
                 <div>Khong co cell nao khop bo loc dang chon.</div>
               ) : (
-                <table className="r012-qos-eval-table">
-                  <thead>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                      <tr key={headerGroup.id}>
-                        {headerGroup.headers.map((header) => (
-                          <SortableHeaderCell key={header.id} header={header} />
-                        ))}
-                      </tr>
-                    ))}
-                  </thead>
-                  <tbody>
-                    {table.getRowModel().rows.map((row) => (
-                      <tr key={row.id}>
-                        {row.getVisibleCells().map((cell) => (
-                          <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                // Viec 4: bang nay co TOI 8 cot (Cell/Ma tram/TB truoc/TB sau/Chenh lech/So ngay khong dat/
+                // Ket luan/Can xu ly), header lai "whiteSpace: nowrap" (SortableHeaderCell) nen tong chieu
+                // rong THAT SU cua bang de vuot qua chieu rong Modal (800px, xem SessionHistoryList.tsx) ->
+                // bang se TRAN ra ngoai neu khong gioi han. Boc trong div overflow-x:auto de bang CUON
+                // NGANG rieng trong khung cua no, KHONG lam vo layout Modal ben ngoai
+                <div style={{ overflowX: "auto" }}>
+                  <table className="r012-qos-eval-table">
+                    <thead>
+                      {table.getHeaderGroups().map((headerGroup) => (
+                        <tr key={headerGroup.id}>
+                          {headerGroup.headers.map((header) => (
+                            <SortableHeaderCell key={header.id} header={header} />
+                          ))}
+                        </tr>
+                      ))}
+                    </thead>
+                    <tbody>
+                      {table.getRowModel().rows.map((row) => (
+                        <tr key={row.id}>
+                          {row.getVisibleCells().map((cell) => (
+                            <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </>
           )}

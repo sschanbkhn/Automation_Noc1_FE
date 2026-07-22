@@ -4,10 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { getSessionDetail } from "../../services/R012Service";
 import { SessionDetailResponse } from "../../types";
 import { CrStreamStatus } from "../../hooks/useSseStream";
-// QosSparkline (Widget F33) + QoeQosCharts (Zone E) hien SAU KHI co ket qua CR, theo dung yeu cau ghep
-// "vao dung vi tri (sau khi co ket qua CR)" - ca 2 component TU goi API rieng (nhan sessionId/status qua props),
-// khong can CrResultsByDirection truyen du lieu cell_params/session detail xuong, tranh phu thuoc component cha
-import QosSparkline from "../ChiSoQos/QosSparkline";
+// QoeQosCharts (Zone E) hien SAU KHI co ket qua CR, theo dung yeu cau ghep "vao dung vi tri (sau khi co
+// ket qua CR)" - component TU goi API rieng (nhan sessionId qua props), khong can CrResultsByDirection
+// truyen du lieu cell_params/session detail xuong, tranh phu thuoc component cha
+// XOA QosSparkline (Widget F33, Viec 1, 22072026 xac nhan voi user): CTS chi ho tro granularity NGAY, 48h
+// chi ra toi da 2 diem -> duong thang vo nghia, khong the sua cho dung duoc. Da co CellQosHistoryChart
+// (7 ngay, preview) va QosEvaluationChart (15 ngay, danh gia) day du hon thay the
 import QoeQosCharts from "../DanhGiaChatLuong/QoeQosCharts";
 // phan hien thi bang cell_params theo huong tach rieng thanh component dung CHUNG voi EvaluationDetail.tsx
 // (LichSuCR - xem lai session da DONE), tranh viet lai cung 1 logic nhom/render o 2 noi
@@ -61,22 +63,15 @@ const CrResultsByDirection: React.FC<CrResultsByDirectionProps> = ({ sessionId, 
           o tren, truyen xuong de CellParamsByHuong dat dung ten file export */}
       <CellParamsByHuong cellParams={data.cell_params} sessionId={sessionId} />
 
-      {/* QosSparkline (Widget F33) va QoeQosCharts (Zone E) chi hien SAU KHI co ket qua CR (status="done" -
-          diem nay chac chan dung vi return o tren da loc het cac truong hop status khac), dat CUOI CUNG
-          sau bang ket qua theo huong, dung vi tri "sau khi co ket qua CR" theo yeu cau */}
-      <div style={{ marginTop: "1.5rem" }}>
-        <h4>QoS Sparkline 48h (Widget F33)</h4>
-        <QosSparkline sessionId={sessionId} status={status} />
-      </div>
+      {/* QoeQosCharts (Zone E) chi hien SAU KHI co ket qua CR (status="done" - diem nay chac chan dung vi
+          return o tren da loc het cac truong hop status khac), dat CUOI CUNG sau bang ket qua theo huong,
+          dung vi tri "sau khi co ket qua CR" theo yeu cau. QosSparkline (Widget F33) da XOA (Viec 1) -
+          xem comment o import phia tren. QosEvaluationSection cung KHONG dat o day (Viec 2, phien truoc) -
+          chi giu o EvaluationDetail.tsx de tranh trung noi dung */}
       <div style={{ marginTop: "1.5rem" }}>
         <h4>Danh gia chat luong QoE/QoS (Zone E)</h4>
         <QoeQosCharts sessionId={sessionId} />
       </div>
-      {/* SUA (Viec 2, 22072026, xac nhan voi user): BO QosEvaluationSection khoi day - truoc do hien CA
-          o day LAN o EvaluationDetail.tsx (Lich su CR) gay TRUNG NOI DUNG. QosEvaluationSection (chart
-          15 ngay + bang danh gia DAT/KHONG DAT) CHI giu lai o EvaluationDetail.tsx (xem lai session DONE
-          trong Lich su CR) - khu vuc preview/sau-CR ngay tai luc trigger nay CHI can CellQosHistoryChart
-          (7 ngay, Viec 1) de NOC xem nhanh xu huong, chua can danh gia DAT/KHONG DAT day du ngay */}
     </div>
   );
 };

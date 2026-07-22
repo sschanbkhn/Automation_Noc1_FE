@@ -60,8 +60,9 @@ const ResultBadge: React.FC<{ result: string | null }> = ({ result }) => {
 };
 
 const QoeQosCharts: React.FC<QoeQosChartsProps> = ({ sessionId }) => {
-  // dung CHUNG queryKey voi CrResultsByDirection.tsx/QosSparkline.tsx - TanStack Query tu dung chung cache
-  // cho cung 1 session_id, KHONG goi API lap lai du nhieu component doc lap cung mo 1 session
+  // dung CHUNG queryKey voi cac component khac cung doc session detail (CrResultsByDirection.tsx,
+  // EvaluationDetail.tsx, QosEvaluationChart.tsx...) - TanStack Query tu dung chung cache cho cung 1
+  // session_id, KHONG goi API lap lai du nhieu component doc lap cung mo 1 session
   const { data, isLoading, isError } = useQuery<SessionDetailResponse>({
     queryKey: ["r012", "session-detail", sessionId],
     queryFn: () => getSessionDetail(sessionId as number),

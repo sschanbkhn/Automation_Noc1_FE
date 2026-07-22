@@ -151,20 +151,26 @@ const CellQosHistoryChart: React.FC<CellQosHistoryChartProps> = ({ previewData }
 
       {selectedCell !== null && !isLoading && !isError && hasAnyData && (
         <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="label" />
+          {/* Viec 3: ve dep hon - barCategoryGap chua khoang cach vua phai giua cac cot (khong dinh nhau),
+              grid nhe mau xam nhat (tableBorder) thay vi mau xam mac dinh cua Recharts qua dam */}
+          <BarChart data={chartData} barCategoryGap="24%">
+            <CartesianGrid strokeDasharray="3 3" stroke={R012_COLORS.tableBorder} vertical={false} />
+            {/* tickLine/axisLine tat (false) cho truc gon, chi giu label - nhin bot roi hon truc mac dinh cua Recharts */}
+            <XAxis dataKey="label" tickLine={false} axisLine={{ stroke: R012_COLORS.tableBorder }} />
             {/* domain co dinh [0,5] theo dung thang diem QoS (yeu cau nghiep vu) */}
-            <YAxis domain={[0, 5]} allowDecimals />
+            <YAxis domain={[0, 5]} allowDecimals tickLine={false} axisLine={{ stroke: R012_COLORS.tableBorder }} />
             <Tooltip
               formatter={(value: number | null) => [value === null ? "Chua co du lieu" : `${value} diem`, "QoS"]}
+              // cursor: highlight nhe khi hover (mac dinh Recharts la xam dam qua tuong phan) - dung lai
+              // primaryPale (rat nhat) de hover khong lan at mau cot that
+              cursor={{ fill: R012_COLORS.primaryPale }}
             />
             {/* Ngay chua co du lieu (qos=null) -> Recharts KHONG ve shape cho cot do (cot rong), khong can
                 xu ly gi them ngoai viec giu gia tri null trong du lieu.
-                Viec 1: BO phan to 3 mau (khong con phan biet truoc/CR/sau vi preview CHUA co ngay CR/sau
-                CR nao co du lieu) - dung 1 mau THONG NHAT (chartBeforeCr - dung lai token "truoc CR" co
-                san trong theme.ts, phu hop ngu nghia vi TOAN BO 7 cot o day deu la "truoc CR") */}
-            <Bar dataKey="qos" fill={R012_COLORS.chartBeforeCr} />
+                Viec 1: chi con 1 mau THONG NHAT (khong con nhom truoc/CR/sau) - dung chartPreview (xanh
+                duong trung binh trong thang do dam cua theme.ts, xem ly do chon token trong theme.ts).
+                radius: bo goc TREN cot cho mem mai hon cot vuong mac dinh cua Recharts (Viec 3) */}
+            <Bar dataKey="qos" fill={R012_COLORS.chartPreview} radius={[6, 6, 0, 0]} maxBarSize={48} />
           </BarChart>
         </ResponsiveContainer>
       )}

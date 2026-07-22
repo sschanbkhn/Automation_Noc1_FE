@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import { Row, Col } from "antd";
+import React, { useMemo, useState } from "react";
+import { Row, Col, Collapse } from "antd";
+import type { CollapseProps } from "antd";
 // khu vuc tim kiem va chon tram, xac nhan trigger CR - tuong ung Zone A trong UI_DESIGN.md
 // doi ten tu ZoneA sang TimTram de ten thu muc phan anh dung chuc nang thay vi ten generic theo vi tri layout
 import StationSearchGrid from "./TimTram/StationSearchGrid";
@@ -17,8 +18,9 @@ import CrCellsTable from "./XemTruocAnhHuong/CrCellsTable";
 import CellQosHistoryChart from "./XemTruocAnhHuong/CellQosHistoryChart";
 // khu vuc ket qua CR theo tung huong va log tien trinh CR - tuong ung Zone C trong UI_DESIGN.md
 // doi ten tu ZoneC sang KetQuaCR cho dung chuc nang hien thi
-// QosSparkline (Widget F33) va QoeQosCharts (Zone E) KHONG import truc tiep o day nua - da nhung san
-// BEN TRONG CrResultsByDirection.tsx (hien sau khi co ket qua CR), tranh render trung 2 lan cung du lieu
+// QoeQosCharts (Zone E) KHONG import truc tiep o day nua - da nhung san BEN TRONG CrResultsByDirection.tsx
+// (hien sau khi co ket qua CR), tranh render trung 2 lan cung du lieu. QosSparkline (Widget F33) da XOA
+// (Viec 1) - CTS chi ho tro granularity ngay nen chart 48h vo nghia, thay bang CellQosHistoryChart/QosEvaluationChart
 import CrResultsByDirection from "./KetQuaCR/CrResultsByDirection";
 import SseProgressLog from "./KetQuaCR/SseProgressLog";
 import { StationItem, PreviewCrResponse } from "../types";
@@ -87,6 +89,45 @@ const TacDongTram: React.FC = () => {
     setIsTriggerModalOpen(false);
   };
 
+  // Viec 6: danh sach muc Collapse cua Zone B - tach rieng thanh useMemo (thay vi viet thang trong JSX)
+  // vi antd Collapse ban moi (5.5+) dung prop "items" (mang), khong con dung <Collapse.Panel> children nhu
+  // ban cu (da deprecated) - xay mang nay CO DIEU KIEN de cac muc bang/chart CHI xuat hien SAU KHI co
+  // previewData, giu DUNG hanh vi an/hien nhu truoc khi doi sang Collapse
+  const zoneBCollapseItems: CollapseProps["items"] = useMemo(() => {
+    const items: NonNullable<CollapseProps["items"]> = [
+      {
+        key: "map",
+        label: "Ban do mang",
+        children: <NetworkMap station={selectedStationForView} previewData={previewData} />,
+      },
+    ];
+    if (previewData) {
+      items.push(
+        {
+          key: "tram-anh-huong",
+          label: "Tram bi anh huong",
+          children: <AffectedStationsTable previewData={previewData} />,
+        },
+        {
+          key: "cell-anh-huong",
+          label: "Cell bi anh huong",
+          children: <AffectedCellsTable previewData={previewData} />,
+        },
+        {
+          key: "cell-chay-cr",
+          label: "Cell chay CR",
+          children: <CrCellsTable previewData={previewData} />,
+        },
+        {
+          key: "chart-qos-preview",
+          label: "Chart QoS 7 ngay gan nhat",
+          children: <CellQosHistoryChart previewData={previewData} />,
+        }
+      );
+    }
+    return items;
+  }, [selectedStationForView, previewData]);
+
   return (
     <div>
       <div id="zone-a">
@@ -108,40 +149,12 @@ const TacDongTram: React.FC = () => {
         onTriggerSuccess={handleTriggerSuccess}
       />
       <div id="zone-b">
-        <Row gutter={16}>
-          {/* mot cot day du (span 24) vi SectorBeam da nam trong long NetworkMap, khong con la 2 khoi rieng canh nhau */}
-          <Col span={24}>
-            <NetworkMap station={selectedStationForView} previewData={previewData} />
-          </Col>
-        </Row>
-        {/* bang tram + 2 bang cell + chart QoS CHI hien khi da co previewData (da bam "Xem truoc anh huong"
-            thanh cong) - an han (khong render) khi chua co, tranh chiem layout voi cac khoi rong vo nghia
-            truoc do. Thu tu Map -> Bang tram -> Bang cell bi anh huong -> Bang cell chay CR (dung DUNG yeu
-            cau bo tri Phan 1) -> Chart QoS (giu nguyen vi tri cuoi cung, ngoai pham vi Phan 1) */}
-        {previewData && (
-          <>
-            <Row gutter={16} style={{ marginTop: "1rem" }}>
-              <Col span={24}>
-                <AffectedStationsTable previewData={previewData} />
-              </Col>
-            </Row>
-            <Row gutter={16} style={{ marginTop: "1rem" }}>
-              <Col span={24}>
-                <AffectedCellsTable previewData={previewData} />
-              </Col>
-            </Row>
-            <Row gutter={16} style={{ marginTop: "1rem" }}>
-              <Col span={24}>
-                <CrCellsTable previewData={previewData} />
-              </Col>
-            </Row>
-            <Row gutter={16} style={{ marginTop: "1rem" }}>
-              <Col span={24}>
-                <CellQosHistoryChart previewData={previewData} />
-              </Col>
-            </Row>
-          </>
-        )}
+        {/* Viec 6: gom Zone B thanh Collapse (antd) - khu vuc nay da kha dai khi co previewData (map + 3
+            bang + 1 chart), NOC phai cuon nhieu de thay het. Mac dinh CHI mo muc "Ban do mang" (tong quan
+            truoc tien), cac muc con lai thu gon - NOC tu bam mo muc nao can xem, tranh trang qua dai.
+            Thu tu giu DUNG bo tri cu: Map -> Bang tram -> Bang cell bi anh huong -> Bang cell chay CR ->
+            Chart QoS (cac muc bang/chart CHI xuat hien SAU KHI co previewData, giong logic an/hien cu) */}
+        <Collapse defaultActiveKey={["map"]} items={zoneBCollapseItems} />
       </div>
       {/* CHI render zone-c khi da co activeCrSessionId (da trigger CR) - truoc day zone-c luon hien du
           chua trigger, dan den CA CrResultsByDirection LAN SseProgressLog cung hien text "Chua co phien CR..."

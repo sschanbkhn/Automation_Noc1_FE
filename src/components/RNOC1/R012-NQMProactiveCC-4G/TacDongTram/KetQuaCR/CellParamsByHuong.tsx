@@ -13,11 +13,12 @@ import {
 // (1 sheet, khong can dinh dang phuc tap nhu merge cell/style rieng ma exceljs manh hon), nhe hon khi bundle
 import * as XLSX from "xlsx";
 import { CellParamDetailItem } from "../../types";
+import { R012_COLORS } from "../../theme";
 // <th> dung chung cho MOI bang co sort trong module (click header + mui ten huong sort)
 import { SortableHeaderCell } from "../../common/SortableHeaderCell";
 
-// tach rieng phan hien thi cell_params theo huong tu CrResultsByDirection.tsx thanh component dung CHUNG,
-// de EvaluationDetail.tsx (LichSuCR - xem lai session da DONE, khong co SSE) TAI SU DUNG duoc thay vi viet lai
+// tach rieng phan hien thi cell_params tu CrResultsByDirection.tsx thanh component dung CHUNG, de
+// EvaluationDetail.tsx (LichSuCR - xem lai session da DONE, khong co SSE) TAI SU DUNG duoc thay vi viet lai
 // - ca 2 noi deu chi can 1 mang CellParamDetailItem[] la du, KHONG phu thuoc sessionId/SSE gi ca
 interface CellParamsByHuongProps {
   cellParams: CellParamDetailItem[];
@@ -53,9 +54,21 @@ function resolveBeforeAfter(cellParam: CellParamDetailItem): { before: number | 
   return { before: "-", after: "-" };
 }
 
+const columnHelper = createColumnHelper<CellParamDetailItem>();
+
+// SUA (Viec 2, 22072026, xac nhan voi user): GOP nhieu bang rieng theo tung huong (1 bang/huong, truoc day
+// tach o HuongCellTable) thanh 1 BANG DUY NHAT, them cot "Huong" de phan biet - de NOC sort/loc xuyen suot
+// TOAN BO cell bat ke huong nao, thay vi phai doc rai rac nhieu bang nho
 const CellParamsByHuong: React.FC<CellParamsByHuongProps> = ({ cellParams, sessionId }) => {
-  // xuat TAT CA cell chung 1 sheet (khong tach theo huong nhu bang hien thi) theo dung yeu cau - moi dong
-  // ung voi 1 cell, cot lay dung ten field yeu cau: huong_id, cell_name, param_type, gia_tri_cu, gia_tri_moi, priority
+  const [sorting, setSorting] = useState<SortingState>([
+    // mac dinh sort Huong tang dan roi Priority tang dan (Viec 2 yeu cau) - TanStack Table ho tro multi-sort
+    // qua thu tu phan tu trong mang SortingState, phan tu dau la tieu chi CHINH
+    { id: "huong_id", desc: false },
+    { id: "priority", desc: false },
+  ]);
+
+  // xuat TAT CA cell chung 1 sheet theo dung yeu cau - moi dong ung voi 1 cell, cot lay dung ten field yeu
+  // cau: huong_id, cell_name, param_type, gia_tri_cu, gia_tri_moi, priority
   const handleExportExcel = () => {
     const rows = cellParams.map((cellParam) => {
       const { before, after } = resolveBeforeAfter(cellParam);
@@ -76,22 +89,60 @@ const CellParamsByHuong: React.FC<CellParamsByHuongProps> = ({ cellParams, sessi
     // logic download rieng
     XLSX.writeFile(workbook, `R012_CR_cells_${sessionId}_${formatTimestampForFileName(new Date())}.xlsx`);
   };
-  // nhom cell_params theo huong_id (vd "11"/"12" - GIA TRI THAT tu BE, KHONG phai "H1"/"H2"/"H3" nhu mockup UI_DESIGN.md)
-  // de hien ket qua theo tung huong nhu yeu cau nghiep vu, dung DUNG field that, khong bia them field
-  const groupedByHuong = useMemo(() => {
-    const groups: Record<string, CellParamDetailItem[]> = {};
-    cellParams.forEach((cellParam) => {
-      // huong_id co the null theo schema - gom vao nhom "Khong xac dinh huong" thay vi bo sot du lieu
-      const key = cellParam.huong_id ?? "Khong xac dinh huong";
-      if (!groups[key]) {
-        groups[key] = [];
-      }
-      groups[key].push(cellParam);
-    });
-    return groups;
-  }, [cellParams]);
 
-  const huongIds = Object.keys(groupedByHuong);
+  const columns = useMemo(
+    () => [
+      columnHelper.display({
+        id: "stt",
+        header: "STT",
+        enableSorting: false, // STT chi la vi tri hien thi theo thu tu DANG SAP XEP, sort cot nay khong co y nghia
+        cell: (info) => info.row.index + 1,
+      }),
+      columnHelper.accessor("huong_id", {
+        header: "Huong",
+        cell: (info) => info.getValue() ?? "-", // co the null theo schema (cell khong xac dinh duoc huong)
+      }),
+      columnHelper.accessor("cell_name", { header: "Cell" }),
+      columnHelper.accessor("action_type", {
+        header: "Hanh dong",
+        cell: (info) => info.getValue() ?? "-",
+      }),
+      columnHelper.accessor("priority", {
+        header: "Priority",
+        cell: (info) => info.getValue() ?? "-",
+      }),
+      columnHelper.display({
+        id: "rsboost",
+        header: "Rsboost (truoc -> moi)",
+        enableSorting: false, // cot ghep 2 gia tri thanh 1 chuoi, KHONG phai 1 gia tri don co the sap xep tu nhien
+        cell: (info) => {
+          const row = info.row.original;
+          return `${row.rsboost_before_cr ?? "-"} -> ${row.rsboost_new ?? "-"}`;
+        },
+      }),
+      columnHelper.display({
+        id: "qrxlevmin",
+        header: "Qrxlevmin (truoc -> moi)",
+        enableSorting: false,
+        cell: (info) => {
+          const row = info.row.original;
+          return `${row.qrxlevmin_before_cr ?? "-"} -> ${row.qrxlevmin_new ?? "-"}`;
+        },
+      }),
+    ],
+    []
+  );
+
+  // KHONG can phan trang - cellParams cua 1 session thuong chi vai chuc cell (toi da ~12-47 theo du lieu
+  // that da xac nhan), du de hien 1 trang, chi them sort (Viec 2/Phan 4)
+  const table = useReactTable({
+    data: cellParams,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
 
   // nut export dat CHUNG cho ca 2 truong hop (co/khong co cell) - disable khi rong thay vi an han, de NOC
   // luon thay nut o cung 1 vi tri, khong bi giat layout giua 2 trang thai co/khong co du lieu
@@ -101,7 +152,7 @@ const CellParamsByHuong: React.FC<CellParamsByHuongProps> = ({ cellParams, sessi
     </Button>
   );
 
-  if (huongIds.length === 0) {
+  if (cellParams.length === 0) {
     // truong hop hoan tat nhung khong co cell nao thay doi (tat ca skip), hoac session chua co cell_params -
     // van la ket qua hop le, khong phai loi
     return (
@@ -115,99 +166,55 @@ const CellParamsByHuong: React.FC<CellParamsByHuongProps> = ({ cellParams, sessi
   return (
     <div>
       {exportButton}
-      {huongIds.map((huongId) => (
-        <HuongCellTable key={huongId} huongId={huongId} cellParams={groupedByHuong[huongId]} />
-      ))}
-    </div>
-  );
-};
-
-const huongTableColumnHelper = createColumnHelper<CellParamDetailItem>();
-
-// tach rieng 1 component con CHO MOI nhom huong - React Hooks (useState/useReactTable) KHONG the goi ben
-// trong vong lap .map() cua component cha, phai tach thanh component rieng de moi nhom huong co 1 table
-// instance (va 1 sorting state) DOC LAP voi cac nhom huong khac
-const HuongCellTable: React.FC<{ huongId: string; cellParams: CellParamDetailItem[] }> = ({
-  huongId,
-  cellParams,
-}) => {
-  const [sorting, setSorting] = useState<SortingState>([]);
-
-  const columns = useMemo(
-    () => [
-      huongTableColumnHelper.accessor("cell_name", { header: "Cell" }),
-      huongTableColumnHelper.accessor("action_type", {
-        header: "Hanh dong",
-        cell: (info) => info.getValue() ?? "-",
-      }),
-      huongTableColumnHelper.accessor("priority", {
-        header: "Priority",
-        cell: (info) => info.getValue() ?? "-",
-      }),
-      huongTableColumnHelper.display({
-        id: "rsboost",
-        header: "Rsboost (truoc -> moi)",
-        enableSorting: false, // cot ghep 2 gia tri thanh 1 chuoi, KHONG phai 1 gia tri don co the sap xep tu nhien
-        cell: (info) => {
-          const row = info.row.original;
-          return `${row.rsboost_before_cr ?? "-"} -> ${row.rsboost_new ?? "-"}`;
-        },
-      }),
-      huongTableColumnHelper.display({
-        id: "qrxlevmin",
-        header: "Qrxlevmin (truoc -> moi)",
-        enableSorting: false,
-        cell: (info) => {
-          const row = info.row.original;
-          return `${row.qrxlevmin_before_cr ?? "-"} -> ${row.qrxlevmin_new ?? "-"}`;
-        },
-      }),
-    ],
-    []
-  );
-
-  // KHONG can phan trang o day - cellParams cua 1 huong thuong chi vai cell, chi them sort theo yeu cau Phan 4
-  const table = useReactTable({
-    data: cellParams,
-    columns,
-    state: { sorting },
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
-
-  return (
-    <div style={{ marginBottom: "1rem" }}>
-      <h4>Huong {huongId}</h4>
       <style>{`
-        .r012-cellparams-table { width: 100%; border-collapse: collapse; }
-        .r012-cellparams-table thead th { text-align: left; border-bottom: 1px solid #e2e8f0; padding: 6px; }
-        .r012-cellparams-table tbody td { border-bottom: 1px solid #f1f5f9; padding: 6px; }
+        /* Viec 4: BO "width: 100%" - bang nay hien co 7 cot (them cot Huong sau khi gop, Viec 2), header
+           "whiteSpace: nowrap" (SortableHeaderCell) nen co the rong hon Modal 800px (EvaluationDetail.tsx)
+           - de bang GIU DUNG do rong tu nhien roi CUON qua div overflow-x:auto ben ngoai, KHONG bop cot */
+        .r012-cellparams-table { border-collapse: collapse; white-space: nowrap; }
+        .r012-cellparams-table thead th {
+          text-align: left;
+          padding: 10px 8px;
+          background-color: ${R012_COLORS.tableHeaderBg};
+          color: #ffffff;
+          font-weight: 700;
+          border: 1px solid ${R012_COLORS.primary};
+        }
+        .r012-cellparams-table tbody td {
+          padding: 8px;
+          border-bottom: 1px solid ${R012_COLORS.tableBorder};
+        }
+        .r012-cellparams-table tbody tr:nth-child(odd) { background-color: #ffffff; }
+        .r012-cellparams-table tbody tr:nth-child(even) { background-color: ${R012_COLORS.tableRowAlt}; }
+        .r012-cellparams-table tbody tr:hover { background-color: ${R012_COLORS.rowHoverBg}; }
       `}</style>
-      <table className="r012-cellparams-table">
-        <thead>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <SortableHeaderCell key={header.id} header={header} />
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {/* KHONG loc theo action_type - moi cell_param deu duoc render du la rsboost/qrxlevmin/skip, chi de
-              "-" o cot khong ap dung cho loai do (vd cell rsboost se co "-" o cot Qrxlevmin) - neu 1 session
-              that su khong co cell qrxlevmin nao thi cot do se toan "-", DAY LA DAC DIEM DU LIEU THAT (da
-              xac nhan qua session that), KHONG PHAI loi an du lieu */}
-          {table.getRowModel().rows.map((row) => (
-            <tr key={row.id}>
-              {row.getVisibleCells().map((cell) => (
-                <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* Viec 4: boc trong div overflow-x:auto de bang CUON NGANG rieng trong khung cua no khi rong hon
+          Modal ben ngoai, KHONG lam vo layout Modal (giong cach da lam o QosEvaluationTable.tsx) */}
+      <div style={{ overflowX: "auto" }}>
+        <table className="r012-cellparams-table">
+          <thead>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <SortableHeaderCell key={header.id} header={header} />
+                ))}
+              </tr>
+            ))}
+          </thead>
+          <tbody>
+            {/* KHONG loc theo action_type - moi cell_param deu duoc render du la rsboost/qrxlevmin/skip, chi de
+                "-" o cot khong ap dung cho loai do (vd cell rsboost se co "-" o cot Qrxlevmin) - neu 1 session
+                that su khong co cell qrxlevmin nao thi cot do se toan "-", DAY LA DAC DIEM DU LIEU THAT (da
+                xac nhan qua session that), KHONG PHAI loi an du lieu */}
+            {table.getRowModel().rows.map((row) => (
+              <tr key={row.id}>
+                {row.getVisibleCells().map((cell) => (
+                  <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
