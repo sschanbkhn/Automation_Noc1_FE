@@ -4,7 +4,6 @@ import {
   createColumnHelper,
   useReactTable,
   getCoreRowModel,
-  getSortedRowModel,
   flexRender,
   SortingState,
 } from "@tanstack/react-table";
@@ -16,7 +15,7 @@ import { SortableHeaderCell } from "../../common/SortableHeaderCell";
 import debounce from "lodash/debounce";
 import { useStations } from "../../hooks/useStations";
 import { usePreview } from "../../hooks/usePreview";
-import { StationItem, PreviewCrResponse } from "../../types";
+import { StationItem, StationsQueryParams, PreviewCrResponse } from "../../types";
 // token mau dung chung toan module - xem theme.ts de biet ly do chon tung gia tri
 import { R012_COLORS } from "../../theme";
 
@@ -75,11 +74,35 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
     };
   }, [debouncedApplySearch]);
 
-  // goi hook that, truyen dung q/page/size khop voi StationsQueryParams va tham so ma getStations dang nhan
+  // sort SERVER-SIDE (BE vua bo sung param sort_by/order, xem StationsQueryParams trong types/index.ts) -
+  // dung state SortingState cua TanStack Table CHI de dieu khien icon mui ten + click header qua
+  // SortableHeaderCell, KHONG dang ky getSortedRowModel (se sort lai lan 2 tren client, thua va co the
+  // sai neu client sort khac thu tu BE tra ve) - thu tu hien thi CUOI CUNG hoan toan do BE quyet dinh
+  // qua sort_by/order truyen xuong useStations() ben duoi
+  const [sorting, setSorting] = useState<SortingState>([]);
+
+  // click header doi sort -> luon ve trang 1 (Buoc yeu cau "Doi sort -> ve trang 1"): thu tu toan bo danh
+  // sach da doi, trang cu (tinh theo thu tu MOI) khong con cung y nghia voi truoc khi doi sort
+  const handleSortingChange = (updaterOrValue: SortingState | ((old: SortingState) => SortingState)) => {
+    setSorting(updaterOrValue);
+    setPage(1);
+  };
+
+  // suy ra sort_by/order tu SortingState cua TanStack Table - column.id cua cac cot accessor (vd "tram_id",
+  // "tram_name") TRUNG KHOP voi gia tri enum sort_by that cua BE, nen dung thang duoc, khong can map rieng.
+  // sorting rong ([]) nghia la chua chon sort cot nao -> KHONG truyen sort_by/order, de BE tu dung thu tu mac dinh
+  const sortBy = sorting.length > 0 ? (sorting[0].id as StationsQueryParams["sort_by"]) : undefined;
+  const sortOrder: "asc" | "desc" | undefined = sorting.length > 0 ? (sorting[0].desc ? "desc" : "asc") : undefined;
+
+  // goi hook that, truyen dung q/page/size/sort_by/order khop voi StationsQueryParams va tham so ma
+  // getStations dang nhan - GIU sort state khi doi trang (khong reset sorting khi setPage), CHI reset ve
+  // trang 1 khi CHINH sorting doi (xem handleSortingChange o tren)
   const { data, isLoading, isError, error } = useStations({
     q: searchTerm || undefined, // khong gui q rong de tranh BE phai xu ly filter rong khong can thiet
     page,
     size,
+    sort_by: sortBy,
+    order: sortOrder,
   });
 
   // du lieu tram lay tu response that, fallback mang rong khi chua co data (dang loading lan dau)
@@ -102,44 +125,44 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
       }),
       columnHelper.accessor("tram_id", {
         header: "Ma tram",
+        // sort_by="tram_id" nam trong enum BE ho tro (xem StationsQueryParams) - duoc phep sort
       }),
       columnHelper.accessor("tram_name", {
         header: "Ten tram",
+        // sort_by="tram_name" nam trong enum BE ho tro - duoc phep sort
       }),
       columnHelper.accessor("ten_quan_ly", {
         header: "Don vi quan ly",
+        enableSorting: false, // "ten_quan_ly" KHONG nam trong enum sort_by cua BE (xem StationsQueryParams) - sort cot nay se bi BE tra 422
         cell: (info) => info.getValue() ?? "-", // field co the null theo schema, hien "-" khi khong co du lieu
       }),
       columnHelper.accessor("ma_csht", {
         header: "Ma CSHT",
+        enableSorting: false, // "ma_csht" KHONG nam trong enum sort_by cua BE
         cell: (info) => info.getValue() ?? "-", // field co the null theo schema
       }),
       columnHelper.accessor("trang_thai", {
         header: "Trang thai",
+        enableSorting: false, // "trang_thai" KHONG nam trong enum sort_by cua BE
       }),
       columnHelper.accessor("cr_status", {
         header: "Trang thai CR",
+        enableSorting: false, // "cr_status" KHONG nam trong enum sort_by cua BE
         cell: (info) => info.getValue() ?? "-", // field co the null theo schema (tram chua tung trigger CR)
       }),
     ],
     [page, size]
   );
 
-  // sort CLIENT-SIDE - DA KIEM TRA openapi.json GET /api/v1/stations: CHI co q/status/page/size, KHONG co
-  // param sort/order_by nao. GHI CHU HAN CHE: vi vay sort o day CHI ap dung tren `stations` (dong DA TAI VE
-  // cua trang hien tai, toi da `size` dong), KHONG PHAI sort toan bo danh sach tram tren BE - doi trang se
-  // mat trang thai sort (BE tra du lieu trang moi theo thu tu goc, chua sort lai)
-  const [sorting, setSorting] = useState<SortingState>([]);
-
-  // khoi tao table instance cua TanStack Table v8 - phan trang/loc da xu ly o phia BE (server-side), CHI
-  // them getSortedRowModel de sort trong pham vi trang dang xem (xem ghi chu han che o tren)
+  // khoi tao table instance cua TanStack Table v8 - phan trang/sort deu da xu ly o phia BE (server-side).
+  // sorting state CHI dung de dieu khien UI (icon mui ten qua SortableHeaderCell), KHONG dang ky
+  // getSortedRowModel - `stations` hien thi THANG theo thu tu BE tra ve, KHONG sort lai lan 2 tren client
   const table = useReactTable({
     data: stations,
     columns,
     state: { sorting },
-    onSortingChange: setSorting,
+    onSortingChange: handleSortingChange,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
   });
 
   // ham xu ly khi click 1 dong - luu station vao local state de hien nut Trigger CR cho dung tram do

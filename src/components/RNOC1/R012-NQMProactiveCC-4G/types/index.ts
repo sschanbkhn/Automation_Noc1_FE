@@ -8,6 +8,14 @@ export interface StationsQueryParams {
   status?: string; // loc theo trang thai tram, optional theo schema
   page?: number; // trang hien tai, mac dinh 1 theo schema
   size?: number; // so ban ghi moi trang, mac dinh 50, toi da 200 theo schema
+  // sort_by/order them 22072026 (BE vua bo sung sort server-side) - DA XAC NHAN qua openapi.json that:
+  // sort_by CHI nhan enum "tram_id"|"tram_name"|"ma_tinh" (KHONG phai TOAN BO cot dang hien trong bang -
+  // ten_quan_ly/ma_csht/trang_thai/cr_status KHONG nam trong enum nay, "ma_tinh" cung KHONG phai field nao
+  // dang hien trong StationItem/StationListItem - BE co field rieng khong lo ra o response list). FE CHI
+  // duoc bat sort cho 2 cot Ma tram/Ten tram tren bang (xem StationSearchGrid.tsx), cac cot con lai PHAI
+  // enableSorting:false vi gui sort_by ngoai enum se bi BE tra 422
+  sort_by?: "tram_id" | "tram_name" | "ma_tinh";
+  order?: "asc" | "desc"; // mac dinh "desc" theo schema BE - CHI co y nghia khi da truyen sort_by
 }
 
 // dung cho GET /api/v1/stations - 1 dong du lieu tram trong response
@@ -53,6 +61,12 @@ export interface SessionsQueryParams {
   to?: string; // loc den ngay gio dang ISO date-time, optional theo schema
   page?: number; // trang hien tai, mac dinh 1 theo schema
   size?: number; // so ban ghi moi trang, mac dinh 20, toi da 200 theo schema
+  // sort_by/order them 22072026 (BE vua bo sung sort server-side) - DA XAC NHAN qua openapi.json that:
+  // enum gom du "id"|"tram_id"|"tram_name"|"action"|"status"|"executed_at"|"created_at", KHOP DU voi TAT
+  // CA cot dang hien trong SessionHistoryList.tsx (tru STT khong phai field that) - khac voi stations,
+  // o day KHONG can enableSorting:false cot nao
+  sort_by?: "id" | "tram_id" | "tram_name" | "action" | "status" | "executed_at" | "created_at";
+  order?: "asc" | "desc"; // mac dinh "desc" theo schema BE - CHI co y nghia khi da truyen sort_by
 }
 
 // dung cho GET /api/v1/sessions - 1 dong du lieu session trong danh sach

@@ -5,7 +5,6 @@ import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
-  getSortedRowModel,
   useReactTable,
   SortingState,
 } from "@tanstack/react-table";
@@ -16,7 +15,7 @@ import { SortableHeaderCell } from "../common/SortableHeaderCell";
 // dung cach nay) thay vi tu viet lai setTimeout/clearTimeout - tranh trung lap logic da duoc test san
 import debounce from "lodash/debounce";
 import { getSessions } from "../services/R012Service";
-import { SessionListItem, SessionListResponse } from "../types";
+import { SessionListItem, SessionListResponse, SessionsQueryParams } from "../types";
 import EvaluationDetail from "./EvaluationDetail";
 // token mau dung chung toan module - xem theme.ts de biet ly do chon tung gia tri
 import { R012_COLORS } from "../theme";
@@ -120,10 +119,30 @@ const SessionHistoryList: React.FC = () => {
     setPage(1);
   };
 
+  // sort SERVER-SIDE (BE vua bo sung param sort_by/order, xem SessionsQueryParams trong types/index.ts) -
+  // dung state SortingState cua TanStack Table CHI de dieu khien icon mui ten + click header qua
+  // SortableHeaderCell, KHONG dang ky getSortedRowModel (se sort lai lan 2 tren client, thua va co the
+  // sai neu client sort khac thu tu BE tra ve) - thu tu hien thi CUOI CUNG hoan toan do BE quyet dinh
+  // qua sort_by/order truyen xuong getSessions() ben duoi
+  const [sorting, setSorting] = useState<SortingState>([]);
+
+  // click header doi sort -> luon ve trang 1 (yeu cau "Doi sort -> ve trang 1"): thu tu toan bo danh sach
+  // da doi, trang cu (tinh theo thu tu MOI) khong con cung y nghia voi truoc khi doi sort
+  const handleSortingChange = (updaterOrValue: SortingState | ((old: SortingState) => SortingState)) => {
+    setSorting(updaterOrValue);
+    setPage(1);
+  };
+
+  // suy ra sort_by/order tu SortingState - column.id cua cac cot accessor (vd "tram_id", "executed_at")
+  // TRUNG KHOP voi gia tri enum sort_by that cua BE, nen dung thang duoc, khong can map rieng. sorting
+  // rong ([]) nghia la chua chon sort cot nao -> KHONG truyen sort_by/order, de BE tu dung thu tu mac dinh
+  const sortBy = sorting.length > 0 ? (sorting[0].id as SessionsQueryParams["sort_by"]) : undefined;
+  const sortOrder: "asc" | "desc" | undefined = sorting.length > 0 ? (sorting[0].desc ? "desc" : "asc") : undefined;
+
   const { data, isLoading, isError, error } = useQuery<SessionListResponse>({
-    // dua ca searchTerm/fromParam/toParam/statusFilter vao queryKey de TanStack Query TU goi lai API moi khi
-    // doi bo loc, khong can effect/handler goi refetch thu cong
-    queryKey: ["r012", "sessions", page, size, searchTerm, fromParam, toParam, statusFilter],
+    // dua ca searchTerm/fromParam/toParam/statusFilter/sortBy/sortOrder vao queryKey de TanStack Query TU
+    // goi lai API moi khi doi bo loc/sort, khong can effect/handler goi refetch thu cong
+    queryKey: ["r012", "sessions", page, size, searchTerm, fromParam, toParam, statusFilter, sortBy, sortOrder],
     queryFn: () =>
       getSessions({
         page,
@@ -132,6 +151,8 @@ const SessionHistoryList: React.FC = () => {
         from: fromParam,
         to: toParam,
         status: statusFilter || undefined, // "" (Tat ca) khong gui param status, de BE tra ve tat ca trang thai
+        sort_by: sortBy,
+        order: sortOrder,
       }),
   });
 
@@ -147,6 +168,8 @@ const SessionHistoryList: React.FC = () => {
         enableSorting: false, // STT chi la vi tri hien thi, sort cot nay khong co y nghia
         cell: (info) => (page - 1) * size + info.row.index + 1, // tinh STT tu vi tri dong, khong phai du lieu that tu BE
       }),
+      // tram_id/tram_name/action/status/executed_at/created_at DEU nam trong enum sort_by cua BE (xem
+      // SessionsQueryParams) - KHAC voi StationSearchGrid.tsx, o day KHONG can enableSorting:false cot nao
       columnHelper.accessor("tram_id", { header: "Ma tram" }),
       columnHelper.accessor("tram_name", {
         header: "Ten tram",
@@ -172,19 +195,15 @@ const SessionHistoryList: React.FC = () => {
     [page, size]
   );
 
-  // sort CLIENT-SIDE - DA KIEM TRA openapi.json GET /api/v1/sessions: CHI co q/status/from/to/page/size,
-  // KHONG co param sort/order_by nao. GHI CHU HAN CHE: sort o day CHI ap dung tren `sessions` (dong DA TAI
-  // VE cua trang hien tai, toi da `size` dong), KHONG PHAI sort toan bo lich su CR tren BE - doi trang se
-  // mat trang thai sort (BE tra du lieu trang moi theo thu tu goc, chua sort lai)
-  const [sorting, setSorting] = useState<SortingState>([]);
-
+  // khoi tao table instance - phan trang/sort deu da xu ly o phia BE (server-side). sorting state CHI
+  // dung de dieu khien UI (icon mui ten qua SortableHeaderCell), KHONG dang ky getSortedRowModel -
+  // `sessions` hien thi THANG theo thu tu BE tra ve, KHONG sort lai lan 2 tren client
   const table = useReactTable({
     data: sessions,
     columns,
     state: { sorting },
-    onSortingChange: setSorting,
+    onSortingChange: handleSortingChange,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
   });
 
   return (
