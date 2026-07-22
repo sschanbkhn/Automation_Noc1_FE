@@ -101,14 +101,18 @@ export interface CellParamDetailItem {
   qrxlevmin_new: number | null; // gia tri qrxlevmin moi sau CR, co the null theo schema
 }
 
-// dung cho GET /api/v1/sessions/{session_id} - 1 dong log tien trinh CR (dung lam nen tang cho SSE sau nay)
+// dung cho GET /api/v1/sessions/{session_id} - 1 dong log tien trinh CR, BE gio DA PERSIST that (22072026,
+// xem docs/DEV_LOG.md muc "Persist log tung buoc CR" cua BE) - cr_logs[] KHONG con luon rong nhu truoc.
+// DA XAC NHAN lai qua source BE that (api/schemas/session_schemas.py::CrLogItem, KHONG phai doan): field
+// CHI co 6 cai duoi day, KHONG co "detail" (cot detail/JSONB co ton tai trong DB cr_log nhung BE CHUA lo ra
+// qua API nay - neu can hien detail phai xin BE bo sung schema truoc, KHONG tu bia field o day)
 export interface CrLogItem {
   step: number; // buoc thu may, bat buoc theo schema
   step_name: string; // ten buoc, bat buoc theo schema
-  status: string; // trang thai cua buoc, bat buoc theo schema
+  status: string; // trang thai cua buoc: "running"|"success"|"failed" (dung string vi BE khong khai bao enum rieng)
   message: string | null; // thong diep chi tiet, co the null theo schema
   pct: number | null; // phan tram tien do, co the null theo schema
-  created_at: string | null; // thoi diem ghi log dang ISO date-time, co the null theo schema
+  created_at: string | null; // thoi diem ghi log dang ISO date-time (UTC, co hau to Z), co the null theo schema
 }
 
 // dung cho GET /api/v1/sessions/{session_id} - 1 diem du lieu QoE theo thoi gian
@@ -163,8 +167,10 @@ export interface SessionDetailResponse {
 
 // dung cho SSE stream GET /api/v1/cr/stream/{session_id} - doc truc tiep tu source code BE that
 // (application/trigger_cr_use_case.py ham _emit()/_fail(), va api/routers/sse.py dong 36 cho truong hop timeout)
-// MOI KHAC HOAN TOAN voi CrLogItem o tren (CrLogItem la cr_logs tu DB, BE hien LUON tra ve mang rong -
-// xem api/routers/sessions.py dong 92: cr_logs=[], vi BE chua co persist cr_log - TODO rieng cua BE)
+// VAN KHAC voi CrLogItem o tren du BE gio DA persist cr_log (22072026): CrStreamEvent la SSE LIVE (tam thoi,
+// dong tab la mat, co field "done"/"error"/"type"=heartbeat rieng), CrLogItem la doc lai TU DB SAU KHI CR
+// xong (ben vung, KHONG co cac field do) - 2 nguon du lieu khac nhau cho 2 muc dich khac nhau (Tab1 live vs
+// Tab2 lich su), KHONG dung lan hay thay the nhau duoc
 // BE KHONG dat ten "event:" rieng, chi gui "data: {json}\n\n" nen FE doc bang onmessage mac dinh, khong can event ten rieng
 export interface CrStreamEvent {
   step?: number; // buoc thu may (1-18), KHONG co trong truong hop status="timeout" (sse.py dong 36 chi gui {"status": "timeout"})

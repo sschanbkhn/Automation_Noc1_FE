@@ -20,6 +20,9 @@ import { resolveCrDateGmt7 } from "../TacDongTram/DanhGiaChatLuong/qosEvaluation
 // theo huong (giong Tab1 sau CR), o day la XEM LAI session da DONE nen chi truyen thang cell_params tinh,
 // khong can sessionId/status SSE gi ca
 import CellParamsByHuong from "../TacDongTram/KetQuaCR/CellParamsByHuong";
+// Log tac dong (22072026, xac nhan voi user) - BE gio da persist cr_log, xem chi tiet ly do chon Timeline
+// trong comment dau file CrLogTimeline.tsx
+import CrLogTimeline from "./CrLogTimeline";
 // token mau xanh duong dung CHUNG toan module - da trich tu R012Header.tsx sang theme.ts, KHONG con
 // dinh nghia hex rieng trong file nay nua, xem chi tiet tung token trong theme.ts
 import { R012_COLORS } from "../theme";
@@ -70,9 +73,11 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
     return <Alert type="error" message="Khong tai duoc chi tiet session" />;
   }
 
-  // Viec 6: gom 4 khoi noi dung thanh Collapse (antd Collapse ban moi dung prop "items", KHONG con dung
+  // Viec 6: gom cac khoi noi dung thanh Collapse (antd Collapse ban moi dung prop "items", KHONG con dung
   // <Collapse.Panel> children nhu ban cu da deprecated) - mac dinh CHI mo muc dau tien ("Thong tin tram"),
-  // 3 muc con lai thu gon, giup trang khong qua dai/phai cuon nhieu nhu truoc
+  // cac muc con lai thu gon, giup trang khong qua dai/phai cuon nhieu nhu truoc.
+  // 22072026 (xac nhan voi user): them muc "Log tac dong" ngay SAU "Thong tin tram" (truoc "Ket qua CR theo
+  // huong") - danh so lai 2->5 cho cac muc con lai, GIU NGUYEN thu tu tuong doi cu giua chung.
   const collapseItems: CollapseProps["items"] = [
     {
       key: "thong-tin-tram",
@@ -92,18 +97,24 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
       ),
     },
     {
+      key: "log-tac-dong",
+      label: "2. Log tac dong",
+      // CrLogTimeline tu xu ly truong hop rong (session cu chua co log) - khong can guard o day
+      children: <CrLogTimeline crLogs={data.cr_logs} />,
+    },
+    {
       key: "ket-qua-cr",
       // Ket qua CR theo huong (CellParamsByHuong) - Chi hien loai tham so (rsboost/qrxlevmin) nao THAT SU
       // co du lieu, KHONG ep hien ca 2 cot neu 1 trong 2 rong - day co the la dac diem du lieu that cua
       // tram (da xac nhan qua session that: co tram chi co rsboost, khong co qrxlevmin nao, khong phai loi)
-      label: "2. Ket qua CR theo huong",
+      label: "3. Ket qua CR theo huong",
       // sessionId chac chan la number (khong null) tai day - da qua guard "if (sessionId === null) return null"
       // o dau ham, truyen xuong de CellParamsByHuong dat dung ten file export
       children: <CellParamsByHuong cellParams={data.cell_params} sessionId={sessionId} />,
     },
     {
       key: "danh-gia-chat-luong",
-      label: "3. Danh gia chat luong",
+      label: "4. Danh gia chat luong",
       children: (
         <>
           <QoeQosCharts sessionId={sessionId} />
@@ -123,7 +134,7 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
     },
     {
       key: "bang-danh-gia-chi-tiet",
-      label: "4. Bang danh gia chi tiet",
+      label: "5. Bang danh gia chi tiet",
       children:
         crDateGmt7 !== null ? (
           <QosEvaluationTable sessionId={data.id} affectedCells={data.affected_cells} crDateGmt7={crDateGmt7} />
