@@ -4,8 +4,13 @@ import {
   createColumnHelper,
   useReactTable,
   getCoreRowModel,
+  getSortedRowModel,
   flexRender,
+  SortingState,
 } from "@tanstack/react-table";
+// <th> dung chung cho MOI bang co sort trong module (click header + mui ten huong sort) - xem ly do
+// tach rieng trong chinh file do
+import { SortableHeaderCell } from "../../common/SortableHeaderCell";
 // dung debounce co san tu lodash (da la dependency co san trong package.json) thay vi tu viet lai
 // setTimeout/clearTimeout, tranh trung lap logic da duoc thu vien xu ly va test san
 import debounce from "lodash/debounce";
@@ -92,6 +97,7 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
       columnHelper.display({
         id: "stt",
         header: "STT",
+        enableSorting: false, // STT chi la vi tri hien thi, sort cot nay khong co y nghia
         cell: (info) => (page - 1) * size + info.row.index + 1, // tinh STT tu vi tri dong, khong phai du lieu that tu BE
       }),
       columnHelper.accessor("tram_id", {
@@ -119,11 +125,21 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
     [page, size]
   );
 
-  // khoi tao table instance cua TanStack Table v8 - chi dung getCoreRowModel vi phan trang/loc da xu ly o phia BE (server-side)
+  // sort CLIENT-SIDE - DA KIEM TRA openapi.json GET /api/v1/stations: CHI co q/status/page/size, KHONG co
+  // param sort/order_by nao. GHI CHU HAN CHE: vi vay sort o day CHI ap dung tren `stations` (dong DA TAI VE
+  // cua trang hien tai, toi da `size` dong), KHONG PHAI sort toan bo danh sach tram tren BE - doi trang se
+  // mat trang thai sort (BE tra du lieu trang moi theo thu tu goc, chua sort lai)
+  const [sorting, setSorting] = useState<SortingState>([]);
+
+  // khoi tao table instance cua TanStack Table v8 - phan trang/loc da xu ly o phia BE (server-side), CHI
+  // them getSortedRowModel de sort trong pham vi trang dang xem (xem ghi chu han che o tren)
   const table = useReactTable({
     data: stations,
     columns,
+    state: { sorting },
+    onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
   });
 
   // ham xu ly khi click 1 dong - luu station vao local state de hien nut Trigger CR cho dung tram do
@@ -218,9 +234,7 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
-                    <th key={header.id}>
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                    </th>
+                    <SortableHeaderCell key={header.id} header={header} />
                   ))}
                 </tr>
               ))}

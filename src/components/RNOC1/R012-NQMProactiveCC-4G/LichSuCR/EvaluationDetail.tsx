@@ -6,6 +6,10 @@ import { SessionDetailResponse } from "../types";
 // tai su dung LAI QoeQosCharts tu Phan B (TacDongTram/DanhGiaChatLuong), KHONG viet lai logic chart -
 // component do da tu goi API rieng theo sessionId, dung chung duoc o ca Tab1 (sau CR) va Tab2 (lich su) nay
 import QoeQosCharts from "../TacDongTram/DanhGiaChatLuong/QoeQosCharts";
+// Phan 3 - danh gia QoS THAT dua tren /qos/{cell}?from=&to= + affected_cells (KHAC QoeQosCharts, phu thuoc
+// qos_snapshots hien van rong cho session cu - xem BUOC 0 da xac nhan). Component nay TU goi lai API session
+// detail (dung chung cache voi query o tren vi cung queryKey, KHONG goi API lan 2), giong cach QoeQosCharts da lam
+import QosEvaluationSection from "../TacDongTram/DanhGiaChatLuong/QosEvaluationSection";
 // tai su dung LAI CellParamsByHuong (da tach tu CrResultsByDirection.tsx) - hien danh sach cell da tac dong
 // theo huong (giong Tab1 sau CR), o day la XEM LAI session da DONE nen chi truyen thang cell_params tinh,
 // khong can sessionId/status SSE gi ca
@@ -116,6 +120,9 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
           goi lai API session detail (dung chung cache voi query o tren vi cung queryKey, KHONG goi API lan 2) */}
       <SectionTitle>3. Danh gia chat luong</SectionTitle>
       <QoeQosCharts sessionId={sessionId} />
+      <div style={{ marginTop: "1.5rem" }}>
+        <QosEvaluationSection sessionId={sessionId} />
+      </div>
     </Card>
   );
 };

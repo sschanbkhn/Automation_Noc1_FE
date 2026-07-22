@@ -29,7 +29,7 @@ L.Marker.prototype.options.icon = defaultIcon; // ap dung cho moi Marker trong f
 const SINGLE_STATION_ZOOM = 15;
 
 // icon dang cham tron mau ve bang L.divIcon (KHONG can them file anh moi) de phan biet tram_goc (do) va
-// tram_lan_can (xanh duong) tren cung 1 ban do preview - marker mac dinh cua Leaflet (defaultIcon o tren)
+// tram_bi_anh_huong (xanh duong) tren cung 1 ban do preview - marker mac dinh cua Leaflet (defaultIcon o tren)
 // chi co 1 mau xanh duong nen khong dung truc tiep duoc cho ca 2 vai tro cung luc
 const buildDotIcon = (color: string, sizePx: number) =>
   L.divIcon({
@@ -44,7 +44,7 @@ const tramLanCanIcon = buildDotIcon(R012_COLORS.primary, 14); // xanh duong - du
 
 interface NetworkMapProps {
   station: StationItem | null; // tram dang duoc chon de xem tren ban do, null khi chua chon tram nao
-  // ket qua preview CR (tram_goc + tram_lan_can) - CO gia tri thi UU TIEN hien che do nhieu marker (preview),
+  // ket qua preview CR (tram_goc + tram_bi_anh_huong) - CO gia tri thi UU TIEN hien che do nhieu marker (preview),
   // BO QUA prop "station" o tren; null/undefined thi quay lai che do 1 marker binh thuong nhu truoc
   previewData?: PreviewCrResponse | null;
 }
@@ -114,7 +114,7 @@ const NetworkMap: React.FC<NetworkMapProps> = ({ station, previewData }) => {
 };
 
 // tram da loc: chi giu tram CO du toa do (longitude/latitude khac null) va da tinh san so cell anh huong,
-// dung chung cho ca tram_goc va tung phan tu tram_lan_can khi ve marker/tinh bounds ben duoi
+// dung chung cho ca tram_goc va tung phan tu tram_bi_anh_huong khi ve marker/tinh bounds ben duoi
 interface ValidCoordTram {
   tram_id: string;
   tram_name: string | null;
@@ -125,9 +125,12 @@ interface ValidCoordTram {
 
 // tach rieng component cho che do preview (nhieu marker) - giu NetworkMap chinh o tren gon, de doc theo tung che do
 const PreviewMap: React.FC<{ data: PreviewCrResponse }> = ({ data }) => {
-  // so cell anh huong cua CHINH tram_goc: PreviewTramGoc KHONG co field "cells" rieng theo schema that (BUOC 0
-  // cua task nay), phai tim tram trung tram_id trong mang tram_lan_can (BE tra tram_goc lap lai o do, KEM cells)
-  const tramGocTrongDsLanCan = data.tram_lan_can.find((t) => t.tram_id === data.tram_goc.tram_id);
+  // FIX (Phan 1, ban sua theo schema BE moi 22072026): BE da tach rieng tram_bi_anh_huong (mang PHANG,
+  // KHONG con lap lai tram_goc ben trong nhu tram_lan_can cu) va cells_bi_anh_huong (mang PHANG rieng,
+  // KHONG con nam long trong tung tram nhu PreviewTramItem.cells cu) - so cell anh huong cua tram_goc PHAI
+  // tu dem qua cells_bi_anh_huong theo tram_id, DA XAC NHAN qua goi that: cells_bi_anh_huong KHONG chua
+  // cell nao thuoc tram_goc (tram_goc khong con "tu anh huong chinh no"), nen so cell cua tram_goc la 0
+  const soCellCuaTramGoc = data.cells_bi_anh_huong.filter((c) => c.tram_id === data.tram_goc.tram_id).length;
 
   const tramGocValid: ValidCoordTram | null =
     data.tram_goc.longitude !== null && data.tram_goc.latitude !== null
@@ -136,24 +139,17 @@ const PreviewMap: React.FC<{ data: PreviewCrResponse }> = ({ data }) => {
           tram_name: data.tram_goc.tram_name,
           lat: data.tram_goc.latitude,
           lng: data.tram_goc.longitude,
-          soCellAnhHuong: tramGocTrongDsLanCan?.cells.length ?? 0,
+          soCellAnhHuong: soCellCuaTramGoc,
         }
       : null;
 
-  // loc tram_lan_can theo 2 buoc:
-  // 1) BO tram trung tram_id voi tram_goc - DA XAC NHAN qua goi that (tram 111139, Buoc 0): BE tra tram_goc
-  //    LAP LAI trong chinh mang tram_lan_can. Neu khong loc se ve 2 marker (do + xanh) chong khit len nhau
-  //    tai CUNG 1 toa do, marker do luon nam tren che khuat marker xanh, gay nham lan tuong tram_goc khong
-  //    nam trong danh sach anh huong (du lieu cell cua no van duoc gom vao tramGocValid o tren roi).
-  // 2) BO tram KHONG co toa do (longitude/latitude null, ~0.4% khong join duoc theo yeu cau nghiep vu) - KHONG
-  //    ve marker cho truong hop nay de tranh crash Leaflet khi truyen toa do null, chi dem lai so luong de
-  //    ghi chu cho NOC biet con thieu du lieu, tranh hieu lam preview chi co bay nhieu do la TOAN BO anh huong.
+  // FIX: dung THANG tram_bi_anh_huong BE tra san (KHONG con phai tu loc trung tram_goc nhu tram_lan_can cu -
+  // DA XAC NHAN qua goi that: tram_bi_anh_huong KHONG con lap lai tram_goc). Van GIU nguyen buoc loc tram
+  // KHONG co toa do (longitude/latitude null) - EDGE CASE nay van co the xay ra du response mau lan nay du
+  // toa do ca 29 tram, KHONG ve marker de tranh crash Leaflet, chi dem lai so luong de ghi chu cho NOC
   let soTramKhongCoToaDo = 0;
   const tramLanCanValid: ValidCoordTram[] = [];
-  data.tram_lan_can.forEach((t) => {
-    if (t.tram_id === data.tram_goc.tram_id) {
-      return;
-    }
+  data.tram_bi_anh_huong.forEach((t) => {
     if (t.longitude === null || t.latitude === null) {
       soTramKhongCoToaDo += 1;
       return;
@@ -163,7 +159,7 @@ const PreviewMap: React.FC<{ data: PreviewCrResponse }> = ({ data }) => {
       tram_name: t.tram_name,
       lat: t.latitude,
       lng: t.longitude,
-      soCellAnhHuong: t.cells.length,
+      soCellAnhHuong: data.cells_bi_anh_huong.filter((c) => c.tram_id === t.tram_id).length,
     });
   });
 

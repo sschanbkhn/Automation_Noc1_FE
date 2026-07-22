@@ -111,6 +111,19 @@ export interface QosSnapshotItem {
   period: string; // ky do luong (truoc/sau CR...), bat buoc theo schema
 }
 
+// dung cho GET /api/v1/sessions/{session_id}, field affected_cells - them 22072026 (Phuong an B, DA DUYET
+// boi user, xem application/get_session_detail_use_case.py). La TOAN BO cell BI ANH HUONG cua session
+// (KHAC voi cell_params - la cell DA THAT SU CHAY CR, tap con cua affected_cells). DA XAC NHAN qua goi that:
+// session CU (truoc 22072026, vd id 195/196/202/203/205) co affected_cells=[] RONG - BE KHONG backfill du
+// lieu cu, CHI session MOI trigger tu 22072026 tro di moi co du lieu. Luu y schema nay tram_id CO THE null
+// (KHAC voi AffectedCellItem cua preview /cr/preview, o do tram_id la bat buoc) - dat ten rieng SessionAffectedCellItem
+// de khong dung nham 2 schema tuy cung ten field nhung do nullable khac nhau
+export interface SessionAffectedCellItem {
+  cell_name: string; // ten cell, bat buoc theo schema
+  tram_id: string | null; // ma tram cha, co the null theo schema
+  huong_id: string | null; // id huong cua cell, co the null theo schema
+}
+
 // dung cho GET /api/v1/sessions/{session_id} - response chi tiet 1 session CR
 export interface SessionDetailResponse {
   id: number; // id session, bat buoc theo schema
@@ -127,7 +140,8 @@ export interface SessionDetailResponse {
   qos_after: number | null; // diem QoS sau CR, co the null theo schema
   executed_at: string | null; // thoi diem thuc thi dang ISO date-time, co the null theo schema
   evaluated_at: string | null; // thoi diem danh gia dang ISO date-time, co the null theo schema
-  cell_params: CellParamDetailItem[]; // danh sach tham so cell, mac dinh mang rong theo schema
+  cell_params: CellParamDetailItem[]; // danh sach cell DA CHAY CR, mac dinh mang rong theo schema
+  affected_cells: SessionAffectedCellItem[]; // TOAN BO cell BI ANH HUONG cua session (Phan 3, Buoc 2) - mac dinh mang rong theo schema
   cr_logs: CrLogItem[]; // danh sach log tien trinh CR, mac dinh mang rong theo schema
   qoe_snapshots: QoeSnapshotItem[]; // danh sach diem QoE theo thoi gian, mac dinh mang rong theo schema
   qos_snapshots: QosSnapshotItem[]; // danh sach diem QoS theo thoi gian, mac dinh mang rong theo schema
@@ -152,24 +166,8 @@ export interface CrStreamEvent {
   type?: string;
 }
 
-// dung cho POST /api/v1/cr/preview - 1 cell bi anh huong trong danh sach cells cua 1 tram lan can (hoac
-// chinh tram goc, xem PreviewTramItem). Lay dung tu OpenAPI schema PreviewCellItem, KHONG doan field -
-// luu y ten field rsboost_cu/rsboost_moi/qrxlevmin_cu/qrxlevmin_moi KHAC voi CellParamDetailItem
-// (rsboost_before_cr/rsboost_new) vi 2 endpoint /sessions/{id} va /cr/preview dung ten field rieng biet
-export interface PreviewCellItem {
-  cell_name: string; // ten cell, bat buoc theo schema
-  huong_id: string | null; // id huong cua cell, co the null theo schema
-  priority: number | null; // do uu tien, co the null theo schema
-  action_type: string | null; // loai hanh dong ap dung cho cell, co the null theo schema
-  rsboost_cu: number | null; // gia tri rsboost hien tai (truoc CR), co the null theo schema
-  rsboost_moi: number | null; // gia tri rsboost du kien sau CR, co the null theo schema
-  qrxlevmin_cu: number | null; // gia tri qrxlevmin hien tai (truoc CR), co the null theo schema
-  qrxlevmin_moi: number | null; // gia tri qrxlevmin du kien sau CR, co the null theo schema
-}
-
-// dung cho POST /api/v1/cr/preview - tram goc (tram bi tac dong CR truc tiep). KHONG co field "cells" rieng
-// theo schema PreviewTramGoc that (khac PreviewTramItem ben duoi) - neu can so cell anh huong cua chinh
-// tram goc, phai tim tram co cung tram_id trong mang tram_lan_can (BE tra tram goc lap lai o do kem cells)
+// dung cho POST /api/v1/cr/preview - tram goc (tram bi tac dong CR truc tiep). Lay dung tu OpenAPI schema
+// PreviewTramGoc that (khong doi so voi ban truoc)
 export interface PreviewTramGoc {
   tram_id: string; // ma tram, bat buoc theo schema
   tram_name: string | null; // ten tram, co the null theo schema
@@ -177,26 +175,90 @@ export interface PreviewTramGoc {
   latitude: number | null; // vi do, co the null theo schema
 }
 
-// dung cho POST /api/v1/cr/preview - 1 tram lan can bi anh huong, kem danh sach cells cua tram do.
-// DA XAC NHAN qua goi that: mang tram_lan_can LUON chua ca chinh tram_goc (kem cells cua tram_goc),
-// khong chi cac tram khac xung quanh - FE phai tu loc trung khi ve marker (xem NetworkMap.tsx)
-export interface PreviewTramItem {
+// BE DA DOI SCHEMA response POST /cr/preview (xac nhan lai qua goi that tram_id=110548 ngay 22072026):
+// BO tram_lan_can (mang long tram+cells long nhau, tung phai tu loc trung tram_goc/dem cells) - THAY BANG
+// 3 mang PHANG rieng biet cells_bi_anh_huong/tram_bi_anh_huong/cells_chay_cr, moi mang co schema OpenAPI
+// rieng (AffectedCellItem/AffectedTramItem/CrCellItem) - BE da tu tra dung so lieu tach san, FE KHONG con
+// phai tu loc trung tram_goc hay tu dem so cell CR nhu cach lam voi tram_lan_can truoc day
+
+// dung cho POST /api/v1/cr/preview, field cells_bi_anh_huong - 1 cell NAM TRONG vung anh huong (suy hao/
+// nhieu do tram_goc tat), KHONG phai la cell se chay CR (xem CrCellItem rieng ben duoi) - vi vay KHONG co
+// rsboost/qrxlevmin/priority/action_type, chi co thong tin dinh danh cell. Lay dung tu OpenAPI schema AffectedCellItem
+export interface AffectedCellItem {
+  cell_name: string; // ten cell, bat buoc theo schema
+  huong_id: string | null; // id huong cua cell, co the null theo schema
+  tram_id: string; // ma tram cha chua cell nay, bat buoc theo schema
+}
+
+// dung cho POST /api/v1/cr/preview, field tram_bi_anh_huong - 1 tram lan can bi anh huong (KHONG kem danh
+// sach cells rieng nhu PreviewTramItem cu - so cell cua tram nay phai tu dem qua cells_bi_anh_huong.tram_id
+// khop voi tram_id nay). DA XAC NHAN qua goi that: mang nay KHONG con lap lai tram_goc nhu ban cu (BE da tu
+// loc), FE KHONG can tu loc trung nua. Lay dung tu OpenAPI schema AffectedTramItem
+export interface AffectedTramItem {
   tram_id: string; // ma tram, bat buoc theo schema
   tram_name: string | null; // ten tram, co the null theo schema
-  longitude: number | null; // kinh do, co the null theo schema - ~0.4% tram khong join duoc toa do (null)
+  longitude: number | null; // kinh do, co the null theo schema - EDGE CASE toa do null van co the xay ra (giu xu ly nhu cu)
   latitude: number | null; // vi do, co the null theo schema
-  cells: PreviewCellItem[]; // danh sach cell bi anh huong cua tram nay, mac dinh mang rong theo schema
+}
+
+// dung cho POST /api/v1/cr/preview, field cells_chay_cr - 1 cell THAT SU se duoc dieu chinh tham so
+// (rsboost/qrxlevmin) khi trigger CR, la TAP CON cua cells_bi_anh_huong (DA XAC NHAN qua goi that: 12/47
+// cell). Cac field rsboost/qrxlevmin/priority/action_type GIU NGUYEN ten nhu PreviewCellItem cu (khong doi).
+// Lay dung tu OpenAPI schema CrCellItem
+export interface CrCellItem {
+  cell_name: string; // ten cell, bat buoc theo schema
+  tram_id: string; // ma tram cha chua cell nay, bat buoc theo schema
+  huong_id: string | null; // id huong cua cell, co the null theo schema
+  priority: number | null; // do uu tien, co the null theo schema
+  action_type: string | null; // loai hanh dong ap dung cho cell, co the null theo schema
+  rsboost_cu: number | null; // gia tri rsboost hien tai (truoc CR, dB that), co the null theo schema
+  rsboost_moi: number | null; // gia tri rsboost du kien sau CR (step chuan), co the null theo schema
+  qrxlevmin_cu: number | null; // gia tri qrxlevmin hien tai (truoc CR), co the null theo schema
+  qrxlevmin_moi: number | null; // gia tri qrxlevmin du kien sau CR, co the null theo schema
 }
 
 // dung cho POST /api/v1/cr/preview - response chinh, request body dung chung TriggerCrRequest (tram_id + action)
 export interface PreviewCrResponse {
   tram_goc: PreviewTramGoc; // tram bi tac dong CR truc tiep, bat buoc theo schema
-  tram_lan_can: PreviewTramItem[]; // danh sach tram bi anh huong (kem ca tram_goc, xem comment PreviewTramItem), bat buoc theo schema
+  cells_bi_anh_huong: AffectedCellItem[]; // TOAN BO cell nam trong vung anh huong, bat buoc theo schema
+  tram_bi_anh_huong: AffectedTramItem[]; // TOAN BO tram lan can bi anh huong (khong kem tram_goc), bat buoc theo schema
+  cells_chay_cr: CrCellItem[]; // cell se THAT SU chay CR (tap con cua cells_bi_anh_huong), bat buoc theo schema
 }
 
 // dung cho GET /api/v1/qos/{cell_name} - BE khai bao additionalProperties true, chua co field co dinh trong schema
 // giu kieu Record de khong tu bia field khong ton tai trong schema that
 export type QosMetrics = Record<string, unknown>;
+
+// dung cho GET /api/v1/qos/{cell_name}?days=N - lich su QoS N ngay gan nhat cua 1 cell, dung rieng cho
+// CellQosHistoryChart (Buoc chart QoS, buoc cuoi tinh nang preview). DA XAC NHAN qua goi that (curl):
+// {"cell_name":"4G-STY008M43-HNI","data":[{"time":"2026-07-19T00:00:00Z","qos":5}]} - openapi.json KHONG
+// khai bao param "days" (chi co "cell_name" trong path, response schema van la additionalProperties:true
+// chung chung nhu QosMetrics o tren), nhung goi thu voi ?days=7/3/1 deu tra HTTP 200 (khong loi 422), va
+// CA 5 cell da thu deu CHI co DUNG 1 diem du yeu cau bao nhieu ngay - xac nhan CTS thieu du lieu ngay la
+// tinh trang THAT, KHONG phai loi FE, nen chart PHAI tu ve du truc 7 ngay va de trong ngay khong co du lieu
+export interface QosHistoryPoint {
+  time: string; // thoi diem do QoS dang ISO date-time UTC, bat buoc theo response that
+  qos: number; // diem QoS thang 1-5, bat buoc theo response that
+}
+
+export interface QosHistoryResponse {
+  cell_name: string; // ten cell, bat buoc theo response that
+  data: QosHistoryPoint[]; // danh sach diem QoS thuc te co trong N ngay yeu cau - co the ÍT hon so ngay
+  // yeu cau (DA XAC NHAN qua goi that: CTS thieu du lieu ngay), FE tu bu them cac ngay thieu = null khi ve chart
+}
+
+// dung cho GET /api/v1/qos/{cell_name} - query param, CAP NHAT 22072026 (Gap 1, DA XAC NHAN qua source
+// api/routers/qos.py + goi that): BE gio nhan THEM "from"/"to" (dang date "YYYY-MM-DD") BEN CANH "days" cu.
+// PHAI truyen CA HAI from+to cung luc (BE tra 422 neu chi truyen 1 trong 2) - dung khi can neo QoS vao 1
+// khoang ngay CU THE trong qua khu (vd 15 ngay quanh 1 ngay CR da qua, Phan 3 Buoc 1), vi "days" LUON neo
+// window vao "hom qua" tinh tu luc goi API (khong lam duoc voi ngay CR trong qua khu). Toi da 60 ngay cho
+// khoang from/to (BE tu chan, xem _MAX_FROM_TO_WINDOW_DAYS). KHONG truyen from/to -> giu nguyen hanh vi
+// "days" cu (dung cho CellQosHistoryChart preview, Phan 2)
+export interface QosHistoryQueryParams {
+  days?: number; // mac dinh 7 theo schema BE - CHI dung khi KHONG truyen from/to
+  from?: string; // "YYYY-MM-DD" - PHAI di kem "to"
+  to?: string; // "YYYY-MM-DD" - PHAI di kem "from"
+}
 
 // dung cho POST /api/v1/jobs/sync-rims - BE khai bao response la object additionalProperties true, chua co field co dinh
 export type SyncRimsResponse = Record<string, unknown>;

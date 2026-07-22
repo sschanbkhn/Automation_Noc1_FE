@@ -1,20 +1,25 @@
-import React, { useMemo } from "react";
-import { Button } from "antd";
+import React, { useEffect, useMemo, useState } from "react";
+import { Button, Pagination } from "antd";
 import {
   createColumnHelper,
   useReactTable,
   getCoreRowModel,
+  getSortedRowModel,
+  getPaginationRowModel,
   flexRender,
+  SortingState,
+  PaginationState,
 } from "@tanstack/react-table";
 // dung xlsx (SheetJS) co san trong package.json (^0.17.5), giong cach CellParamsByHuong.tsx da dung -
 // KHONG cai them dependency moi cho 1 export co ban (1 sheet, khong can style/merge cell phuc tap)
 import * as XLSX from "xlsx";
 import { PreviewCrResponse } from "../../types";
 import { R012_COLORS } from "../../theme";
+// <th> dung chung cho MOI bang co sort trong module (click header + mui ten huong sort)
+import { SortableHeaderCell } from "../../common/SortableHeaderCell";
 
 // dinh dang timestamp DDMMYYYY_HHMM cho ten file export - dung DUNG quy uoc da dung o CellParamsByHuong.tsx.
-// KHONG tach thanh helper dung chung vi ham chi 8 dong va hien chi co 2-3 noi can, tach som se la
-// premature abstraction cho 1 ham qua nho
+// KHONG tach thanh helper dung chung vi ham chi 8 dong, tach som se la premature abstraction cho 1 ham qua nho
 function formatTimestampForFileName(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   const dd = pad(date.getDate());
@@ -39,63 +44,103 @@ interface AffectedStationsTableProps {
   previewData: PreviewCrResponse;
 }
 
-// bang danh sach tram_lan_can (da loc trung tram_goc) - tuong ung Buoc 1 tinh nang preview lan 2.
-// Component nay CHI nhan previewData da co san tu state cua TacDongTram.tsx (khong tu goi API)
+// bang danh sach tram_bi_anh_huong - tuong ung Buoc 3 (Phan 1, ban sua theo schema BE moi 22072026).
+// FIX so voi ban truoc: BE da doi schema, tram_bi_anh_huong la mang PHANG BE tra san (KHONG con la
+// tram_lan_can long ca tram_goc ben trong nhu cu) - FE KHONG con phai tu loc trung tram_goc nua, dung
+// THANG mang nay. Component nay CHI nhan previewData da co san tu state cua TacDongTram.tsx (khong tu goi API)
 const AffectedStationsTable: React.FC<AffectedStationsTableProps> = ({ previewData }) => {
-  // loc trung tram_goc khoi tram_lan_can - DA XAC NHAN qua goi that (xem comment PreviewTramItem trong
-  // types/index.ts): BE tra tram_goc LAP LAI trong chinh mang tram_lan_can. Bang tram CHI hien cac tram
-  // lan can THAT SU (tram_goc da duoc hien rieng bang marker do tren map), giong cach da loc o NetworkMap.tsx
+  // dem so cell bi anh huong cho tung tram bang cells_bi_anh_huong.tram_id - AffectedTramItem (schema moi)
+  // KHONG con kem san danh sach cells nhu PreviewTramItem cu, nen phai tu dem qua mang cells_bi_anh_huong rieng
+  const soCellTheoTram = useMemo(() => {
+    const counts = new Map<string, number>();
+    previewData.cells_bi_anh_huong.forEach((c) => {
+      counts.set(c.tram_id, (counts.get(c.tram_id) ?? 0) + 1);
+    });
+    return counts;
+  }, [previewData]);
+
   const rows: StationRow[] = useMemo(
     () =>
-      previewData.tram_lan_can
-        .filter((t) => t.tram_id !== previewData.tram_goc.tram_id)
-        .map((t) => ({
-          tram_id: t.tram_id,
-          tram_name: t.tram_name,
-          soCellAnhHuong: t.cells.length,
-          longitude: t.longitude,
-          latitude: t.latitude,
-        })),
-    [previewData]
+      previewData.tram_bi_anh_huong.map((t) => ({
+        tram_id: t.tram_id,
+        tram_name: t.tram_name,
+        soCellAnhHuong: soCellTheoTram.get(t.tram_id) ?? 0,
+        longitude: t.longitude,
+        latitude: t.latitude,
+      })),
+    [previewData, soCellTheoTram]
   );
+
+  // sort + phan trang deu xu ly qua TanStack Table (KHONG tu slice mang thu cong nhu ban truoc) - de
+  // getSortedRowModel chay TRUOC getPaginationRowModel, dam bao sort tren TOAN BO du lieu roi moi cat trang,
+  // thay vi chi sort trong pham vi 1 trang dang xem (khac voi StationSearchGrid/SessionHistoryList o cho
+  // du lieu preview nay da co san DAY DU trong bo nho, khong bi gioi han boi phan trang server-side)
+  const [sorting, setSorting] = useState<SortingState>([]);
+  // mac dinh 10 dong/trang, cho doi 10/20/50 theo yeu cau
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  // reset ve trang 1 moi khi previewData doi (NOC xem preview tram khac) de tranh dung o trang cu co the
+  // vuot qua so trang cua du lieu moi
+  useEffect(() => {
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }, [previewData]);
 
   const columns = useMemo(
     () => [
       columnHelper.display({
         id: "stt",
         header: "STT",
-        cell: (info) => info.row.index + 1, // so thu tu tinh theo vi tri dong, khong phai du lieu tu BE
+        enableSorting: false, // STT chi la vi tri hien thi, sort cot nay khong co y nghia
+        // STT tinh theo vi tri TUYET DOI trong ca danh sach (khong reset ve 1 moi trang), giup NOC biet
+        // dung thu tu tong the khi chuyen trang - info.row.index o day la vi tri TRONG TRANG hien tai
+        // (getPaginationRowModel dang duoc dung) nen phai cong them offset cua trang
+        cell: (info) => pagination.pageIndex * pagination.pageSize + info.row.index + 1,
       }),
       columnHelper.accessor("tram_id", { header: "Ma tram" }),
       columnHelper.accessor("tram_name", {
         header: "Ten tram",
-        cell: (info) => info.getValue() ?? "-", // co the null theo schema PreviewTramItem
+        cell: (info) => info.getValue() ?? "-", // co the null theo schema AffectedTramItem
       }),
       columnHelper.accessor("soCellAnhHuong", { header: "So cell bi anh huong" }),
       columnHelper.display({
         id: "toaDo",
         header: "Toa do",
-        // longitude/latitude co the null theo schema (~0.4% tram khong join duoc toa do) - ghi ro
-        // "Thieu toa do" thay vi hien "null, null" gay kho hieu cho NOC
+        // longitude/latitude co the null theo schema (EDGE CASE toa do null van giu nguyen xu ly nhu cu,
+        // du response mau lan nay ca 29 tram deu co du toa do) - ghi ro "Thieu toa do" thay vi "null, null"
         cell: (info) => {
           const row = info.row.original;
           return row.longitude !== null && row.latitude !== null
             ? `${row.latitude}, ${row.longitude}`
             : "Thieu toa do";
         },
+        // sort theo latitude (KHONG the sort truc tiep tren chuoi "lat, lng" da format) - tram thieu toa do
+        // (null) luon xep CUOI bat ke asc/desc, tranh lam gian doan thu tu cac tram co toa do that
+        sortingFn: (rowA, rowB) => {
+          const a = rowA.original.latitude;
+          const b = rowB.original.latitude;
+          if (a === null && b === null) return 0;
+          if (a === null) return 1;
+          if (b === null) return -1;
+          return a - b;
+        },
       }),
     ],
-    []
+    [pagination]
   );
 
   const table = useReactTable({
     data: rows,
     columns,
+    state: { sorting, pagination },
+    onSortingChange: setSorting,
+    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
   });
 
-  // export dung DUNG cot yeu cau: ma tram, ten tram, so cell, longitude, latitude - longitude/latitude
-  // xuat "" (rong) khi null thay vi chu "null"/"Thieu toa do" de o Excel van la kieu so, de loc/tinh toan sau
+  // export TOAN BO rows (khong chi trang dang xem) - dung DUNG cot yeu cau: ma tram, ten tram, so cell,
+  // longitude, latitude - longitude/latitude xuat "" (rong) khi null thay vi chu "null"/"Thieu toa do" de
+  // o Excel van la kieu so, de loc/tinh toan sau
   const handleExportExcel = () => {
     const exportRows = rows.map((r) => ({
       ma_tram: r.tram_id,
@@ -123,14 +168,15 @@ const AffectedStationsTable: React.FC<AffectedStationsTableProps> = ({ previewDa
           marginBottom: "0.5rem",
         }}
       >
-        <h4 style={{ margin: 0 }}>Danh sach tram bi anh huong ({rows.length})</h4>
+        {/* tieu de dung DUNG dinh dang "Tram bi anh huong (N)" theo yeu cau, N la TONG so tram (khong phai so dong dang hien) */}
+        <h4 style={{ margin: 0 }}>Tram bi anh huong ({rows.length})</h4>
         <Button onClick={handleExportExcel} disabled={rows.length === 0}>
           Export Excel
         </Button>
       </div>
 
       {rows.length === 0 ? (
-        <div>Khong co tram lan can nao bi anh huong.</div>
+        <div>Khong co tram nao bi anh huong.</div>
       ) : (
         <>
           {/* CSS scoped rieng cho bang nay, dung DUNG token tu theme.ts, dong bo voi StationSearchGrid.tsx
@@ -158,7 +204,7 @@ const AffectedStationsTable: React.FC<AffectedStationsTableProps> = ({ previewDa
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
-                    <th key={header.id}>{flexRender(header.column.columnDef.header, header.getContext())}</th>
+                    <SortableHeaderCell key={header.id} header={header} />
                   ))}
                 </tr>
               ))}
@@ -173,6 +219,20 @@ const AffectedStationsTable: React.FC<AffectedStationsTableProps> = ({ previewDa
               ))}
             </tbody>
           </table>
+
+          {/* Pagination cua antd chi la UI dieu khien - state that (pageIndex/pageSize) nam trong TanStack
+              Table (bien "pagination" o tren) de phoi hop dung voi getSortedRowModel/getPaginationRowModel */}
+          <Pagination
+            current={pagination.pageIndex + 1}
+            pageSize={pagination.pageSize}
+            total={rows.length}
+            pageSizeOptions={["10", "20", "50"]}
+            showSizeChanger
+            onChange={(newPage, newPageSize) => {
+              setPagination({ pageIndex: newPage - 1, pageSize: newPageSize });
+            }}
+            style={{ marginTop: "1rem" }}
+          />
         </>
       )}
     </div>

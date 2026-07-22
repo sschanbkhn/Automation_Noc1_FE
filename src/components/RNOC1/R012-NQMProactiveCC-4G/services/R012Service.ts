@@ -11,6 +11,8 @@ import {
   SessionDetailResponse,
   PreviewCrResponse,
   QosMetrics,
+  QosHistoryResponse,
+  QosHistoryQueryParams,
   SyncRimsResponse,
   SyncNetactResponse,
   EvaluateCrResponse,
@@ -51,8 +53,9 @@ export const getSessions = async (params?: SessionsQueryParams): Promise<Session
   }
 };
 
-// ham goi POST /api/v1/cr/preview - xem truoc anh huong CR (tram_goc + tram_lan_can kem cells) TRUOC KHI
-// trigger that, dung chung body TriggerCrRequest voi triggerCr o tren (tram_id/tram_name/action)
+// ham goi POST /api/v1/cr/preview - xem truoc anh huong CR (tram_goc + cells_bi_anh_huong + tram_bi_anh_huong
+// + cells_chay_cr, xem types/index.ts) TRUOC KHI trigger that, dung chung body TriggerCrRequest voi
+// triggerCr o tren (tram_id/tram_name/action)
 // chi goi API va tra ve dung raw response theo type PreviewCrResponse
 export const getPreview = async (payload: TriggerCrRequest): Promise<PreviewCrResponse> => {
   try {
@@ -63,7 +66,9 @@ export const getPreview = async (payload: TriggerCrRequest): Promise<PreviewCrRe
   }
 };
 
-// ham goi GET /api/v1/sessions/{session_id} - lay chi tiet 1 session CR (cell_params, cr_logs, qoe/qos snapshot)
+// ham goi GET /api/v1/sessions/{session_id} - lay chi tiet 1 session CR (cell_params, affected_cells,
+// cr_logs, qoe/qos snapshot). affected_cells them 22072026 - session cu (truoc ngay do) se tra mang rong
+// (BE khong backfill, xem comment SessionAffectedCellItem trong types/index.ts)
 // chi goi API va tra ve dung raw response theo type SessionDetailResponse
 export const getSessionDetail = async (sessionId: number): Promise<SessionDetailResponse> => {
   try {
@@ -80,6 +85,23 @@ export const getQos = async (cellName: string): Promise<QosMetrics> => {
   try {
     const data: any = await r012Request.get(`/qos/${cellName}`);
     return data as QosMetrics;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// ham goi GET /api/v1/qos/{cell_name} - lay lich su QoS cua 1 cell, dung CHUNG cho 2 truong hop:
+// 1) truyen {days} - window neo vao "hom qua" (dung cho CellQosHistoryChart trong preview, Phan 2)
+// 2) truyen {from, to} - window tuong minh theo 1 khoang ngay CU THE trong qua khu (dung cho danh gia
+//    chat luong QoS 15 ngay quanh 1 ngay CR da qua, Phan 3 Buoc 1) - CAP NHAT 22072026 (Gap 1, xac nhan
+//    qua goi that + source api/routers/qos.py), xem comment day du trong QosHistoryQueryParams (types/index.ts)
+export const getQosHistory = async (
+  cellName: string,
+  params: QosHistoryQueryParams = {}
+): Promise<QosHistoryResponse> => {
+  try {
+    const data: any = await r012Request.get(`/qos/${cellName}`, { params });
+    return data as QosHistoryResponse;
   } catch (error) {
     throw error;
   }

@@ -12,6 +12,9 @@ import NetworkMap from "./BanDoMang/NetworkMap";
 // dung chung previewData da co san, KHONG tu goi API rieng
 import AffectedStationsTable from "./XemTruocAnhHuong/AffectedStationsTable";
 import AffectedCellsTable from "./XemTruocAnhHuong/AffectedCellsTable";
+// bang cell CHAY CR (MOI, tach rieng khoi bang cell bi anh huong o tren - Phan 1, schema BE moi 22072026)
+import CrCellsTable from "./XemTruocAnhHuong/CrCellsTable";
+import CellQosHistoryChart from "./XemTruocAnhHuong/CellQosHistoryChart";
 // khu vuc ket qua CR theo tung huong va log tien trinh CR - tuong ung Zone C trong UI_DESIGN.md
 // doi ten tu ZoneC sang KetQuaCR cho dung chuc nang hien thi
 // QosSparkline (Widget F33) va QoeQosCharts (Zone E) KHONG import truc tiep o day nua - da nhung san
@@ -42,7 +45,7 @@ const TacDongTram: React.FC = () => {
 
   // ket qua "Xem truoc anh huong" (Buoc 1 tinh nang preview) - null nghia la chua xem truoc hoac vua doi
   // sang tram khac (StationSearchGrid tu reset ve null khi doi tram, xem comment handleRowClick trong do).
-  // CO gia tri thi NetworkMap uu tien hien che do nhieu marker (tram_goc + tram_lan_can) thay vi 1 marker
+  // CO gia tri thi NetworkMap uu tien hien che do nhieu marker (tram_goc + tram_bi_anh_huong) thay vi 1 marker
   const [previewData, setPreviewData] = useState<PreviewCrResponse | null>(null);
 
   // session_id cua phien CR dang duoc theo doi SSE realtime (Zone C - KetQuaCR) - null nghia la chua trigger
@@ -111,9 +114,10 @@ const TacDongTram: React.FC = () => {
             <NetworkMap station={selectedStationForView} previewData={previewData} />
           </Col>
         </Row>
-        {/* bang tram + bang cell CHI hien khi da co previewData (da bam "Xem truoc anh huong" thanh cong) -
-            an han (khong render) khi chua co, tranh chiem layout voi 2 bang rong vo nghia truoc do.
-            Thu tu Map -> Bang tram -> Bang cell (tu tong quan den chi tiet) theo dung yeu cau bo tri */}
+        {/* bang tram + 2 bang cell + chart QoS CHI hien khi da co previewData (da bam "Xem truoc anh huong"
+            thanh cong) - an han (khong render) khi chua co, tranh chiem layout voi cac khoi rong vo nghia
+            truoc do. Thu tu Map -> Bang tram -> Bang cell bi anh huong -> Bang cell chay CR (dung DUNG yeu
+            cau bo tri Phan 1) -> Chart QoS (giu nguyen vi tri cuoi cung, ngoai pham vi Phan 1) */}
         {previewData && (
           <>
             <Row gutter={16} style={{ marginTop: "1rem" }}>
@@ -124,6 +128,16 @@ const TacDongTram: React.FC = () => {
             <Row gutter={16} style={{ marginTop: "1rem" }}>
               <Col span={24}>
                 <AffectedCellsTable previewData={previewData} />
+              </Col>
+            </Row>
+            <Row gutter={16} style={{ marginTop: "1rem" }}>
+              <Col span={24}>
+                <CrCellsTable previewData={previewData} />
+              </Col>
+            </Row>
+            <Row gutter={16} style={{ marginTop: "1rem" }}>
+              <Col span={24}>
+                <CellQosHistoryChart previewData={previewData} />
               </Col>
             </Row>
           </>

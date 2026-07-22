@@ -28,4 +28,12 @@ export const R012_COLORS = {
   // voi cac tram_lan_can (van dung primary blue) tren cung 1 ban do, dung chung 1 mau se khong the
   // phan biet duoc marker nao la tram bi tat truc tiep khi nhin luot qua
   dangerRed: "#dc2626",
+
+  // ---- token cho bieu do cot QoS/QoE preview (CellQosHistoryChart.tsx, Phan 2) ----
+  // 3 mau PHAN BIET RO 3 nhom ngay (truoc CR / ngay CR / sau CR) - CO Y dung 3 mau khac han nhau (khong
+  // chi khac do dam cua CUNG 1 mau) de NOC nhin luot qua bieu do la phan biet ngay dang thuoc nhom nao,
+  // khong phai doc tung label truc X
+  chartBeforeCr: "#94a3b8", // xam-xanh trung tinh - 2 ngay TRUOC ngay CR, la du lieu tham khao, chua phai trong tam theo doi
+  chartCrDay: "#f59e0b", // cam/amber - dung mau nong nhat cho DUNG 1 cot "ngay CR" (gia dinh = hom nay trong preview), de noi bat nhat
+  chartAfterCr: "#3b82f6", // xanh duong - dung lai token primary, 5 ngay SAU ngay CR la khoang thoi gian se theo doi hieu qua CR
 };

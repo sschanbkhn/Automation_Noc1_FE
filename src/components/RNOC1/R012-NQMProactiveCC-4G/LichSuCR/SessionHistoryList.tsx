@@ -5,9 +5,13 @@ import {
   createColumnHelper,
   flexRender,
   getCoreRowModel,
+  getSortedRowModel,
   useReactTable,
+  SortingState,
 } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
+// <th> dung chung cho MOI bang co sort trong module (click header + mui ten huong sort)
+import { SortableHeaderCell } from "../common/SortableHeaderCell";
 // dung debounce co san tu lodash (da la dependency co san trong package.json, StationSearchGrid.tsx cung
 // dung cach nay) thay vi tu viet lai setTimeout/clearTimeout - tranh trung lap logic da duoc test san
 import debounce from "lodash/debounce";
@@ -140,6 +144,7 @@ const SessionHistoryList: React.FC = () => {
       columnHelper.display({
         id: "stt",
         header: "STT",
+        enableSorting: false, // STT chi la vi tri hien thi, sort cot nay khong co y nghia
         cell: (info) => (page - 1) * size + info.row.index + 1, // tinh STT tu vi tri dong, khong phai du lieu that tu BE
       }),
       columnHelper.accessor("tram_id", { header: "Ma tram" }),
@@ -167,10 +172,19 @@ const SessionHistoryList: React.FC = () => {
     [page, size]
   );
 
+  // sort CLIENT-SIDE - DA KIEM TRA openapi.json GET /api/v1/sessions: CHI co q/status/from/to/page/size,
+  // KHONG co param sort/order_by nao. GHI CHU HAN CHE: sort o day CHI ap dung tren `sessions` (dong DA TAI
+  // VE cua trang hien tai, toi da `size` dong), KHONG PHAI sort toan bo lich su CR tren BE - doi trang se
+  // mat trang thai sort (BE tra du lieu trang moi theo thu tu goc, chua sort lai)
+  const [sorting, setSorting] = useState<SortingState>([]);
+
   const table = useReactTable({
     data: sessions,
     columns,
+    state: { sorting },
+    onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
   });
 
   return (
@@ -263,9 +277,7 @@ const SessionHistoryList: React.FC = () => {
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
-                    <th key={header.id}>
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                    </th>
+                    <SortableHeaderCell key={header.id} header={header} />
                   ))}
                 </tr>
               ))}
