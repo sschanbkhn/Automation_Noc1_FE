@@ -2,6 +2,7 @@ import React from "react";
 import { Tabs } from "antd";
 import TacDongTram from "../TacDongTram/TacDongTram";
 import LichSuCR from "../LichSuCR/LichSuCR";
+import CellXau from "../CellXau/CellXau";
 
 const R012Tabs: React.FC = () => {
   const items = [
@@ -14,6 +15,13 @@ const R012Tabs: React.FC = () => {
       key: "tab2",
       label: "Lịch sử CR",
       children: <LichSuCR />,
+    },
+    {
+      key: "tab3",
+      label: "Cell xấu",
+      // Module S006-CELL, goi truc tiep BE ben SOC (10.155.43.210:8000/api/cell) qua apiConfig.tsx
+      // rieng cua no, KHONG qua BE cua R012 - xem CellXau/apiConfig.tsx
+      children: <CellXau />,
     },
   ];
 
