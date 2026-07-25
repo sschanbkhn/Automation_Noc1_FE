@@ -24,6 +24,8 @@ import CellQosHistoryChart from "./XemTruocAnhHuong/CellQosHistoryChart";
 import CrResultsByDirection from "./KetQuaCR/CrResultsByDirection";
 import SseProgressLog from "./KetQuaCR/SseProgressLog";
 import { StationItem, PreviewCrResponse } from "../types";
+// token mau xanh duong dung chung toan module - dong bo mau header Collapse (Viec 1) voi phan con lai
+import { R012_COLORS } from "../theme";
 // goi useSseStream DUY NHAT 1 LAN o cap TacDongTram nay, KHONG goi rieng trong tung component con cua Zone C -
 // neu goi nhieu lan se mo nhieu ket noi EventSource trung lap toi CUNG 1 session_id, gay lang phi tai nguyen
 // va co the loi (nhieu socket cung tranh nhau doc/dong 1 session tren BE)
@@ -154,7 +156,29 @@ const TacDongTram: React.FC = () => {
             truoc tien), cac muc con lai thu gon - NOC tu bam mo muc nao can xem, tranh trang qua dai.
             Thu tu giu DUNG bo tri cu: Map -> Bang tram -> Bang cell bi anh huong -> Bang cell chay CR ->
             Chart QoS (cac muc bang/chart CHI xuat hien SAU KHI co previewData, giong logic an/hien cu) */}
-        <Collapse defaultActiveKey={["map"]} items={zoneBCollapseItems} />
+        {/* Viec 1 (24072026, xac nhan voi user): header Collapse dong bo mau xanh duong toan module - dung
+            className "r012-collapse" + selector 2 lop de TANG DO SPECIFICITY hon rule goc cua antd, THANG
+            cascade thong thuong, KHONG can !important (giong quy uoc EvaluationDetail.tsx/cac bang trong module) */}
+        <style>{`
+          .r012-collapse.ant-collapse .ant-collapse-header {
+            background-color: ${R012_COLORS.tableRowAlt};
+          }
+          .r012-collapse.ant-collapse .ant-collapse-header .ant-collapse-header-text {
+            color: ${R012_COLORS.primaryDark};
+            font-weight: 700;
+          }
+          .r012-collapse.ant-collapse .ant-collapse-expand-icon {
+            color: ${R012_COLORS.primary};
+          }
+          .r012-collapse.ant-collapse,
+          .r012-collapse.ant-collapse .ant-collapse-item {
+            border-color: ${R012_COLORS.primaryLight};
+          }
+          .r012-collapse.ant-collapse .ant-collapse-item-active > .ant-collapse-header {
+            background-color: ${R012_COLORS.primaryPale};
+          }
+        `}</style>
+        <Collapse className="r012-collapse" defaultActiveKey={["map"]} items={zoneBCollapseItems} />
       </div>
       {/* CHI render zone-c khi da co activeCrSessionId (da trigger CR) - truoc day zone-c luon hien du
           chua trigger, dan den CA CrResultsByDirection LAN SseProgressLog cung hien text "Chua co phien CR..."

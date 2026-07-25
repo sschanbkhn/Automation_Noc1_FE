@@ -186,7 +186,33 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
         body: { padding: "20px 24px" },
       }}
     >
-      <Collapse defaultActiveKey={["thong-tin-tram"]} items={collapseItems} />
+      {/* Viec 1 (24072026, xac nhan voi user): header Collapse dong bo mau xanh duong toan module thay vi
+          nen xam nhat #FAFAFA mac dinh cua antd. Dung className "r012-collapse" + selector 2 lop
+          (.r012-collapse.ant-collapse ...) de TANG DO SPECIFICITY hon rule goc cua antd (chi 1 lop class),
+          THANG bang cascade thong thuong - KHONG can !important (giong quy uoc da dung o cac bang trong
+          module, xem StationSearchGrid.tsx: "khong dung !important") */}
+      <style>{`
+        .r012-collapse.ant-collapse .ant-collapse-header {
+          background-color: ${R012_COLORS.tableRowAlt};
+        }
+        .r012-collapse.ant-collapse .ant-collapse-header .ant-collapse-header-text {
+          color: ${R012_COLORS.primaryDark};
+          font-weight: 700;
+        }
+        .r012-collapse.ant-collapse .ant-collapse-expand-icon {
+          color: ${R012_COLORS.primary};
+        }
+        .r012-collapse.ant-collapse,
+        .r012-collapse.ant-collapse .ant-collapse-item {
+          border-color: ${R012_COLORS.primaryLight};
+        }
+        /* muc dang MO (active) dam mau hon 1 chut de phan biet voi muc dang dong - tuy chon theo yeu cau,
+           dung primaryPale (dam hon tableRowAlt) da co san trong theme.ts, khong bia mau moi */
+        .r012-collapse.ant-collapse .ant-collapse-item-active > .ant-collapse-header {
+          background-color: ${R012_COLORS.primaryPale};
+        }
+      `}</style>
+      <Collapse className="r012-collapse" defaultActiveKey={["thong-tin-tram"]} items={collapseItems} />
     </Card>
   );
 };
