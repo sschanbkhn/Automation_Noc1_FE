@@ -95,6 +95,7 @@ import HomeSleepingCell from "components/RNOC1/R005-SleepingCell/R005HomeSleepin
 // import Sleeping from "components/RNOC1/R005-SleepingCell/R005HomeSleepingCell";
 import HomePRBLoadBalancing from "components/RNOC1/R003-PRBLoadBalancing/R003HomePRBLoadBalancing";
 import Home5GSRANPnPDeclaration from "components/RNOC1/R007-5GSRANPnPDeclaration/R007Home5GSRANPnPDeclaration";
+import HomeNQMProactiveCC4G from "components/RNOC1/R012-NQMProactiveCC-4G/R012HomeNQMProactiveCC4G";
 // RNOC1
 // duong dan den file
 //========================================================================
@@ -269,6 +270,9 @@ const MainPageRoute = (props: Props) => {
 
       case "R0075GSRANPnPDeclaration": // ← Match với code trong menu
              return <Home5GSRANPnPDeclaration />;
+
+      case "R012NQMProactiveCC4G": // Match voi code trong menu_config.json
+             return <HomeNQMProactiveCC4G />;
       // ket thuc RNOC1
       //========================================================================
       //========================================================================
