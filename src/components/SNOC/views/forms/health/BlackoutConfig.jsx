@@ -102,6 +102,7 @@ const BlackoutConfigPage = () => {
   const [form,                   setForm]                   = useState(DEFAULT_FORM);
   const [selectedPlatformOption, setSelectedPlatformOption] = useState(null);
   const [selectedDeviceOption,   setSelectedDeviceOption]   = useState(null);
+  const [isCloning,              setIsCloning]              = useState(false);
   const isEditingRef = useRef(false);
 
   // ── Effects ──────────────────────────────────────────────────────────
@@ -151,6 +152,7 @@ const BlackoutConfigPage = () => {
   const openCreate = () => {
     isEditingRef.current = false;
     setEditingId(null);
+    setIsCloning(false);
     setForm({
       ...DEFAULT_FORM,
       department: !isAdmin ? (userClaims?.department_id ?? "") : "",
@@ -164,6 +166,39 @@ const BlackoutConfigPage = () => {
   const openEdit = (r) => {
     isEditingRef.current = true;
     setEditingId(r.id);
+    setIsCloning(false);
+    const deptObj  = departments.find(d => d.name === r.department);
+    const groupObj = groups.find(g => g.name === r.group);
+    setForm({
+      scope:            r.scope            || "PLATFORM",
+      platform:         r.platform         || "",
+      device:           r.device           || "",
+      type:             r.type             || "DAILY_WINDOW",
+      enabled:          !!r.enabled,
+      reason:           r.reason           || "",
+      start_time:       r.start_time       || "",
+      end_time:         r.end_time         || "",
+      days_of_week:     r.days_of_week     || [],
+      duration_minutes: r.duration_minutes || 30,
+      pause_until:      r.pause_until
+        ? new Date(r.pause_until).toISOString().slice(0, 16) : "",
+      department: deptObj?.id  || "",
+      group:      groupObj?.id || "",
+    });
+    setSelectedPlatformOption(
+      r.platform ? { label: r.platform, value: r.platform } : null
+    );
+    setSelectedDeviceOption(
+      r.device ? { label: r.device, value: r.device } : null
+    );
+    if (r.platform) dispatch(fetchDevicesByPlatform(r.platform));
+    setShowModal(true);
+  };
+
+  const openClone = (r) => {
+    isEditingRef.current = true;
+    setEditingId(null);
+    setIsCloning(true);
     const deptObj  = departments.find(d => d.name === r.department);
     const groupObj = groups.find(g => g.name === r.group);
     setForm({
@@ -269,7 +304,7 @@ const BlackoutConfigPage = () => {
       <Modal show={showModal} onHide={() => setShowModal(false)} size="lg" centered>
         <Modal.Header closeButton>
           <Modal.Title>
-            {editingId ? "Sửa Blackout" : "Tạo Blackout mới"}
+            {editingId ? "Sửa Blackout" : isCloning ? "Clone Blackout" : "Tạo Blackout mới"}
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -509,7 +544,7 @@ const BlackoutConfigPage = () => {
                       {isAdmin && <th>Creator</th>}
                       {isAdmin && <th>Updater</th>}
                       <th style={{ whiteSpace: "nowrap" }}>Tạo lúc</th>
-                      <th style={{ width: 130 }}>Hành động</th>
+                      <th style={{ width: 170 }}>Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -603,6 +638,9 @@ const BlackoutConfigPage = () => {
                                 <Button size="sm" variant="outline-primary"
                                   onClick={() => openEdit(r)} disabled={saving}
                                   title="Sửa">✏️</Button>
+                                <Button size="sm" variant="outline-secondary"
+                                  onClick={() => openClone(r)} disabled={saving}
+                                  title="Clone">📋</Button>
                                 <Button size="sm"
                                   variant={r.enabled ? "outline-secondary" : "outline-success"}
                                   onClick={() => dispatch(toggleBlackout({ id: r.id, enabled: !r.enabled }))}

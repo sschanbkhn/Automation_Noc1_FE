@@ -2,16 +2,16 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import snocApi from "../../api/snocApiWithAutoToken";
 import { showTemporaryAlert } from "../Alert/alertSlice";
 
+// HLR/CUDB có lệnh chờ cứng theo thiết kế (vài phút/lệnh) nên backend luôn
+// queue Celery async và trả job_id ngay (202) — không còn chờ kết quả trong
+// cùng request HTTP. Client phải poll fetchDhttHcSimpleJobStatus cho tới khi
+// job đạt trạng thái "done"/"failed"/"locked".
 export const runDhttHcSimple = createAsyncThunk(
   "dhttHcSimple/runManual",
   async ({ platform, node_names }, { dispatch, rejectWithValue }) => {
     try {
       const res = await snocApi.post("/nornirps/ManualDhttHcSimpleView/", { platform, node_names });
-      dispatch(showTemporaryAlert({
-        message: `✅ Hoàn thành HC Simple manual: ${platform}`,
-        type: "success",
-      }));
-      return res.data;
+      return res.data; // { job_id, status: "queued", poll_url, ... }
     } catch (error) {
       const status = error?.response?.status;
       const msg =
@@ -20,6 +20,18 @@ export const runDhttHcSimple = createAsyncThunk(
           : error?.response?.data?.error || "Lỗi khi chạy HC Simple manual";
       dispatch(showTemporaryAlert({ message: msg, type: "error" }));
       return rejectWithValue(msg);
+    }
+  }
+);
+
+export const fetchDhttHcSimpleJobStatus = createAsyncThunk(
+  "dhttHcSimple/fetchJobStatus",
+  async (jobId, { rejectWithValue }) => {
+    try {
+      const res = await snocApi.get(`/nornirps/dhtt-hc-simple/job/${jobId}/`);
+      return res.data; // { status, result, error, ... }
+    } catch (error) {
+      return rejectWithValue(error?.response?.data?.error || error.message);
     }
   }
 );
@@ -48,7 +60,9 @@ export const fetchDhttHcSimpleHistory = createAsyncThunk(
 const dhttHcSimpleSlice = createSlice({
   name: "dhttHcSimple",
   initialState: {
-    running:        false,
+    running:        false, // đang submit job hoặc đang poll chờ kết quả
+    jobId:          null,
+    jobStatus:      null,  // queued | pending | running | done | failed | locked
     manualResult:   null,
     history:        [],
     historyCount:   0,
@@ -56,19 +70,47 @@ const dhttHcSimpleSlice = createSlice({
     loading:        false,
     error:          null,
   },
-  reducers: {},
+  reducers: {
+    resetDhttHcSimpleJob(state) {
+      state.running      = false;
+      state.jobId        = null;
+      state.jobStatus    = null;
+      state.manualResult = null;
+      state.error        = null;
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(runDhttHcSimple.pending, (state) => {
         state.running      = true;
+        state.jobId        = null;
+        state.jobStatus    = null;
         state.manualResult = null;
+        state.error        = null;
       })
       .addCase(runDhttHcSimple.fulfilled, (state, action) => {
-        state.running      = false;
-        state.manualResult = action.payload;
+        state.jobId     = action.payload?.job_id || null;
+        state.jobStatus = action.payload?.status || "queued";
+        // running vẫn giữ true — sẽ chỉ tắt khi job poll xong (done/failed/locked)
       })
-      .addCase(runDhttHcSimple.rejected, (state) => {
+      .addCase(runDhttHcSimple.rejected, (state, action) => {
         state.running = false;
+        state.error   = action.payload || "Lỗi khi chạy HC Simple manual";
+      })
+      .addCase(fetchDhttHcSimpleJobStatus.fulfilled, (state, action) => {
+        const job = action.payload || {};
+        state.jobStatus = job.status || state.jobStatus;
+        if (job.status === "done") {
+          state.running      = false;
+          state.manualResult = job.result || null;
+        } else if (["failed", "locked", "cancelled"].includes(job.status)) {
+          state.running = false;
+          state.error   = job.error || `Job ${job.status}`;
+        }
+      })
+      .addCase(fetchDhttHcSimpleJobStatus.rejected, (state, action) => {
+        state.running = false;
+        state.error   = action.payload || "Không lấy được trạng thái job";
       })
       .addCase(fetchDhttHcSimpleHistory.pending, (state) => {
         state.historyLoading = true;
@@ -86,4 +128,5 @@ const dhttHcSimpleSlice = createSlice({
   },
 });
 
+export const { resetDhttHcSimpleJob } = dhttHcSimpleSlice.actions;
 export default dhttHcSimpleSlice.reducer;

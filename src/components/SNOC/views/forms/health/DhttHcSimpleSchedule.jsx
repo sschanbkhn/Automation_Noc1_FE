@@ -148,6 +148,23 @@ const DhttHcSimpleSchedule = () => {
     setShowModal(true);
   }, [departments, groups, dispatch]);
 
+  const openClone = useCallback((task) => {
+    isEditingRef.current = true;
+    setEditingTask(null);
+    const deptObj  = departments.find(d => d.name === task.department);
+    const groupObj = groups.find(g => g.name === task.owner_group);
+    setForm({
+      name: `${task.name}_clone`, cron: task.cron || "",
+      department: deptObj?.id || "", group: groupObj?.id || "",
+      platform: task.platform || "", node_names: task.node_names || [],
+    });
+    const platVal = task.platform || null;
+    setSelectedPlatform(platVal ? { label: platVal, value: platVal } : null);
+    setSelectedDevices((task.node_names || []).map(d => ({ label: d, value: d })));
+    if (platVal) dispatch(fetchDevicesByPlatform(platVal));
+    setShowModal(true);
+  }, [departments, groups, dispatch]);
+
   const openDelete = useCallback((task) => { setDeletingTask(task); setShowDeleteModal(true); }, []);
 
   const handleToggle = useCallback((task) => {
@@ -211,10 +228,14 @@ const DhttHcSimpleSchedule = () => {
       <Modal show={showModal} onHide={() => setShowModal(false)} size="xl" centered>
         <Modal.Header closeButton>
           <Modal.Title>
-            {editingTask ? `Sửa lịch: ${editingTask.name}` : "Tạo lịch HC Simple"}
+            {editingTask
+              ? `Sửa lịch: ${editingTask.name}`
+              : form.name.endsWith("_clone")
+                ? "Clone lịch HC Simple"
+                : "Tạo lịch HC Simple"}
           </Modal.Title>
         </Modal.Header>
-        <Modal.Body>
+        <Modal.Body style={{ overflowY: "visible" }}>
           <Row className="g-2 mb-2">
             <Col md={6}>
               <Form.Label className="fw-bold">Department</Form.Label>
@@ -354,7 +375,7 @@ const DhttHcSimpleSchedule = () => {
                 <th>Tóm tắt</th>
                 <th>Lần chạy cuối</th>
                 {isAdmin && <th>Group</th>}
-                <th style={{ width: 100 }}>Hành động</th>
+                <th style={{ width: 140 }}>Hành động</th>
               </tr>
             </thead>
             <tbody>
@@ -401,6 +422,7 @@ const DhttHcSimpleSchedule = () => {
                       {canAct ? (
                         <div className="d-flex gap-1">
                           <Button size="sm" variant="outline-warning" onClick={() => openEdit(row)}>✏️</Button>
+                          <Button size="sm" variant="outline-secondary" onClick={() => openClone(row)} title="Clone lịch này">📋</Button>
                           <Button size="sm" variant="outline-danger" onClick={() => openDelete(row)}>🗑️</Button>
                         </div>
                       ) : (

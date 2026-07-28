@@ -1,16 +1,23 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { saveAs } from "file-saver";
 import * as XLSX from "xlsx";
 import {
-  Badge, Button, Card, Col, Form,
+  Alert, Badge, Button, Card, Col, Form,
   ProgressBar, Row, Spinner, Table,
 } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import Select from "react-select";
 
-import { runDhttHcSimple } from "../../../redux/Healthcheck/dhttHcSimpleSlice";
+import {
+  fetchDhttHcSimpleJobStatus,
+  resetDhttHcSimpleJob,
+  runDhttHcSimple,
+} from "../../../redux/Healthcheck/dhttHcSimpleSlice";
 import { fetchDevicesByPlatform, fetchPlatforms } from "../../../redux/Healthcheck/platformDeviceSlice";
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
+
+const POLL_INTERVAL  = 4000;  // ms
+const POLL_MAX_COUNT = 450;   // 4s × 450 ≈ 30 phút — đủ headroom cho HLR/CUDB
 
 const SELECT_STYLES = {
   valueContainer: (b) => ({ ...b, maxHeight: "38px", overflowX: "auto", flexWrap: "nowrap" }),
@@ -30,11 +37,47 @@ const DhttHcSimple = () => {
 
   const { platforms = [], devices = [], loadingDevices = false } =
     useSelector((s) => s.platformDevice || {});
-  const { running = false, manualResult = null } =
+  const { running = false, manualResult = null, jobId = null, jobStatus = null, error = null } =
     useSelector((s) => s.dhttHcSimple || {});
 
   const [selectedPlatform, setSelectedPlatform] = useState(null);
   const [selectedDevices,  setSelectedDevices]  = useState([]);
+  const [pollTimedOut, setPollTimedOut] = useState(false);
+
+  const pollRef      = useRef(null);
+  const pollCountRef = useRef(0);
+
+  const stopPolling = useCallback(() => {
+    clearInterval(pollRef.current);
+    pollRef.current = null;
+  }, []);
+
+  const pollJob = useCallback((id) => {
+    dispatch(fetchDhttHcSimpleJobStatus(id)).then((action) => {
+      const status = action.payload?.status;
+      if (["done", "failed", "locked", "cancelled"].includes(status)) {
+        stopPolling();
+        return;
+      }
+      pollCountRef.current += 1;
+      if (pollCountRef.current >= POLL_MAX_COUNT) {
+        setPollTimedOut(true);
+        stopPolling();
+      }
+    });
+  }, [dispatch, stopPolling]);
+
+  useEffect(() => {
+    if (jobId && running && !pollRef.current) {
+      pollCountRef.current = 0;
+      setPollTimedOut(false);
+      pollJob(jobId);
+      pollRef.current = setInterval(() => pollJob(jobId), POLL_INTERVAL);
+    }
+    if (!running) stopPolling();
+  }, [jobId, running, pollJob, stopPolling]);
+
+  useEffect(() => () => stopPolling(), [stopPolling]);
 
   useEffect(() => { dispatch(fetchPlatforms()); }, [dispatch]);
 
@@ -66,6 +109,8 @@ const DhttHcSimple = () => {
   const handleRun = () => {
     if (!selectedPlatform) return alert("Vui lòng chọn platform");
     if (!selectedDevices.length) return alert("Vui lòng chọn ít nhất 1 thiết bị");
+    dispatch(resetDhttHcSimpleJob());
+    setPollTimedOut(false);
     dispatch(runDhttHcSimple({
       platform:   selectedPlatform.value,
       node_names: selectedDevices.map(d => d.value),
@@ -182,11 +227,26 @@ const DhttHcSimple = () => {
               </Row>
               {running && (
                 <div className="mt-3">
-                  <ProgressBar animated now={100} label="Đang kết nối và thu thập dữ liệu..." />
+                  <ProgressBar animated now={100} label={
+                    jobStatus === "queued" ? "Đã xếp hàng, chờ worker xử lý..." :
+                    jobStatus === "running" ? "Đang kết nối và thu thập dữ liệu (có thể mất vài phút với HLR/CUDB)..." :
+                    "Đang chạy..."
+                  } />
                 </div>
               )}
             </Card.Body>
           </Card>
+
+          {/* ── Lỗi / timeout ────────────────────────────────────── */}
+          {!running && pollTimedOut && (
+            <Alert variant="warning">
+              ⏱️ Đã poll quá thời gian tối đa ({Math.round(POLL_MAX_COUNT * POLL_INTERVAL / 60000)} phút) mà job chưa
+              hoàn thành. Job có thể vẫn đang chạy ở backend — kiểm tra lại History sau ít phút.
+            </Alert>
+          )}
+          {!running && !pollTimedOut && error && (
+            <Alert variant="danger">❌ {typeof error === "string" ? error : JSON.stringify(error)}</Alert>
+          )}
 
           {/* ── Bảng kết quả ─────────────────────────────────────── */}
           {!running && outputs.length > 0 && (
