@@ -24,7 +24,9 @@ import {
 export const getStations = async (params?: StationsQueryParams): Promise<StationListResponse> => {
   try {
     // r012Request da co interceptor tra ve response.data, nen ket qua o day chinh la body JSON that
-    const data: any = await r012Request.get('/stations', { params });
+    // endpoint nay khong goi CDS (chi doc du lieu tram da dong bo san) nen giu timeout ngan hon
+    // 30s thay vi dung mac dinh 60s cua ca instance (mac dinh danh cho cac endpoint co goi CDS)
+    const data: any = await r012Request.get('/stations', { params, timeout: 30000 });
     return data as StationListResponse;
   } catch (error) {
     // loi da duoc interceptor cua r012Request hien Notification, o day ném lai de hook goi ham nay tu quyet dinh xu ly tiep
@@ -36,7 +38,9 @@ export const getStations = async (params?: StationsQueryParams): Promise<Station
 // chi goi API va tra ve dung raw response theo type TriggerCrResponse
 export const triggerCr = async (payload: TriggerCrRequest): Promise<TriggerCrResponse> => {
   try {
-    const data: any = await r012Request.post('/cr/trigger', payload);
+    // BE tra 202 NGAY khi trigger (khong block cho SSH chay het, chi mang session_id de FE
+    // theo doi tiep qua SSE), khong goi CDS dong bo nen giu timeout ngan hon
+    const data: any = await r012Request.post('/cr/trigger', payload, { timeout: 30000 });
     return data as TriggerCrResponse;
   } catch (error) {
     throw error;
@@ -47,7 +51,8 @@ export const triggerCr = async (payload: TriggerCrRequest): Promise<TriggerCrRes
 // chi goi API va tra ve dung raw response theo type SessionListResponse
 export const getSessions = async (params?: SessionsQueryParams): Promise<SessionListResponse> => {
   try {
-    const data: any = await r012Request.get('/sessions', { params });
+    // endpoint nay khong goi CDS (chi doc lich su session da luu trong DB) nen giu timeout ngan hon
+    const data: any = await r012Request.get('/sessions', { params, timeout: 30000 });
     return data as SessionListResponse;
   } catch (error) {
     throw error;
@@ -60,7 +65,11 @@ export const getSessions = async (params?: SessionsQueryParams): Promise<Session
 // chi goi API va tra ve dung raw response theo type PreviewCrResponse
 export const getPreview = async (payload: TriggerCrRequest): Promise<PreviewCrResponse> => {
   try {
-    const data: any = await r012Request.post('/cr/preview', payload);
+    // endpoint nang nhat: goi CDS (gw-oneoss cell/neighbors) dong bo de tinh cells_bi_anh_huong,
+    // CDS phan hoi khong on dinh (luc nhanh luc cham, co luc qua 15s) nen dung du 60s (mac dinh
+    // cua r012Request) thay vi rut ngan - khai bao lai timeout tuong minh o day de ro rang y do,
+    // tranh nham lan neu sau nay co ai doi mac dinh cua instance
+    const data: any = await r012Request.post('/cr/preview', payload, { timeout: 60000 });
     return data as PreviewCrResponse;
   } catch (error) {
     throw error;
@@ -84,7 +93,8 @@ export const getSessionDetail = async (sessionId: number): Promise<SessionDetail
 // BE khai bao schema additionalProperties true nen giu nguyen kieu QosMetrics (Record), khong bia field
 export const getQos = async (cellName: string): Promise<QosMetrics> => {
   try {
-    const data: any = await r012Request.get(`/qos/${cellName}`);
+    // endpoint nay khong goi CDS (doc so lieu QoS da luu trong DB) nen giu timeout ngan hon
+    const data: any = await r012Request.get(`/qos/${cellName}`, { timeout: 30000 });
     return data as QosMetrics;
   } catch (error) {
     throw error;
@@ -101,7 +111,8 @@ export const getQosHistory = async (
   params: QosHistoryQueryParams = {}
 ): Promise<QosHistoryResponse> => {
   try {
-    const data: any = await r012Request.get(`/qos/${cellName}`, { params });
+    // endpoint nay khong goi CDS (doc lich su QoS da luu trong DB) nen giu timeout ngan hon
+    const data: any = await r012Request.get(`/qos/${cellName}`, { params, timeout: 30000 });
     return data as QosHistoryResponse;
   } catch (error) {
     throw error;
