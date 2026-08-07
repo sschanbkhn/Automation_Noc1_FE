@@ -280,6 +280,25 @@ export interface QosHistoryQueryParams {
   to?: string; // "YYYY-MM-DD" - PHAI di kem "from"
 }
 
+// dung cho POST /api/v1/phieu (KHOI 4b/5, xuat phieu SaveCellClm cho 1 cell KHONG DAT) - khop CHINH XAC
+// api/schemas/phieu_schemas.py::XuatPhieuResponse phia BE (KHOI 4a/5, doc source truc tiep, khong doan)
+export interface CtsResponse {
+  isError: boolean | null;
+  code: string | null;
+  message: string | null;
+  data: unknown; // hinh dang CHUA XAC NHAN tu BE (TU GIA DINH, xem application/xuat_phieu_use_case.py::_extract_phieu_id)
+}
+
+export interface XuatPhieuResponse {
+  // SUCCESS/FAILED/DAT_KHONG_XUAT - xem domain/ports/inbound/use_case_ports.py::XuatPhieuResult phia BE
+  trang_thai: string;
+  phieu_id: string | null;
+  // null khi DAT_KHONG_XUAT hoac da xuat truoc do (KHONG goi lai CTS lan nay) - CHI co gia tri khi THAT SU
+  // goi CTS trong lan nay (FE dung de phan biet "da xuat truoc" voi "vua xuat xong", ca 2 deu trang_thai=SUCCESS)
+  cts_response: CtsResponse | null;
+  message: string | null;
+}
+
 // dung cho POST /api/v1/jobs/sync-rims - BE khai bao response la object additionalProperties true, chua co field co dinh
 export type SyncRimsResponse = Record<string, unknown>;
 

@@ -13,6 +13,7 @@ import {
   QosMetrics,
   QosHistoryResponse,
   QosHistoryQueryParams,
+  XuatPhieuResponse,
   SyncRimsResponse,
   SyncNetactResponse,
   EvaluateCrResponse,
@@ -102,6 +103,18 @@ export const getQosHistory = async (
   try {
     const data: any = await r012Request.get(`/qos/${cellName}`, { params });
     return data as QosHistoryResponse;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// ham goi POST /api/v1/phieu - xuat phieu SaveCellClm cho 1 cell (KHOI 4b/5). WRITE API tao phieu THAT tren
+// TTS (BE POST that, dry_run=False - xem KHOI 4a/5) - KHONG duoc goi lai tu dong/retry o tang service, cho
+// component tu kiem soat (disable nut trong luc goi, xem QosEvaluationTable.tsx::handleXuatPhieu)
+export const xuatPhieu = async (sessionId: number, cellName: string): Promise<XuatPhieuResponse> => {
+  try {
+    const data: any = await r012Request.post('/phieu', { session_id: sessionId, cell_name: cellName });
+    return data as XuatPhieuResponse;
   } catch (error) {
     throw error;
   }
