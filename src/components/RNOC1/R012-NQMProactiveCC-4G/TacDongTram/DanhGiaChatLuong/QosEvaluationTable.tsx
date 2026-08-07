@@ -16,14 +16,7 @@ import { Dayjs } from "dayjs";
 import { SessionAffectedCellItem } from "../../types";
 import { R012_COLORS } from "../../theme";
 import { SortableHeaderCell } from "../../common/SortableHeaderCell";
-import {
-  CellEvalRow,
-  QosConclusion,
-  QosActionNeeded,
-  QOS_BAD_DAY_THRESHOLD,
-  evaluateAllAffectedCells,
-  resolveQosWindow,
-} from "./qosEvaluation";
+import { CellEvalRow, QosConclusion, evaluateAllAffectedCells, resolveQosWindow } from "./qosEvaluation";
 
 // dinh dang timestamp DDMMYYYY_HHMM cho ten file export - dung DUNG quy uoc da dung o cac bang preview khac
 function formatTimestampForFileName(date: Date): string {
@@ -36,31 +29,19 @@ function formatTimestampForFileName(date: Date): string {
   return `${dd}${mm}${yyyy}_${hh}${min}`;
 }
 
-// Viec 4: 2 tieu chi DOC LAP, moi tieu chi 1 bo Tag/filter rieng - KHONG con gop chung 1 "trang thai" nhu ban cu
+// SUA (yeu cau truc tiep user, khop tieu chi MOI phia BE) - BO "ACTION_TAG"/"ACTION_FILTER_OPTIONS" rieng
+// (Tieu chi 2 "Can xu ly" cu) - chi con 1 Tag/filter "Ket luan" DUY NHAT, dua tren chenh lech TB truoc/sau.
 const CONCLUSION_TAG: Record<QosConclusion, { label: string; color: string }> = {
   PASS: { label: "DAT", color: "green" },
   FAIL: { label: "KHONG DAT", color: "red" },
   INSUFFICIENT: { label: "Chua du du lieu", color: "default" },
 };
 
-const ACTION_TAG: Record<QosActionNeeded, { label: string; color: string }> = {
-  YES: { label: "Can xu ly", color: "red" },
-  NO: { label: "Khong can xu ly", color: "green" },
-  INSUFFICIENT: { label: "Chua du du lieu", color: "default" },
-};
-
-// "" nghia la "Tat ca" - khong loc theo tieu chi do, giong quy uoc STATUS_FILTER_OPTIONS o SessionHistoryList.tsx
+// "" nghia la "Tat ca" - khong loc theo Ket luan, giong quy uoc STATUS_FILTER_OPTIONS o SessionHistoryList.tsx
 const CONCLUSION_FILTER_OPTIONS = [
   { value: "", label: "Tat ca ket luan" },
   { value: "PASS", label: "DAT" },
   { value: "FAIL", label: "KHONG DAT" },
-  { value: "INSUFFICIENT", label: "Chua du du lieu" },
-];
-
-const ACTION_FILTER_OPTIONS = [
-  { value: "", label: "Tat ca (can xu ly)" },
-  { value: "YES", label: "Can xu ly" },
-  { value: "NO", label: "Khong can xu ly" },
   { value: "INSUFFICIENT", label: "Chua du du lieu" },
 ];
 
@@ -72,7 +53,7 @@ interface QosEvaluationTableProps {
   crDateGmt7: Dayjs;
 }
 
-// bang danh gia QoS cho TOAN BO affected_cells cua session, theo 2 TIEU CHI DOC LAP (Viec 4). NUT bam thu
+// bang danh gia QoS cho TOAN BO affected_cells cua session, theo 1 TIEU CHI DUY NHAT (khop BE). NUT bam thu
 // cong (khong tu chay khi mount) vi co the phai goi TOI 47 request QoS (xem qosEvaluation.ts::
 // evaluateAllAffectedCells, gioi han 5 request dong thoi/lan) - de NOC chu dong quyet dinh luc nao can
 // chay, tranh ton tai nguyen moi lan panel nay duoc render/mo lai
@@ -80,10 +61,8 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
   const [rows, setRows] = useState<CellEvalRow[] | null>(null); // null = chua chay danh gia lan nao
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [progress, setProgress] = useState<{ done: number; total: number }>({ done: 0, total: 0 });
-  // 2 bo loc DOC LAP - NOC co the loc theo Ket luan VA theo Can xu ly CUNG LUC (vd xem cell "DAT" nhung
-  // "Can xu ly" - truong hop hiem nhung co the xay ra vi 2 tieu chi tinh tren 2 tap du lieu khac nhau)
+  // CHI con 1 bo loc (Ket luan) - da bo "Can xu ly" rieng (gop lam 1 tieu chi duy nhat, khop BE)
   const [conclusionFilter, setConclusionFilter] = useState<string>("");
-  const [actionFilter, setActionFilter] = useState<string>("");
   const [sorting, setSorting] = useState<SortingState>([]);
   // Viec 3: phan trang mac dinh 5 dong/trang (giong 3 bang preview AffectedStationsTable/AffectedCellsTable/
   // CrCellsTable da lam) - bang nay co the toi 47 dong, chua co phan trang truoc day se rat dai
@@ -102,16 +81,14 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
 
   const filteredRows = useMemo(() => {
     if (rows === null) return [];
-    return rows.filter(
-      (r) => (!conclusionFilter || r.conclusion === conclusionFilter) && (!actionFilter || r.actionNeeded === actionFilter)
-    );
-  }, [rows, conclusionFilter, actionFilter]);
+    return rows.filter((r) => !conclusionFilter || r.conclusion === conclusionFilter);
+  }, [rows, conclusionFilter]);
 
   // reset ve trang 1 khi doi bo loc/chay lai danh gia - tranh dung o trang cu co the vuot qua so trang cua
   // danh sach da loc moi (vd dang o trang 5 roi loc con 2 dong thi se khong thay gi)
   useEffect(() => {
     setPagination((p) => ({ ...p, pageIndex: 0 }));
-  }, [conclusionFilter, actionFilter, rows]);
+  }, [conclusionFilter, rows]);
 
   const columns = useMemo(
     () => [
@@ -149,14 +126,6 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
           return v !== null ? v.toFixed(2) : "-";
         },
       }),
-      columnHelper.accessor("badDaysAfter", {
-        header: `So ngay khong dat (QoS<=${QOS_BAD_DAY_THRESHOLD})`,
-        // hien dang "X/7" de NOC biet NGAY vi sao Ket luan la DAT/KHONG DAT, khong phai chi hien so tron
-        cell: (info) => {
-          const v = info.getValue();
-          return v !== null ? `${v}/7 ngay` : "-";
-        },
-      }),
       columnHelper.accessor("conclusion", {
         header: "Ket luan",
         // sort theo GIA TRI GOC "PASS"/"FAIL"/"INSUFFICIENT" (khong phai nhan tieng Viet hien thi) - don gian,
@@ -164,13 +133,6 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
         cell: (info) => {
           const v = info.getValue();
           return <Tag color={CONCLUSION_TAG[v].color}>{CONCLUSION_TAG[v].label}</Tag>;
-        },
-      }),
-      columnHelper.accessor("actionNeeded", {
-        header: "Can xu ly",
-        cell: (info) => {
-          const v = info.getValue();
-          return <Tag color={ACTION_TAG[v].color}>{ACTION_TAG[v].label}</Tag>;
         },
       }),
     ],
@@ -188,8 +150,8 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
     getSortedRowModel: getSortedRowModel(),
   });
 
-  // export theo DUNG danh sach dang hien (da loc theo ca 2 bo loc) - NOC loc "Can xu ly" roi export se ra
-  // dung file chi chua cell can xu ly, hop ly hon export ca 47 cell moi lan
+  // export theo DUNG danh sach dang hien (da loc theo Ket luan) - NOC loc "KHONG DAT" roi export se ra dung
+  // file chi chua cell khong dat, hop ly hon export ca 47 cell moi lan
   const handleExportExcel = () => {
     const exportRows = filteredRows.map((r) => ({
       cell_name: r.cell_name,
@@ -197,9 +159,7 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
       tb_truoc: r.avgBefore ?? "",
       tb_sau: r.avgAfter ?? "",
       chenh_lech: r.diff ?? "",
-      so_ngay_khong_dat: r.badDaysAfter !== null ? `${r.badDaysAfter}/7` : "-",
       ket_luan: CONCLUSION_TAG[r.conclusion].label,
-      can_xu_ly: ACTION_TAG[r.actionNeeded].label,
     }));
     const worksheet = XLSX.utils.json_to_sheet(exportRows);
     const workbook = XLSX.utils.book_new();
@@ -230,12 +190,6 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
                   options={CONCLUSION_FILTER_OPTIONS}
                   style={{ width: 180 }}
                 />
-                <Select
-                  value={actionFilter}
-                  onChange={setActionFilter}
-                  options={ACTION_FILTER_OPTIONS}
-                  style={{ width: 180 }}
-                />
                 <Button onClick={handleExportExcel} disabled={filteredRows.length === 0}>
                   Export Excel
                 </Button>
@@ -256,9 +210,9 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
           {rows !== null && !isRunning && (
             <>
               <style>{`
-                /* Viec 4: BO "width: 100%" (ban cu) - ep bang co dung 100% chieu rong container se lam
-                   cac cot bi BOP lai qua nho khi co qua nhieu cot (8 cot), MAU THUAN voi div overflow-x:auto
-                   vua boc ben ngoai (muon bang GIU DUNG do rong tu nhien theo noi dung roi CUON, khong bop) */
+                /* BO "width: 100%" (ban cu) - ep bang co dung 100% chieu rong container se lam cac cot bi
+                   BOP lai qua nho, MAU THUAN voi div overflow-x:auto vua boc ben ngoai (muon bang GIU DUNG
+                   do rong tu nhien theo noi dung roi CUON, khong bop) */
                 .r012-qos-eval-table { border-collapse: collapse; white-space: nowrap; }
                 .r012-qos-eval-table thead th {
                   text-align: left;
@@ -279,11 +233,10 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
               {filteredRows.length === 0 ? (
                 <div>Khong co cell nao khop bo loc dang chon.</div>
               ) : (
-                // Viec 4: bang nay co TOI 8 cot (Cell/Ma tram/TB truoc/TB sau/Chenh lech/So ngay khong dat/
-                // Ket luan/Can xu ly), header lai "whiteSpace: nowrap" (SortableHeaderCell) nen tong chieu
-                // rong THAT SU cua bang de vuot qua chieu rong Modal (800px, xem SessionHistoryList.tsx) ->
-                // bang se TRAN ra ngoai neu khong gioi han. Boc trong div overflow-x:auto de bang CUON
-                // NGANG rieng trong khung cua no, KHONG lam vo layout Modal ben ngoai
+                // header dung "whiteSpace: nowrap" (SortableHeaderCell) nen tong chieu rong THAT SU cua bang
+                // co the vuot qua chieu rong Modal (800px, xem SessionHistoryList.tsx) -> bang se TRAN ra
+                // ngoai neu khong gioi han. Boc trong div overflow-x:auto de bang CUON NGANG rieng trong
+                // khung cua no, KHONG lam vo layout Modal ben ngoai
                 <div style={{ overflowX: "auto" }}>
                   <table className="r012-qos-eval-table">
                     <thead>
