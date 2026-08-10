@@ -40,6 +40,10 @@ const BREADCRUMB_MAP = {
   "/healthcheck/monitor":              { section: "System",     label: "System Monitor" },
   "/config-email-sms":                 { section: "System",     label: "Kênh thông báo" },
   "/healthcheck/retention-config":     { section: "System",     label: "Cấu hình lưu giữ" },
+  "/healthcheck/platform-mapping":            { section: "Platform Config", label: "Platform Mapping" },
+  "/healthcheck/group-schema-permissions":    { section: "Platform Config", label: "Phân quyền theo Group" },
+  "/healthcheck/platform-taxonomy":           { section: "Platform Config", label: "Group / Subsystem" },
+  "/healthcheck/config-sync":                 { section: "Platform Config", label: "Đồng bộ File ⇄ DB" },
   "/healthcheck/kpi":                  { section: "KPI",        label: "KPI Explorer" },
   "/kpi/dashboard":                    { section: "KPI",        label: "KPI Dashboard" },
   "/kpi/schedule":                     { section: "KPI",        label: "Quản lý Schedule" },
@@ -53,6 +57,7 @@ const SECTION_URLS = {
   "Bảo Dưỡng":  "/dhtt/dashboard",
   "System":      "/healthcheck/monitor",
   "KPI":         "/kpi/dashboard",
+  "Platform Config": "/healthcheck/platform-mapping",
 };
 
 const getBreadcrumb = (pathname) => {
@@ -140,6 +145,12 @@ const TopNavbar = () => {
   const KPI_PATHS = [
     "/healthcheck/kpi",
     "/kpi/",
+  ];
+  const PLATFORM_CONFIG_PATHS = [
+    "/healthcheck/platform-mapping",
+    "/healthcheck/group-schema-permissions",
+    "/healthcheck/platform-taxonomy",
+    "/healthcheck/config-sync",
   ];
 
   const breadcrumb = getBreadcrumb(pathname);
@@ -311,6 +322,28 @@ const TopNavbar = () => {
                 </NavDropdown.Item>
                 <NavDropdown.Item as={NavLink} to="/healthcheck/retention-config">
                   🗂️ Cấu Hình Lưu Giữ
+                </NavDropdown.Item>
+              </NavDropdown>
+            )}
+            {/* ── Platform Config (admin only) ── */}
+            {isAdmin && (
+              <NavDropdown
+                title={<span style={ddTitleStyle(PLATFORM_CONFIG_PATHS)}>🔌 Platform Config</span>}
+                id="dd-platform-config"
+                menuVariant="light"
+                className={ddClass(PLATFORM_CONFIG_PATHS)}
+              >
+                <NavDropdown.Item as={NavLink} to="/healthcheck/platform-mapping">
+                  🔗 Platform Mapping
+                </NavDropdown.Item>
+                <NavDropdown.Item as={NavLink} to="/healthcheck/group-schema-permissions">
+                  🛡️ Phân quyền theo Group
+                </NavDropdown.Item>
+                <NavDropdown.Item as={NavLink} to="/healthcheck/platform-taxonomy">
+                  🗂️ Group / Subsystem
+                </NavDropdown.Item>
+                <NavDropdown.Item as={NavLink} to="/healthcheck/config-sync">
+                  🔄 Đồng bộ File ⇄ DB
                 </NavDropdown.Item>
               </NavDropdown>
             )}

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Badge, Button, Card, Col, Form, Modal,
-  Row, Spinner, Tab, Table, Tabs,
+  Pagination, Row, Spinner, Tab, Table, Tabs,
 } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import Select from "react-select";
@@ -17,6 +17,11 @@ import { fetchDepartments } from "../../../redux/User/departmentSlice";
 import { fetchGroups } from "../../../redux/User/groupSlice";
 import snocApi, { getJwtClaims } from "../../../api/snocApiWithAutoToken";
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
+import {
+  createRequestSortFunction, getClassNamesFor, sortData,
+} from "../../../utils/tableUtils";
+
+const PAGE_SIZE = 20;
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -147,6 +152,11 @@ const AlertConfigs = () => {
   // List-level filters
   const [filterPlatform, setFilterPlatform] = useState("");
   const [filterEnabled, setFilterEnabled]   = useState("all"); // "all" | "enabled" | "disabled"
+
+  // List-level sort + pagination
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
+  const requestSort = createRequestSortFunction(setSortConfig, sortConfig);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Platform options — fetched dynamically, filtered by dept/group when selected
   const [availablePlatforms, setAvailablePlatforms] = useState([]);
@@ -302,6 +312,15 @@ const AlertConfigs = () => {
     if (filterEnabled !== "all") result = result.filter((c) => c.enabled === (filterEnabled === "enabled"));
     return result;
   }, [configs, filterPlatform, filterEnabled]);
+
+  const sortedConfigs = useMemo(
+    () => (sortConfig.key ? sortData(filteredConfigs, sortConfig.key, sortConfig.direction) : filteredConfigs),
+    [filteredConfigs, sortConfig]
+  );
+  const totalPages = Math.max(1, Math.ceil(sortedConfigs.length / PAGE_SIZE));
+  const pagedConfigs = sortedConfigs.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  useEffect(() => { setCurrentPage(1); }, [filterPlatform, filterEnabled, sortConfig]);
 
   // ── channel badge summary ──────────────────────────────────────────────────
   const renderChannelBadges = (cfg) => (
@@ -603,26 +622,26 @@ const AlertConfigs = () => {
                   <Table responsive hover className="mb-0 small align-middle">
                   <thead className="table-light">
                     <tr>
-                      <th>Label</th>
+                      <th role="button" onClick={() => requestSort("label")} className={getClassNamesFor(sortConfig, "label")}>Label</th>
                       <th>Scope</th>
-                      <th>Function</th>
-                      <th>Platform</th>
+                      <th role="button" onClick={() => requestSort("function_name")} className={getClassNamesFor(sortConfig, "function_name")}>Function</th>
+                      <th role="button" onClick={() => requestSort("platform")} className={getClassNamesFor(sortConfig, "platform")}>Platform</th>
                       <th>Devices</th>
                       <th>Channels</th>
                       <th>Trigger</th>
                       <th>Clear</th>
-                      <th style={{ width: 60 }}>Active</th>
+                      <th role="button" onClick={() => requestSort("enabled")} className={getClassNamesFor(sortConfig, "enabled")} style={{ width: 60 }}>Active</th>
                       <th style={{ width: 240 }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredConfigs.length === 0 ? (
+                    {pagedConfigs.length === 0 ? (
                       <tr>
                         <td colSpan={10} className="text-center text-muted py-4">
                           Không có config nào khớp với bộ lọc
                         </td>
                       </tr>
-                    ) : filteredConfigs.map((cfg) => (
+                    ) : pagedConfigs.map((cfg) => (
                       <tr key={cfg.id} className={!cfg.enabled ? "opacity-50" : ""}>
                         <td className="fw-semibold">{cfg.label}</td>
                         <td><ScopeBadge cfg={cfg} /></td>
@@ -711,6 +730,27 @@ const AlertConfigs = () => {
                     ))}
                   </tbody>
                 </Table>
+                {totalPages > 1 && (
+                  <Pagination className="justify-content-center mt-3">
+                    <Pagination.Prev
+                      onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                      disabled={currentPage === 1}
+                    />
+                    {Array.from({ length: totalPages }, (_, i) => (
+                      <Pagination.Item
+                        key={i + 1}
+                        active={i + 1 === currentPage}
+                        onClick={() => setCurrentPage(i + 1)}
+                      >
+                        {i + 1}
+                      </Pagination.Item>
+                    ))}
+                    <Pagination.Next
+                      onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                    />
+                  </Pagination>
+                )}
                 </>
               )}
             </Card.Body>

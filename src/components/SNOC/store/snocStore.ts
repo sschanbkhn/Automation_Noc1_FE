@@ -38,6 +38,10 @@ import analysisParamReducer from "../redux/Healthcheck/analysisParamSlice";
 import alertConfigReducer from "../redux/Healthcheck/alertConfigSlice";
 import retentionConfigReducer from "../redux/Healthcheck/retentionConfigSlice";
 import notifChannelConfigReducer from "../redux/Healthcheck/notifChannelConfigSlice";
+import platformMappingReducer from "../redux/Healthcheck/platformMappingSlice";
+import groupSchemaPermissionReducer from "../redux/Healthcheck/groupSchemaPermissionSlice";
+import platformTaxonomyReducer from "../redux/Healthcheck/platformTaxonomySlice";
+import configSyncReducer from "../redux/Healthcheck/configSyncSlice";
 import regionReducer from "../redux/User/regionSlice";
 import accessScopeReducer from "../redux/User/accessScopeSlice";
 import kpiDashboardStateReducer from "../redux/KPI/kpiDashboardStateSlice";
@@ -77,6 +81,10 @@ const snocStore = configureStore({
     alertConfig: alertConfigReducer,
     retentionConfig: retentionConfigReducer,
     notifChannelConfig: notifChannelConfigReducer,
+    platformMapping: platformMappingReducer,
+    groupSchemaPermission: groupSchemaPermissionReducer,
+    platformTaxonomy: platformTaxonomyReducer,
+    configSync: configSyncReducer,
     region: regionReducer,
     accessScope: accessScopeReducer,
     kpiDashboardState: kpiDashboardStateReducer,

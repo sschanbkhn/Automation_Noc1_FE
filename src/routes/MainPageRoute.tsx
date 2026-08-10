@@ -83,6 +83,10 @@ import AnalysisParams from "components/SNOC/views/forms/health/AnalysisParams";
 import AlertConfigs from "components/SNOC/views/forms/health/AlertConfigs";
 import RetentionConfig from "components/SNOC/views/forms/health/RetentionConfig";
 import NotifChannelConfig from "components/SNOC/views/forms/health/NotifChannelConfig";
+import PlatformMapping from "components/SNOC/views/forms/health/PlatformMapping";
+import GroupSchemaPermissions from "components/SNOC/views/forms/health/GroupSchemaPermissions";
+import PlatformTaxonomy from "components/SNOC/views/forms/health/PlatformTaxonomy";
+import ConfigSync from "components/SNOC/views/forms/health/ConfigSync";
 import DhttManual from "components/SNOC/views/forms/health/DhttManual";
 import DhttDashboard from "components/SNOC/views/dashboard/DashOrigin/DhttDashboard";
 import DhttHcSimple from "components/SNOC/views/forms/health/DhttHcSimple";
@@ -265,6 +269,10 @@ const MainPageRoute = (props: Props) => {
           {/* chỉ super mới vào được khu Admin */}
           <Route element={<RequireSuperUserInline />}>
             <Route path="/app/snoc/admin" element={<UserGroupDeptManager />} />
+            <Route path="/healthcheck/platform-mapping" element={<PlatformMapping />} />
+            <Route path="/healthcheck/group-schema-permissions" element={<GroupSchemaPermissions />} />
+            <Route path="/healthcheck/platform-taxonomy" element={<PlatformTaxonomy />} />
+            <Route path="/healthcheck/config-sync" element={<ConfigSync />} />
           </Route>
 
           <Route path="/healthcheck/devices" element={<HostConfigPanel />} />
