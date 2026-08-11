@@ -24,6 +24,9 @@ import CellParamsByHuong from "../TacDongTram/KetQuaCR/CellParamsByHuong";
 // Log tac dong (22072026, xac nhan voi user) - BE gio da persist cr_log, xem chi tiet ly do chon Timeline
 // trong comment dau file CrLogTimeline.tsx
 import CrLogTimeline from "./CrLogTimeline";
+// Lich su phieu cua RIENG session dang xem - dung LAI dung component cua tab "Lich su phieu" (chi khac o
+// cho co truyen sessionId), khong viet bang thu 2 cho cung 1 loai du lieu
+import PhieuHistoryTable from "../LichSuPhieu/PhieuHistoryTable";
 // token mau xanh duong dung CHUNG toan module - da trich tu R012Header.tsx sang theme.ts, KHONG con
 // dinh nghia hex rieng trong file nay nua, xem chi tiet tung token trong theme.ts
 import { R012_COLORS } from "../theme";
@@ -165,6 +168,17 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
         ) : (
           <Empty description="Cho CR thuc thi xong moi co the tinh bang danh gia chi tiet" />
         ),
+    },
+    {
+      key: "lich-su-phieu",
+      label: "6. Lich su phieu",
+      // dat NGAY SAU "Bang danh gia chi tiet" vi phieu chinh la ket qua cua bang do (nut "Xuat phieu" o moi
+      // dong cell KHONG DAT, xem QosEvaluationTable.tsx) - NOC xuat phieu xong mo muc nay la thay ngay.
+      // KHONG phu thuoc crDateGmt7 nhu 2 muc tren: phieu da xuat thi luon xem lai duoc, ke ca khi session
+      // chua co executed_at.
+      // PhieuHistoryTable tu goi API rieng theo session_id (lazy: Collapse chua mo thi children chua render,
+      // nen chua ton 1 luot goi API cho session ma NOC khong quan tam toi phieu)
+      children: <PhieuHistoryTable sessionId={data.id} />,
     },
   ];
 

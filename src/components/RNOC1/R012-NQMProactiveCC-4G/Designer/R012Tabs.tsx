@@ -3,6 +3,7 @@ import { Tabs } from "antd";
 import TacDongTram from "../TacDongTram/TacDongTram";
 import LichSuCR from "../LichSuCR/LichSuCR";
 import CellXau from "../CellXau/CellXau";
+import LichSuPhieu from "../LichSuPhieu/LichSuPhieu";
 
 const R012Tabs: React.FC = () => {
   const items = [
@@ -22,6 +23,13 @@ const R012Tabs: React.FC = () => {
       // Module S006-CELL, goi truc tiep BE ben SOC (10.155.43.210:8000/api/cell) qua apiConfig.tsx
       // rieng cua no, KHONG qua BE cua R012 - xem CellXau/apiConfig.tsx
       children: <CellXau />,
+    },
+    {
+      key: "tab4",
+      label: "Lịch sử phiếu",
+      // Lich su phieu SaveCellClm da xuat (GET /api/v1/phieu) - dat CUOI cung vi day la buoc sau cung cua
+      // quy trinh (tac dong tram -> theo doi CR -> danh gia -> xuat phieu), khong chen vao giua 3 tab cu
+      children: <LichSuPhieu />,
     },
   ];
 

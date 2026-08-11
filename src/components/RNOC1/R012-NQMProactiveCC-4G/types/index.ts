@@ -299,6 +299,49 @@ export interface XuatPhieuResponse {
   message: string | null;
 }
 
+// ==== GET /api/v1/phieu (lich su phieu da xuat) ====
+// dung cho GET /api/v1/phieu - query param loc lich su phieu. TAT CA param deu optional:
+// khong truyen session_id -> lay phieu cua MOI session (tab rieng "Lich su phieu"); truyen session_id ->
+// chi lay phieu cua 1 session (dung trong chi tiet session CR)
+export interface PhieuHistoryQueryParams {
+  session_id?: number; // loc theo 1 session CR, optional
+  // SUCCESS|FAILED|PENDING|DRY_RUN. KHONG truyen param nay = mac dinh cua BE la AN cac ban ghi DRY_RUN
+  // (phieu chay thu, khong tao that tren TTS) - nen "Tat ca" o FE thuc chat la "tat ca TRU DRY_RUN"
+  trang_thai?: string;
+  page?: number; // trang hien tai
+  size?: number; // so ban ghi moi trang
+  // TU GIA DINH theo quy uoc da dung o GET /sessions (enum sort_by = dung ten field cua bang) - FE chi cho
+  // sort cac cot chac chan la field that (cell_name/trang_thai/created_at), KHONG cho sort cot suy dien
+  // (STT) de tranh gui gia tri ngoai enum lam BE tra 422
+  sort_by?: string;
+  order?: "asc" | "desc";
+}
+
+// dung cho GET /api/v1/phieu - 1 dong lich su phieu
+export interface PhieuHistoryItem {
+  id: number; // id ban ghi lich su phieu
+  cr_session_id: number | null; // session CR da sinh ra phieu nay
+  cell_name: string; // cell duoc xuat phieu
+  trang_thai: string; // SUCCESS|FAILED|PENDING|DRY_RUN
+  phieu_id: string | null; // ma phieu ben TTS, null khi chua xuat duoc (FAILED/PENDING)
+  created_at: string | null; // thoi diem tao dang ISO date-time (UTC, format qua helpers/formatDateTime)
+  // request_payload/response_body khai bao KIEU RONG (object | string | null) CO CHU DICH: BE co the tra
+  // ve object JSON da parse san, cung co the tra ve chuoi JSON tho neu cot trong DB la text - FE tu nhan
+  // dien va parse o PhieuDetailModal thay vi ep 1 kieu roi vo khi gap kieu con lai
+  request_payload: Record<string, unknown> | string | null; // 28 field gui sang CTS (SaveCellClm)
+  response_body: CtsResponse | Record<string, unknown> | string | null; // JSON CTS tra ve
+  error_message: string | null; // mo ta loi khi trang_thai=FAILED, null khi khong loi
+}
+
+// dung cho GET /api/v1/phieu - response phan trang. KHAC SessionListResponse ({total, data}): endpoint nay
+// tra ve THEM page/size, giu dung nguyen ban de FE khong phai doan lai trang hien tai tu state
+export interface PhieuHistoryResponse {
+  total: number; // tong so phieu KHOP bo loc (khong phai so dong cua trang hien tai)
+  page: number;
+  size: number;
+  data: PhieuHistoryItem[];
+}
+
 // dung cho POST /api/v1/jobs/sync-rims - BE khai bao response la object additionalProperties true, chua co field co dinh
 export type SyncRimsResponse = Record<string, unknown>;
 

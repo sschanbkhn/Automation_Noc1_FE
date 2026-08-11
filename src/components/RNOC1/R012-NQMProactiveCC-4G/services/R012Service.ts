@@ -14,6 +14,8 @@ import {
   QosHistoryResponse,
   QosHistoryQueryParams,
   XuatPhieuResponse,
+  PhieuHistoryQueryParams,
+  PhieuHistoryResponse,
   SyncRimsResponse,
   SyncNetactResponse,
   EvaluateCrResponse,
@@ -126,6 +128,22 @@ export const xuatPhieu = async (sessionId: number, cellName: string): Promise<Xu
   try {
     const data: any = await r012Request.post('/phieu', { session_id: sessionId, cell_name: cellName });
     return data as XuatPhieuResponse;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// ham goi GET /api/v1/phieu - lay LICH SU phieu da xuat (READ, khac han POST /phieu o tren la WRITE tao phieu that)
+// dung CHUNG cho 2 man hinh, khac nhau DUY NHAT o params.session_id:
+//  - co session_id -> phieu cua dung 1 session (muc "Lich su phieu" trong chi tiet session CR)
+//  - khong co     -> phieu cua MOI session (tab rieng "Lich su phieu")
+// axios tu bo cac key co gia tri undefined khoi query string, nen cu truyen ca object params vao la du,
+// khong can tu loc undefined truoc khi goi
+export const getLichSuPhieu = async (params?: PhieuHistoryQueryParams): Promise<PhieuHistoryResponse> => {
+  try {
+    // endpoint nay khong goi CDS/CTS (chi doc lich su phieu da luu trong DB) nen giu timeout ngan hon
+    const data: any = await r012Request.get('/phieu', { params, timeout: 30000 });
+    return data as PhieuHistoryResponse;
   } catch (error) {
     throw error;
   }
