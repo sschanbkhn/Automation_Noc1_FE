@@ -47,6 +47,9 @@ const BREADCRUMB_MAP = {
   "/healthcheck/kpi":                  { section: "KPI",        label: "KPI Explorer" },
   "/kpi/dashboard":                    { section: "KPI",        label: "KPI Dashboard" },
   "/kpi/schedule":                     { section: "KPI",        label: "Quản lý Schedule" },
+  "/ai-contribution/manual":           { section: "AI-Contribution", label: "Thêm thủ công" },
+  "/ai-contribution/review":           { section: "AI-Contribution", label: "Duyệt đóng góp" },
+  "/ai-contribution/catalog":          { section: "AI-Contribution", label: "Danh mục hàm" },
 };
 
 const SECTION_URLS = {
@@ -58,6 +61,7 @@ const SECTION_URLS = {
   "System":      "/healthcheck/monitor",
   "KPI":         "/kpi/dashboard",
   "Platform Config": "/healthcheck/platform-mapping",
+  "AI-Contribution": "/ai-contribution/manual",
 };
 
 const getBreadcrumb = (pathname) => {
@@ -152,6 +156,11 @@ const TopNavbar = () => {
     "/healthcheck/platform-taxonomy",
     "/healthcheck/config-sync",
   ];
+  const AI_CONTRIBUTION_PATHS = [
+    "/ai-contribution/manual",
+    "/ai-contribution/review",
+    "/ai-contribution/catalog",
+  ];
 
   const breadcrumb = getBreadcrumb(pathname);
 
@@ -159,10 +168,6 @@ const TopNavbar = () => {
     <>
     <Navbar bg="primary" variant="dark" expand="lg" className="px-3 py-1 shadow-sm">
       <Container fluid>
-        <Navbar.Brand className="fw-bold me-0" style={{ fontSize: "1rem" }}>
-          System Health Automation
-        </Navbar.Brand>
-
         <Navbar.Toggle aria-controls="topnav-collapse" />
 
         <Navbar.Collapse id="topnav-collapse" className="w-100">
@@ -362,6 +367,24 @@ const TopNavbar = () => {
               </NavDropdown.Item>
               <NavDropdown.Item as={NavLink} to="/kpi/schedule">
                 📅 Quản lý Schedule
+              </NavDropdown.Item>
+            </NavDropdown>
+
+            {/* ── 8. AI-CONTRIBUTION ▾ ─────────────────────────────── */}
+            <NavDropdown
+              title={<span style={ddTitleStyle(AI_CONTRIBUTION_PATHS)}>🧩 AI-Contribution</span>}
+              id="dd-ai-contribution"
+              menuVariant="light"
+              className={ddClass(AI_CONTRIBUTION_PATHS)}
+            >
+              <NavDropdown.Item as={NavLink} to="/ai-contribution/manual">
+                ✍️ Thêm thủ công
+              </NavDropdown.Item>
+              <NavDropdown.Item as={NavLink} to="/ai-contribution/review">
+                ✅ Duyệt đóng góp
+              </NavDropdown.Item>
+              <NavDropdown.Item as={NavLink} to="/ai-contribution/catalog">
+                📚 Danh mục hàm
               </NavDropdown.Item>
             </NavDropdown>
 

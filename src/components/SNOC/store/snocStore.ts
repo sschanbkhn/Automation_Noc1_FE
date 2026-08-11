@@ -45,6 +45,7 @@ import configSyncReducer from "../redux/Healthcheck/configSyncSlice";
 import regionReducer from "../redux/User/regionSlice";
 import accessScopeReducer from "../redux/User/accessScopeSlice";
 import kpiDashboardStateReducer from "../redux/KPI/kpiDashboardStateSlice";
+import contributionReducer from "../redux/contribution/contributionSlice";
 const snocStore = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -88,6 +89,7 @@ const snocStore = configureStore({
     region: regionReducer,
     accessScope: accessScopeReducer,
     kpiDashboardState: kpiDashboardStateReducer,
+    contribution: contributionReducer,
   },
 });
 

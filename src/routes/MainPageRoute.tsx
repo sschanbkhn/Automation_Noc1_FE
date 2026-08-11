@@ -87,6 +87,9 @@ import PlatformMapping from "components/SNOC/views/forms/health/PlatformMapping"
 import GroupSchemaPermissions from "components/SNOC/views/forms/health/GroupSchemaPermissions";
 import PlatformTaxonomy from "components/SNOC/views/forms/health/PlatformTaxonomy";
 import ConfigSync from "components/SNOC/views/forms/health/ConfigSync";
+import ManualContribution from "components/SNOC/views/forms/contribution/ManualContribution";
+import ContributionReview from "components/SNOC/views/forms/contribution/ContributionReview";
+import FunctionCatalog from "components/SNOC/views/forms/contribution/FunctionCatalog";
 import DhttManual from "components/SNOC/views/forms/health/DhttManual";
 import DhttDashboard from "components/SNOC/views/dashboard/DashOrigin/DhttDashboard";
 import DhttHcSimple from "components/SNOC/views/forms/health/DhttHcSimple";
@@ -312,6 +315,9 @@ const MainPageRoute = (props: Props) => {
             path="/healthcheck/history"
             element={<HistoricalReporting />}
           />
+          <Route path="/ai-contribution/manual"  element={<ManualContribution />} />
+          <Route path="/ai-contribution/review"  element={<ContributionReview />} />
+          <Route path="/ai-contribution/catalog" element={<FunctionCatalog />} />
           <Route path="/precheck"          element={<PrecheckDashboard/>}/>
           <Route path="/precheck/manual"   element={<PrecheckManual/>}/>
           <Route path="/healthcheck/precheck-external" element={<PrecheckExternal />} />
