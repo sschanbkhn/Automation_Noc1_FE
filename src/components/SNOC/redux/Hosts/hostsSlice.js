@@ -60,20 +60,22 @@ export const fetchHosts = createAsyncThunk(
       const devices = (res.data || []).map((d) => ({
         name: d.name,
         hostname: d.hostname,
-        platform: d.platform,      // Tên platform
-        group: d.group || "—",     // 🔹 Mới: Device Group
-        department: d.department || "—", // 🔹 Mới: Department
+        platform: d.platform,
+        group: d.group || "—",
+        department: d.department || "—",
         groups: Array.isArray(d.groups)
           ? d.groups
           : typeof d.groups === "string"
           ? d.groups.split(",").map((x) => x.trim()).filter(Boolean)
           : [],
-        all_groups: d.all_groups || [], // Danh sách gộp tất cả nhãn (platform, group, dept, tags)
+        all_groups: d.all_groups || [],
         username: d.username ?? "—",
         port: d.port,
         site_code: d.site_code,
         vendor: d.vendor,
         license_throughput: d.license_throughput,
+        app_role: d.app_role ?? null,
+        nfvi_host: d.nfvi_host ?? null,
       }));
 
       return devices;
@@ -117,6 +119,7 @@ export const updateHost = createAsyncThunk(
       dispatch(showTemporaryAlert({ message: "Cập nhật thiết bị thành công", type: "success" }));
       dispatch(fetchHosts());
       dispatch(fetchPlatforms());
+      dispatch(fetchAllDeviceApps());
     } catch (error) {
       const msg = error?.response?.data?.error || "Không thể cập nhật thiết bị";
       dispatch(showTemporaryAlert({ message: msg, type: "error" }));
@@ -169,27 +172,205 @@ export const cloneDevice = createAsyncThunk(
 
 
 
+// ─── NfviHost thunks ──────────────────────────────────────────────────────
+export const fetchNfviHosts = createAsyncThunk(
+  "hosts/fetchNfviHosts",
+  async (_, { rejectWithValue }) => {
+    try {
+      const res = await snocApi.get("/nornirps/nfvi-hosts/list/");
+      return res.data || [];
+    } catch (err) {
+      return rejectWithValue(err?.response?.data?.error || "Lỗi tải NfviHost");
+    }
+  }
+);
+
+export const addNfviHost = createAsyncThunk(
+  "hosts/addNfviHost",
+  async (payload, { rejectWithValue, dispatch }) => {
+    try {
+      const res = await snocApi.post("/nornirps/nfvi-hosts/", payload);
+      dispatch(showTemporaryAlert({ message: res.data?.message || "✅ Thêm NfviHost thành công", type: "success" }));
+      dispatch(fetchNfviHosts());
+      return res.data;
+    } catch (err) {
+      const msg = err?.response?.data?.error || "Lỗi thêm NfviHost";
+      dispatch(showTemporaryAlert({ message: msg, type: "danger" }));
+      return rejectWithValue(msg);
+    }
+  }
+);
+
+export const updateNfviHost = createAsyncThunk(
+  "hosts/updateNfviHost",
+  async ({ name, data }, { rejectWithValue, dispatch }) => {
+    try {
+      const res = await snocApi.put(`/nornirps/nfvi-hosts/${name}/`, data);
+      dispatch(showTemporaryAlert({ message: res.data?.message || "✅ Cập nhật thành công", type: "success" }));
+      dispatch(fetchNfviHosts());
+      return res.data;
+    } catch (err) {
+      const msg = err?.response?.data?.error || "Lỗi cập nhật NfviHost";
+      dispatch(showTemporaryAlert({ message: msg, type: "danger" }));
+      return rejectWithValue(msg);
+    }
+  }
+);
+
+export const deleteNfviHost = createAsyncThunk(
+  "hosts/deleteNfviHost",
+  async (name, { rejectWithValue, dispatch }) => {
+    try {
+      const res = await snocApi.delete(`/nornirps/nfvi-hosts/${name}/delete/`);
+      dispatch(showTemporaryAlert({ message: res.data?.message || "✅ Đã xóa NfviHost", type: "success" }));
+      dispatch(fetchNfviHosts());
+      return name;
+    } catch (err) {
+      const msg = err?.response?.data?.error || "Lỗi xóa NfviHost";
+      dispatch(showTemporaryAlert({ message: msg, type: "danger" }));
+      return rejectWithValue(msg);
+    }
+  }
+);
+
+// ─── K8sCluster thunks ────────────────────────────────────────────────────
+export const fetchK8sClusters = createAsyncThunk(
+  "hosts/fetchK8sClusters",
+  async (_, { rejectWithValue }) => {
+    try {
+      const res = await snocApi.get("/nornirps/k8s-clusters/list/");
+      return res.data || [];
+    } catch (err) {
+      return rejectWithValue(err?.response?.data?.error || "Lỗi tải K8sClusters");
+    }
+  }
+);
+
+export const addK8sCluster = createAsyncThunk(
+  "hosts/addK8sCluster",
+  async (payload, { rejectWithValue, dispatch }) => {
+    try {
+      const res = await snocApi.post("/nornirps/k8s-clusters/", payload);
+      dispatch(showTemporaryAlert({ message: res.data?.message || "✅ Thêm K8sCluster thành công", type: "success" }));
+      dispatch(fetchK8sClusters());
+      return res.data;
+    } catch (err) {
+      const msg = err?.response?.data?.error || "Lỗi thêm K8sCluster";
+      dispatch(showTemporaryAlert({ message: msg, type: "danger" }));
+      return rejectWithValue(msg);
+    }
+  }
+);
+
+export const deleteK8sCluster = createAsyncThunk(
+  "hosts/deleteK8sCluster",
+  async (name, { rejectWithValue, dispatch }) => {
+    try {
+      const res = await snocApi.delete(`/nornirps/k8s-clusters/${name}/delete/`);
+      dispatch(showTemporaryAlert({ message: res.data?.message || "✅ Đã xóa", type: "success" }));
+      dispatch(fetchK8sClusters());
+      return name;
+    } catch (err) {
+      const msg = err?.response?.data?.error || "Lỗi xóa K8sCluster";
+      dispatch(showTemporaryAlert({ message: msg, type: "danger" }));
+      return rejectWithValue(msg);
+    }
+  }
+);
+
+// ─── DeviceApplication thunks ─────────────────────────────────────────────
+export const fetchAllDeviceApps = createAsyncThunk(
+  "hosts/fetchAllDeviceApps",
+  async (_, { rejectWithValue }) => {
+    try {
+      const res = await snocApi.get("/nornirps/hosts/apps/all/");
+      return res.data || [];
+    } catch (err) {
+      return rejectWithValue(err?.response?.data?.error || "Lỗi tải all apps");
+    }
+  }
+);
+
+
+export const fetchDeviceApps = createAsyncThunk(
+  "hosts/fetchDeviceApps",
+  async (deviceName, { rejectWithValue }) => {
+    try {
+      const res = await snocApi.get(`/nornirps/hosts/${deviceName}/apps/`);
+      return { deviceName, apps: res.data || [] };
+    } catch (err) {
+      return rejectWithValue(err?.response?.data?.error || "Lỗi tải apps");
+    }
+  }
+);
+
+export const addDeviceApp = createAsyncThunk(
+  "hosts/addDeviceApp",
+  async ({ deviceName, data }, { rejectWithValue, dispatch }) => {
+    try {
+      const res = await snocApi.post(`/nornirps/hosts/${deviceName}/apps/add/`, data);
+      dispatch(showTemporaryAlert({ message: res.data?.message || "✅ Thêm app thành công", type: "success" }));
+      dispatch(fetchDeviceApps(deviceName));
+      return res.data;
+    } catch (err) {
+      const msg = err?.response?.data?.error || "Lỗi thêm app";
+      dispatch(showTemporaryAlert({ message: msg, type: "danger" }));
+      return rejectWithValue(msg);
+    }
+  }
+);
+
+export const deleteDeviceApp = createAsyncThunk(
+  "hosts/deleteDeviceApp",
+  async ({ deviceName, appName }, { rejectWithValue, dispatch }) => {
+    try {
+      const res = await snocApi.delete(`/nornirps/hosts/${deviceName}/apps/${appName}/`);
+      dispatch(showTemporaryAlert({ message: res.data?.message || "✅ Đã xóa app", type: "success" }));
+      dispatch(fetchDeviceApps(deviceName));
+      return { deviceName, appName };
+    } catch (err) {
+      const msg = err?.response?.data?.error || "Lỗi xóa app";
+      dispatch(showTemporaryAlert({ message: msg, type: "danger" }));
+      return rejectWithValue(msg);
+    }
+  }
+);
+
+// ─── Slice ────────────────────────────────────────────────────────────────
 const hostsSlice = createSlice({
   name: "hosts",
   initialState: {
     devices: [],
     loading: false,
     error: null,
+    nfviHosts: [],
+    loadingNfvi: false,
+    k8sClusters: [],
+    loadingK8s: false,
+    deviceApps: {},   // { [deviceName]: [...] }
+    allDeviceApps: [],
   },
   reducers: {},
   extraReducers: (builder) => {
     builder
       // Fetch Hosts
-      .addCase(fetchHosts.pending, (state) => {
-        state.loading = true;
+      .addCase(fetchHosts.pending, (state) => { state.loading = true; })
+      .addCase(fetchHosts.fulfilled, (state, action) => { state.loading = false; state.devices = action.payload || []; })
+      .addCase(fetchHosts.rejected, (state, action) => { state.loading = false; state.error = action.payload; })
+      // NfviHost
+      .addCase(fetchNfviHosts.pending, (state) => { state.loadingNfvi = true; })
+      .addCase(fetchNfviHosts.fulfilled, (state, action) => { state.loadingNfvi = false; state.nfviHosts = action.payload; })
+      .addCase(fetchNfviHosts.rejected, (state) => { state.loadingNfvi = false; })
+      // K8sCluster
+      .addCase(fetchK8sClusters.pending, (state) => { state.loadingK8s = true; })
+      .addCase(fetchK8sClusters.fulfilled, (state, action) => { state.loadingK8s = false; state.k8sClusters = action.payload; })
+      .addCase(fetchK8sClusters.rejected, (state) => { state.loadingK8s = false; })
+      // DeviceApps
+      .addCase(fetchDeviceApps.fulfilled, (state, action) => {
+        state.deviceApps[action.payload.deviceName] = action.payload.apps;
       })
-      .addCase(fetchHosts.fulfilled, (state, action) => {
-        state.loading = false;
-        state.devices = action.payload || [];
-      })
-      .addCase(fetchHosts.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
+      .addCase(fetchAllDeviceApps.fulfilled, (state, action) => {
+        state.allDeviceApps = action.payload;
       });
   },
 });

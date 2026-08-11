@@ -21,11 +21,17 @@ const BREADCRUMB_MAP = {
   "/healthcheck/analysis-params":      { section: "Healthcheck", label: "Analysis Params" },
   "/healthcheck/alert-config":         { section: "Healthcheck", label: "Alert Config" },
   "/healthcheck/external/stats":       { label: "External Stats" },
+  "/hc-simple/dashboard":              { section: "HC Simple",  label: "Dashboard" },
+  "/hc-simple/manual":                 { section: "HC Simple",  label: "Manual" },
+  "/hc-simple/schedule":               { section: "HC Simple",  label: "Schedule" },
+  "/hc-simple/history":                { section: "HC Simple",  label: "History" },
   "/precheck":                         { section: "Precheck",   label: "Dashboard" },
   "/precheck/manual":                  { section: "Precheck",   label: "Manual" },
   "/healthcheck/precheck-external":    { section: "Precheck",   label: "Manual External" },
   "/precheck/schedule":                { section: "Precheck",   label: "Schedule" },
   "/precheck/history":                 { section: "Precheck",   label: "History" },
+  "/fcp":                              { section: "FCP",        label: "Trigger" },
+  "/fcp/history":                      { section: "FCP",        label: "History" },
   "/dhtt/dashboard":                   { section: "Bảo Dưỡng", label: "Dashboard" },
   "/dhtt/manual":                      { section: "Bảo Dưỡng", label: "Manual" },
   "/healthcheck/kpischedule":          { section: "Bảo Dưỡng", label: "Schedule" },
@@ -34,17 +40,28 @@ const BREADCRUMB_MAP = {
   "/healthcheck/monitor":              { section: "System",     label: "System Monitor" },
   "/config-email-sms":                 { section: "System",     label: "Kênh thông báo" },
   "/healthcheck/retention-config":     { section: "System",     label: "Cấu hình lưu giữ" },
+  "/healthcheck/platform-mapping":            { section: "Platform Config", label: "Platform Mapping" },
+  "/healthcheck/group-schema-permissions":    { section: "Platform Config", label: "Phân quyền theo Group" },
+  "/healthcheck/platform-taxonomy":           { section: "Platform Config", label: "Group / Subsystem" },
+  "/healthcheck/config-sync":                 { section: "Platform Config", label: "Đồng bộ File ⇄ DB" },
   "/healthcheck/kpi":                  { section: "KPI",        label: "KPI Explorer" },
   "/kpi/dashboard":                    { section: "KPI",        label: "KPI Dashboard" },
   "/kpi/schedule":                     { section: "KPI",        label: "Quản lý Schedule" },
+  "/ai-contribution/manual":           { section: "AI-Contribution", label: "Thêm thủ công" },
+  "/ai-contribution/review":           { section: "AI-Contribution", label: "Duyệt đóng góp" },
+  "/ai-contribution/catalog":          { section: "AI-Contribution", label: "Danh mục hàm" },
 };
 
 const SECTION_URLS = {
   "Healthcheck": "/app/dashboard/origin",
+  "HC Simple":   "/hc-simple/dashboard",
   "Precheck":    "/precheck",
+  "FCP":         "/fcp",
   "Bảo Dưỡng":  "/dhtt/dashboard",
   "System":      "/healthcheck/monitor",
   "KPI":         "/kpi/dashboard",
+  "Platform Config": "/healthcheck/platform-mapping",
+  "AI-Contribution": "/ai-contribution/manual",
 };
 
 const getBreadcrumb = (pathname) => {
@@ -113,6 +130,16 @@ const TopNavbar = () => {
     "/precheck/schedule",
     "/precheck/history",
   ];
+  const FCP_PATHS = [
+    "/fcp",
+    "/fcp/history",
+  ];
+  const HC_SIMPLE_PATHS = [
+    "/hc-simple/dashboard",
+    "/hc-simple/manual",
+    "/hc-simple/schedule",
+    "/hc-simple/history",
+  ];
   const BAODUONG_PATHS = [
     "/dhtt/dashboard",
     "/dhtt/manual",
@@ -123,6 +150,17 @@ const TopNavbar = () => {
     "/healthcheck/kpi",
     "/kpi/",
   ];
+  const PLATFORM_CONFIG_PATHS = [
+    "/healthcheck/platform-mapping",
+    "/healthcheck/group-schema-permissions",
+    "/healthcheck/platform-taxonomy",
+    "/healthcheck/config-sync",
+  ];
+  const AI_CONTRIBUTION_PATHS = [
+    "/ai-contribution/manual",
+    "/ai-contribution/review",
+    "/ai-contribution/catalog",
+  ];
 
   const breadcrumb = getBreadcrumb(pathname);
 
@@ -130,10 +168,6 @@ const TopNavbar = () => {
     <>
     <Navbar bg="primary" variant="dark" expand="lg" className="px-3 py-1 shadow-sm">
       <Container fluid>
-        <Navbar.Brand className="fw-bold me-0" style={{ fontSize: "1rem" }}>
-          System Health Automation
-        </Navbar.Brand>
-
         <Navbar.Toggle aria-controls="topnav-collapse" />
 
         <Navbar.Collapse id="topnav-collapse" className="w-100">
@@ -204,7 +238,44 @@ const TopNavbar = () => {
               </NavDropdown.Item>
             </NavDropdown>
 
-            {/* ── 3. BẢO DƯỠNG ▾ ───────────────────────────────────── */}
+            {/* ── 2b. FCP ▾ ──────────────────────────────────────── */}
+            <NavDropdown
+              title={<span style={ddTitleStyle(FCP_PATHS)}>⚡ FCP</span>}
+              id="dd-fcp"
+              menuVariant="light"
+              className={ddClass(FCP_PATHS)}
+            >
+              <NavDropdown.Item as={NavLink} to="/fcp">
+                🔍 Trigger
+              </NavDropdown.Item>
+              <NavDropdown.Item as={NavLink} to="/fcp/history">
+                📋 History
+              </NavDropdown.Item>
+            </NavDropdown>
+
+            {/* ── 3. HC SIMPLE ▾ ───────────────────────────────────── */}
+            <NavDropdown
+              title={<span style={ddTitleStyle(HC_SIMPLE_PATHS)}>HC Simple</span>}
+              id="dd-hc-simple"
+              menuVariant="light"
+              className={ddClass(HC_SIMPLE_PATHS)}
+            >
+              <NavDropdown.Item as={NavLink} to="/hc-simple/dashboard">
+                📊 Dashboard
+              </NavDropdown.Item>
+              <NavDropdown.Divider />
+              <NavDropdown.Item as={NavLink} to="/hc-simple/manual">
+                🛠️ Manual
+              </NavDropdown.Item>
+              <NavDropdown.Item as={NavLink} to="/hc-simple/schedule">
+                📅 Schedule
+              </NavDropdown.Item>
+              <NavDropdown.Item as={NavLink} to="/hc-simple/history">
+                📋 History
+              </NavDropdown.Item>
+            </NavDropdown>
+
+            {/* ── 4. BẢO DƯỠNG ▾ ───────────────────────────────────── */}
             <NavDropdown
               title={<span style={ddTitleStyle(BAODUONG_PATHS)}>Bảo Dưỡng</span>}
               id="dd-baoduong"
@@ -225,13 +296,13 @@ const TopNavbar = () => {
                 📋 History
               </NavDropdown.Item>
             </NavDropdown>
-            {/* ── 4. DEVICES ───────────────────────────────────────── */}
+            {/* ── 5. DEVICES ───────────────────────────────────────── */}
 
             <NavLink to="/healthcheck/devices" className={getLinkClass}>
               Devices
             </NavLink>
 
-            {/* ── 5. EXTERNAL STATS ────────────────────────────────── */}
+            {/* ── 6. EXTERNAL STATS ────────────────────────────────── */}
             <NavLink to="/healthcheck/external/stats" className={getLinkClass}>
               📊 External Stats
             </NavLink>
@@ -259,7 +330,29 @@ const TopNavbar = () => {
                 </NavDropdown.Item>
               </NavDropdown>
             )}
-            {/* ── 4. KPI ▾ ─────────────────────────────────────────── */}
+            {/* ── Platform Config (admin only) ── */}
+            {isAdmin && (
+              <NavDropdown
+                title={<span style={ddTitleStyle(PLATFORM_CONFIG_PATHS)}>🔌 Platform Config</span>}
+                id="dd-platform-config"
+                menuVariant="light"
+                className={ddClass(PLATFORM_CONFIG_PATHS)}
+              >
+                <NavDropdown.Item as={NavLink} to="/healthcheck/platform-mapping">
+                  🔗 Platform Mapping
+                </NavDropdown.Item>
+                <NavDropdown.Item as={NavLink} to="/healthcheck/group-schema-permissions">
+                  🛡️ Phân quyền theo Group
+                </NavDropdown.Item>
+                <NavDropdown.Item as={NavLink} to="/healthcheck/platform-taxonomy">
+                  🗂️ Group / Subsystem
+                </NavDropdown.Item>
+                <NavDropdown.Item as={NavLink} to="/healthcheck/config-sync">
+                  🔄 Đồng bộ File ⇄ DB
+                </NavDropdown.Item>
+              </NavDropdown>
+            )}
+            {/* ── 7. KPI ▾ ─────────────────────────────────────────── */}
             <NavDropdown
               title={<span style={ddTitleStyle(KPI_PATHS)}>KPI</span>}
               id="dd-kpi"
@@ -274,6 +367,24 @@ const TopNavbar = () => {
               </NavDropdown.Item>
               <NavDropdown.Item as={NavLink} to="/kpi/schedule">
                 📅 Quản lý Schedule
+              </NavDropdown.Item>
+            </NavDropdown>
+
+            {/* ── 8. AI-CONTRIBUTION ▾ ─────────────────────────────── */}
+            <NavDropdown
+              title={<span style={ddTitleStyle(AI_CONTRIBUTION_PATHS)}>🧩 AI-Contribution</span>}
+              id="dd-ai-contribution"
+              menuVariant="light"
+              className={ddClass(AI_CONTRIBUTION_PATHS)}
+            >
+              <NavDropdown.Item as={NavLink} to="/ai-contribution/manual">
+                ✍️ Thêm thủ công
+              </NavDropdown.Item>
+              <NavDropdown.Item as={NavLink} to="/ai-contribution/review">
+                ✅ Duyệt đóng góp
+              </NavDropdown.Item>
+              <NavDropdown.Item as={NavLink} to="/ai-contribution/catalog">
+                📚 Danh mục hàm
               </NavDropdown.Item>
             </NavDropdown>
 

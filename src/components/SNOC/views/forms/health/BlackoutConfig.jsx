@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Badge, Button, Card, Col, Form, FormControl,
-  InputGroup, Modal, Row, Spinner, Table,
+  InputGroup, Modal, Pagination, Row, Spinner, Table,
 } from "react-bootstrap";
 import { useDispatch, useSelector } from "react-redux";
 import Select from "react-select";
@@ -15,6 +15,11 @@ import { fetchDepartments } from "../../../redux/User/departmentSlice";
 import { fetchGroups }      from "../../../redux/User/groupSlice";
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
 import { getJwtClaims } from "../../../api/snocApiWithAutoToken";
+import {
+  createRequestSortFunction, getClassNamesFor, sortData,
+} from "../../../utils/tableUtils";
+
+const PAGE_SIZE = 20;
 
 // ── Constants ─────────────────────────────────────────────────────────────
 const SCOPE_OPTIONS = [
@@ -92,6 +97,11 @@ const BlackoutConfigPage = () => {
   const [filterType,   setFilterType]   = useState("");
   const [filterActive, setFilterActive] = useState("");
 
+  // Sort + pagination
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
+  const requestSort = createRequestSortFunction(setSortConfig, sortConfig);
+  const [currentPage, setCurrentPage] = useState(1);
+
   // Modal
   const [showModal,       setShowModal]       = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -102,6 +112,7 @@ const BlackoutConfigPage = () => {
   const [form,                   setForm]                   = useState(DEFAULT_FORM);
   const [selectedPlatformOption, setSelectedPlatformOption] = useState(null);
   const [selectedDeviceOption,   setSelectedDeviceOption]   = useState(null);
+  const [isCloning,              setIsCloning]              = useState(false);
   const isEditingRef = useRef(false);
 
   // ── Effects ──────────────────────────────────────────────────────────
@@ -147,10 +158,20 @@ const BlackoutConfigPage = () => {
     });
   }, [items, search, filterType, filterActive]);
 
+  const sortedItems = useMemo(
+    () => (sortConfig.key ? sortData(filteredItems, sortConfig.key, sortConfig.direction) : filteredItems),
+    [filteredItems, sortConfig]
+  );
+  const totalPages = Math.max(1, Math.ceil(sortedItems.length / PAGE_SIZE));
+  const pagedItems = sortedItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  useEffect(() => { setCurrentPage(1); }, [search, filterType, filterActive, sortConfig]);
+
   // ── Modal helpers ─────────────────────────────────────────────────────
   const openCreate = () => {
     isEditingRef.current = false;
     setEditingId(null);
+    setIsCloning(false);
     setForm({
       ...DEFAULT_FORM,
       department: !isAdmin ? (userClaims?.department_id ?? "") : "",
@@ -164,6 +185,39 @@ const BlackoutConfigPage = () => {
   const openEdit = (r) => {
     isEditingRef.current = true;
     setEditingId(r.id);
+    setIsCloning(false);
+    const deptObj  = departments.find(d => d.name === r.department);
+    const groupObj = groups.find(g => g.name === r.group);
+    setForm({
+      scope:            r.scope            || "PLATFORM",
+      platform:         r.platform         || "",
+      device:           r.device           || "",
+      type:             r.type             || "DAILY_WINDOW",
+      enabled:          !!r.enabled,
+      reason:           r.reason           || "",
+      start_time:       r.start_time       || "",
+      end_time:         r.end_time         || "",
+      days_of_week:     r.days_of_week     || [],
+      duration_minutes: r.duration_minutes || 30,
+      pause_until:      r.pause_until
+        ? new Date(r.pause_until).toISOString().slice(0, 16) : "",
+      department: deptObj?.id  || "",
+      group:      groupObj?.id || "",
+    });
+    setSelectedPlatformOption(
+      r.platform ? { label: r.platform, value: r.platform } : null
+    );
+    setSelectedDeviceOption(
+      r.device ? { label: r.device, value: r.device } : null
+    );
+    if (r.platform) dispatch(fetchDevicesByPlatform(r.platform));
+    setShowModal(true);
+  };
+
+  const openClone = (r) => {
+    isEditingRef.current = true;
+    setEditingId(null);
+    setIsCloning(true);
     const deptObj  = departments.find(d => d.name === r.department);
     const groupObj = groups.find(g => g.name === r.group);
     setForm({
@@ -269,7 +323,7 @@ const BlackoutConfigPage = () => {
       <Modal show={showModal} onHide={() => setShowModal(false)} size="lg" centered>
         <Modal.Header closeButton>
           <Modal.Title>
-            {editingId ? "Sửa Blackout" : "Tạo Blackout mới"}
+            {editingId ? "Sửa Blackout" : isCloning ? "Clone Blackout" : "Tạo Blackout mới"}
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -496,30 +550,31 @@ const BlackoutConfigPage = () => {
                   <Spinner animation="border" variant="primary" />
                 </div>
               ) : (
+                <>
                 <Table responsive hover bordered size="sm" className="align-middle">
                   <thead className="table-light">
                     <tr>
                       <th>Trạng thái</th>
                       <th>Phạm vi</th>
-                      <th>Platform / Device</th>
-                      <th>Loại</th>
+                      <th role="button" onClick={() => requestSort("platform")} className={getClassNamesFor(sortConfig, "platform")}>Platform / Device</th>
+                      <th role="button" onClick={() => requestSort("type")} className={getClassNamesFor(sortConfig, "type")}>Loại</th>
                       <th>Lịch / Thời gian</th>
                       <th>Lý do</th>
-                      {isAdmin && <th>Group</th>}
+                      {isAdmin && <th role="button" onClick={() => requestSort("group")} className={getClassNamesFor(sortConfig, "group")}>Group</th>}
                       {isAdmin && <th>Creator</th>}
                       {isAdmin && <th>Updater</th>}
-                      <th style={{ whiteSpace: "nowrap" }}>Tạo lúc</th>
-                      <th style={{ width: 130 }}>Hành động</th>
+                      <th role="button" onClick={() => requestSort("created_at")} className={getClassNamesFor(sortConfig, "created_at")} style={{ whiteSpace: "nowrap" }}>Tạo lúc</th>
+                      <th style={{ width: 170 }}>Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredItems.length === 0 ? (
+                    {pagedItems.length === 0 ? (
                       <tr>
                         <td colSpan={isAdmin ? 10 : 7} className="text-center text-muted py-3">
                           Không có blackout nào
                         </td>
                       </tr>
-                    ) : filteredItems.map(r => {
+                    ) : pagedItems.map(r => {
                       const canAct = checkCanAction(r);
                       return (
                         <tr key={r.id}>
@@ -603,6 +658,9 @@ const BlackoutConfigPage = () => {
                                 <Button size="sm" variant="outline-primary"
                                   onClick={() => openEdit(r)} disabled={saving}
                                   title="Sửa">✏️</Button>
+                                <Button size="sm" variant="outline-secondary"
+                                  onClick={() => openClone(r)} disabled={saving}
+                                  title="Clone">📋</Button>
                                 <Button size="sm"
                                   variant={r.enabled ? "outline-secondary" : "outline-success"}
                                   onClick={() => dispatch(toggleBlackout({ id: r.id, enabled: !r.enabled }))}
@@ -623,6 +681,28 @@ const BlackoutConfigPage = () => {
                     })}
                   </tbody>
                 </Table>
+                {totalPages > 1 && (
+                  <Pagination className="justify-content-center mt-3">
+                    <Pagination.Prev
+                      onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                      disabled={currentPage === 1}
+                    />
+                    {Array.from({ length: totalPages }, (_, i) => (
+                      <Pagination.Item
+                        key={i + 1}
+                        active={i + 1 === currentPage}
+                        onClick={() => setCurrentPage(i + 1)}
+                      >
+                        {i + 1}
+                      </Pagination.Item>
+                    ))}
+                    <Pagination.Next
+                      onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                    />
+                  </Pagination>
+                )}
+                </>
               )}
             </Card.Body>
           </Card>

@@ -7,6 +7,7 @@ import alertReducer from "../redux/Alert/alertSlice";
 import dnsReducer from "../redux/Dns/dnsSlice";
 import psCoreReducer from "../redux/Healthcheck/healthcheckSlice";
 import dhttReducer from "../redux/Healthcheck/dhttSlice";
+import dhttHcSimpleReducer from "../redux/Healthcheck/dhttHcSimpleSlice";
 import platformDeviceReducer from "../redux/Healthcheck/platformDeviceSlice";
 import snocReducer from "../redux/Healthcheck/snocSlice";
 import hostsReducer from "../redux/Hosts/hostsSlice";
@@ -32,13 +33,19 @@ import userReducer from "./../redux/User/userSlice";
 import outputIgnoreV2Reducer from "../redux/Healthcheck/outputIgnoreSliceV2";
 import blackoutReducer from "../redux/Healthcheck/blackoutSlice";
 import precheckReducer from "../redux/Healthcheck/precheckSlice";
+import faultPrecheckReducer from "../redux/Healthcheck/faultPrecheckSlice";
 import analysisParamReducer from "../redux/Healthcheck/analysisParamSlice";
 import alertConfigReducer from "../redux/Healthcheck/alertConfigSlice";
 import retentionConfigReducer from "../redux/Healthcheck/retentionConfigSlice";
 import notifChannelConfigReducer from "../redux/Healthcheck/notifChannelConfigSlice";
+import platformMappingReducer from "../redux/Healthcheck/platformMappingSlice";
+import groupSchemaPermissionReducer from "../redux/Healthcheck/groupSchemaPermissionSlice";
+import platformTaxonomyReducer from "../redux/Healthcheck/platformTaxonomySlice";
+import configSyncReducer from "../redux/Healthcheck/configSyncSlice";
 import regionReducer from "../redux/User/regionSlice";
 import accessScopeReducer from "../redux/User/accessScopeSlice";
 import kpiDashboardStateReducer from "../redux/KPI/kpiDashboardStateSlice";
+import contributionReducer from "../redux/contribution/contributionSlice";
 const snocStore = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -66,16 +73,23 @@ const snocStore = configureStore({
     // ✅ NEW: output ignore rules
     outputIgnore: outputIgnoreReducer,
     dhtt: dhttReducer,
+    dhttHcSimple: dhttHcSimpleReducer,
     outputIgnoreV2: outputIgnoreV2Reducer,
     blackout: blackoutReducer,
     precheck: precheckReducer,
+    faultPrecheck: faultPrecheckReducer,
     analysisParam: analysisParamReducer,
     alertConfig: alertConfigReducer,
     retentionConfig: retentionConfigReducer,
     notifChannelConfig: notifChannelConfigReducer,
+    platformMapping: platformMappingReducer,
+    groupSchemaPermission: groupSchemaPermissionReducer,
+    platformTaxonomy: platformTaxonomyReducer,
+    configSync: configSyncReducer,
     region: regionReducer,
     accessScope: accessScopeReducer,
     kpiDashboardState: kpiDashboardStateReducer,
+    contribution: contributionReducer,
   },
 });
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  Alert,
   Button,
   Card,
   Col,
@@ -18,6 +19,7 @@ import {
   fetchDevicesByPlatform,
   fetchPlatforms,
 } from "../../../redux/Healthcheck/platformDeviceSlice";
+import { fetchHosts, fetchDeviceApps, fetchAllDeviceApps } from "../../../redux/Hosts/hostsSlice";
 import TopNavbarHealth from "../../dashboard/DashOrigin/TopNavbarHealth";
 import WebSocketStatusBanner from "./../../../components/WebSocketStatusBanner"; 
 import { getJwtClaims } from "../../../api/snocApiWithAutoToken";
@@ -45,14 +47,21 @@ const Healthcheck = () => {
   const { healthchecknodes = [], loading = false } = useSelector(
     (state) => state.pscore ?? {}
   );
-  console.log("healthchecknodes", healthchecknodes);
+  const { devices: allHosts = [], allDeviceApps = [] } = useSelector((state) => state.hosts || {});
 
   // Chuyển sang quản lý object { label, value } giống Precheck để react-select hoạt động đúng
   const [selectedPlatform, setSelectedPlatform] = useState(null);
   const [selectedDevices, setSelectedDevices] = useState([]);
 
+  // State cho tính năng healthcheck theo tên thiết bị
+  const [deviceForApps, setDeviceForApps] = useState(null);
+  const [loadingApps, setLoadingApps] = useState(false);
+  const [appsAlert, setAppsAlert] = useState(null); // { variant, message }
+
   useEffect(() => {
     dispatch(fetchPlatforms());
+    dispatch(fetchHosts());
+    dispatch(fetchAllDeviceApps());
   }, [dispatch]);
 
   useEffect(() => {
@@ -73,13 +82,30 @@ const Healthcheck = () => {
 
   const deviceOptions = useMemo(() => {
     return devices.map((d) => ({
-      label: `${d.name} (${d.ip || "no-ip"})`,
+      label: d.is_app
+        ? `↳ ${d.display_name || d.name} (${d.ip || "no-ip"})`
+        : `${d.name} (${d.ip || "no-ip"})`,
       value: d.name,
     }));
   }, [devices]);
 
   const allOption = { label: "-- Chọn tất cả thiết bị --", value: "__all__" };
   const combinedOptions = useMemo(() => [allOption, ...deviceOptions], [deviceOptions]);
+
+  const deviceNamesWithApps = useMemo(() =>
+    new Set(allDeviceApps.map(app => app.device_name)),
+  [allDeviceApps]);
+
+  const representativeDeviceOptions = useMemo(() =>
+    allHosts
+      .filter(d => deviceNamesWithApps.has(d.name))
+      .map(d => ({
+        value: d.name,
+        label: d.hostname
+          ? `${d.name} (${d.platform || "?"}) — có IP`
+          : `${d.name} (${d.platform || "?"}) — chỉ apps`,
+      })),
+  [allHosts, deviceNamesWithApps]);
 
   const handleDeviceChange = (selected) => {
     if (!selected) return setSelectedDevices([]);
@@ -103,6 +129,44 @@ const Healthcheck = () => {
       );
     } else {
       console.log("Vui lòng chọn platform và thiết bị.");
+    }
+  };
+
+  const handleHealthcheckByDevice = async () => {
+    if (!deviceForApps) return;
+    setAppsAlert(null);
+    setLoadingApps(true);
+    try {
+      const result = await dispatch(fetchDeviceApps(deviceForApps.value)).unwrap();
+      const apps = result.apps || [];
+      if (apps.length === 0) {
+        setAppsAlert({ variant: "warning", message: `Thiết bị "${deviceForApps.value}" không có app nào được cấu hình.` });
+        return;
+      }
+      const parentDevice = allHosts.find(d => d.name === deviceForApps.value);
+      const hasIp = !!parentDevice?.hostname;
+
+      // Case 2 (có IP): dùng platform của thiết bị đại diện
+      // Case 1 (không IP): lấy platform từ app đầu tiên
+      const platformName = hasIp
+        ? (parentDevice?.platform || apps[0]?.platform)
+        : apps[0]?.platform;
+
+      if (!platformName) {
+        setAppsAlert({ variant: "danger", message: `Không xác định được platform của thiết bị "${deviceForApps.value}".` });
+        return;
+      }
+      const appNames = apps.map(app => `${deviceForApps.value}__${app.app_name.toLowerCase()}`);
+
+      // Case 2: healthcheck cả thiết bị đại diện lẫn toàn bộ apps
+      // Case 1: chỉ healthcheck apps
+      const deviceList = hasIp ? [deviceForApps.value, ...appNames] : appNames;
+
+      dispatch(GenericHealthCheckView({ selectedPlatform: platformName, selectedDevice: deviceList }));
+    } catch (err) {
+      setAppsAlert({ variant: "danger", message: `Lỗi: ${err?.message || "Không lấy được danh sách app."}` });
+    } finally {
+      setLoadingApps(false);
     }
   };
 
@@ -183,6 +247,46 @@ console.log("=== 1. DỮ LIỆU REDUX ===", {
                   )}
                 </Col>
               </Row>
+
+              {isAdmin && (
+                <>
+                  <hr className="my-2" />
+                  <Row className="align-items-center g-2">
+                    <Col md="auto">
+                      <span className="text-muted small fw-semibold">Healthcheck theo thiết bị đại diện:</span>
+                    </Col>
+                    <Col md={4}>
+                      <Select
+                        options={representativeDeviceOptions}
+                        value={deviceForApps}
+                        onChange={v => { setDeviceForApps(v); setAppsAlert(null); }}
+                        isClearable
+                        placeholder="Chọn thiết bị đại diện..."
+                        styles={SELECT_STYLES}
+                      />
+                    </Col>
+                    <Col md="auto">
+                      <Button
+                        variant="outline-primary"
+                        onClick={handleHealthcheckByDevice}
+                        disabled={!deviceForApps || loadingApps || loading}
+                      >
+                        {loadingApps
+                          ? <><Spinner animation="border" size="sm" className="me-1" />Đang tải...</>
+                          : "🔍 Healthcheck tất cả apps"}
+                      </Button>
+                    </Col>
+                    {appsAlert && (
+                      <Col md={12}>
+                        <Alert variant={appsAlert.variant} className="mb-0 py-2 px-3 small"
+                          dismissible onClose={() => setAppsAlert(null)}>
+                          {appsAlert.message}
+                        </Alert>
+                      </Col>
+                    )}
+                  </Row>
+                </>
+              )}
             </Card.Body>
           </Card>
         </Col>

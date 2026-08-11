@@ -87,6 +87,8 @@ const HealthcheckTable = ({
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
+  const [showKpiCharts, setShowKpiCharts] = useState(true);
+  const [showKpiForm,   setShowKpiForm]   = useState(false);
   const [showHostHistory, setShowHostHistory] = useState(false);
   const [selectedHost, setSelectedHost] = useState(null);
   const [hostHistoryPage, setHostHistoryPage] = useState(1);
@@ -579,6 +581,58 @@ const isAdmin = useMemo(() => {
               </div>
             )}
 
+            {/* ==== KPI (ẩn/hiện riêng chart và form) ==== */}
+            <div className="mb-3">
+              <div className="d-flex align-items-center gap-2 mb-2">
+                <Button
+                  size="sm"
+                  variant={showKpiCharts ? "outline-primary" : "outline-secondary"}
+                  onClick={() => setShowKpiCharts(v => !v)}
+                  style={{ fontSize: "0.8rem" }}
+                >
+                  📊 Charts {showKpiCharts ? "▲" : "▼"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant={showKpiForm ? "outline-primary" : "outline-secondary"}
+                  onClick={() => setShowKpiForm(v => !v)}
+                  style={{ fontSize: "0.8rem" }}
+                >
+                  🔧 Explorer {showKpiForm ? "▲" : "▼"}
+                </Button>
+              </div>
+              {(showKpiCharts || showKpiForm) && (
+                <div>
+                  {isPgw && (
+                    <Nav variant="tabs" activeKey={kpiTab} onSelect={setKpiTab} className="border-0 mb-2">
+                      <Nav.Item>
+                        <Nav.Link eventKey="single" style={{ fontSize: "0.8rem", padding: "3px 12px" }}>
+                          Single Platform
+                        </Nav.Link>
+                      </Nav.Item>
+                      <Nav.Item>
+                        <Nav.Link eventKey="multi" style={{ fontSize: "0.8rem", padding: "3px 12px" }}>
+                          📌 Multi-PGW
+                        </Nav.Link>
+                      </Nav.Item>
+                    </Nav>
+                  )}
+                  {(!isPgw || kpiTab === "single") && (
+                    <KPIExplorerCore
+                      defaultGroup={group}
+                      defaultSubsystem={subsystem}
+                      defaultPlatform={platformList?.[0] || ""}
+                      realtime={false}
+                      embedded
+                      hideToolbar={!showKpiForm}
+                      hideCharts={!showKpiCharts}
+                    />
+                  )}
+                  {isPgw && kpiTab === "multi" && <MultiPlatformKPITab />}
+                </div>
+              )}
+            </div>
+
             {loading && !anyRowRunning ? (
               <div className="text-center my-4">
                 <Spinner animation="border" variant="primary" />
@@ -937,41 +991,6 @@ const isAdmin = useMemo(() => {
               </>
             )}
           </Card.Body>
-          {/* ==== KPI SECTION (inline) ==== */}
-          <div className="mt-3">
-            <Card>
-              {isPgw && (
-                <Card.Header className="py-1">
-                  <Nav variant="tabs" activeKey={kpiTab} onSelect={setKpiTab} className="border-0 mb-n1">
-                    <Nav.Item>
-                      <Nav.Link eventKey="single" style={{ fontSize: "0.8rem", padding: "3px 12px" }}>
-                        Single Platform
-                      </Nav.Link>
-                    </Nav.Item>
-                    <Nav.Item>
-                      <Nav.Link eventKey="multi" style={{ fontSize: "0.8rem", padding: "3px 12px" }}>
-                        📌 Multi-PGW
-                      </Nav.Link>
-                    </Nav.Item>
-                  </Nav>
-                </Card.Header>
-              )}
-              <Card.Body>
-                {(!isPgw || kpiTab === "single") && (
-                  <KPIExplorerCore
-                    defaultGroup={group}
-                    defaultSubsystem={subsystem}
-                    defaultPlatform={platformList?.[0] || ""}
-                    realtime={false}
-                    embedded
-                  />
-                )}
-                {isPgw && kpiTab === "multi" && (
-                  <MultiPlatformKPITab />
-                )}
-              </Card.Body>
-            </Card>
-          </div>
         </Card>
       </Col>
     </Row>
