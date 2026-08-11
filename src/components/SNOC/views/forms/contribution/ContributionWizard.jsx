@@ -4,6 +4,9 @@ import { useDispatch, useSelector } from "react-redux";
 import ContributionForm from "./ContributionForm";
 import SandboxResult from "./SandboxResult";
 import { saveManualCode, runSandbox, submitDraft } from "../../../redux/contribution/contributionSlice";
+import { showTemporaryAlert } from "../../../redux/Alert/alertSlice";
+import { buildContributionPrompt } from "./aiPromptTemplate";
+import { copyToClipboard } from "./clipboard";
 
 const STEPS = ["Thông tin", "Nhập code", "Sandbox", "Submit"];
 
@@ -52,6 +55,18 @@ export default function ContributionWizard({ initialDraftId = null, onDone }) {
     });
   };
   const handleSandbox = () => dispatch(runSandbox(draftId));
+  const handleCopyPrompt = async () => {
+    if (!draft) return;
+    const ok = await copyToClipboard(buildContributionPrompt(draft));
+    dispatch(showTemporaryAlert(
+      ok
+        ? {
+            message: "📋 Đã copy prompt — dán vào ChatGPT/Claude/Gemini, sau đó paste hàm AI trả về vào ô bên dưới rồi bấm Lưu code",
+            type: "success",
+          }
+        : { message: "⚠️ Không copy được prompt vào clipboard, thử lại hoặc copy thủ công", type: "error" }
+    ));
+  };
   const handleSubmit = () => {
     dispatch(submitDraft(draftId)).then((res) => {
       if (res.meta.requestStatus === "fulfilled") {
@@ -99,6 +114,15 @@ export default function ContributionWizard({ initialDraftId = null, onDone }) {
 
             {editingManual && (
               <div>
+                <div className="mb-2">
+                  <Button size="sm" variant="outline-primary" onClick={handleCopyPrompt}>
+                    📋 Copy prompt cho AI
+                  </Button>
+                  <Form.Text className="text-muted d-block">
+                    Copy prompt đã lắp sẵn thông tin của draft này, dán vào AI ngoài (ChatGPT/Claude/Gemini...)
+                    để nhờ viết hàm, rồi paste kết quả AI trả về vào ô bên dưới.
+                  </Form.Text>
+                </div>
                 <Form.Control
                   as="textarea"
                   rows={14}

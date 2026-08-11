@@ -4,7 +4,10 @@ import Select from "react-select";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchPlatforms } from "../../../redux/Healthcheck/platformDeviceSlice";
 import { createDraft, fetchPlatformContext, saveManualCode, testCodePreview } from "../../../redux/contribution/contributionSlice";
+import { showTemporaryAlert } from "../../../redux/Alert/alertSlice";
 import SandboxResult from "./SandboxResult";
+import { buildContributionPrompt } from "./aiPromptTemplate";
+import { copyToClipboard } from "./clipboard";
 
 const SELECT_STYLES = {
   valueContainer: (b) => ({ ...b, maxHeight: "38px", overflowX: "auto", flexWrap: "nowrap" }),
@@ -108,6 +111,26 @@ export default function ContributionForm({ onCreated, showCodeField = false }) {
       code, sample_output: form.sample_output,
       command_pattern: form.command_pattern, fn_name: form.fn_name,
     }));
+  };
+
+  const canCopyPrompt =
+    form.platform.trim() &&
+    form.fn_name.trim() &&
+    form.command_pattern.trim() &&
+    form.device_command.trim() &&
+    form.description.trim() &&
+    form.sample_output.trim();
+  const handleCopyPrompt = async () => {
+    if (!canCopyPrompt) return;
+    const ok = await copyToClipboard(buildContributionPrompt(form));
+    dispatch(showTemporaryAlert(
+      ok
+        ? {
+            message: "📋 Đã copy prompt — dán vào ChatGPT/Claude/Gemini, sau đó paste hàm AI trả về vào ô bên dưới rồi bấm Test code",
+            type: "success",
+          }
+        : { message: "⚠️ Không copy được prompt vào clipboard, thử lại hoặc copy thủ công", type: "error" }
+    ));
   };
 
   const isValid =
@@ -245,6 +268,26 @@ export default function ContributionForm({ onCreated, showCodeField = false }) {
         <Form.Group as={Row} className="mb-3">
           <Form.Label column sm={3}>Hàm phân tích (paste nguyên hàm)</Form.Label>
           <Col sm={9}>
+            <div className="mb-2">
+              <Button
+                size="sm" variant="outline-primary" disabled={!canCopyPrompt}
+                onClick={handleCopyPrompt}
+              >
+                📋 Copy prompt cho AI
+              </Button>
+              {!canCopyPrompt && (
+                <Form.Text className="text-muted d-block">
+                  Cần điền Platform, Tên hàm, Command pattern, Câu lệnh trên thiết bị, Mô tả &amp; Tiêu chí,
+                  Sample output để sinh prompt.
+                </Form.Text>
+              )}
+              {canCopyPrompt && (
+                <Form.Text className="text-muted d-block">
+                  Copy prompt đã lắp sẵn thông tin ở trên, dán vào AI ngoài (ChatGPT/Claude/Gemini...) để nhờ
+                  viết hàm, rồi paste kết quả AI trả về vào ô bên dưới.
+                </Form.Text>
+              )}
+            </div>
             <Form.Control
               as="textarea"
               rows={14}
