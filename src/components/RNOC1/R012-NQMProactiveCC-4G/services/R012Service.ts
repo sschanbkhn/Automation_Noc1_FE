@@ -19,6 +19,9 @@ import {
   SyncRimsResponse,
   SyncNetactResponse,
   EvaluateCrResponse,
+  JobRunQueryParams,
+  JobRunListResponse,
+  JobRunDetail,
 } from '../types';
 
 // ham goi GET /api/v1/stations - lay danh sach tram co phan trang
@@ -67,11 +70,12 @@ export const getSessions = async (params?: SessionsQueryParams): Promise<Session
 // chi goi API va tra ve dung raw response theo type PreviewCrResponse
 export const getPreview = async (payload: TriggerCrRequest): Promise<PreviewCrResponse> => {
   try {
-    // endpoint nang nhat: goi CDS (gw-oneoss cell/neighbors) dong bo de tinh cells_bi_anh_huong,
-    // CDS phan hoi khong on dinh (luc nhanh luc cham, co luc qua 15s) nen dung du 60s (mac dinh
-    // cua r012Request) thay vi rut ngan - khai bao lai timeout tuong minh o day de ro rang y do,
-    // tranh nham lan neu sau nay co ai doi mac dinh cua instance
-    const data: any = await r012Request.post('/cr/preview', payload, { timeout: 60000 });
+    // endpoint nang nhat: goi CDS (gw-oneoss cell/neighbors) dong bo de tinh cells_bi_anh_huong.
+    // 120s - RIENG cho endpoint nay, KHONG nang mac dinh 60s cua r012Request: CDS van co luc vuot 60s
+    // (lan tang truoc 15s->60s da chua du), ma xem truoc la thao tac NOC CHU DONG bam va ngoi cho ket qua
+    // nen cho lau con hon bao loi timeout roi phai bam lai tu dau - trong khi cac endpoint doc DB con lai
+    // neu cham toi 60s thi that su la co su co, khong duoc keo dai cho chung.
+    const data: any = await r012Request.post('/cr/preview', payload, { timeout: 120000 });
     return data as PreviewCrResponse;
   } catch (error) {
     throw error;
@@ -144,6 +148,36 @@ export const getLichSuPhieu = async (params?: PhieuHistoryQueryParams): Promise<
     // endpoint nay khong goi CDS/CTS (chi doc lich su phieu da luu trong DB) nen giu timeout ngan hon
     const data: any = await r012Request.get('/phieu', { params, timeout: 30000 });
     return data as PhieuHistoryResponse;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// ham goi GET /api/v1/jobs/runs - lay danh sach LUOT CHAY job (bang job_run_log), dung cho bang lich su
+// chay job trong tab "Lich su phieu". Response KHONG co chi_tiet (BE co y bo ra, xem JobRunListItem trong
+// types/index.ts) - muon xem chi_tiet phai goi getJobRunDetail ben duoi
+// LUU Y params.tu_ngay/den_ngay: PHAI la "YYYY-MM-DD" (ngay lich GMT+7), KHONG duoc la ISO date-time -
+// xem comment day du trong JobRunQueryParams (types/index.ts)
+// axios tu bo cac key co gia tri undefined khoi query string nen cu truyen ca object params vao la du
+export const getJobRuns = async (params?: JobRunQueryParams): Promise<JobRunListResponse> => {
+  try {
+    // endpoint nay khong goi CDS/CTS (chi doc bang job_run_log trong DB) nen giu timeout ngan hon
+    const data: any = await r012Request.get('/jobs/runs', { params, timeout: 30000 });
+    return data as JobRunListResponse;
+  } catch (error) {
+    // loi da duoc interceptor cua r012Request hien Notification, o day nem lai de hook goi ham nay tu xu ly tiep
+    throw error;
+  }
+};
+
+// ham goi GET /api/v1/jobs/runs/{id} - lay DAY DU 1 luot chay job KE CA chi_tiet (JSONB gom danh sach
+// session x cell da xu ly). Tach endpoint rieng thay vi tra kem trong danh sach vi chi_tiet rat lon
+export const getJobRunDetail = async (id: number): Promise<JobRunDetail> => {
+  try {
+    // van la doc DB thuan (khong CDS/CTS) nen giu 30s; BE tra 404 khi khong co id -> interceptor hien
+    // Notification va reject, component tu hien Alert loi
+    const data: any = await r012Request.get(`/jobs/runs/${id}`, { timeout: 30000 });
+    return data as JobRunDetail;
   } catch (error) {
     throw error;
   }

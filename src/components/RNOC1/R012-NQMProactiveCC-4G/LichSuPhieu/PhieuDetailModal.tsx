@@ -6,7 +6,7 @@ import { R012_COLORS } from "../theme";
 import { formatDateTime } from "../helpers/formatDateTime";
 // mau Tag trang thai phieu - khai bao 1 lan o PhieuHistoryTable roi import lai vao day, tranh 2 file tu
 // dinh nghia 2 bang mau roi lech nhau khi sau nay them trang thai moi
-import { PHIEU_STATUS_COLORS } from "./phieuStatus";
+import { PHIEU_STATUS_COLORS, PHIEU_STATUS_LABELS } from "./phieuStatus";
 
 interface PhieuDetailModalProps {
   // null = Modal dang dong. Nhan NGUYEN dong du lieu tu bang thay vi goi lai API theo id: GET /phieu da tra
@@ -109,7 +109,11 @@ const PhieuDetailModal: React.FC<PhieuDetailModalProps> = ({ phieu, onClose }) =
           >
             <Descriptions.Item label="Cell">{phieu.cell_name}</Descriptions.Item>
             <Descriptions.Item label="Trang thai">
-              <Tag color={PHIEU_STATUS_COLORS[phieu.trang_thai] ?? "default"}>{phieu.trang_thai}</Tag>
+              {/* dung CHUNG nhan voi cot Trang thai cua bang (PHIEU_STATUS_LABELS) - modal nay mo ra tu dung
+                  dong do, 2 noi ghi 2 kieu se lam nguoi doc tuong la 2 trang thai khac nhau */}
+              <Tag color={PHIEU_STATUS_COLORS[phieu.trang_thai] ?? "default"}>
+                {PHIEU_STATUS_LABELS[phieu.trang_thai] ?? phieu.trang_thai}
+              </Tag>
             </Descriptions.Item>
             <Descriptions.Item label="Ma phieu">{phieu.phieu_id ?? "-"}</Descriptions.Item>
             <Descriptions.Item label="Session CR">{phieu.cr_session_id ?? "-"}</Descriptions.Item>

@@ -152,6 +152,17 @@ const AffectedCellsTable: React.FC<AffectedCellsTableProps> = ({ previewData }) 
               padding: 8px;
               border-bottom: 1px solid ${R012_COLORS.tableBorder};
             }
+            /* Cot "Cell" (cot thu 2, ngay sau STT): ten cell dai (vd "HNI1234_L1800_1") truoc day bi ngat
+               thanh 2 dong lam chieu cao hang gap doi va bang nhin lo cho. nowrap giu ten tren DUNG 1 hang.
+               Cap voi width:1% - day la cach chuan de trinh duyet cap cho cot dung be rong NOI DUNG that
+               ("1%" nghia la "nho nhat co the", nhung nowrap khong cho ep nho hon ten cell) roi chia phan
+               du cho cac cot con lai; KHONG dat px cung vi ten cell dai ngan khac nhau tuy tram.
+               nth-child(2) bam theo thu tu cot khai bao co dinh trong "columns" o tren (STT, Cell, ...) */
+            .r012-affected-cells-table thead th:nth-child(2),
+            .r012-affected-cells-table tbody td:nth-child(2) {
+              white-space: nowrap;
+              width: 1%;
+            }
             .r012-affected-cells-table tbody tr:nth-child(odd) { background-color: #ffffff; }
             .r012-affected-cells-table tbody tr:nth-child(even) { background-color: ${R012_COLORS.tableRowAlt}; }
             .r012-affected-cells-table tbody tr:hover { background-color: ${R012_COLORS.rowHoverBg}; }

@@ -50,7 +50,10 @@ const STATUS_FILTER_OPTIONS = [
 
 const SessionHistoryList: React.FC = () => {
   const [page, setPage] = useState<number>(1);
-  const [size, setSize] = useState<number>(20); // 20 la default cua BE theo schema SessionsQueryParams
+  // 10 dong/trang (yeu cau truc tiep user) - CO Y khac default 20 cua BE (schema SessionsQueryParams):
+  // bang nay nam ngay dau tab, 20 dong lam phai cuon het man hinh moi thay Pagination. Van gui size=10
+  // tuong minh len BE nen khong phu thuoc default cua BE
+  const [size, setSize] = useState<number>(10);
 
   // state luu session dang duoc xem chi tiet - null nghia la Modal dang dong
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
@@ -240,7 +243,13 @@ const SessionHistoryList: React.FC = () => {
             setSearchInput(value);
             debouncedApplySearch(value);
           }}
-          style={{ width: "260px" }}
+          // KHONG dat width co dinh 260px nhu truoc: nut "Xoa loc" luon la phan tu CUOI cua thanh loc nay,
+          // nen khi tong be rong 4 o vuot khung thi chinh no bi flexWrap day xuong dong 2 (thanh loc cua
+          // SessionHistoryList rong hon cua PhieuHistoryTable vi co them RangePicker). Cho o tim CO GIAN
+          // (co the co lai toi 180px) de phan thieu duoc bu tu day - 4 o giu duoc tren CUNG 1 HANG o moi
+          // be rong man hinh thuc te, thay vi tach hang. Van giu flexWrap o container lam duong lui cho
+          // man hinh cuc hep
+          style={{ flex: "1 1 220px", minWidth: "180px", maxWidth: "260px" }}
         />
         {/* Select loc trang thai - dung options tinh san (STATUS_FILTER_OPTIONS). KHONG tu style border rieng:
             RangePicker/Input.Search canh ben cung dang de mau xanh duong mac dinh cua antd theme (chua co
