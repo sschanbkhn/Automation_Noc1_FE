@@ -9,9 +9,12 @@ import { Cookie } from 'helpers/cookie'
 // without breaking the response interceptor.
 const r012Request = axios.create({
   baseURL: process.env.R012_API_URL || 'http://127.0.0.1:8000/api/v1',
-  // giam tu 60000ms xuong 15000ms: BE gio tra 202 NGAY khi trigger CR (khong con block cho SSH chay het),
-  // response chi mang session_id de FE theo doi tiep qua SSE - 15s la du du cho 1 response 202 tra ve ngay
-  timeout: 15000
+  // tang tu 15000ms len 60000ms: CDS (gw-oneoss cell/neighbors) phan hoi khong on dinh,
+  // luc nhanh luc cham (co luc qua 15s) - BE da xu ly nhanh phia minh (chi 1 lan goi CDS,
+  // khong lap lai), nut co la do CDS cham nen FE phai cho lau hon de khong bao loi gia.
+  // day la timeout mac dinh cho ca instance; cac endpoint nhanh (khong goi CDS) tu override
+  // timeout ngan hon ngay tai noi goi trong R012Service.ts
+  timeout: 60000
 })
 
 r012Request.interceptors.request.use(

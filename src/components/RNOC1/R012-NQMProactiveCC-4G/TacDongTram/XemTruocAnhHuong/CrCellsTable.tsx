@@ -197,6 +197,14 @@ const CrCellsTable: React.FC<CrCellsTableProps> = ({ previewData }) => {
               padding: 8px;
               border-bottom: 1px solid ${R012_COLORS.tableBorder};
             }
+            /* Cot "Cell" (cot thu 2, ngay sau STT): xem giai thich day du trong AffectedCellsTable.tsx -
+               bang nay con NHIEU cot hon (9 cot) nen ap luc ep ten cell xuong dong cang lon, cang can nowrap.
+               nth-child(2) bam theo thu tu cot khai bao co dinh trong "columns" o tren (STT, Cell, ...) */
+            .r012-cr-cells-table thead th:nth-child(2),
+            .r012-cr-cells-table tbody td:nth-child(2) {
+              white-space: nowrap;
+              width: 1%;
+            }
             .r012-cr-cells-table tbody tr:nth-child(odd) { background-color: #ffffff; }
             .r012-cr-cells-table tbody tr:nth-child(even) { background-color: ${R012_COLORS.tableRowAlt}; }
             .r012-cr-cells-table tbody tr:hover { background-color: ${R012_COLORS.rowHoverBg}; }

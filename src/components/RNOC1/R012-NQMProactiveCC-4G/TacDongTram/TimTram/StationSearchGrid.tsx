@@ -303,11 +303,19 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
             <Button type="primary" onClick={() => onTriggerCr(selectedStation)}>
               Trigger CR cho tram {selectedStation.tram_name}
             </Button>
-            {/* loading state: CDS co the mat vai giay de tra ve tram_lan_can, dung loading co san cua antd Button
-                thay vi tu ve Spin rieng, NOC van thay ro nut dang xu ly va khong bam trung lap duoc (antd tu disable) */}
+            {/* loading state: CDS co the mat vai giay den gan 1 phut de tra ve tram_lan_can (timeout FE da tang
+                len 60s de khop), dung loading co san cua antd Button thay vi tu ve Spin rieng, NOC van thay ro
+                nut dang xu ly va khong bam trung lap duoc (antd tu disable) */}
             <Button loading={previewMutation.isLoading} onClick={handlePreviewClick}>
               Xem truoc anh huong
             </Button>
+            {/* text ro rang thay vi chi spinner tren nut - CDS co the phan hoi cham, NOC can biet dang cho
+                chu khong phai treo may, tranh bam lap lai hoac F5 giua chung */}
+            {previewMutation.isLoading && (
+              <span style={{ color: "#888", fontStyle: "italic" }}>
+                Dang tai du lieu tu CDS, co the mat den 1 phut...
+              </span>
+            )}
           </div>
           {/* error state: preview that bai (vd tram khong co tram lan can / CDS loi - da xac nhan qua goi that
               tram_id khong hop le tra HTTP 502 CDS_API_ERROR o Buoc 0) - hien ro cho NOC, KHONG de im lang.

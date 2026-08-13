@@ -280,6 +280,79 @@ export interface QosHistoryQueryParams {
   to?: string; // "YYYY-MM-DD" - PHAI di kem "from"
 }
 
+// dung cho POST /api/v1/phieu (KHOI 4b/5, xuat phieu SaveCellClm cho 1 cell KHONG DAT) - khop CHINH XAC
+// api/schemas/phieu_schemas.py::XuatPhieuResponse phia BE (KHOI 4a/5, doc source truc tiep, khong doan)
+export interface CtsResponse {
+  isError: boolean | null;
+  code: string | null;
+  message: string | null;
+  data: unknown; // hinh dang CHUA XAC NHAN tu BE (TU GIA DINH, xem application/xuat_phieu_use_case.py::_extract_phieu_id)
+}
+
+export interface XuatPhieuResponse {
+  // SUCCESS/FAILED/DAT_KHONG_XUAT - xem domain/ports/inbound/use_case_ports.py::XuatPhieuResult phia BE
+  trang_thai: string;
+  phieu_id: string | null;
+  // null khi DAT_KHONG_XUAT hoac da xuat truoc do (KHONG goi lai CTS lan nay) - CHI co gia tri khi THAT SU
+  // goi CTS trong lan nay (FE dung de phan biet "da xuat truoc" voi "vua xuat xong", ca 2 deu trang_thai=SUCCESS)
+  cts_response: CtsResponse | null;
+  message: string | null;
+}
+
+// ==== GET /api/v1/phieu (lich su phieu da xuat) ====
+// dung cho GET /api/v1/phieu - query param loc lich su phieu. TAT CA param deu optional:
+// khong truyen session_id -> lay phieu cua MOI session (tab rieng "Lich su phieu"); truyen session_id ->
+// chi lay phieu cua 1 session (dung trong chi tiet session CR)
+export interface PhieuHistoryQueryParams {
+  session_id?: number; // loc theo 1 session CR, optional
+  // SUCCESS|FAILED|PENDING|KHONG_XUAT_VUOT_GIOI_HAN|KHONG_XUAT_HET_LUOT_THU.
+  // DRY_RUN da bi BO HAN khoi hop dong BE (khong con che do chay thu), keo theo BE khong con an ngam ban
+  // ghi nao nua -> KHONG truyen param nay gio dung nghia la lay TAT CA trang thai
+  trang_thai?: string;
+  page?: number; // trang hien tai
+  size?: number; // so ban ghi moi trang
+  // TU GIA DINH theo quy uoc da dung o GET /sessions (enum sort_by = dung ten field cua bang) - FE chi cho
+  // sort cac cot chac chan la field that (cell_name/trang_thai/created_at), KHONG cho sort cot suy dien
+  // (STT) de tranh gui gia tri ngoai enum lam BE tra 422
+  sort_by?: string;
+  order?: "asc" | "desc";
+}
+
+// dung cho GET /api/v1/phieu - 1 dong lich su phieu
+export interface PhieuHistoryItem {
+  id: number; // id ban ghi lich su phieu
+  cr_session_id: number | null; // session CR da sinh ra phieu nay
+  cell_name: string; // cell duoc xuat phieu
+  // SUCCESS|FAILED|PENDING|KHONG_XUAT_VUOT_GIOI_HAN|KHONG_XUAT_HET_LUOT_THU (DRY_RUN da bi bo han).
+  // De kieu string chu KHONG phai union: cot trong DB la VARCHAR tu do, bang mau/nhan o phieuStatus.ts
+  // deu da co fallback nen gia tri la van hien duoc nguyen van thay vi lam vo man hinh
+  trang_thai: string;
+  phieu_id: string | null; // ma phieu ben TTS, null khi chua xuat duoc (FAILED/PENDING/KHONG_XUAT_*)
+  created_at: string | null; // thoi diem tao dang ISO date-time (UTC, format qua helpers/formatDateTime)
+  // request_payload/response_body khai bao KIEU RONG (object | string | null) CO CHU DICH: BE co the tra
+  // ve object JSON da parse san, cung co the tra ve chuoi JSON tho neu cot trong DB la text - FE tu nhan
+  // dien va parse o PhieuDetailModal thay vi ep 1 kieu roi vo khi gap kieu con lai
+  request_payload: Record<string, unknown> | string | null; // 28 field gui sang CTS (SaveCellClm)
+  response_body: CtsResponse | Record<string, unknown> | string | null; // JSON CTS tra ve
+  error_message: string | null; // mo ta loi khi trang_thai=FAILED, null khi khong loi
+  // So lan da POST THAT len CTS ma van chua SUCCESS (cot cr_phieu.so_lan_thu ben BE - INTEGER NOT NULL
+  // DEFAULT 0, xem models/cr_phieu.py). Job tu dong NGUNG thu cell nay khi cham tran XUAT_PHIEU_MAX_RETRY
+  // va danh dau KHONG_XUAT_HET_LUOT_THU. FE dung de canh bao TRUOC KHI nguoi dung bam xuat tay: "da thu n
+  // lan that bai" - xuat tay lan nua rat co the cung hong y het, nen doc error_message tim nguyen nhan truoc.
+  // LUU Y giai doan chuyen tiep: BE dang bo sung field nay vao GET /phieu, response cu se KHONG co no ->
+  // moi cho doc phai chiu duoc undefined (vd `(so_lan_thu ?? 0) > 0`), khong duoc coi la luon co san
+  so_lan_thu: number;
+}
+
+// dung cho GET /api/v1/phieu - response phan trang. KHAC SessionListResponse ({total, data}): endpoint nay
+// tra ve THEM page/size, giu dung nguyen ban de FE khong phai doan lai trang hien tai tu state
+export interface PhieuHistoryResponse {
+  total: number; // tong so phieu KHOP bo loc (khong phai so dong cua trang hien tai)
+  page: number;
+  size: number;
+  data: PhieuHistoryItem[];
+}
+
 // dung cho POST /api/v1/jobs/sync-rims - BE khai bao response la object additionalProperties true, chua co field co dinh
 export type SyncRimsResponse = Record<string, unknown>;
 
@@ -288,3 +361,111 @@ export type SyncNetactResponse = Record<string, unknown>;
 
 // dung cho POST /api/v1/jobs/evaluate-cr - BE khai bao response la object additionalProperties true, chua co field co dinh
 export type EvaluateCrResponse = Record<string, unknown>;
+
+// ==== GET /api/v1/jobs/runs + GET /api/v1/jobs/runs/{id} (lich su chay job) ====
+// TAT CA ten field duoi day DOC TRUC TIEP tu source BE api/schemas/job_schemas.py + api/routers/jobs.py
+// (JobRunListItem/JobRunDetail/JobRunListResponse), KHONG tu dat ten.
+
+// 3 gia tri BE khai bao bang Literal cho param LOC (api/routers/jobs.py::_JobRunTrangThai) - gui gia tri
+// ngoai 3 cai nay se bi Pydantic tra 422 ngay tang validate, nen o FE khai bao union thay vi string
+export type JobRunTrangThai = "RUNNING" | "DONE" | "FAILED";
+
+// enum sort_by that cua BE (api/routers/jobs.py::_JobRunSortBy) - HEP hon danh sach cot se hien tren bang:
+// cac cot so_* KHONG nam trong enum nay nen bang phai de enableSorting:false cho chung
+export type JobRunSortBy = "id" | "job_type" | "started_at" | "finished_at" | "trang_thai";
+
+// dung cho GET /api/v1/jobs/runs - query param loc lich su chay job. TAT CA param deu optional
+export interface JobRunQueryParams {
+  job_type?: string; // "xuat_phieu_auto" (job duy nhat hien co), BE de ngo cho job khac dung chung bang
+  trang_thai?: JobRunTrangThai;
+  // === QUAN TRONG: tu_ngay/den_ngay la NGAY LICH GMT+7 dang "YYYY-MM-DD", KHONG phai ISO date-time ===
+  // BE khai bao kieu `date` (khong phai datetime) va TU quy doi sang moc UTC: _dau_ngay_gmt7(ngay) cho
+  // tu_ngay, va _dau_ngay_gmt7(den_ngay) + 1 NGAY cho den_ngay (nua khoang [tu, den+1) -> ngay cuoi duoc
+  // tinh TRON VEN, khong bi cat). Vi vay FE CHI duoc gui dayjs(...).format("YYYY-MM-DD").
+  // TUYET DOI KHONG dung .toISOString() nhu SessionsQueryParams.from/to dang lam cho GET /sessions:
+  // endpoint do nhan `datetime` nen ISO la dung, con o day ISO se lam lech 1 ngay (00:00 gio VN cua
+  // ngay N khi doi sang UTC roi cat phan ngay se ra ngay N-1), tham chi bi 422 vi phan gio khac 00:00.
+  tu_ngay?: string; // YYYY-MM-DD (gio VN)
+  den_ngay?: string; // YYYY-MM-DD (gio VN), BE tu cong 1 ngay nen ngay nay duoc tinh CA NGAY
+  page?: number; // mac dinh 1 theo schema (ge=1)
+  size?: number; // mac dinh 20, TOI DA 100 theo schema (le=100 - thap hon /phieu la 200)
+  sort_by?: JobRunSortBy;
+  order?: "asc" | "desc"; // mac dinh "desc" theo schema BE
+}
+
+// dung cho GET /api/v1/jobs/runs - 1 dong danh sach luot chay job. KHONG co chi_tiet (BE co y bo ra khoi
+// danh sach vi chi_tiet gom toan bo session x cell cua ca luot chay, 20 dong se keo theo vai tram KB) -
+// muon xem chi_tiet phai goi GET /jobs/runs/{id}
+export interface JobRunListItem {
+  id: number;
+  job_type: string; // "xuat_phieu_auto"
+  started_at: string; // ISO date-time (UTC), BE khai bao NOT NULL - format qua helpers/formatDateTime
+  // null = luot chay CHUA ket thuc (dang RUNNING) HOAC job chet giua chung (xem models/job_run_log.py)
+  finished_at: string | null;
+  // RUNNING|DONE|FAILED. De kieu string (KHONG phai JobRunTrangThai): Literal cua BE chi rang buoc param
+  // LOC dau vao, con cot trong DB la VARCHAR(20) tu do - bang mau o jobRunStatus.ts da co fallback "default"
+  trang_thai: string;
+  // KHONG con field dry_run: hop dong BE moi da bo hoan toan che do chay thu, cot dry_run cung da bi bo
+  // khoi bang job_run_log. Moi luot chay bay gio deu la chay THAT nen khong con gi de phan biet
+  so_session_quet: number;
+  so_phieu_thanh_cong: number;
+  so_phieu_that_bai: number;
+  so_cell_vuot_gioi_han: number;
+  error_message: string | null;
+}
+
+// ---- cac manh nho ben trong chi_tiet (chi co o GET /jobs/runs/{id}) ----
+// Hinh dang duoi day doc tu application/xuat_phieu_use_case.py::_xu_ly_mot_session() (dong 730-790) -
+// noi THAT SU sinh ra du lieu nay. BE KHONG khoa schema (chi_tiet khai bao `dict | None`) de job khong
+// phai doi schema moi lan them 1 truong, nen FE khai bao cac field la OPTIONAL va van giu duong lui
+// hien JSON tho khi gap hinh dang la (xem JobRunDetailModal.tsx)
+export interface JobRunCellDaXuLy {
+  cell_name: string;
+  do_te: number; // chenh lech (TB truoc CR - TB sau CR), cang lon cang te -> uu tien xuat phieu truoc
+  // SUCCESS|FAILED|DAT_KHONG_XUAT (trang_thai tra ve tu XuatPhieuUseCase.execute, DRY_RUN da bi bo), HOAC chuoi
+  // "LOI: <mo ta>" khi goi xuat phieu nem exception (dong 749) - nen KHONG khai bao union cung o day
+  ket_qua: string;
+  // KHONG co key nay o nhanh loi (dong 749 chi ghi cell_name/do_te/ket_qua) -> phai de optional, khong
+  // duoc khai bao `string | null` (se noi doi la key luon ton tai)
+  phieu_id?: string | null;
+}
+
+export interface JobRunCellVuotGioiHan {
+  cell_name: string;
+  do_te: number;
+}
+
+// 1 phan tu cua chi_tiet.sessions - co DUNG 2 dang:
+//  1) dong BINH THUONG: day du tram_id/so_cell_khong_dat/4 nhom cell
+//  2) dong LOI (xuat_phieu_use_case.py dong 824): CHI co { cr_session_id, loi } - session do chet giua
+//     chung nhung KHONG duoc giet ca luot quet
+export interface JobRunChiTietSession {
+  cr_session_id: number;
+  loi?: string; // chi co o dang (2)
+  tram_id?: string;
+  so_cell_khong_dat?: number;
+  cell_da_xu_ly?: JobRunCellDaXuLy[]; // cell da thuc su goi xuat phieu trong luot nay
+  cell_vuot_gioi_han?: JobRunCellVuotGioiHan[]; // cell tu thu 11 tro di - KHONG BAO GIO duoc job tu xuat, phai lam tay
+  cell_da_co_phieu?: string[]; // nam trong top 10 nhung da co phieu SUCCESS tu luot truoc -> bo qua
+  cell_vuot_so_lan_thu?: string[]; // da thu >= XUAT_PHIEU_MAX_RETRY lan van FAILED -> NGUNG thu tu dong
+}
+
+// chi_tiet la JSONB tu do; BE hien luon ghi dung dang {"sessions": [...]} (xuat_phieu_use_case.py dong
+// 845/857/865) nhung KHONG co schema ep buoc, nen `sessions` van de optional
+export interface JobRunChiTiet {
+  sessions?: JobRunChiTietSession[];
+}
+
+// dung cho GET /api/v1/jobs/runs/{id} - y het 1 dong danh sach, THEM chi_tiet (BE cung ke thua dung kieu
+// nay: class JobRunDetail(JobRunListItem))
+export interface JobRunDetail extends JobRunListItem {
+  chi_tiet: JobRunChiTiet | null;
+}
+
+// dung cho GET /api/v1/jobs/runs - response phan trang {total, page, size, data}, y het PhieuHistoryResponse
+export interface JobRunListResponse {
+  total: number; // tong so luot chay KHOP bo loc (khong phai so dong cua trang hien tai)
+  page: number;
+  size: number;
+  data: JobRunListItem[];
+}
