@@ -1,0 +1,30 @@
+.badcell-table {
+    margin-top: 10px;
+}
+
+.badcell-table .ant-table {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.badcell-table .ant-table-thead > tr > th {
+    background: #1677ff;
+    color: white;
+    text-align: center;
+    font-weight: 600;
+}
+
+.badcell-table .ant-table-tbody > tr:hover > td {
+    background: #e6f4ff;
+}
+
+.badcell-table .ant-table-cell {
+    vertical-align: middle;
+}
+
+.badcell-table .ant-btn {
+    border-radius: 6px;
+}
+.shutdown-row td {
+    background-color: #a7eb6f !important;
+}
