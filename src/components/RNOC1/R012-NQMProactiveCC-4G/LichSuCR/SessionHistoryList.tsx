@@ -329,6 +329,12 @@ const SessionHistoryList: React.FC = () => {
             current={page}
             pageSize={size}
             total={total}
+            showSizeChanger
+            // khai bao TUONG MINH danh sach muc: BE gioi han size le=200 nhung 200 dong/trang la vo dung o
+            // man hinh nay; de antd tu quyet dinh thi moi ban antd co the dua ra danh sach khac nhau.
+            // Mac dinh van la 10 (state "size" khoi tao o tren)
+            pageSizeOptions={[5, 10, 20, 50]}
+            showTotal={(t) => `Tong ${t} session`}
             onChange={(newPage, newSize) => {
               // antd Pagination tra ve ca page va pageSize trong 1 callback, phai cap nhat ca 2 de dong bo voi BE
               setPage(newPage);

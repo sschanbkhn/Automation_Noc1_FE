@@ -309,13 +309,30 @@ export interface PhieuHistoryQueryParams {
   // DRY_RUN da bi BO HAN khoi hop dong BE (khong con che do chay thu), keo theo BE khong con an ngam ban
   // ghi nao nua -> KHONG truyen param nay gio dung nghia la lay TAT CA trang thai
   trang_thai?: string;
-  page?: number; // trang hien tai
-  size?: number; // so ban ghi moi trang
-  // TU GIA DINH theo quy uoc da dung o GET /sessions (enum sort_by = dung ten field cua bang) - FE chi cho
-  // sort cac cot chac chan la field that (cell_name/trang_thai/created_at), KHONG cho sort cot suy dien
-  // (STT) de tranh gui gia tri ngoai enum lam BE tra 422
+  // O TIM CHUNG cho cell_name VA phieu_id - BE chay ILIKE %q% tren CA HAI cot (api/routers/phieu.py::q,
+  // them 13/08). KHONG can cho nguoi dung chon truoc "tim theo gi": ten cell co chu, phieu_id toan so nen
+  // 2 loai gia tri nay khong nham lan duoc voi nhau.
+  // LUU Y: KHONG tim duoc theo cr_session_id - BE khong soi q vao cot do. Muon loc theo session phai dung
+  // param session_id rieng ben tren
+  q?: string;
+  // === NGAY LICH GMT+7 dang "YYYY-MM-DD", loc tren created_at - KHONG phai ISO date-time ===
+  // BE khai bao kieu `date` va tu quy doi qua api/routers/loc_ngay.py::khoang_ngay_gmt7(): tu_ngay ->
+  // dau_ngay_gmt7(), den_ngay -> dau_ngay_gmt7() + 1 NGAY (nua khoang [tu, den+1) nen ngay cuoi duoc tinh
+  // TRON VEN, dong tao luc 23:59 van lot).
+  // TUYET DOI KHONG dung .toISOString() nhu SessionsQueryParams.from/to: endpoint /sessions nhan `datetime`
+  // nen ISO la dung, con o day ISO se lam LECH 1 NGAY (00:00 gio VN cua ngay N doi sang UTC roi cat phan
+  // ngay se ra N-1). Dung dayjs(...).format("YYYY-MM-DD").
+  // Hai dau mut DOC LAP - gui 1 trong 2 cung duoc ("tu 01/08 den nay", "truoc 01/08")
+  tu_ngay?: string; // YYYY-MM-DD (gio VN)
+  den_ngay?: string; // YYYY-MM-DD (gio VN), BE tu cong 1 ngay nen ngay nay duoc tinh CA NGAY
+  page?: number; // trang hien tai, mac dinh 1
+  size?: number; // so ban ghi moi trang, mac dinh 20, TOI DA 200 theo schema (ge=1, le=200)
+  // Enum sort_by THAT cua BE (da doc api/routers/phieu.py::_PhieuSortBy, khong con la phong doan):
+  // "id"|"cr_session_id"|"cell_name"|"trang_thai"|"created_at". Giu kieu string (khong that chat thanh
+  // union) vi FE truyen thang column.id tu TanStack Table xuong; bang chi bat sort cho cac cot nam trong
+  // enum nay, cot ngoai enum phai de enableSorting:false keo BE tra 422
   sort_by?: string;
-  order?: "asc" | "desc";
+  order?: "asc" | "desc"; // mac dinh "desc" theo schema BE
 }
 
 // dung cho GET /api/v1/phieu - 1 dong lich su phieu

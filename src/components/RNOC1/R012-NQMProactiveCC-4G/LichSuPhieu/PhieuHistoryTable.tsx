@@ -1,5 +1,19 @@
-import React, { useCallback, useMemo, useState } from "react";
-import { Alert, Button, Empty, Input, Modal, Pagination, Select, Spin, Tag, message } from "antd";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Alert,
+  Button,
+  DatePicker,
+  Empty,
+  Input,
+  InputNumber,
+  Modal,
+  Pagination,
+  Select,
+  Spin,
+  Tag,
+  message,
+} from "antd";
+import { Dayjs } from "dayjs";
 import {
   createColumnHelper,
   flexRender,
@@ -8,6 +22,9 @@ import {
   SortingState,
 } from "@tanstack/react-table";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+// debounce co san tu lodash (da la dependency, SessionHistoryList.tsx/StationSearchGrid.tsx cung dung
+// cach nay) - khong tu viet lai setTimeout/clearTimeout
+import debounce from "lodash/debounce";
 // <th> dung chung cho MOI bang co sort trong module (click header + mui ten huong sort)
 import { SortableHeaderCell } from "../common/SortableHeaderCell";
 import { getLichSuPhieu, xuatPhieu } from "../services/R012Service";
@@ -17,6 +34,12 @@ import { R012_COLORS } from "../theme";
 import { formatDateTime } from "../helpers/formatDateTime";
 import { PHIEU_STATUS_COLORS, PHIEU_STATUS_FILTER_OPTIONS, PHIEU_STATUS_LABELS } from "./phieuStatus";
 import PhieuDetailModal from "./PhieuDetailModal";
+
+const { RangePicker } = DatePicker;
+
+// danh sach muc so dong/trang dung CHUNG cho ca 2 ngu canh cua bang. Khai bao TUONG MINH (khong de antd tu
+// quyet dinh) de moi ban antd deu ra cung 1 danh sach, va de KHONG co muc nao vuot le=200 cua BE
+const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
 
 interface PhieuHistoryTableProps {
   // KHONG truyen (undefined) -> hien phieu cua MOI session, dung cho tab rieng "Lich su phieu"
@@ -30,11 +53,14 @@ interface PhieuHistoryTableProps {
 const columnHelper = createColumnHelper<PhieuHistoryItem>();
 
 const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFilters }) => {
-  // 10 dong/trang o CA HAI cho dung component nay (truoc day tab tat ca dung 20, trong chi tiet session
-  // dung 10) - yeu cau truc tiep user, va thong nhat 1 con so thi khong con phai giai thich vi sao 2 man
-  // hinh cua cung 1 bang lai phan trang khac nhau
+  // So dong/trang MAC DINH khac nhau theo ngu canh:
+  //  - trong Modal chi tiet session CR (co sessionId): 5 - Modal chi cao 800px va con phai chua QoS chart,
+  //    bang danh gia... 10 dong day het cac muc khac xuong duoi man hinh
+  //  - tab rieng "Lich su phieu" (khong sessionId): 10 - ca trang chi co 1 bang nay
+  // Ca hai deu doi duoc qua showSizeChanger (PAGE_SIZE_OPTIONS)
+  const defaultSize = sessionId !== undefined ? 5 : 10;
   const [page, setPage] = useState<number>(1);
-  const [size, setSize] = useState<number>(10);
+  const [size, setSize] = useState<number>(defaultSize);
 
   // trang thai dang loc - "" nghia la khong gui param trang_thai, tuc lay TAT CA trang thai (BE khong con
   // an ngam DRY_RUN nhu truoc vi trang thai do da bi bo han - xem phieuStatus.ts)
@@ -48,12 +74,29 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
   // dung de bao TanStack Query nap lai bang sau khi xuat phieu thanh cong
   const queryClient = useQueryClient();
 
-  // tu khoa loc theo ten cell. LUU Y: GET /api/v1/phieu KHONG co param tim kiem (chi co session_id/
-  // trang_thai/page/size/sort_by/order) nen day la loc PHIA CLIENT tren cac dong CUA TRANG HIEN TAI -
-  // KHONG debounce/goi lai API. Da ghi ro trong placeholder + dong ghi chu duoi bang de NOC khong hieu
-  // nham la tim tren toan bo du lieu; khi nao BE bo sung param q thi doi sang loc server-side nhu
-  // SessionHistoryList.tsx (co san pattern debounce o do)
-  const [cellKeyword, setCellKeyword] = useState<string>("");
+  // Tim kiem SERVER-SIDE qua param q (BE bo sung 13/08, xem api/routers/phieu.py) - TRUOC DAY la loc client
+  // tren cac dong CUA TRANG HIEN TAI, nen go ten 1 cell nam o trang 3 thi khong bao gio ra ma man hinh van
+  // bao "khong tim thay": sai pham vi mot cach im lang. Gio BE chay ILIKE %q% tren CA cell_name LAN phieu_id.
+  // Tach 2 state giong SessionHistoryList.tsx: searchInput hien ngay tren o (khong giat khi go),
+  // searchTerm moi la gia tri that su goi API sau khi ngung go 400ms
+  const [searchInput, setSearchInput] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState<string>("");
+
+  // khoang ngay loc tren created_at - null nghia la khong loc theo ngay
+  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(null);
+
+  // Loc theo session CR - O RIENG, KHONG gop vao o tim kiem q. Ly do: 2 kieu tim khac han nhau.
+  //  - q: BE chay ILIKE %q% tren cell_name/phieu_id -> tim chuoi GAN DUNG, go "10" se khop ca "SSN10",
+  //    "PH_10023", "1105"...
+  //  - session_id: so CHINH XAC, BE so sanh bang.
+  // Gop chung 1 o thi go "10" se ra lan lon phieu cua session 10 voi moi cell/phieu co chuoi "10" ben trong -
+  // nguoi dung khong the biet dong nao la thu minh can. Tach o rieng thi moi o tra dung mot loai ket qua.
+  // null = khong loc theo session
+  const [sessionFilter, setSessionFilter] = useState<number | null>(null);
+
+  // session_id THAT SU gui len BE: uu tien prop sessionId (dang dung trong EvaluationDetail - da khoa cung
+  // 1 session, o loc khong hien) roi moi den o loc cua tab rieng
+  const effectiveSessionId = sessionId ?? sessionFilter ?? undefined;
 
   // dong dang xem chi tiet - null nghia la Modal dang dong
   const [selectedPhieu, setSelectedPhieu] = useState<PhieuHistoryItem | null>(null);
@@ -72,9 +115,54 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
     setPage(1); // doi bo loc -> ve trang 1, tranh hien trang trong gay hieu lam het du lieu
   };
 
+  const debouncedApplySearch = useMemo(
+    () =>
+      debounce((value: string) => {
+        setSearchTerm(value);
+        setPage(1); // doi tu khoa -> ve trang 1, neu khong se dung o trang 3 cua ket qua chi con 2 dong
+      }, 400),
+    []
+  );
+
+  useEffect(() => {
+    // huy debounce dang cho khi unmount - tranh setState tren component da unmount (bang nay nam trong Modal
+    // chi tiet session, dong Modal la unmount ngay giua luc dang cho 400ms)
+    return () => {
+      debouncedApplySearch.cancel();
+    };
+  }, [debouncedApplySearch]);
+
+  // === CHO PHAI CAN THAN NHAT ===
+  // BE nhan tu_ngay/den_ngay kieu `date` (NGAY LICH GMT+7) roi TU quy doi qua khoang_ngay_gmt7():
+  // tu_ngay -> dau ngay GMT+7, den_ngay -> dau ngay GMT+7 + 1 NGAY (nua khoang [tu, den+1)).
+  // Vi vay .format("YYYY-MM-DD") - TUYET DOI KHONG toISOString() nhu SessionHistoryList dang lam cho
+  // /sessions (endpoint do nhan `datetime` nen ISO moi dung). Gui ISO vao day se lech 1 ngay.
+  // Cung KHONG can endOf("day") cho den_ngay: BE da cong 1 ngay san roi.
+  const { tuNgay, denNgay } = useMemo(() => {
+    if (!dateRange) {
+      return { tuNgay: undefined as string | undefined, denNgay: undefined as string | undefined };
+    }
+    const [start, end] = dateRange;
+    return { tuNgay: start.format("YYYY-MM-DD"), denNgay: end.format("YYYY-MM-DD") };
+  }, [dateRange]);
+
+  const handleDateRangeChange = (values: [Dayjs | null, Dayjs | null] | null) => {
+    setDateRange(values && values[0] && values[1] ? [values[0], values[1]] : null);
+    setPage(1);
+  };
+
+  const handleSessionFilterChange = (value: number | null) => {
+    setSessionFilter(value);
+    setPage(1); // doi bo loc -> ve trang 1, tranh hien trang trong gay hieu lam het du lieu
+  };
+
   const handleClearFilters = () => {
     setStatusFilter("");
-    setCellKeyword("");
+    setSearchInput("");
+    setSearchTerm("");
+    debouncedApplySearch.cancel(); // huy lan go dang cho, neu khong no se ghi de searchTerm rong sau 400ms
+    setDateRange(null);
+    setSessionFilter(null);
     setPage(1);
   };
 
@@ -193,11 +281,28 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
   const { data, isLoading, isError, error } = useQuery<PhieuHistoryResponse>({
     // sessionId nam trong queryKey de 2 noi dung component nay (tab tat ca / trong 1 session) KHONG dung
     // chung cache cua nhau; cac gia tri loc/sort cung vay de TanStack Query tu goi lai API khi chung doi
-    queryKey: ["r012", "phieu-history", sessionId ?? "all", page, size, statusFilter, sortBy, sortOrder],
+    queryKey: [
+      "r012",
+      "phieu-history",
+      // dung effectiveSessionId (khong phai rieng prop sessionId): o loc session cua tab rieng cung phai
+      // lam doi queryKey, neu khong TanStack Query se tra lai cache cu khi go so session moi
+      effectiveSessionId ?? "all",
+      page,
+      size,
+      statusFilter,
+      searchTerm,
+      tuNgay,
+      denNgay,
+      sortBy,
+      sortOrder,
+    ],
     queryFn: () =>
       getLichSuPhieu({
-        session_id: sessionId,
+        session_id: effectiveSessionId,
         trang_thai: statusFilter || undefined,
+        q: searchTerm || undefined, // khong gui q rong de BE khoi chay ILIKE thua
+        tu_ngay: tuNgay,
+        den_ngay: denNgay,
         page,
         size,
         sort_by: sortBy,
@@ -205,18 +310,9 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
       }),
   });
 
-  // useMemo cho allRows (khong viet thang "data?.data ?? []"): nhanh fallback [] tao MANG MOI moi lan render,
-  // lam deps cua useMemo loc cell ben duoi doi lien tuc -> loc lai vo ich moi render (ESLint da canh bao
-  // dung cho truong hop nay luc build)
-  const allRows = useMemo(() => data?.data ?? [], [data?.data]);
+  // MOI bo loc gio deu chay tren BE - khong con buoc loc client nao o day nua
+  const rows = useMemo(() => data?.data ?? [], [data?.data]);
   const total = data?.total ?? 0;
-
-  // loc theo cell tren du lieu CUA TRANG HIEN TAI (xem ly do o comment khai bao cellKeyword)
-  const rows = useMemo(() => {
-    const keyword = cellKeyword.trim().toLowerCase();
-    if (keyword === "") return allRows;
-    return allRows.filter((item) => item.cell_name.toLowerCase().includes(keyword));
-  }, [allRows, cellKeyword]);
 
   const columns = useMemo(() => {
     const baseColumns: any[] = [
@@ -256,7 +352,10 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
         columnHelper.accessor("cr_session_id", {
           header: "Session",
           cell: (info) => info.getValue() ?? "-",
-          enableSorting: false, // chua xac nhan cr_session_id nam trong enum sort_by cua BE
+          // "cr_session_id" CO nam trong enum _PhieuSortBy cua BE (da doc api/routers/phieu.py) nen sort
+          // duoc - khong con la phong doan nhu ghi chu cu. column.id trung dung ten field nen dung thang
+          // lam sort_by, khong can map rieng
+          enableSorting: true,
         })
       );
     }
@@ -336,12 +435,43 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
             style={{ width: "200px" }}
           />
           <Input.Search
-            // ghi RO "trong trang" ngay tren placeholder: day la loc client-side, khong phai tim toan bo
-            placeholder="Loc theo cell (trong trang)"
+            // KHONG con chu "(trong trang)" nhu ban cu: gio tim tren TOAN BO du lieu qua BE. Placeholder ghi
+            // ro tim duoc theo 2 thu de nguoi dung khong phai doan
+            placeholder="Tim theo cell hoac ma phieu"
             allowClear
-            value={cellKeyword}
-            onChange={(e) => setCellKeyword(e.target.value)}
-            style={{ width: "260px" }}
+            // value theo searchInput (cap nhat ngay tung phim) chu KHONG phai searchTerm (tre 400ms), de o
+            // input khong bi giat/tre khi go
+            value={searchInput}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSearchInput(value);
+              debouncedApplySearch(value);
+            }}
+            style={{ flex: "1 1 220px", minWidth: "180px", maxWidth: "260px" }}
+          />
+          {/* O loc session CHI hien o tab rieng. Trong EvaluationDetail (co prop sessionId) thi bang da khoa
+              cung 1 session roi - bay them o nay ra chi gay hieu nham la co the doi sang session khac.
+              Dieu kien bam theo `sessionId === undefined` chu khong dua vao shouldShowFilters: co the co
+              noi truyen showFilters={true} KEM sessionId, luc do van phai an o nay */}
+          {sessionId === undefined && (
+            <InputNumber
+              value={sessionFilter}
+              onChange={handleSessionFilterChange}
+              placeholder="Session ID"
+              // min=1 + precision=0: id la so nguyen duong, chan luon gia tri am/thap phan ngay tai o nhap
+              // thay vi de BE tra 422
+              min={1}
+              precision={0}
+              style={{ width: "130px" }}
+            />
+          )}
+          <RangePicker
+            value={dateRange}
+            onChange={handleDateRangeChange}
+            // dinh dang HIEN THI quen thuoc cua NOC; gia tri GUI LEN BE duoc format rieng thanh YYYY-MM-DD
+            // o useMemo ben tren, khong lien quan toi format nay
+            format="DD/MM/YYYY"
+            placeholder={["Tu ngay", "Den ngay"]}
           />
           <Button onClick={handleClearFilters}>Xoa loc</Button>
         </div>
@@ -406,24 +536,25 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
 
           {rows.length === 0 && (
             <Empty
-              // phan biet 2 truong hop rong de NOC biet co phai do bo loc cell cua minh khong
+              // MOI bo loc deu chay tren BE nen "rong" chi con 1 nghia: khong ban ghi nao khop. Khong con
+              // phai phan biet "rong that" voi "rong do loc client trong trang" nhu ban cu
               description={
-                cellKeyword.trim() !== "" && allRows.length > 0
-                  ? "Khong co cell nao khop trong trang nay"
+                searchTerm || statusFilter || dateRange || sessionFilter !== null
+                  ? "Khong co phieu nao khop bo loc"
                   : "Chua co phieu nao"
               }
               style={{ margin: "24px 0" }}
             />
           )}
 
-          {/* Pagination dung total THAT tu BE. Khi dang loc cell client-side thi so dong hien thi co the it
-              hon so dong cua trang - da co dong ghi chu ben duoi giai thich, KHONG sua total theo so dong
-              da loc (lam vay se sai tong so ban ghi that va nhay lung tung khi go tung ky tu) */}
+          {/* total la tong so ban ghi KHOP BO LOC tu BE (khong phai so dong cua trang) - gio moi bo loc deu
+              server-side nen con so nay luon dung voi thu dang hien */}
           <Pagination
             current={page}
             pageSize={size}
             total={total}
             showSizeChanger
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
             showTotal={(t) => `Tong ${t} phieu`}
             onChange={(newPage, newSize) => {
               // antd Pagination tra ve ca page va pageSize trong 1 callback, phai cap nhat ca 2 de dong bo voi BE
@@ -432,13 +563,6 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
             }}
             style={{ marginTop: "1rem" }}
           />
-
-          {cellKeyword.trim() !== "" && (
-            <div style={{ marginTop: "8px", fontSize: "12px", color: R012_COLORS.statusRunning }}>
-              Dang loc cell trong trang hien tai ({rows.length}/{allRows.length} dong) - bo loc nay khong ap
-              dung cho cac trang khac.
-            </div>
-          )}
         </>
       )}
 
