@@ -21,15 +21,6 @@ import EvaluationDetail from "./EvaluationDetail";
 import { R012_COLORS } from "../theme";
 // dinh dang thoi gian dung CHUNG toan module (ep UTC->GMT+7) - xem ly do trong file helper
 import { formatDateTime } from "../helpers/formatDateTime";
-// 3 cot dien giai 6 truong moi cua BE (16082026) + bo loc theo buoc tien trinh - xem tienTrinh.tsx
-import {
-  TienTrinhCell,
-  PhieuCell,
-  ConLaiCell,
-  TIEN_TRINH_FILTER_OPTIONS,
-  TIEN_TRINH_TAT_CA,
-  layParamTienTrinh,
-} from "./tienTrinh";
 
 const { RangePicker } = DatePicker;
 
@@ -57,7 +48,20 @@ const STATUS_FILTER_OPTIONS = [
   { value: "RUNNING", label: "RUNNING" },
 ];
 
-const SessionHistoryList: React.FC = () => {
+// Yeu cau loc san 1 tram, do TAB KHAC gui sang (tab "Lich su phieu" > muc "Tien trinh", bam vao ma tram).
+// PHAI co "seq" ben canh tramId: neu chi truyen tramId thi bam lai DUNG ma tram vua bam se khong lam prop
+// doi gia tri -> useEffect khong chay lai -> nguoi dung bam ma khong thay gi xay ra. seq tang moi lan bam
+// nen lan nao cung co hieu luc, ke ca bam lien tiep cung 1 tram
+export interface YeuCauLocTram {
+  tramId: string;
+  seq: number;
+}
+
+interface SessionHistoryListProps {
+  yeuCauLocTram?: YeuCauLocTram | null;
+}
+
+const SessionHistoryList: React.FC<SessionHistoryListProps> = ({ yeuCauLocTram = null }) => {
   const [page, setPage] = useState<number>(1);
   // 10 dong/trang (yeu cau truc tiep user) - CO Y khac default 20 cua BE (schema SessionsQueryParams):
   // bang nay nam ngay dau tab, 20 dong lam phai cuon het man hinh moi thay Pagination. Van gui size=10
@@ -79,10 +83,6 @@ const SessionHistoryList: React.FC = () => {
   // trang thai dang loc (Select) - "" nghia la "Tat ca", khong gui param status len BE
   const [statusFilter, setStatusFilter] = useState<string>("");
 
-  // buoc tien trinh dang loc (Select thu 2, them 16082026) - "" = Tat ca. Gia tri nay dieu khien CA HAI
-  // param ?buoc= va ?qua_han= qua layParamTienTrinh, xem ly do gop 1 Select trong tienTrinh.tsx
-  const [tienTrinhFilter, setTienTrinhFilter] = useState<string>(TIEN_TRINH_TAT_CA);
-
   const debouncedApplySearch = useMemo(
     () =>
       debounce((value: string) => {
@@ -98,6 +98,26 @@ const SessionHistoryList: React.FC = () => {
       debouncedApplySearch.cancel();
     };
   }, [debouncedApplySearch]);
+
+  // Nhan yeu cau loc tu tab khac (bam ma tram o muc "Tien trinh" trong tab Lich su phieu) - do o tim cua
+  // bang nay chay ILIKE tren ca tram_id/tram_name nen chi can dat searchTerm = ma tram la ra dung session
+  // cua tram do.
+  // Dat THANG searchTerm (khong qua debouncedApplySearch): day khong phai nguoi dung dang go phim, khong
+  // co gi de cho - de qua debounce se lam bang hien du lieu cu them 400ms ngay sau khi vua chuyen tab.
+  // Van dat searchInput cung luc de o tim HIEN ma tram dang loc, neu khong nguoi dung se thay bang da bi
+  // loc ma o tim trong tron, khong hieu tai sao chi con vai dong va cung khong biet cach xoa loc
+  useEffect(() => {
+    if (!yeuCauLocTram) {
+      return;
+    }
+    debouncedApplySearch.cancel(); // huy lan go dang cho (neu co) de no khong ghi de gia tri vua dat
+    setSearchInput(yeuCauLocTram.tramId);
+    setSearchTerm(yeuCauLocTram.tramId);
+    setPage(1);
+    // phu thuoc vao seq (KHONG phai ca object yeuCauLocTram): component cha tao object moi moi lan render,
+    // dua ca object vao day se lam effect chay lai lien tuc va dap len tu khoa nguoi dung dang tu go
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [yeuCauLocTram?.seq]);
 
   // chuyen dateRange sang from/to dang ISO de goi API - 'to' PHAI la CUOI ngay (endOf day, 23:59:59.999)
   // chu KHONG phai 00:00:00 cua ngay ket thuc, neu khong se bi thieu toan bo du lieu trong ngay cuoi cung
@@ -125,13 +145,6 @@ const SessionHistoryList: React.FC = () => {
     setPage(1);
   };
 
-  // doi Select tien trinh -> cung reset ve trang 1 nhu 2 bo loc tren: so trang cua ket qua da loc theo buoc
-  // it hon han danh sach day du, dang o trang 3 ma loc lai se ra bang trong du van con du lieu o trang 1
-  const handleTienTrinhFilterChange = (value: string) => {
-    setTienTrinhFilter(value);
-    setPage(1);
-  };
-
   // nut "Xoa loc" dua tat ca bo loc (q/from/to/status) ve mac dinh va ve lai trang 1, giup NOC thoat nhanh khoi
   // 1 bo loc dang khong ra ket qua ma khong can xoa tung o thu cong
   const handleClearFilters = () => {
@@ -139,7 +152,6 @@ const SessionHistoryList: React.FC = () => {
     setSearchTerm("");
     setDateRange(null);
     setStatusFilter("");
-    setTienTrinhFilter(TIEN_TRINH_TAT_CA);
     setPage(1);
   };
 
@@ -163,27 +175,10 @@ const SessionHistoryList: React.FC = () => {
   const sortBy = sorting.length > 0 ? (sorting[0].id as SessionsQueryParams["sort_by"]) : undefined;
   const sortOrder: "asc" | "desc" | undefined = sorting.length > 0 ? (sorting[0].desc ? "desc" : "asc") : undefined;
 
-  // doi gia tri Select tien trinh thanh 2 param that cua BE (?buoc= va/hoac ?qua_han=)
-  const paramTienTrinh = layParamTienTrinh(tienTrinhFilter);
-
   const { data, isLoading, isError, error } = useQuery<SessionListResponse>({
-    // dua ca searchTerm/fromParam/toParam/statusFilter/tienTrinhFilter/sortBy/sortOrder vao queryKey de
-    // TanStack Query TU goi lai API moi khi doi bo loc/sort, khong can effect/handler goi refetch thu cong.
-    // Dung tienTrinhFilter (chuoi cua Select) chu KHONG phai paramTienTrinh (object tao moi moi lan render):
-    // object khong on dinh se lam queryKey doi lien tuc -> refetch vo han
-    queryKey: [
-      "r012",
-      "sessions",
-      page,
-      size,
-      searchTerm,
-      fromParam,
-      toParam,
-      statusFilter,
-      tienTrinhFilter,
-      sortBy,
-      sortOrder,
-    ],
+    // dua ca searchTerm/fromParam/toParam/statusFilter/sortBy/sortOrder vao queryKey de TanStack Query TU
+    // goi lai API moi khi doi bo loc/sort, khong can effect/handler goi refetch thu cong
+    queryKey: ["r012", "sessions", page, size, searchTerm, fromParam, toParam, statusFilter, sortBy, sortOrder],
     queryFn: () =>
       getSessions({
         page,
@@ -192,8 +187,6 @@ const SessionHistoryList: React.FC = () => {
         from: fromParam,
         to: toParam,
         status: statusFilter || undefined, // "" (Tat ca) khong gui param status, de BE tra ve tat ca trang thai
-        // buoc/qua_han: chi 1 trong 2 co gia tri (hoac khong cai nao khi chon "Tat ca") - xem layParamTienTrinh
-        ...paramTienTrinh,
         sort_by: sortBy,
         order: sortOrder,
       }),
@@ -211,60 +204,27 @@ const SessionHistoryList: React.FC = () => {
         enableSorting: false, // STT chi la vi tri hien thi, sort cot nay khong co y nghia
         cell: (info) => (page - 1) * size + info.row.index + 1, // tinh STT tu vi tri dong, khong phai du lieu that tu BE
       }),
-      // tram_id/tram_name/status/executed_at nam trong enum sort_by cua BE (xem SessionsQueryParams) nen
-      // van bat sort binh thuong. RIENG 3 cot moi ben duoi PHAI enableSorting:false - xem ly do tai cho
+      // tram_id/tram_name/action/status/executed_at/created_at DEU nam trong enum sort_by cua BE (xem
+      // SessionsQueryParams) - KHAC voi StationSearchGrid.tsx, o day KHONG can enableSorting:false cot nao
       columnHelper.accessor("tram_id", { header: "Ma tram" }),
       columnHelper.accessor("tram_name", {
         header: "Ten tram",
         cell: (info) => info.getValue() ?? "-", // co the null theo schema
       }),
-      // ==== 2 cot DA BO (16082026) ====
-      // - "Hanh dong" (action): 33/33 dong deu la "shutdown". Cot ma moi dong deu giong nhau khong giup
-      //   phan biet duoc dong nao voi dong nao, chi an chieu ngang cua cac cot that su can doc. Truong
-      //   action VAN con trong SessionListItem va van hien o Modal chi tiet session - neu sau nay CR co
-      //   them cancel/relocate chay that thi dua cot nay tro lai.
-      // - "Thoi gian tao" (created_at): lech voi "Thoi gian thuc thi" (executed_at) dung vai giay (tao
-      //   session xong la chay CR ngay). Hai cot dong ho gan nhu trung nhau lam nguoi doc phai dung lai
-      //   so sanh tung so roi nhan ra khong co gi khac - giu lai 1 cot executed_at la du.
-      // Cho trong 2 cot nay nhuong cho 3 cot Tien trinh/Phieu/Con lai ben duoi - la thu MOI LAN vao tab
-      // nay nguoi truc deu can biet (session dang ket o dau, da xuat duoc bao nhieu phieu, con may ngay).
+      columnHelper.accessor("action", { header: "Hanh dong" }),
       columnHelper.accessor("status", {
-        // VIEC 1d - DOI TEN CO CHU DICH: cot nay truoc ten "Trang thai", dat canh cot "Tien trinh" moi se
-        // bi doc nham la 2 cach hien cua cung 1 thu. Thuc te la 2 nghia KHAC HAN nhau:
-        //   - "Trang thai CR" (day) = ket qua chay CR cua SESSION (RUNNING/DONE/FAILED/EVAL_*), do chinh
-        //     luong trigger CR sinh ra, chot lai ngay trong vai phut dau.
-        //   - "Tien trinh" (cot moi) = session dang o buoc may trong vong doi 4 buoc keo dai NHIEU NGAY,
-        //     do JOB tu dong day di.
-        // Session co the DONE (CR chay ngon) nhung tien trinh van dung o buoc 2 suot 8 ngay - hai cot noi
-        // 2 chuyen khac nhau, nen ten phai tach bach: them chu "CR" de neo ro day la trang thai cua CR.
-        header: "Trang thai CR",
+        header: "Trang thai",
         cell: (info) => {
           const status = info.getValue();
           return <Tag color={STATUS_COLORS[status] ?? "default"}>{status}</Tag>;
         },
       }),
-      // ==== 3 cot MOI (16082026) - dien giai 6 truong BE vua bo sung, xem tienTrinh.tsx ====
-      // CA 3 deu PHAI enableSorting:false: enum sort_by cua BE chi co id/tram_id/tram_name/action/status/
-      // executed_at/created_at (da doi chieu openapi.json that) - KHONG co buoc_hien_tai/so_phieu_da_xuat/
-      // con_bao_nhieu_ngay. De sort mo thi cu click header la gui sort_by ngoai enum -> BE tra 422, bang
-      // trang tron. Dung dung bai hoc da ghi o StationSearchGrid.tsx.
-      columnHelper.accessor("buoc_hien_tai", {
-        header: "Tien trinh",
-        enableSorting: false,
-        cell: (info) => <TienTrinhCell session={info.row.original} />,
-      }),
-      columnHelper.accessor("so_phieu_da_xuat", {
-        header: "Phieu",
-        enableSorting: false,
-        cell: (info) => <PhieuCell session={info.row.original} />,
-      }),
-      columnHelper.accessor("con_bao_nhieu_ngay", {
-        header: "Con lai",
-        enableSorting: false,
-        cell: (info) => <ConLaiCell session={info.row.original} />,
-      }),
       columnHelper.accessor("executed_at", {
         header: "Thoi gian thuc thi",
+        cell: (info) => formatDateTime(info.getValue()),
+      }),
+      columnHelper.accessor("created_at", {
+        header: "Thoi gian tao",
         cell: (info) => formatDateTime(info.getValue()),
       }),
     ],
@@ -333,17 +293,6 @@ const SessionHistoryList: React.FC = () => {
           onChange={handleStatusFilterChange}
           options={STATUS_FILTER_OPTIONS}
           style={{ width: "160px" }}
-        />
-        {/* Select thu 2: loc theo BUOC tien trinh (?buoc=) hoac rieng nhom QUA HAN (?qua_han=true).
-            Co prefix "Tien trinh:" ngay trong o - dat canh Select trang thai o tren, 2 o Select tron
-            giong het nhau se khong biet o nao loc cai gi neu chua bam mo. Rong hon o kia (190px) vi
-            nhan dai nhat ("Dang chay/loi") khong vua 160px */}
-        <Select
-          value={tienTrinhFilter}
-          onChange={handleTienTrinhFilterChange}
-          options={TIEN_TRINH_FILTER_OPTIONS}
-          style={{ width: "190px" }}
-          prefix="Tien trinh:"
         />
         <Button onClick={handleClearFilters}>Xoa loc</Button>
       </div>

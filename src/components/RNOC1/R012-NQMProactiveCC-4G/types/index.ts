@@ -407,6 +407,35 @@ export interface PhieuHistoryResponse {
   data: PhieuHistoryItem[];
 }
 
+// ==== GET /api/v1/sessions/{cr_session_id}/qoe-cells (danh gia QoE theo TUNG CELL) ====
+// DA XAC NHAN qua openapi.json that + goi that tren BE .196:8080 (schema QoeCellItem/QoeCellsResponse).
+// KHAC HAN voi QoeSnapshotItem o tren: snapshot la diem QoE theo NGAY cua ca session (do job evaluate 21
+// ngay sinh ra), con day la ket qua danh gia TB truoc/sau CR cua TUNG CELL - tinh truc tiep tu CEM khi goi.
+//
+// LUU Y NANG: 1 lan goi endpoint nay = BE ban ~14 request sang CEM (moi cell 1 request) nen RAT CHAM -
+// cho nao dung phai goi LAZY (chi goi khi nguoi dung that su mo xem), xem QoeCellsTable.tsx
+export interface QoeCellItem {
+  cell_name: string; // ten cell, bat buoc theo schema
+  // 3 truong so duoi day co the null khi CEM khong co du lieu cho cell do - va day la chuyen BINH THUONG
+  // voi QoE (CEM thung du lieu), khong phai loi he thong
+  avg_before: number | null; // diem QoE trung binh TRUOC CR
+  avg_after: number | null; // diem QoE trung binh SAU CR
+  delta: number | null; // chenh lech (sau - truoc)
+  so_ngay_before: number; // so ngay THAT SU co du lieu trong window truoc CR, bat buoc theo schema
+  so_ngay_after: number; // so ngay THAT SU co du lieu trong window sau CR, bat buoc theo schema
+  // PASS|FAIL|INSUFFICIENT_DATA. De kieu string (KHONG phai union): BE khai bao la "type": "string" tu do
+  // chu khong phai enum, bang mau/nhan o QoeCellsTable da co fallback nen gia tri la van hien duoc
+  ket_qua: string;
+  diem_thap_nhat_sau: number | null; // diem QoE THAP NHAT trong window sau CR, null khi khong co du lieu
+  so_ngay_dat_sau: number; // so ngay DAT nguong trong window sau CR (BE khai bao default 0)
+}
+
+export interface QoeCellsResponse {
+  cr_session_id: number;
+  total: number;
+  data: QoeCellItem[];
+}
+
 // dung cho POST /api/v1/jobs/sync-rims - BE khai bao response la object additionalProperties true, chua co field co dinh
 export type SyncRimsResponse = Record<string, unknown>;
 

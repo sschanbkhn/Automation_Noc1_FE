@@ -22,6 +22,7 @@ import {
   JobRunQueryParams,
   JobRunListResponse,
   JobRunDetail,
+  QoeCellsResponse,
 } from '../types';
 
 // ham goi GET /api/v1/stations - lay danh sach tram co phan trang
@@ -90,6 +91,21 @@ export const getSessionDetail = async (sessionId: number): Promise<SessionDetail
   try {
     const data: any = await r012Request.get(`/sessions/${sessionId}`);
     return data as SessionDetailResponse;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// ham goi GET /api/v1/sessions/{cr_session_id}/qoe-cells - danh gia QoE theo TUNG CELL cua 1 session
+// (TB truoc/sau CR, ket luan PASS/FAIL/INSUFFICIENT_DATA, diem thap nhat + so ngay dat sau CR)
+export const getQoeCells = async (sessionId: number): Promise<QoeCellsResponse> => {
+  try {
+    // ENDPOINT NANG NHAT trong nhom doc: BE goi CEM cho TUNG cell (~14 request cho 1 session binh thuong)
+    // roi moi tong hop tra ve - KHONG dung timeout 30s nhu cac endpoint doc DB thuan ben canh, se bao
+    // timeout oan trong khi BE van dang chay dung. Dat 120s giong /cr/preview (endpoint nang tuong tu, cung
+    // goi he thong ngoai dong bo)
+    const data: any = await r012Request.get(`/sessions/${sessionId}/qoe-cells`, { timeout: 120000 });
+    return data as QoeCellsResponse;
   } catch (error) {
     throw error;
   }

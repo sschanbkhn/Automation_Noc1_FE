@@ -1,11 +1,31 @@
-import React from "react";
+import React, { useCallback, useState } from "react";
 import { Tabs } from "antd";
 import TacDongTram from "../TacDongTram/TacDongTram";
 import LichSuCR from "../LichSuCR/LichSuCR";
 import CellXau from "../CellXau/CellXau";
 import LichSuPhieu from "../LichSuPhieu/LichSuPhieu";
+import { YeuCauLocTram } from "../LichSuCR/SessionHistoryList";
+
+// key cua tab "Lich su CR" - dat thanh hang so vi gio co cho khac (dieu huong tu tab Lich su phieu) tro
+// toi no, go lech chinh ta se lam nut bam khong ra tab nao ma cung khong bao loi gi
+const KEY_TAB_LICH_SU_CR = "tab2";
 
 const R012Tabs: React.FC = () => {
+  // Tabs chuyen tu KHONG dieu khien (defaultActiveKey) sang CO dieu khien: can doi tab bang CODE khi nguoi
+  // dung bam ma tram o muc "Tien trinh" cua tab Lich su phieu. defaultActiveKey chi co tac dung o lan
+  // render dau, khong doi tab theo lenh duoc
+  const [activeKey, setActiveKey] = useState<string>("tab1");
+
+  // Yeu cau loc gui sang tab Lich su CR. Mang theo "seq" tang dan chu khong chi tramId: bam lai DUNG ma
+  // tram vua bam se khong lam prop doi gia tri -> useEffect ben SessionHistoryList khong chay lai ->
+  // nguoi dung bam ma khong thay gi xay ra
+  const [yeuCauLocTram, setYeuCauLocTram] = useState<YeuCauLocTram | null>(null);
+
+  const handleXemLichSuCR = useCallback((tramId: string) => {
+    setYeuCauLocTram((truoc) => ({ tramId, seq: (truoc?.seq ?? 0) + 1 }));
+    setActiveKey(KEY_TAB_LICH_SU_CR);
+  }, []);
+
   const items = [
     {
       key: "tab1",
@@ -13,9 +33,9 @@ const R012Tabs: React.FC = () => {
       children: <TacDongTram />,
     },
     {
-      key: "tab2",
+      key: KEY_TAB_LICH_SU_CR,
       label: "Lịch sử CR",
-      children: <LichSuCR />,
+      children: <LichSuCR yeuCauLocTram={yeuCauLocTram} />,
     },
     // DOI CHO tab "Lich su phieu" LEN TRUOC "Cell xau" (truoc day nguoc lai). Ly do: 3 tab Tac dong tram /
     // Lich su CR / Lich su phieu deu la NOI DUNG CUA R012, doc CUNG 1 BE (FastAPI R012) va la 3 buoc lien
@@ -29,7 +49,7 @@ const R012Tabs: React.FC = () => {
     {
       key: "tab4",
       label: "Lịch sử phiếu",
-      children: <LichSuPhieu />,
+      children: <LichSuPhieu onXemLichSuCR={handleXemLichSuCR} />,
     },
     {
       key: "tab3",
@@ -51,7 +71,8 @@ const R012Tabs: React.FC = () => {
         padding: "0.5rem 1rem",
       }}
     >
-      <Tabs defaultActiveKey="tab1" items={items} />
+      {/* CO dieu khien (activeKey + onChange) thay cho defaultActiveKey: xem ly do o comment state activeKey */}
+      <Tabs activeKey={activeKey} onChange={setActiveKey} items={items} />
     </div>
   );
 };
