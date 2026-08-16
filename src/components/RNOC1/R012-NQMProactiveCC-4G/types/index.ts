@@ -67,7 +67,22 @@ export interface SessionsQueryParams {
   // o day KHONG can enableSorting:false cot nao
   sort_by?: "id" | "tram_id" | "tram_name" | "action" | "status" | "executed_at" | "created_at";
   order?: "asc" | "desc"; // mac dinh "desc" theo schema BE - CHI co y nghia khi da truyen sort_by
+  // === them 16082026: loc theo BUOC trong tien trinh (xem BuocTienTrinh ben duoi) ===
+  // DA XAC NHAN qua openapi.json that + goi that tren BE .196:8080: param ten "buoc", kieu IntEnum
+  // BuocFilter voi enum [1, 2, 4]. KHONG truyen -> lay tat ca buoc
+  buoc?: BuocTienTrinh;
+  // Loc rieng "da QUA HAN xuat phieu" (con_bao_nhieu_ngay < 0). BE khai bao boolean default false, nen
+  // KHONG gui param nay tuong duong gui false - FE chi gui true khi that su can loc, de query string gon
+  qua_han?: boolean;
 }
+
+// 3 gia tri hop le cua query param ?buoc= (BE khai bao IntEnum BuocFilter, enum [1, 2, 4]).
+// KHONG co 3: buoc 3 (dang danh gia) la trang thai THOANG QUA trong 1 luot job (job doc KPI -> danh gia ->
+// xuat phieu trong cung 1 lan chay), khong session nao dung lai o do de nguoi dung kip nhin thay. BE CO Y
+// tra 422 cho ?buoc=3 thay vi tra danh sach rong - danh sach rong se bi doc nham thanh "khong con session
+// nao dang danh gia" trong khi that ra la "trang thai nay khong bao gio ton tai". Vi vay bo loc o FE cung
+// KHONG duoc co muc nao gui buoc=3
+export type BuocTienTrinh = 1 | 2 | 4;
 
 // dung cho GET /api/v1/sessions - 1 dong du lieu session trong danh sach
 export interface SessionListItem {
@@ -81,6 +96,28 @@ export interface SessionListItem {
   executed_at: string | null; // thoi diem thuc thi CR dang ISO date-time, co the null theo schema
   evaluated_at: string | null; // thoi diem danh gia dang ISO date-time, co the null theo schema
   created_at: string | null; // thoi diem tao session dang ISO date-time, co the null theo schema
+
+  // ==== 6 truong THEM 16082026 (BE da san sang, DA XAC NHAN qua openapi.json + goi that GET /sessions
+  // tren .196:8080) - phuc vu cot "Tien trinh"/"Phieu"/"Con lai" cua tab Lich su CR ====
+  // 4 truong so duoi day BE khai bao co "default" (0 / 1) nen KHONG nam trong mang "required" cua schema,
+  // nhung response THAT luon co du (da kiem 33/33 dong). Khai bao la number (khong optional) cho dung hop
+  // dong BE; RIENG o cho doc van giu `?? 0` lam duong lui cho response cu con nam trong cache TanStack
+  // Query tu truoc khi BE nang cap - cache do khong co 4 truong nay
+  so_cell_anh_huong: number; // tong so cell bi anh huong cua session
+  so_phieu_da_xuat: number; // so phieu DA xuat thanh cong (mau so la so_cell_anh_huong)
+  so_cell_cho_xuat_tay: number; // so cell job tu dong KHONG xuat duoc (vuot gioi han/het luot thu) -> phai lam TAY
+  // NGAY LICH dang "YYYY-MM-DD" (BE khai bao format "date", KHONG phai date-time nhu executed_at/created_at)
+  // -> TUYET DOI KHONG dua qua helpers/formatDateTime (ham do ep dayjs.utc(...).tz(+7), voi chuoi chi co
+  // ngay se thanh 07:00 gio VN cua chinh ngay do - vo nghia). Dung dayjs(v).format("DD/MM/YYYY")
+  ngay_du_kien_xuat_phieu: string | null;
+  // So ngay con lai den ngay du kien xuat phieu. AM = da QUA HAN bay nhieu ngay, 0 = dung hom nay,
+  // null = chua tinh duoc (session chua chay xong CR nen chua co moc ngay)
+  con_bao_nhieu_ngay: number | null;
+  // Buoc hien tai trong tien trinh 4 buoc: 1=chay CR, 2=cho thu thap KPI, 3=danh gia, 4=xuat phieu.
+  // THUC TE BE CHI tra 1|2|4 (xem BuocTienTrinh) - buoc 3 thoang qua trong 1 luot job nen khong bao gio
+  // bat gap. De kieu number (khong phai BuocTienTrinh) vi day la du lieu BE tra ve chu khong phai gia tri
+  // FE gui len: neu sau nay BE co tra 3 that thi cot Tien trinh van hien duoc thay vi vo kieu
+  buoc_hien_tai: number;
 }
 
 // dung cho GET /api/v1/sessions - response tra ve danh sach session kem tong so

@@ -10,6 +10,9 @@ import "leaflet/dist/leaflet.css"; // css goc cua Leaflet - bat buoc phai co de 
 import { StationItem, PreviewCrResponse } from "../../types";
 import SectorBeam from "./SectorBeam";
 import { R012_COLORS } from "../../theme";
+// tach marker trung toa do (nhieu tram treo cung 1 cot, cell chi khac huong anten) - xem ly do day du
+// trong chinh file do, ke ca ly do KHONG chon cach tang maxZoom
+import { tachMarkerChongNhau, suyHuongTuTenCell } from "./tachMarkerChongNhau";
 
 // gan lai icon mac dinh bang anh da import qua webpack, thay vi de Leaflet tu doan duong dan (se sai khi bundle)
 // chi can lam 1 lan khi module duoc load, khong can lam lai moi lan render
@@ -223,6 +226,10 @@ interface ValidCoordTram {
   lat: number;
   lng: number;
   soCellAnhHuong: number;
+  laTramGoc: boolean; // phan biet marker do (tram bi tat) voi marker xanh (tram lan can) khi ve chung 1 vong lap
+  // so hieu huong anten suy tu ten cell cua tram nay - dung chon goc rai khi marker bi trung toa do.
+  // null = khong suy duoc (tram khong co cell nao trong cells_bi_anh_huong, hoac ten cell khong theo khuon)
+  huongAnten: number | null;
 }
 
 // tach rieng component cho che do preview (nhieu marker) - giu NetworkMap chinh o tren gon, de doc theo tung che do
@@ -237,6 +244,18 @@ const PreviewMap: React.FC<{ data: PreviewCrResponse }> = ({ data }) => {
   // cell nao thuoc tram_goc (tram_goc khong con "tu anh huong chinh no"), nen so cell cua tram_goc la 0
   const soCellCuaTramGoc = data.cells_bi_anh_huong.filter((c) => c.tram_id === data.tram_goc.tram_id).length;
 
+  // So hieu huong anten dai dien cua 1 tram, suy tu ten cac cell cua chinh tram do (vd 4G-SSN121M43-HNI ->
+  // huong 4). Lay so NHO NHAT khi tram co nhieu cell nhieu huong: chi can 1 gia tri ON DINH de chon goc rai
+  // - lay min thi cung 1 tram luon ra cung 1 goc du BE tra cells_bi_anh_huong theo thu tu khac nhau, con
+  // lay phan tu dau tien thi goc se nhay lung tung moi lan goi lai preview
+  const layHuongCuaTram = (tramId: string): number | null => {
+    const cacHuong = data.cells_bi_anh_huong
+      .filter((c) => c.tram_id === tramId)
+      .map((c) => suyHuongTuTenCell(c.cell_name))
+      .filter((h): h is number => h !== null);
+    return cacHuong.length > 0 ? Math.min(...cacHuong) : null;
+  };
+
   const tramGocValid: ValidCoordTram | null =
     data.tram_goc.longitude !== null && data.tram_goc.latitude !== null
       ? {
@@ -245,6 +264,8 @@ const PreviewMap: React.FC<{ data: PreviewCrResponse }> = ({ data }) => {
           lat: data.tram_goc.latitude,
           lng: data.tram_goc.longitude,
           soCellAnhHuong: soCellCuaTramGoc,
+          laTramGoc: true,
+          huongAnten: layHuongCuaTram(data.tram_goc.tram_id),
         }
       : null;
 
@@ -265,6 +286,8 @@ const PreviewMap: React.FC<{ data: PreviewCrResponse }> = ({ data }) => {
       lat: t.latitude,
       lng: t.longitude,
       soCellAnhHuong: data.cells_bi_anh_huong.filter((c) => c.tram_id === t.tram_id).length,
+      laTramGoc: false,
+      huongAnten: layHuongCuaTram(t.tram_id),
     });
   });
 
@@ -292,7 +315,20 @@ const PreviewMap: React.FC<{ data: PreviewCrResponse }> = ({ data }) => {
     );
   }
 
-  const bounds: [number, number][] = allMarkers.map((m) => [m.lat, m.lng]);
+  // TACH MARKER TRUNG TOA DO (16082026) - lam NGAY TRUOC khi tinh bounds/ve marker. Tu day tro xuong CHI
+  // dung toa do da tach (m.lat/m.lng cua KetQuaTachMarker), khong dung lai toa do goc trong m.item nua:
+  // bounds tinh theo toa do da tach thi marker bi day ra ria van chac chan nam trong khung nhin
+  const markerDaTach = tachMarkerChongNhau(
+    allMarkers,
+    (m) => ({ lat: m.lat, lng: m.lng }),
+    (m) => m.huongAnten
+  );
+
+  const bounds: [number, number][] = markerDaTach.map((m) => [m.lat, m.lng]);
+
+  // tong so marker da phai doi vi tri hien thi - dung cho dong ghi chu duoi ban do. Neu khong noi ra, mot
+  // ngay nao do se co nguoi doi chieu toa do tren map voi toa do trong bang va tuong FE hien sai du lieu
+  const soMarkerDaTach = markerDaTach.filter((m) => m.daTach).length;
 
   return (
     // position:relative de ThieuTileOverlay (position:absolute) neo dung vao khung ban do, KHONG tran ra
@@ -318,26 +354,32 @@ const PreviewMap: React.FC<{ data: PreviewCrResponse }> = ({ data }) => {
           {/* tile OFFLINE tu server noi bo (xem TILE_URL) - khong con goi ra internet */}
           <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} eventHandlers={eventHandlers} />
 
-          {tramGocValid && (
-            <Marker position={[tramGocValid.lat, tramGocValid.lng]} icon={tramGocIcon}>
+          {/* VE CHUNG 1 vong lap cho ca tram goc lan tram lan can (truoc day tach lam 2 khoi): viec tach
+              marker trung toa do phai xet TAT CA marker cung mot luc moi biet cai nao trung cai nao - trong
+              du lieu that chinh tram goc cung co the trung toa do voi 1 tram lan can. Vai tro tram goc /
+              lan can gio phan biet bang co laTramGoc (icon do vs xanh), khong con bang vi tri trong JSX */}
+          {markerDaTach.map(({ item, lat, lng, daTach, soTrungToaDo }) => (
+            <Marker
+              key={item.tram_id}
+              position={[lat, lng]}
+              icon={item.laTramGoc ? tramGocIcon : tramLanCanIcon}
+            >
               <Popup>
                 <div>
-                  <strong>{tramGocValid.tram_name ?? tramGocValid.tram_id}</strong> (tram goc - bi tat)
+                  <strong>{item.tram_name ?? item.tram_id}</strong>{" "}
+                  {item.laTramGoc ? "(tram goc - bi tat)" : "(tram lan can)"}
                 </div>
-                <div>Ma tram: {tramGocValid.tram_id}</div>
-                <div>So cell bi anh huong: {tramGocValid.soCellAnhHuong}</div>
-              </Popup>
-            </Marker>
-          )}
-
-          {tramLanCanValid.map((t) => (
-            <Marker key={t.tram_id} position={[t.lat, t.lng]} icon={tramLanCanIcon}>
-              <Popup>
-                <div>
-                  <strong>{t.tram_name ?? t.tram_id}</strong> (tram lan can)
-                </div>
-                <div>Ma tram: {t.tram_id}</div>
-                <div>So cell bi anh huong: {t.soCellAnhHuong}</div>
+                <div>Ma tram: {item.tram_id}</div>
+                <div>So cell bi anh huong: {item.soCellAnhHuong}</div>
+                {/* Noi ro ngay trong popup khi marker nay da bi doi cho: nguoi truc bam vao dung marker
+                    dang nghi ngo la thay ly do, khong phai doc dong ghi chu chung o duoi roi tu doan
+                    marker nao bi anh huong */}
+                {daTach && (
+                  <div style={{ marginTop: "4px", color: "#8c8c8c" }}>
+                    Vi tri hien thi da tach ra {soTrungToaDo} marker: {soTrungToaDo} tram nay dung CHUNG
+                    mot toa do
+                  </div>
+                )}
               </Popup>
             </Marker>
           ))}
@@ -345,6 +387,16 @@ const PreviewMap: React.FC<{ data: PreviewCrResponse }> = ({ data }) => {
 
         {thieuTile && <ThieuTileOverlay />}
       </div>
+
+      {/* ghi chu khi co marker bi doi cho - CAN THIET vi toa do tren ban do luc nay khong con khop 100%
+          voi toa do trong bang "Tram bi anh huong" ngay ben duoi. Noi truoc con hon de nguoi dung tu phat
+          hien roi mat long tin vao ca 2 cho */}
+      {soMarkerDaTach > 0 && (
+        <div style={{ marginTop: "8px", color: "#8c8c8c", fontSize: "0.85rem" }}>
+          Luu y: {soMarkerDaTach} marker duoc rai quanh vi tri that (trong ban kinh ~40m) vi co nhieu tram
+          dung CHUNG mot toa do - neu ve dung toa do that thi chung de len nhau thanh 1 cham duy nhat.
+        </div>
+      )}
 
       {/* ghi chu so tram khong hien duoc tren map do thieu toa do - de NOC biet con thieu du lieu, khong
           tuong nham la preview chi co bay nhieu do la TOAN BO tram bi anh huong (EDGE CASE theo yeu cau) */}

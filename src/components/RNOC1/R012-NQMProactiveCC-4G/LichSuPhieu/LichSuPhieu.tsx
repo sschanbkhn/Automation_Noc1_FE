@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { Segmented } from "antd";
 import PhieuHistoryTable from "./PhieuHistoryTable";
 import JobRunTable from "./JobRunTable";
+// canh bao "job xuat phieu khong chay/loi" - xem ly do day du trong chinh file do
+import JobHealthAlert from "./JobHealthAlert";
 
 // 2 muc cua Segmented. Tach ra hang so de gia tri dung o value/state khong bi go lech chinh ta
 const MUC_PHIEU = "phieu";
@@ -25,6 +27,11 @@ const LichSuPhieu: React.FC = () => {
 
   return (
     <div>
+      {/* Dat TREN Segmented (khong nam trong muc "Phieu" hay "Luot chay job") vi canh bao nay dung cho CA
+          HAI goc nhin: job chet thi ca bang phieu lan bang luot chay deu trong. Nam ngoai Segmented con co
+          nghia la doi qua lai giua 2 muc KHONG lam component nay unmount roi goi lai API */}
+      <JobHealthAlert />
+
       <Segmented
         value={muc}
         onChange={(value) => setMuc(value as string)}
