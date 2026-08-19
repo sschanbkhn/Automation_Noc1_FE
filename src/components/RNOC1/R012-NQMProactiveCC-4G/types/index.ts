@@ -118,6 +118,14 @@ export interface SessionListItem {
   // bat gap. De kieu number (khong phai BuocTienTrinh) vi day la du lieu BE tra ve chu khong phai gia tri
   // FE gui len: neu sau nay BE co tra 3 that thi cot Tien trinh van hien duoc thay vi vo kieu
   buoc_hien_tai: number;
+
+  // ==== TY LE DIEN NANG (them theo BE 854689a->d133fe1) ====
+  // so_dn_thanh_cong / so_dn_tong - so lenh DN chay thanh cong tren tong so lenh cua session.
+  // NULL o session CU (truoc dot nay BE khong ghi 2 cot nay va KHONG backfill) -> cot hien "-".
+  // CHUA CO tren BE .196:8080 o thoi diem viet (openapi.json: chuoi "so_dn" xuat hien 0 lan) nen hien tai
+  // MOI dong deu undefined -> khai bao optional, cho doc phai chiu duoc CA undefined LAN null
+  so_dn_thanh_cong?: number | null;
+  so_dn_tong?: number | null;
 }
 
 // dung cho GET /api/v1/sessions - response tra ve danh sach session kem tong so
@@ -152,20 +160,6 @@ export interface CrLogItem {
   created_at: string | null; // thoi diem ghi log dang ISO date-time (UTC, co hau to Z), co the null theo schema
 }
 
-// dung cho GET /api/v1/sessions/{session_id} - 1 diem du lieu QoE theo thoi gian
-export interface QoeSnapshotItem {
-  snapshot_date: string; // ngay chup snapshot, bat buoc theo schema
-  qoe_score: number; // diem QoE, bat buoc theo schema
-  period: string; // ky do luong (truoc/sau CR...), bat buoc theo schema
-}
-
-// dung cho GET /api/v1/sessions/{session_id} - 1 diem du lieu QoS theo thoi gian
-export interface QosSnapshotItem {
-  snapshot_date: string; // ngay chup snapshot, bat buoc theo schema
-  qos_score: number; // diem QoS, bat buoc theo schema
-  period: string; // ky do luong (truoc/sau CR...), bat buoc theo schema
-}
-
 // dung cho GET /api/v1/sessions/{session_id}, field affected_cells - them 22072026 (Phuong an B, DA DUYET
 // boi user, xem application/get_session_detail_use_case.py). La TOAN BO cell BI ANH HUONG cua session
 // (KHAC voi cell_params - la cell DA THAT SU CHAY CR, tap con cua affected_cells). DA XAC NHAN qua goi that:
@@ -178,6 +172,12 @@ export interface SessionAffectedCellItem {
   tram_id: string | null; // ma tram cha, co the null theo schema
   huong_id: string | null; // id huong cua cell, co the null theo schema
 }
+
+// dung cho DELETE /api/v1/sessions/{session_id} - BE tra ve so dong DA XOA cua tung bang lien quan,
+// dang {ten_bang: so_dong} (vd {"cr_cell_param": 12, "cr_log": 17, "cr_phieu": 0}). De Record vi danh sach
+// bang co the doi khi BE them bang moi - FE chi duyet key/value de hien, khong phu thuoc ten bang cu the.
+// BE CHI cho xoa khi status=FAILED, khac di tra 409 kem message giai thich
+export type XoaSessionResponse = Record<string, number>;
 
 // dung cho GET /api/v1/sessions/{session_id} - response chi tiet 1 session CR
 export interface SessionDetailResponse {
@@ -198,8 +198,11 @@ export interface SessionDetailResponse {
   cell_params: CellParamDetailItem[]; // danh sach cell DA CHAY CR, mac dinh mang rong theo schema
   affected_cells: SessionAffectedCellItem[]; // TOAN BO cell BI ANH HUONG cua session (Phan 3, Buoc 2) - mac dinh mang rong theo schema
   cr_logs: CrLogItem[]; // danh sach log tien trinh CR, mac dinh mang rong theo schema
-  qoe_snapshots: QoeSnapshotItem[]; // danh sach diem QoE theo thoi gian, mac dinh mang rong theo schema
-  qos_snapshots: QosSnapshotItem[]; // danh sach diem QoS theo thoi gian, mac dinh mang rong theo schema
+  // qoe_snapshots/qos_snapshots DA BO (BE 854689a->d133fe1 xoa khoi GET /sessions/{id}). Truoc do FE cung
+  // KHONG doc 2 truong nay o dau: component QoeQosCharts da xoa tu 23/07 vi 2 khoi do LUON rong (phu thuoc
+  // job evaluate chi chay sau 21 ngay). Da grep lai toan bo src truoc khi bo - khong co cho nao doc.
+  // LUU Y: BE tren .196:8080 HIEN VAN CON tra 2 truong nay (chua deploy ban moi) - thua truong trong
+  // response so voi type la vo hai, TypeScript khong kiem tra luc chay
 }
 
 // dung cho SSE stream GET /api/v1/cr/stream/{session_id} - doc truc tiep tu source code BE that
@@ -317,6 +320,22 @@ export interface QosHistoryQueryParams {
   to?: string; // "YYYY-MM-DD" - PHAI di kem "from"
 }
 
+// ==== GET /api/v1/qoe/{cell_name}?from=&to= (lich su QoE theo ngay, cho chart 15 ngay) ====
+// DA XAC NHAN qua goi that tren BE .196:8080: nhan CA {days} LAN {from,to} y het /qos/{cell_name}, tra ve
+// {"cell_name":"...","data":[{"time":"2026-08-07T00:00:00","qoe":5.0},...]}.
+// KHAC /qos/{cell_name} DUNG 1 CHO: ten truong diem la "qoe" thay vi "qos". Vi vay dung chung duoc toan bo
+// phan tinh toan/ve chart cua QoS (buildQosEvaluation/resolveQosWindow) sau khi doi ten truong - xem
+// QosEvaluationChart.tsx::chiSo
+export interface QoeHistoryPoint {
+  time: string; // thoi diem do QoE (chuoi ISO, luu y BE tra KHONG co hau to Z o endpoint nay)
+  qoe: number; // diem QoE thang 1-5
+}
+
+export interface QoeHistoryResponse {
+  cell_name: string;
+  data: QoeHistoryPoint[]; // co the IT hon so ngay yeu cau khi CEM thieu du lieu ngay - chart tu bu ngay trong
+}
+
 // dung cho POST /api/v1/phieu (KHOI 4b/5, xuat phieu SaveCellClm cho 1 cell KHONG DAT) - khop CHINH XAC
 // api/schemas/phieu_schemas.py::XuatPhieuResponse phia BE (KHOI 4a/5, doc source truc tiep, khong doan)
 export interface CtsResponse {
@@ -427,7 +446,7 @@ export interface PhieuHistoryResponse {
 
 // ==== GET /api/v1/sessions/{cr_session_id}/qoe-cells (danh gia QoE theo TUNG CELL) ====
 // DA XAC NHAN qua openapi.json that + goi that tren BE .196:8080 (schema QoeCellItem/QoeCellsResponse).
-// KHAC HAN voi QoeSnapshotItem o tren: snapshot la diem QoE theo NGAY cua ca session (do job evaluate 21
+// KHAC HAN voi qoe_snapshots cu (da bo cung BE 854689a): snapshot la diem QoE theo NGAY cua ca session (job evaluate 21
 // ngay sinh ra), con day la ket qua danh gia TB truoc/sau CR cua TUNG CELL - tinh truc tiep tu CEM khi goi.
 //
 // LUU Y NANG: 1 lan goi endpoint nay = BE ban ~14 request sang CEM (moi cell 1 request) nen RAT CHAM -

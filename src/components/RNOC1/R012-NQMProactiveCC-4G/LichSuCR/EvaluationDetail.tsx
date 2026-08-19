@@ -164,7 +164,30 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
       // chart 7 ngay CHI giu o khu vuc preview (TacDongTram.tsx)
       children:
         crDateGmt7 !== null ? (
-          <QosEvaluationChart affectedCells={data.affected_cells} crDateGmt7={crDateGmt7} />
+          <>
+            {/* Segmented DUNG CHUNG state "mucDanhGia" voi muc 5 ben duoi (khong phai state rieng): chon
+                QoE o day thi bang danh gia o muc 5 cung chuyen sang QoE. Neu de 2 cong tac doc lap thi rat
+                de roi vao canh chart dang la QoE ma bang lai la QoS - doc cheo 2 chi so cua nhau ma khong
+                nhan ra. Chart va bang luon noi ve CUNG mot chi so */}
+            <Segmented
+              value={mucDanhGia}
+              onChange={(value) => setMucDanhGia(value as string)}
+              options={[
+                { value: MUC_QOS, label: "QoS" },
+                { value: MUC_QOE, label: "QoE" },
+              ]}
+              style={{ marginBottom: "12px" }}
+            />
+            {/* DUNG LAI nguyen component chart cua QoS, chi truyen chiSo khac - xem QosEvaluationChartProps.
+                key ep remount khi doi chi so de dropdown chon cell tro ve trang thai ban dau, tranh canh
+                dang chon cell X o QoS, chuyen sang QoE lai hien so lieu cu vai nhip truoc khi query moi ve */}
+            <QosEvaluationChart
+              key={mucDanhGia}
+              affectedCells={data.affected_cells}
+              crDateGmt7={crDateGmt7}
+              chiSo={mucDanhGia === MUC_QOE ? "qoe" : "qos"}
+            />
+          </>
         ) : (
           // CR chua thuc thi xong (status DONE/RUNNING nhung chua co executed_at) thi chua co moc ngay CR
           // de tinh window 15 ngay, khong the danh gia
@@ -177,10 +200,7 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
       children:
         crDateGmt7 !== null ? (
           <>
-            {/* Segmented con [QoS] [QoE]: 2 goc nhin cua CUNG cau hoi "cac cell nay tot len hay xau di",
-                khac nhau o nguon so lieu (QoS = CTS do mang, QoE = CEM cam nhan nguoi dung). Dat chung 1
-                muc thay vi 2 muc Collapse rieng de doi qua lai duoc ngay, khong phai dong muc nay mo muc
-                kia moi so sanh duoc */}
+            {/* Segmented con [QoS] [QoE] - CUNG state voi Segmented o muc 4, doi o dau cung dong bo ca hai */}
             <Segmented
               value={mucDanhGia}
               onChange={(value) => setMucDanhGia(value as string)}
@@ -205,7 +225,14 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
                 request - trong khi phan lon luot mo modal la de xem log/tham so chu khong dung toi QoE.
                 Muc 5 nay lai con nam trong Collapse dang DONG mac dinh, nen khi chua mo muc thi children
                 chua render, cong them 1 lop tiet kiem nua */}
-            {mucDanhGia === MUC_QOE && <QoeCellsTable sessionId={data.id} enabled={mucDanhGia === MUC_QOE} />}
+            {mucDanhGia === MUC_QOE && (
+              <QoeCellsTable
+                sessionId={data.id}
+                // affected_cells dung de suy cot "Ma tram" (endpoint /qoe-cells khong tra tram_id)
+                affectedCells={data.affected_cells}
+                enabled={mucDanhGia === MUC_QOE}
+              />
+            )}
           </>
         ) : (
           <Empty description="Cho CR thuc thi xong moi co the tinh bang danh gia chi tiet" />

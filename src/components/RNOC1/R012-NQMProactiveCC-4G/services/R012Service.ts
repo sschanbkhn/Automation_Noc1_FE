@@ -23,6 +23,8 @@ import {
   JobRunListResponse,
   JobRunDetail,
   QoeCellsResponse,
+  QoeHistoryResponse,
+  XoaSessionResponse,
 } from '../types';
 
 // ham goi GET /api/v1/stations - lay danh sach tram co phan trang
@@ -136,6 +138,47 @@ export const getQosHistory = async (
     // endpoint nay khong goi CDS (doc lich su QoS da luu trong DB) nen giu timeout ngan hon
     const data: any = await r012Request.get(`/qos/${cellName}`, { params, timeout: 30000 });
     return data as QosHistoryResponse;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// ham goi GET /api/v1/qoe/{cell_name} - lich su QoE theo ngay. DUNG CHUNG khuon params voi getQosHistory
+// ({days} hoac {from,to}) - DA XAC NHAN qua goi that: endpoint nay nhan y het cac param do.
+// Response KHAC /qos/{cell_name} DUNG 1 CHO: ten truong diem la "qoe" thay vi "qos" (xem QoeHistoryPoint)
+export const getQoeHistory = async (
+  cellName: string,
+  params: QosHistoryQueryParams = {}
+): Promise<QoeHistoryResponse> => {
+  try {
+    // doc du lieu QoE da luu trong DB (khong goi CEM dong bo nhu /qoe-cells) nen giu timeout ngan 30s
+    const data: any = await r012Request.get(`/qoe/${cellName}`, { params, timeout: 30000 });
+    return data as QoeHistoryResponse;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// ham goi DELETE /api/v1/sessions/{session_id} - XOA VINH VIEN 1 session CR va toan bo du lieu lien quan
+// (cell param, log, phieu). BE CHI cho xoa khi status=FAILED, khac di tra 409 kem message giai thich ro -
+// FE KHONG tu doan ly do, cu hien nguyen van message do (xem SessionHistoryList.tsx).
+// Tra ve {ten_bang: so_dong_da_xoa}
+export const xoaSession = async (sessionId: number): Promise<XoaSessionResponse> => {
+  try {
+    const data: any = await r012Request.delete(`/sessions/${sessionId}`, { timeout: 30000 });
+    return data as XoaSessionResponse;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// ham goi DELETE /api/v1/phieu/{phieu_id} - xoa 1 DONG lich su phieu. BE chi chan trang_thai=SUCCESS
+// (phieu da len CTS that thi khong the xoa o day) -> 409; cac trang thai con lai deu xoa duoc de cell quay
+// lai trang thai chua xu ly va co the xuat lai
+export const xoaPhieu = async (phieuId: number): Promise<unknown> => {
+  try {
+    const data: any = await r012Request.delete(`/phieu/${phieuId}`, { timeout: 30000 });
+    return data;
   } catch (error) {
     throw error;
   }

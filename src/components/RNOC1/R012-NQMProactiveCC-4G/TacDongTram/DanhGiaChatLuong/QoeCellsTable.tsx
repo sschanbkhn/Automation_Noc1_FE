@@ -10,12 +10,43 @@
 // khong con la thong tin ben le ma la mot can cu xuat phieu ngang hang QoS.
 // Xuat phieu o day goi CHINH endpoint POST /api/v1/phieu cua bang QoS - KHONG co endpoint rieng cho QoE:
 // 1 cell chi co 1 phieu bat ke phat hien ra no qua chi so nao (BE tu ghi nguon_khong_dat = QOS/QOE/CA_HAI).
-import React, { useCallback, useMemo, useState } from "react";
-import { Alert, Button, Empty, Modal, Spin, Table, Tag, Tooltip, message } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Alert, Button, Empty, Modal, Pagination, Select, Spin, Tag, Tooltip, message } from "antd";
+import {
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  PaginationState,
+  SortingState,
+} from "@tanstack/react-table";
+import * as XLSX from "xlsx";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getQoeCells, getLichSuPhieu, xuatPhieu } from "../../services/R012Service";
-import { QoeCellItem, QoeCellsResponse, PhieuHistoryItem, PhieuHistoryResponse } from "../../types";
+import {
+  QoeCellItem,
+  QoeCellsResponse,
+  PhieuHistoryItem,
+  PhieuHistoryResponse,
+  SessionAffectedCellItem,
+} from "../../types";
+import { R012_COLORS } from "../../theme";
+import { SortableHeaderCell } from "../../common/SortableHeaderCell";
+// dung LAI ham dat ten file export cua bang QoS (da export de khong phai nhan ban) - 2 bang xuat file
+// cung mot quy uoc ten thi ghep bao cao moi de
+import { formatTimestampForFileName } from "./QosEvaluationTable";
+
+const columnHelper = createColumnHelper<QoeCellItem>();
+
+// "" = "Tat ca" - giu DUNG quy uoc cua CONCLUSION_FILTER_OPTIONS ben bang QoS
+const KET_QUA_FILTER_OPTIONS = [
+  { value: "", label: "Tat ca ket luan" },
+  { value: "PASS", label: "DAT" },
+  { value: "FAIL", label: "KHONG DAT" },
+  { value: "INSUFFICIENT_DATA", label: "Khong du du lieu" },
+];
 
 // Nhan + mau cho ket_qua. INSUFFICIENT_DATA dung mau XAM (default) chu KHONG phai do:
 // CEM thung du lieu la tinh trang THUONG GAP va BINH THUONG voi QoE (vd toan bo du lieu thang 7 bi thieu),
@@ -42,16 +73,24 @@ interface PhieuState {
 
 interface QoeCellsTableProps {
   sessionId: number;
+  // Dung de suy ra cot "Ma tram": endpoint /qoe-cells KHONG tra tram_id, nhung affected_cells cua session
+  // (da co san o EvaluationDetail) co day du cap cell_name -> tram_id. Doi chieu qua day thay vi bo cot -
+  // bang QoS co cot nay, thieu o QoE la 1 trong nhung diem lech giua 2 bang
+  affectedCells: SessionAffectedCellItem[];
   // CHI goi API khi nguoi dung that su dang xem tab QoE (xem ly do o comment prop nay tai EvaluationDetail):
   // 1 lan goi = ~14 request CEM ben BE
   enabled: boolean;
 }
 
-const QoeCellsTable: React.FC<QoeCellsTableProps> = ({ sessionId, enabled }) => {
+const QoeCellsTable: React.FC<QoeCellsTableProps> = ({ sessionId, affectedCells, enabled }) => {
   const [phieuByCell, setPhieuByCell] = useState<Record<string, PhieuState>>({});
+  // 3 state duoi day de KHOP voi bang QoS (truoc day bang QoE khong co bo loc/sort/phan trang nao)
+  const [ketQuaFilter, setKetQuaFilter] = useState<string>("");
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 5 });
   const queryClient = useQueryClient();
 
-  const { data, isLoading, isError, error } = useQuery<QoeCellsResponse>({
+  const { data, isLoading, isError, error, refetch, isFetching } = useQuery<QoeCellsResponse>({
     queryKey: ["r012", "qoe-cells", sessionId],
     queryFn: () => getQoeCells(sessionId),
     enabled,
@@ -193,100 +232,165 @@ const QoeCellsTable: React.FC<QoeCellsTableProps> = ({ sessionId, enabled }) => 
     [phieuTuServer, handleXuatPhieu]
   );
 
-  const columns: ColumnsType<QoeCellItem> = [
-    { title: "Cell", dataIndex: "cell_name", key: "cell_name" },
-    {
-      title: "TB truoc CR",
-      key: "avg_before",
-      // Tooltip kem SO NGAY co du lieu that: "3.80" tinh tu 7 ngay va "3.80" tinh tu 1 ngay dang tin cay
-      // rat khac nhau, ma nhin con so tran thi khong the biet duoc
-      render: (_, row) => (
-        <Tooltip title={`Tinh tu ${row.so_ngay_before} ngay co du lieu`}>{soHoacGach(row.avg_before)}</Tooltip>
-      ),
-    },
-    {
-      title: "TB sau CR",
-      key: "avg_after",
-      render: (_, row) => (
-        <Tooltip title={`Tinh tu ${row.so_ngay_after} ngay co du lieu`}>{soHoacGach(row.avg_after)}</Tooltip>
-      ),
-    },
-    {
-      title: "Chenh lech",
-      key: "delta",
-      render: (_, row) => soHoacGach(row.delta),
-    },
-    {
-      title: "Ket luan",
-      key: "ket_qua",
-      render: (_, row) => {
-        // fallback cho gia tri ngoai 3 cai da biet: BE khai bao ket_qua la string tu do nen van co the
-        // xuat hien gia tri moi - hien nguyen van con hon lam vo bang
-        const tag = KET_QUA_TAG[row.ket_qua] ?? { label: row.ket_qua, color: "default" };
-        return <Tag color={tag.color}>{tag.label}</Tag>;
-      },
-    },
-    // ==== 2 cot RIENG cua QoE (bang QoS khong co) ====
-    {
-      // Diem TB co the dat trong khi van co ngay tut sau rat sau - cot nay de lo cai day
-      title: "Diem thap nhat sau",
-      key: "diem_thap_nhat_sau",
-      render: (_, row) => soHoacGach(row.diem_thap_nhat_sau),
-    },
-    {
-      title: "So ngay dat",
-      key: "so_ngay_dat_sau",
-      // hien dang "x/y" (so ngay dat / tong so ngay co du lieu sau CR): rieng "3 ngay dat" khong noi len
-      // gi neu khong biet la dat 3/3 hay 3/14
-      render: (_, row) => `${row.so_ngay_dat_sau ?? 0}/${row.so_ngay_after}`,
-    },
-    {
-      title: "Thao tac",
-      key: "thao_tac",
-      render: (_, row) => {
-        const state = phieuByCell[row.cell_name];
-        const phieu = phieuTuServer[row.cell_name];
+  // cell_name -> tram_id, suy tu affected_cells cua session (endpoint /qoe-cells khong tra tram_id)
+  const tramTheoCell: Record<string, string | null> = useMemo(() => {
+    const map: Record<string, string | null> = {};
+    for (const c of affectedCells) {
+      map[c.cell_name] = c.tram_id;
+    }
+    return map;
+  }, [affectedCells]);
 
-        // Uu tien hien trang thai DA XUAT bat ke ket_qua hien tai la gi, va SERVER dung truoc state cuc bo:
-        // phieu DA TON TAI THAT tren CTS thi khong duoc "quen" chi vi bang tinh lai ket qua danh gia.
-        // Cell nay co the da duoc xuat tu bang QoS ben canh (1 cell 1 phieu) - phai the hien duoc dieu do
-        const daXuat = phieu?.trang_thai === "SUCCESS" || state?.trangThai === "SUCCESS";
-        if (daXuat) {
-          const maPhieu = state?.phieuId ?? phieu?.phieu_id;
-          return <Tag color="blue">Da xuat{maPhieu ? ` (${maPhieu})` : ""}</Tag>;
-        }
+  const rows = useMemo(() => data?.data ?? [], [data?.data]);
 
-        // PASS -> AN nut han (khong render gi). Cell dat QoE thi khong co viec gi de lam o dong nay
-        if (row.ket_qua === "PASS") {
-          return <span style={{ color: "#bfbfbf" }}>-</span>;
-        }
+  const filteredRows = useMemo(
+    () => rows.filter((r) => !ketQuaFilter || r.ket_qua === ketQuaFilter),
+    [rows, ketQuaFilter]
+  );
 
-        // FAIL -> nut xuat binh thuong. INSUFFICIENT_DATA -> VAN cho bam (nguoi dung tu quyet): voi QoE,
-        // thieu du lieu CEM la chuyen thuong gap, neu chan cung thi nhung cell that su co van de nhung
-        // CEM khuyet ngay se khong bao gio xuat duoc phieu. Hop xac nhan se canh bao ro truong hop nay
-        const chuaKetLuan = row.ket_qua === "INSUFFICIENT_DATA";
-        return (
-          <Tooltip
-            title={
-              chuaKetLuan
-                ? "Chua du du lieu QoE de ket luan - van cho xuat, ban tu quyet dinh"
-                : "Cell khong dat QoE - xuat phieu"
-            }
-          >
-            <Button
-              size="small"
-              type="primary"
-              danger={!chuaKetLuan} // do cho cell da ket luan khong dat; cell chua ket luan de mau thuong
-              loading={state?.loading}
-              onClick={() => handleXacNhanXuat(row.cell_name, row.ket_qua)}
-            >
-              Xuat phieu
-            </Button>
+  // ve trang 1 khi doi bo loc / khi co du lieu moi - dang o trang 5 roi loc con 2 dong thi se khong thay gi
+  useEffect(() => {
+    setPagination((pg) => ({ ...pg, pageIndex: 0 }));
+  }, [ketQuaFilter, rows]);
+
+  const columns = useMemo(
+    () => [
+      columnHelper.display({
+        id: "stt",
+        header: "STT",
+        enableSorting: false, // STT chi la vi tri hien thi, sort cot nay khong co y nghia
+        // tinh theo vi tri TUYET DOI (khong reset moi trang) - giong het bang QoS
+        cell: (info) => pagination.pageIndex * pagination.pageSize + info.row.index + 1,
+      }),
+      columnHelper.accessor("cell_name", { header: "Cell" }),
+      columnHelper.display({
+        id: "tram_id",
+        header: "Ma tram",
+        enableSorting: false, // gia tri suy tu affected_cells, khong phai field cua /qoe-cells
+        cell: (info) => tramTheoCell[info.row.original.cell_name] ?? "-",
+      }),
+      columnHelper.accessor("avg_before", {
+        header: "TB truoc CR",
+        // Tooltip kem SO NGAY co du lieu that: "3.80" tinh tu 7 ngay va "3.80" tinh tu 1 ngay dang tin cay
+        // rat khac nhau, ma nhin con so tran thi khong the biet duoc
+        cell: (info) => (
+          <Tooltip title={`Tinh tu ${info.row.original.so_ngay_before} ngay co du lieu`}>
+            {soHoacGach(info.getValue())}
           </Tooltip>
-        );
-      },
-    },
-  ];
+        ),
+      }),
+      columnHelper.accessor("avg_after", {
+        header: "TB sau CR",
+        cell: (info) => (
+          <Tooltip title={`Tinh tu ${info.row.original.so_ngay_after} ngay co du lieu`}>
+            {soHoacGach(info.getValue())}
+          </Tooltip>
+        ),
+      }),
+      columnHelper.accessor("delta", {
+        header: "Chenh lech",
+        cell: (info) => soHoacGach(info.getValue()),
+      }),
+      columnHelper.accessor("ket_qua", {
+        header: "Ket luan",
+        cell: (info) => {
+          // fallback cho gia tri ngoai 3 cai da biet: BE khai bao ket_qua la string tu do nen van co the
+          // xuat hien gia tri moi - hien nguyen van con hon lam vo bang
+          const v = info.getValue();
+          const tag = KET_QUA_TAG[v] ?? { label: v, color: "default" };
+          return <Tag color={tag.color}>{tag.label}</Tag>;
+        },
+      }),
+      // ==== 2 cot RIENG cua QoE (bang QoS khong co) ====
+      columnHelper.accessor("diem_thap_nhat_sau", {
+        // Diem TB co the dat trong khi van co ngay tut sau rat sau - cot nay de lo cai day
+        header: "Diem thap nhat sau",
+        cell: (info) => soHoacGach(info.getValue()),
+      }),
+      columnHelper.accessor("so_ngay_dat_sau", {
+        header: "So ngay dat",
+        // hien dang "x/y" (so ngay dat / tong so ngay co du lieu sau CR): rieng "3 ngay dat" khong noi len
+        // gi neu khong biet la dat 3/3 hay 3/14
+        cell: (info) => `${info.getValue() ?? 0}/${info.row.original.so_ngay_after}`,
+      }),
+      columnHelper.display({
+        id: "thao_tac",
+        header: "Thao tac",
+        enableSorting: false, // cot hanh dong, khong co gia tri de sort
+        cell: (info) => {
+          const row = info.row.original;
+          const state = phieuByCell[row.cell_name];
+          const phieu = phieuTuServer[row.cell_name];
+
+          // Uu tien hien trang thai DA XUAT bat ke ket_qua hien tai la gi, va SERVER dung truoc state cuc
+          // bo: phieu DA TON TAI THAT tren CTS thi khong duoc "quen" chi vi bang tinh lai ket qua danh gia.
+          // Cell nay co the da duoc xuat tu bang QoS ben canh (1 cell 1 phieu) - phai the hien duoc dieu do
+          const daXuat = phieu?.trang_thai === "SUCCESS" || state?.trangThai === "SUCCESS";
+          if (daXuat) {
+            const maPhieu = state?.phieuId ?? phieu?.phieu_id;
+            return <Tag color="blue">Da xuat{maPhieu ? ` (${maPhieu})` : ""}</Tag>;
+          }
+
+          // PASS -> AN nut han (chi hien gach) - giong het nhanh PASS cua bang QoS
+          if (row.ket_qua === "PASS") {
+            return <span style={{ color: "#bfbfbf" }}>-</span>;
+          }
+
+          // FAIL -> nut do. INSUFFICIENT_DATA -> van cho bam, mau thuong + Alert vang trong hop xac nhan
+          const chuaKetLuan = row.ket_qua === "INSUFFICIENT_DATA";
+          return (
+            <Tooltip
+              title={
+                chuaKetLuan
+                  ? "Chua du du lieu QoE de ket luan - van cho xuat, ban tu quyet dinh"
+                  : "Cell khong dat QoE - xuat phieu"
+              }
+            >
+              <Button
+                size="small"
+                type="primary"
+                danger={!chuaKetLuan} // do cho cell da ket luan khong dat; cell chua ket luan de mau thuong
+                loading={state?.loading}
+                onClick={() => handleXacNhanXuat(row.cell_name, row.ket_qua)}
+              >
+                Xuat phieu
+              </Button>
+            </Tooltip>
+          );
+        },
+      }),
+    ],
+    [pagination, tramTheoCell, phieuByCell, phieuTuServer, handleXacNhanXuat]
+  );
+
+  const table = useReactTable({
+    data: filteredRows,
+    columns,
+    state: { sorting, pagination },
+    onSortingChange: setSorting,
+    onPaginationChange: setPagination,
+    getPaginationRowModel: getPaginationRowModel(),
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
+
+  // export theo DUNG danh sach dang hien (da loc theo Ket luan) - giong quy uoc cua bang QoS
+  const handleExportExcel = () => {
+    const exportRows = filteredRows.map((r) => ({
+      cell_name: r.cell_name,
+      ma_tram: tramTheoCell[r.cell_name] ?? "-",
+      tb_truoc: r.avg_before ?? "",
+      tb_sau: r.avg_after ?? "",
+      chenh_lech: r.delta ?? "",
+      ket_luan: (KET_QUA_TAG[r.ket_qua] ?? { label: r.ket_qua }).label,
+      diem_thap_nhat_sau: r.diem_thap_nhat_sau ?? "",
+      so_ngay_dat_sau: `${r.so_ngay_dat_sau ?? 0}/${r.so_ngay_after}`,
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(exportRows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Danh gia QoE");
+    XLSX.writeFile(workbook, `R012_danhgia_qoe_${sessionId}_${formatTimestampForFileName(new Date())}.xlsx`);
+  };
 
   if (!enabled) {
     return null; // chua bam sang tab QoE - khong render, cung khong goi API
@@ -307,21 +411,99 @@ const QoeCellsTable: React.FC<QoeCellsTableProps> = ({ sessionId, enabled }) => 
     );
   }
 
-  const rows = data?.data ?? [];
-  if (rows.length === 0) {
-    return <Empty description="Session nay khong co cell nao de danh gia QoE" />;
-  }
-
   return (
-    <Table
-      rowKey="cell_name"
-      columns={columns}
-      dataSource={rows}
-      size="small"
-      // phan trang phia CLIENT: BE tra ve TOAN BO cell cua session trong 1 lan (khong co param page/size
-      // cho endpoint nay), va so cell 1 session chi vai chuc - khong can phan trang server-side
-      pagination={rows.length > 10 ? { pageSize: 10, showSizeChanger: false } : false}
-    />
+    <div style={{ marginTop: "1.5rem" }}>
+      <h4 style={{ margin: "0 0 0.5rem 0" }}>Danh gia QoE toan bo cell cua session ({rows.length})</h4>
+
+      {rows.length === 0 ? (
+        <Empty description="Session nay khong co cell nao de danh gia QoE" />
+      ) : (
+        <>
+          <div style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap" }}>
+            {/* Bang QoS co nut "Tinh lai danh gia" vi phai bam moi chay. Bang QoE tu goi khi mo tab, nhung
+                VAN can duong chay lai: du lieu duoc giu 5 phut (staleTime) nen sau khi CEM co them du lieu
+                hoac sau khi vua xuat phieu, khong co nut nay thi phai dong/mo lai ca Modal moi thay cai moi */}
+            <Button type="primary" onClick={() => refetch()} loading={isFetching}>
+              Tinh lai danh gia
+            </Button>
+            <Select
+              value={ketQuaFilter}
+              onChange={setKetQuaFilter}
+              options={KET_QUA_FILTER_OPTIONS}
+              style={{ width: 180 }}
+            />
+            <Button onClick={handleExportExcel} disabled={filteredRows.length === 0}>
+              Export Excel
+            </Button>
+          </div>
+
+          <style>{`
+            /* KHONG dat "width: 100%" - de bang giu do rong tu nhien theo noi dung roi CUON trong div
+               overflow-x ben ngoai, dung nhu bang QoS (neu ep 100% thi cac cot bi bop lai qua nho) */
+            .r012-qoe-eval-table { border-collapse: collapse; white-space: nowrap; }
+            .r012-qoe-eval-table thead th {
+              text-align: left;
+              padding: 10px 8px;
+              background-color: ${R012_COLORS.tableHeaderBg};
+              color: #ffffff;
+              font-weight: 700;
+              border: 1px solid ${R012_COLORS.primary};
+            }
+            .r012-qoe-eval-table tbody td {
+              padding: 8px;
+              border-bottom: 1px solid ${R012_COLORS.tableBorder};
+            }
+            .r012-qoe-eval-table tbody tr:nth-child(odd) { background-color: #ffffff; }
+            .r012-qoe-eval-table tbody tr:nth-child(even) { background-color: ${R012_COLORS.tableRowAlt}; }
+            .r012-qoe-eval-table tbody tr:hover { background-color: ${R012_COLORS.rowHoverBg}; }
+          `}</style>
+
+          {filteredRows.length === 0 ? (
+            <div>Khong co cell nao khop bo loc dang chon.</div>
+          ) : (
+            <>
+              {/* header dung whiteSpace:nowrap nen tong chieu rong that su cua bang co the vuot chieu rong
+                  Modal (800px) -> boc overflow-x de bang CUON RIENG, khong lam vo layout Modal */}
+              <div style={{ overflowX: "auto" }}>
+                <table className="r012-qoe-eval-table">
+                  <thead>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <tr key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <SortableHeaderCell key={header.id} header={header} />
+                        ))}
+                      </tr>
+                    ))}
+                  </thead>
+                  <tbody>
+                    {table.getRowModel().rows.map((row) => (
+                      <tr key={row.id}>
+                        {row.getVisibleCells().map((cell) => (
+                          <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <Pagination
+                current={pagination.pageIndex + 1}
+                pageSize={pagination.pageSize}
+                total={filteredRows.length}
+                showSizeChanger
+                pageSizeOptions={[5, 10, 20, 50]}
+                showTotal={(t) => `Tong ${t} cell`}
+                onChange={(newPage, newSize) =>
+                  setPagination({ pageIndex: newPage - 1, pageSize: newSize })
+                }
+                style={{ marginTop: "1rem" }}
+              />
+            </>
+          )}
+        </>
+      )}
+    </div>
   );
 };
 

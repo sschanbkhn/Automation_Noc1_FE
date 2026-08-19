@@ -25,7 +25,10 @@ const columnHelper = createColumnHelper<JobRunListItem>();
 
 const JobRunTable: React.FC = () => {
   const [page, setPage] = useState<number>(1);
-  const [size, setSize] = useState<number>(20); // 20 la default cua BE theo schema JobRunQueryParams
+  // 10 dong/trang (KHONG dung default 20 cua BE): dong bo voi 2 muc con lai cua tab (Phieu, Tien trinh) -
+  // doi qua lai giua 3 muc ma so dong nhay tu 10 sang 20 lam nguoi dung tuong du lieu doi. Van gui size
+  // tuong minh len BE nen khong phu thuoc default cua BE
+  const [size, setSize] = useState<number>(10);
 
   // trang thai dang loc - "" nghia la khong gui param trang_thai (BE tra ve ca 3 trang thai)
   const [statusFilter, setStatusFilter] = useState<"" | JobRunTrangThai>("");
@@ -263,8 +266,9 @@ const JobRunTable: React.FC = () => {
             total={total}
             showSizeChanger
             // khai bao TUONG MINH cac muc <= 100: BE gioi han size le=100 (thap hon /phieu la 200), de antd
-            // tu quyet dinh danh sach mac dinh thi mot ban antd khac co the them muc lon hon -> 422
-            pageSizeOptions={[10, 20, 50, 100]}
+            // tu quyet dinh danh sach mac dinh thi mot ban antd khac co the them muc lon hon -> 422.
+            // Dung CUNG bo muc voi 2 muc con lai cua tab (5/10/20/50) cho nhat quan
+            pageSizeOptions={[5, 10, 20, 50]}
             showTotal={(t) => `Tong ${t} luot chay`}
             onChange={(newPage, newSize) => {
               // antd Pagination tra ve ca page va pageSize trong 1 callback, phai cap nhat ca 2 de dong bo voi BE

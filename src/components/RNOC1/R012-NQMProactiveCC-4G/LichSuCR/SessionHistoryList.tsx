@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, Button, DatePicker, Input, Modal, Pagination, Select, Spin, Tag } from "antd";
+import { Alert, Button, DatePicker, Input, Modal, Pagination, Select, Spin, Tag, message } from "antd";
 import dayjs, { Dayjs } from "dayjs";
 import {
   createColumnHelper,
@@ -8,13 +8,13 @@ import {
   useReactTable,
   SortingState,
 } from "@tanstack/react-table";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 // <th> dung chung cho MOI bang co sort trong module (click header + mui ten huong sort)
 import { SortableHeaderCell } from "../common/SortableHeaderCell";
 // dung debounce co san tu lodash (da la dependency co san trong package.json, StationSearchGrid.tsx cung
 // dung cach nay) thay vi tu viet lai setTimeout/clearTimeout - tranh trung lap logic da duoc test san
 import debounce from "lodash/debounce";
-import { getSessions } from "../services/R012Service";
+import { getSessions, xoaSession } from "../services/R012Service";
 import { SessionListItem, SessionListResponse, SessionsQueryParams } from "../types";
 import EvaluationDetail from "./EvaluationDetail";
 // token mau dung chung toan module - xem theme.ts de biet ly do chon tung gia tri
@@ -70,6 +70,12 @@ const SessionHistoryList: React.FC<SessionHistoryListProps> = ({ yeuCauLocTram =
 
   // state luu session dang duoc xem chi tiet - null nghia la Modal dang dong
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
+
+  // id session dang goi DELETE - de disable RIENG nut cua dong do trong luc cho response. Khoa theo id
+  // (khong phai vi tri hang) vi sort/loc/phan trang lam vi tri hang doi
+  const [dangXoaId, setDangXoaId] = useState<number | null>(null);
+
+  const queryClient = useQueryClient();
 
   // searchInput: gia tri hien thi TRUC TIEP tren o Input.Search, cap nhat ngay khi go phim de khong bi
   // cam giac lag do cho debounce. searchTerm: gia tri THAT SU dung goi API (param q), chi doi sau khi
@@ -143,6 +149,54 @@ const SessionHistoryList: React.FC<SessionHistoryListProps> = ({ yeuCauLocTram =
   const handleStatusFilterChange = (value: string) => {
     setStatusFilter(value);
     setPage(1);
+  };
+
+  // Goi THAT DELETE /api/v1/sessions/{id}. Tach rieng khoi handleXacNhanXoa ben duoi: ham nay chi lo goi
+  // API + bao ket qua, viec hoi xac nhan nam o ham kia (dung khuon da co o QosEvaluationTable/PhieuHistoryTable)
+  const handleXoaSession = async (id: number) => {
+    setDangXoaId(id);
+    try {
+      const ketQua = await xoaSession(id);
+      // BE tra {ten_bang: so_dong_da_xoa}. Duyet nguyen object thay vi doc tung ten bang cu the: danh sach
+      // bang co the doi khi BE them bang lien quan moi, doc cung ten se lam mat so lieu ma khong bao gi
+      const moTa = Object.entries(ketQua ?? {})
+        .map(([bang, soDong]) => `${soDong} ${bang}`)
+        .join(", ");
+      message.success(moTa ? `Da xoa: ${moTa}` : `Da xoa session ${id}`);
+      // nap lai danh sach session. Invalidate theo TIEN TO ["r012","sessions"] (khong kem page/size/bo loc)
+      // de MOI bien the cua bang - ke ca bang Tien trinh ben tab Lich su phieu - deu nap lai
+      await queryClient.invalidateQueries({ queryKey: ["r012", "sessions"] });
+    } catch (error: any) {
+      const status = error?.response?.status;
+      // 409 = BE tu choi vi session khong o trang thai FAILED. Message cua BE da giai thich RO vi sao,
+      // hien NGUYEN VAN thay vi tu dien lai - FE khong nam du dieu kien de dien giai cho dung
+      if (status === 409) {
+        message.warning(error?.response?.data?.detail || error?.response?.data?.message || "Khong xoa duoc session nay");
+      } else {
+        message.error(error?.response?.data?.detail || error?.response?.data?.message || "Xoa session that bai");
+      }
+    } finally {
+      setDangXoaId(null);
+    }
+  };
+
+  // Hop xac nhan - hanh dong nay KHONG HOAN TAC DUOC va xoa lan sang nhieu bang khac (cell/log/phieu),
+  // nen phai noi ro pham vi anh huong truoc khi bam, giong cach lam voi nut xuat phieu
+  const handleXacNhanXoa = (id: number) => {
+    Modal.confirm({
+      title: "Xac nhan xoa session",
+      okText: "Xoa vinh vien",
+      okButtonProps: { danger: true },
+      cancelText: "Huy",
+      width: 520,
+      content: (
+        <p style={{ marginTop: 0 }}>
+          Se <b>XOA VINH VIEN</b> session {id} va toan bo du lieu lien quan (cell, log, phieu). Khong khoi
+          phuc duoc.
+        </p>
+      ),
+      onOk: () => handleXoaSession(id),
+    });
   };
 
   // nut "Xoa loc" dua tat ca bo loc (q/from/to/status) ve mac dinh va ve lai trang 1, giup NOC thoat nhanh khoi
@@ -227,8 +281,38 @@ const SessionHistoryList: React.FC<SessionHistoryListProps> = ({ yeuCauLocTram =
         header: "Thoi gian tao",
         cell: (info) => formatDateTime(info.getValue()),
       }),
+      columnHelper.display({
+        id: "thao_tac",
+        header: "Thao tac",
+        enableSorting: false, // cot hanh dong, khong co gia tri de sort
+        cell: (info) => {
+          const row = info.row.original;
+          // CHI session FAILED moi hien nut - dung dieu kien BE dat ra (cac trang thai khac bi tra 409).
+          // AN han thay vi hien nut disabled: day la nut XOA VINH VIEN, mot nut xoa mo mo o moi dong se
+          // moi nguoi ta bam thu, trong khi tuyet dai da so dong khong bao gio duoc phep xoa
+          if (row.status !== "FAILED") {
+            return <span style={{ color: "#bfbfbf" }}>-</span>;
+          }
+          return (
+            <Button
+              size="small"
+              danger
+              loading={dangXoaId === row.id}
+              // stopPropagation: ca dong dang bat onClick mo Modal chi tiet - khong chan thi bam Xoa se
+              // vua mo hop xac nhan vua mo luon Modal chi tiet chong len nhau
+              onClick={(e) => {
+                e.stopPropagation();
+                handleXacNhanXoa(row.id);
+              }}
+            >
+              Xoa
+            </Button>
+          );
+        },
+      }),
     ],
-    [page, size]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [page, size, dangXoaId]
   );
 
   // khoi tao table instance - phan trang/sort deu da xu ly o phia BE (server-side). sorting state CHI

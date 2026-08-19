@@ -30,7 +30,7 @@ interface PhieuState {
 }
 
 // dinh dang timestamp DDMMYYYY_HHMM cho ten file export - dung DUNG quy uoc da dung o cac bang preview khac
-function formatTimestampForFileName(date: Date): string {
+export function formatTimestampForFileName(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   const dd = pad(date.getDate());
   const mm = pad(date.getMonth() + 1);

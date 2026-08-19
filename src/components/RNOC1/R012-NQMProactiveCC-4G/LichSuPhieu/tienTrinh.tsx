@@ -134,28 +134,108 @@ export const tinhTrangThaiTienTrinh = (session: SessionListItem): TrangThaiTienT
 // dau bang den cuoi bang ma van vua 1 dong cao binh thuong
 const DO_DAY_THANH_PX = 14;
 
-// Cot "Tien trinh": thanh tien do (co so %) + ten chang ben canh.
-// showInfo={true}: hien % ngay tren thanh. Rieng con so % thi khong du (66% khong noi len dang o chang nao),
-// nen VAN giu ten chang ben canh - nhung ten chang gio KHONG con kem so ngay, xem comment o
-// tinhTrangThaiTienTrinh: con so ngay da co cot "Con lai" lo, de o ca 2 cho la lap lai trong cung 1 dong
-export const TienTrinhProgress: React.FC<{ session: SessionListItem }> = ({ session }) => {
-  const { phanTram, mau, nhan } = tinhTrangThaiTienTrinh(session);
+// Cam/amber cho ty le DN chay duoc MOT PHAN. Dung lai dung token chartCrDay da co trong theme (khong bia
+// hex moi): do la mau cam DUY NHAT dang dung trong module, va vai tro o day giong het - danh dau 1 gia tri
+// can de y giua cac gia tri binh thuong. KHONG dung do: chay duoc mot phan chua chac la loi
+const CAM_MOT_PHAN = R012_COLORS.chartCrDay;
+
+// Cot "Tien trinh": CHI con thanh tien do (co so %). Chu trang thai da TACH sang cot rieng ben canh -
+// truoc day 2 thu nam chung 1 o lam o do rong gap doi cac cot khac, va khi bang co them cot (STT, DN...)
+// thi chinh o nay la cho bop cac cot con lai.
+// showInfo={true}: hien % ngay tren thanh
+export const TienTrinhBar: React.FC<{ session: SessionListItem }> = ({ session }) => {
+  const { phanTram, mau } = tinhTrangThaiTienTrinh(session);
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: "220px" }}>
-      <Progress
-        // lam tron: chang "Cho KPI" tinh ra so thap phan (vd 49.5) - hien "49.5%" tren thanh vua dai vua
-        // gia chinh xac, trong khi do chinh xac that chi den tung NGAY
-        percent={Math.round(phanTram)}
-        strokeWidth={DO_DAY_THANH_PX}
-        showInfo
-        strokeColor={mau}
-        style={{ flex: "1 1 120px", marginBottom: 0 }}
-      />
-      {/* whiteSpace nowrap: nhan ngan (1-3 tu) nhung neu de no ngat dong thi chieu cao tung dong cua bang
-          se nhay khong deu giua cac session */}
-      <span style={{ color: mau, whiteSpace: "nowrap", fontSize: "0.85rem", fontWeight: 600 }}>{nhan}</span>
-    </div>
+    <Progress
+      // lam tron: chang "Cho KPI" tinh ra so thap phan (vd 49.5) - hien "49.5%" vua dai vua gia chinh xac,
+      // trong khi do chinh xac that chi den tung NGAY
+      percent={Math.round(phanTram)}
+      strokeWidth={DO_DAY_THANH_PX}
+      showInfo
+      strokeColor={mau}
+      style={{ minWidth: "130px", marginBottom: 0 }}
+    />
+  );
+};
+
+// Cot "Trang thai": ten chang, to CUNG MAU voi thanh tien do ben canh de doc 1 dong la thay 2 o thuoc ve
+// nhau (mau la thu duy nhat noi 2 cot nay lai sau khi tach)
+export const TrangThaiTienTrinhText: React.FC<{ session: SessionListItem }> = ({ session }) => {
+  const { mau, nhan } = tinhTrangThaiTienTrinh(session);
+  return <span style={{ color: mau, whiteSpace: "nowrap", fontWeight: 600 }}>{nhan}</span>;
+};
+
+// Cot "DN": ty le lenh dien nang chay thanh cong tren tong so lenh cua session (so_dn_thanh_cong/so_dn_tong).
+//  - thieu so lieu (null hoac undefined) -> "-"  (session cu truoc dot BE bo sung 2 cot nay, VA hien tai la
+//    MOI dong vi BE .196 chua deploy - xem comment o types/index.ts)
+//  - khong chay het (thanh cong < tong) -> to CAM de noi bat: day la session lam duoc mot phan, de bi luot
+//    qua nhat vi no khong hien ra la loi o bat ky cot nao khac
+export const DnCell: React.FC<{ session: SessionListItem }> = ({ session }) => {
+  const thanhCong = session.so_dn_thanh_cong;
+  const tong = session.so_dn_tong;
+
+  if (typeof thanhCong !== "number" || typeof tong !== "number") {
+    return <span style={{ color: "#bfbfbf" }}>-</span>;
+  }
+
+  // 2 duong nhan biet "chay duoc mot phan", giu ca hai vi chung bu cho nhau:
+  //  - status PARTIAL_SUCCESS: nhan BE dat (chua thay gia tri nay tren BE hien tai - openapi.json khong co
+  //    chuoi PARTIAL_SUCCESS nao, nen nhanh nay hien chua bao gio chay)
+  //  - thanhCong < tong: suy TRUC TIEP tu so lieu, dung duoc ngay ca khi BE khong dat nhan rieng
+  const motPhan = session.status === "PARTIAL_SUCCESS" || (tong > 0 && thanhCong < tong);
+
+  return (
+    <Tooltip title={`${thanhCong}/${tong} lenh dien nang chay thanh cong`}>
+      <span style={motPhan ? { color: CAM_MOT_PHAN, fontWeight: 700 } : undefined}>
+        {thanhCong}/{tong}
+      </span>
+    </Tooltip>
+  );
+};
+
+// Cot "Thoi gian": GOP ca luc bat dau lan luc ket thuc CR vao 1 o, dang "18/08 11:27 -> 11:28".
+//
+// ==== 2 TRUONG NAY LAY TU DAU (khong can BE bo sung gi) ====
+//  - created_at  = luc TAO session  -> moc BAT DAU. LUON co (da kiem: 52/52 session deu co gia tri)
+//  - executed_at = duoc ghi o BUOC 17 (buoc gan cuoi cua quy trinh CR) -> moc KET THUC. NULL nghia la CR
+//    DUNG GIUA CHUNG, chua bao gio toi buoc 17 (da kiem: 24/52 session co executed_at NULL, va CA 24 deu
+//    dang status FAILED - khop chinh xac voi y nghia "chet giua chung")
+//
+// ==== TAI SAO GOP 1 COT thay vi tach "Bat dau" / "Ket thuc" ====
+//  1) 2 moc nay cach nhau VAI CHUC GIAY tren du lieu that (vd session 2641: 11:27:52 -> 11:28:13, session
+//     2710: 14:50:11 -> 14:50:21). Hai cot dong ho gan nhu trung nhau se bat nguoi doc dung lai so tung so
+//     roi moi nhan ra khong co gi khac - dung cai loi da phai bo cot "Thoi gian tao" ben tab Lich su CR.
+//  2) Bang nay da co 9 cot, trong do 2 cot rat rong (thanh tien do + chu trang thai). Them 1 cot ngay gio
+//     day du nua la bang phai cuon ngang.
+//  3) Dang "bat dau -> ket thuc" noi luon duoc QUAN HE giua 2 moc (chay het bao lau), thu ma 2 cot roi
+//     khong noi ra duoc.
+// Ngay chi hien o moc dau; moc cuoi chi hien gio NEU cung ngay, khac ngay thi hien ca ngay (CR chay qua
+// nua dem) - tranh doc nham 23:50 -> 00:10 thanh "chay lui ve qua khu"
+export const ThoiGianCrCell: React.FC<{ session: SessionListItem }> = ({ session }) => {
+  const batDau = session.created_at ? dayjs.utc(session.created_at).tz(MUI_GIO_VN) : null;
+  const ketThuc = session.executed_at ? dayjs.utc(session.executed_at).tz(MUI_GIO_VN) : null;
+
+  if (!batDau) {
+    return <span style={{ color: "#bfbfbf" }}>-</span>;
+  }
+
+  const cungNgay = ketThuc !== null && ketThuc.isSame(batDau, "day");
+  const nhanKetThuc = ketThuc ? (cungNgay ? ketThuc.format("HH:mm") : ketThuc.format("DD/MM HH:mm")) : null;
+
+  return (
+    <Tooltip
+      title={
+        ketThuc
+          ? `Bat dau (tao session): ${batDau.format("DD/MM/YYYY HH:mm:ss")} - Ket thuc (buoc 17): ${ketThuc.format("DD/MM/YYYY HH:mm:ss")}`
+          : `Bat dau (tao session): ${batDau.format("DD/MM/YYYY HH:mm:ss")} - CR chua chay xong (chua toi buoc 17)`
+      }
+    >
+      <span style={{ whiteSpace: "nowrap" }}>
+        {batDau.format("DD/MM HH:mm")} -&gt;{" "}
+        {nhanKetThuc ?? <span style={{ color: R012_COLORS.dangerRed }}>(chua xong)</span>}
+      </span>
+    </Tooltip>
   );
 };
 
