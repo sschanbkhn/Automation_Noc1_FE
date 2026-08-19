@@ -28,11 +28,17 @@ import debounce from "lodash/debounce";
 // <th> dung chung cho MOI bang co sort trong module (click header + mui ten huong sort)
 import { SortableHeaderCell } from "../common/SortableHeaderCell";
 import { getLichSuPhieu, xuatPhieu } from "../services/R012Service";
-import { PhieuHistoryItem, PhieuHistoryResponse } from "../types";
+import { NguonKhongDat, PhieuHistoryItem, PhieuHistoryResponse } from "../types";
 import { R012_COLORS } from "../theme";
 // dinh dang thoi gian dung CHUNG toan module (ep UTC->GMT+7) - xem ly do trong file helper
 import { formatDateTime } from "../helpers/formatDateTime";
-import { PHIEU_STATUS_COLORS, PHIEU_STATUS_FILTER_OPTIONS, PHIEU_STATUS_LABELS } from "./phieuStatus";
+import {
+  PHIEU_STATUS_COLORS,
+  PHIEU_STATUS_FILTER_OPTIONS,
+  PHIEU_STATUS_LABELS,
+  NGUON_FILTER_OPTIONS,
+  NGUON_KHONG_DAT_LABELS,
+} from "./phieuStatus";
 import PhieuDetailModal from "./PhieuDetailModal";
 
 const { RangePicker } = DatePicker;
@@ -65,6 +71,11 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
   // trang thai dang loc - "" nghia la khong gui param trang_thai, tuc lay TAT CA trang thai (BE khong con
   // an ngam DRY_RUN nhu truoc vi trang thai do da bi bo han - xem phieuStatus.ts)
   const [statusFilter, setStatusFilter] = useState<string>("");
+
+  // nguon phat hien cell khong dat dang loc - "" = khong gui param nguon, tuc lay TAT CA nguon.
+  // LUU Y: BE tren .196:8080 CHUA trien khai param nay (xem PhieuHistoryQueryParams.nguon trong
+  // types/index.ts) - gui len khong loi nhung cung chua loc gi cho den khi BE duoc deploy lai
+  const [nguonFilter, setNguonFilter] = useState<string>("");
 
   // cell_name dang goi POST /phieu - dung de disable RIENG nut cua dong do trong luc cho response. Khoa theo
   // cell_name (khong phai vi tri hang) vi sort/loc/phan trang lam vi tri hang doi, con cell_name la khoa
@@ -156,8 +167,14 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
     setPage(1); // doi bo loc -> ve trang 1, tranh hien trang trong gay hieu lam het du lieu
   };
 
+  const handleNguonFilterChange = (value: string) => {
+    setNguonFilter(value);
+    setPage(1); // doi bo loc -> ve trang 1, giong cac bo loc con lai
+  };
+
   const handleClearFilters = () => {
     setStatusFilter("");
+    setNguonFilter("");
     setSearchInput("");
     setSearchTerm("");
     debouncedApplySearch.cancel(); // huy lan go dang cho, neu khong no se ghi de searchTerm rong sau 400ms
@@ -290,6 +307,7 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
       page,
       size,
       statusFilter,
+      nguonFilter,
       searchTerm,
       tuNgay,
       denNgay,
@@ -300,6 +318,8 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
       getLichSuPhieu({
         session_id: effectiveSessionId,
         trang_thai: statusFilter || undefined,
+        // "" (Tat ca) -> undefined, axios tu bo key undefined khoi query string nen khong gui param thua
+        nguon: (nguonFilter || undefined) as NguonKhongDat | undefined,
         q: searchTerm || undefined, // khong gui q rong de BE khoi chay ILIKE thua
         tu_ngay: tuNgay,
         den_ngay: denNgay,
@@ -342,6 +362,28 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
         // KHONG cho sort cot nay: sort theo ma phieu khong co y nghia nghiep vu, va cung tranh gui gia tri
         // sort_by chua duoc xac nhan nam trong enum cua BE
         enableSorting: false,
+      }),
+      // Cot "Nguon" - cell nay bi phat hien khong dat qua chi so nao (QoS / QoE / ca hai). Tu khi QoE ngang
+      // hang QoS, 1 dong phieu khong con tu noi len duoc no sinh ra tu dau, ma do la thu can biet dau tien
+      // khi doi chieu lai voi bang danh gia.
+      // enableSorting:false - enum sort_by cua BE la id/cr_session_id/cell_name/trang_thai/created_at,
+      // KHONG co nguon_khong_dat (da doi chieu openapi.json), gui sort_by ngoai enum se bi tra 422
+      columnHelper.accessor("nguon_khong_dat", {
+        header: "Nguon",
+        enableSorting: false,
+        cell: (info) => {
+          const v = info.getValue();
+          // "-" cho CA HAI truong hop khong co gia tri, va ca hai deu BINH THUONG:
+          //  - null: phieu cu xuat truoc dot doi nay (BE khong backfill)
+          //  - undefined: BE tren .196 chua deploy truong nay -> hien tai MOI dong deu vao nhanh nay
+          if (!v) {
+            return <span style={{ color: "#bfbfbf" }}>-</span>;
+          }
+          // KHONG to mau theo nguon: mau trong bang nay da danh cho TRANG THAI phieu (do = loi, xanh =
+          // thanh cong). Them mau thu hai cho nguon se tranh tin hieu voi cot Trang thai ngay ben canh -
+          // nguon khong phai chuyen tot/xau, chi la thong tin phan loai
+          return <Tag>{NGUON_KHONG_DAT_LABELS[v] ?? v}</Tag>;
+        },
       }),
     ];
 
@@ -433,6 +475,16 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
             onChange={handleStatusFilterChange}
             options={PHIEU_STATUS_FILTER_OPTIONS}
             style={{ width: "200px" }}
+            prefix="Trang thai:"
+          />
+          {/* Select loc theo NGUON. Co prefix "Nguon:" vi dat canh Select trang thai o tren, 2 o Select tron
+              giong nhau se khong biet o nao loc cai gi neu chua bam mo (cung ly do da them prefix cho o kia) */}
+          <Select
+            value={nguonFilter}
+            onChange={handleNguonFilterChange}
+            options={NGUON_FILTER_OPTIONS}
+            style={{ width: "160px" }}
+            prefix="Nguon:"
           />
           <Input.Search
             // KHONG con chu "(trong trang)" nhu ban cu: gio tim tren TOAN BO du lieu qua BE. Placeholder ghi

@@ -99,11 +99,10 @@ export const tinhTrangThaiTienTrinh = (session: SessionListItem): TrangThaiTienT
     // Qua han: dung o moc 66% (da xong cho KPI nhung chua xuat duoc phieu) va to DO. Voi phuong an quet
     // dung 1 ngay, session qua han la da bi job bo lai phia sau - phai co nguoi vao xu ly tay
     if (typeof conLai === "number" && conLai < 0) {
-      return {
-        phanTram: PHAN_TRAM_XONG_BUOC_2,
-        mau: R012_COLORS.dangerRed,
-        nhan: `QUA HAN ${Math.abs(conLai)} ngay`,
-      };
+      // Nhan KHONG kem so ngay: cot "Con lai" ngay ben canh da hien "qua han N ngay" roi (xem ConLaiCell).
+      // De ca hai cho cung in con so la lap lai y nguyen trong 1 dong, va lam o Tien trinh rong ra vo ich
+      // trong khi thanh tien do gio to hon can cho
+      return { phanTram: PHAN_TRAM_XONG_BUOC_2, mau: R012_COLORS.dangerRed, nhan: "QUA HAN" };
     }
 
     // Dang cho KPI: thanh CHAY DAN THEO NGAY trong chang 33% -> 66% thay vi dung im suot ca ky cho.
@@ -111,12 +110,12 @@ export const tinhTrangThaiTienTrinh = (session: SessionListItem): TrangThaiTienT
     // ca ky cho keo dai nhieu ngay nen mot thanh dung im trong ca ky trong y het nhu bi treo
     const tienDo = tinhTienDoChoKpi(session);
     const tyLe = tienDo ? Math.min(Math.max(tienDo.soNgayDaTroi / tienDo.tongSoNgay, 0), 1) : 0;
-    const nhan =
-      typeof conLai === "number"
-        ? conLai === 0
-          ? "Cho KPI (den han hom nay)"
-          : `Cho KPI (con ${conLai} ngay)`
-        : "Cho KPI";
+    // Nhan KHONG kem so ngay con lai (truoc day la "Cho KPI (con 4 ngay)"): cot "Con lai" ngay ben canh da
+    // hien dung con so do. Ban than VI TRI cua thanh tien do da noi len "con bao lau" o dang truc quan -
+    // do la muc dich cua viec cho thanh chay theo ngay - nen con so trong nhan chi la lap lai lan thu ba.
+    // Rieng moc "den han hom nay" thi GIU: 0 ngay la moc dang de y nhat, va nhin thanh khong the doan ra
+    // hom nay hay mai
+    const nhan = conLai === 0 ? "Cho KPI (hom nay)" : "Cho KPI";
     return {
       phanTram: PHAN_TRAM_XONG_BUOC_1 + tyLe * (PHAN_TRAM_XONG_BUOC_2 - PHAN_TRAM_XONG_BUOC_1),
       mau: R012_COLORS.primary,
@@ -130,24 +129,32 @@ export const tinhTrangThaiTienTrinh = (session: SessionListItem): TrangThaiTienT
   return { phanTram: PHAN_TRAM_XONG_BUOC_1, mau: R012_COLORS.primary, nhan: session.status };
 };
 
-// Cot "Tien trinh": thanh tien do + chu trang thai ben canh.
-// showInfo={false}: so % mac dinh cua antd o day vo nghia voi nguoi dung ("66%" khong noi len dieu gi),
-// cho do danh cho chu trang thai co noi dung that ("QUA HAN 5 ngay")
+// Do day cua thanh tien do (px). Ban dau dung size="small" (thanh 6px) - qua manh, o mot bang nhieu dong
+// thi day la thu can nhin ra ngay tu xa chu khong phai phai nhin ky. 14px du day de doc duoc mau lien tu
+// dau bang den cuoi bang ma van vua 1 dong cao binh thuong
+const DO_DAY_THANH_PX = 14;
+
+// Cot "Tien trinh": thanh tien do (co so %) + ten chang ben canh.
+// showInfo={true}: hien % ngay tren thanh. Rieng con so % thi khong du (66% khong noi len dang o chang nao),
+// nen VAN giu ten chang ben canh - nhung ten chang gio KHONG con kem so ngay, xem comment o
+// tinhTrangThaiTienTrinh: con so ngay da co cot "Con lai" lo, de o ca 2 cho la lap lai trong cung 1 dong
 export const TienTrinhProgress: React.FC<{ session: SessionListItem }> = ({ session }) => {
   const { phanTram, mau, nhan } = tinhTrangThaiTienTrinh(session);
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: "180px" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: "220px" }}>
       <Progress
-        percent={phanTram}
-        size="small"
-        showInfo={false}
+        // lam tron: chang "Cho KPI" tinh ra so thap phan (vd 49.5) - hien "49.5%" tren thanh vua dai vua
+        // gia chinh xac, trong khi do chinh xac that chi den tung NGAY
+        percent={Math.round(phanTram)}
+        strokeWidth={DO_DAY_THANH_PX}
+        showInfo
         strokeColor={mau}
-        style={{ flex: "1 1 80px", marginBottom: 0 }}
+        style={{ flex: "1 1 120px", marginBottom: 0 }}
       />
-      {/* whiteSpace nowrap: nhan ngan (2-4 tu) nhung neu de no ngat dong thi chieu cao tung dong cua bang
+      {/* whiteSpace nowrap: nhan ngan (1-3 tu) nhung neu de no ngat dong thi chieu cao tung dong cua bang
           se nhay khong deu giua cac session */}
-      <span style={{ color: mau, whiteSpace: "nowrap", fontSize: "0.85rem" }}>{nhan}</span>
+      <span style={{ color: mau, whiteSpace: "nowrap", fontSize: "0.85rem", fontWeight: 600 }}>{nhan}</span>
     </div>
   );
 };

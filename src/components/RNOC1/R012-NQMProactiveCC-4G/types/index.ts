@@ -370,7 +370,17 @@ export interface PhieuHistoryQueryParams {
   // enum nay, cot ngoai enum phai de enableSorting:false keo BE tra 422
   sort_by?: string;
   order?: "asc" | "desc"; // mac dinh "desc" theo schema BE
+  // Loc theo NGUON phat hien cell khong dat (them theo BE commit 8f54b09) - xem NguonKhongDat ben duoi.
+  // CHUA TRIEN KHAI TREN BE .196:8080 o thoi diem viet: openapi.json cua server do khong co param "nguon"
+  // nao, va goi thu ?nguon=RAC (gia tri rac) van tra HTTP 200 -> FastAPI dang BO QUA param nay chu khong
+  // validate. Nghia la den khi BE duoc deploy lai, gui param nay KHONG LOI nhung cung KHONG loc gi
+  nguon?: NguonKhongDat;
 }
+
+// 3 gia tri cot cr_phieu.nguon_khong_dat (BE commit 8f54b09): cell bi phat hien khong dat qua chi so nao.
+// CA_HAI = khong dat o CA QoS LAN QoE. Dung union (khong phai string) vi day la gia tri FE GUI LEN o param
+// ?nguon= - gui gia tri ngoai 3 cai nay la sai hop dong
+export type NguonKhongDat = "QOS" | "QOE" | "CA_HAI";
 
 // dung cho GET /api/v1/phieu - 1 dong lich su phieu
 export interface PhieuHistoryItem {
@@ -389,6 +399,14 @@ export interface PhieuHistoryItem {
   request_payload: Record<string, unknown> | string | null; // 28 field gui sang CTS (SaveCellClm)
   response_body: CtsResponse | Record<string, unknown> | string | null; // JSON CTS tra ve
   error_message: string | null; // mo ta loi khi trang_thai=FAILED, null khi khong loi
+  // Nguon phat hien cell khong dat: QOS | QOE | CA_HAI (cot cr_phieu.nguon_khong_dat, BE commit 8f54b09).
+  // Khai bao OPTIONAL + nullable CO CHU DICH, 2 ly do rieng biet:
+  //  1) null - phieu CU xuat truoc dot doi nay khong co gia tri nao (BE khong backfill) -> cot hien "-"
+  //  2) undefined - BE tren .196:8080 HIEN CHUA CO truong nay (da doi chieu openapi.json that: schema
+  //     PhieuListItem chi co 10 truong, chuoi "nguon" xuat hien 0 lan trong ca file). Cho den khi BE duoc
+  //     deploy lai thi MOI dong deu thieu truong nay -> cho doc PHAI chiu duoc undefined, khong duoc coi
+  //     la luon co san (dung bai hoc da ghi o so_lan_thu ben duoi)
+  nguon_khong_dat?: NguonKhongDat | null;
   // So lan da POST THAT len CTS ma van chua SUCCESS (cot cr_phieu.so_lan_thu ben BE - INTEGER NOT NULL
   // DEFAULT 0, xem models/cr_phieu.py). Job tu dong NGUNG thu cell nay khi cham tran XUAT_PHIEU_MAX_RETRY
   // va danh dau KHONG_XUAT_HET_LUOT_THU. FE dung de canh bao TRUOC KHI nguoi dung bam xuat tay: "da thu n

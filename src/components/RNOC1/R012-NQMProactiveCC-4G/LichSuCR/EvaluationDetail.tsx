@@ -56,7 +56,9 @@ const MUC_QOS = "qos";
 const MUC_QOE = "qoe";
 
 const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
-  // QoS la mac dinh: do la nguon so lieu QUYET DINH viec xuat phieu, QoE chi la tham khao.
+  // QoS la mac dinh CHI vi thu tu quen mat (QoS co truoc, va la chi so duoc dung nhieu hon) - KHONG con vi
+  // "QoS quan trong hon": theo hop dong BE moi, cell khong dat o BAT KY chi so nao (QoS hoac QoE) deu phai
+  // xuat phieu, hai bang gio ngang hang nhau va ca hai deu co nut xuat.
   // State nay cung chinh la cong tac LAZY cho QoE - xem comment tai cho dung ben duoi
   const [mucDanhGia, setMucDanhGia] = useState<string>(MUC_QOS);
 

@@ -184,11 +184,12 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
   // ma 2 man hinh doi xu khac nhau: bang Lich su phieu co hop xac nhan, con o day - noi nut nam GIUA bang,
   // canh cac nut khac, DE BAM NHAM HON - lai khong hoi. Copy y het pattern PhieuHistoryTable.tsx
   const handleXacNhanXuat = useCallback(
-    (cellName: string) => {
+    (cellName: string, conclusion: QosConclusion) => {
       // doc so_lan_thu / error_message tu dong phieu THAT ben server (neu cell da tung duoc thu xuat) -
       // state cuc bo khong co 2 thong tin nay
       const phieu = phieuTuServer[cellName];
       const soLanThu = phieu?.so_lan_thu ?? 0;
+      const chuaKetLuan = conclusion === "INSUFFICIENT";
 
       Modal.confirm({
         title: "Xac nhan xuat phieu",
@@ -202,10 +203,22 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
               Se <b>GUI PHIEU THAT</b> len CTS cho cell <b>{cellName}</b>. Khong the tu thu hoi, phai nho
               CTS xoa tay.
             </p>
+            {/* Cell CHUA ket luan duoc van cho xuat (xem nhanh INSUFFICIENT o cot Xuat phieu) - nhung
+                phai noi ro dang xuat cho 1 cell may KHONG ket luan duoc, khong phai cho 1 cell da xac
+                dinh la khong dat. Cau chu nay dung Y HET ben QoeCellsTable: cung mot tinh huong thi 2
+                bang canh nhau phai canh bao giong nhau tung chu */}
+            {chuaKetLuan && (
+              <Alert
+                type="warning"
+                showIcon
+                message="Cell nay chua ket luan duoc (khong du du lieu). Van xuat phieu de nguoi di kiem tra?"
+              />
+            )}
             {/* chi hien khi da tung thu that bai - thong tin nay LAM DOI quyet dinh: xuat tay lan nua rat
                 co the hong y het, nen doc loi gan nhat truoc khi bam */}
             {soLanThu > 0 && (
               <Alert
+                style={{ marginTop: chuaKetLuan ? "8px" : 0 }}
                 type="warning"
                 showIcon
                 message={`Cell nay da thu ${soLanThu} lan that bai.`}
@@ -308,36 +321,41 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
             return <Tag color="blue">Da xuat{maPhieu ? ` (${maPhieu})` : ""}</Tag>;
           }
 
-          // CHI cell KHONG DAT (FAIL) moi duoc xuat phieu (dung BUOC 3 KHOI 4a/5 phia BE: "cell duoc xuat
-          // phieu = cell KHONG DAT"). PASS/INSUFFICIENT -> disable + tooltip ly do, KHONG an nut de NOC
-          // hieu VI SAO khong bam duoc (thay vi lam nhu cot nay khong ton tai o dong do)
-          if (row.conclusion !== "FAIL") {
-            return (
-              <Tooltip
-                title={
-                  row.conclusion === "PASS"
-                    ? "Cell dat tieu chi QoS (chenh lech <= 0.2) - khong can xuat phieu"
-                    : "Chua du du lieu (>=5/7 ngay moi phia) de danh gia - khong the xuat phieu"
-                }
-              >
-                <Button size="small" disabled>
-                  Xuat phieu
-                </Button>
-              </Tooltip>
-            );
+          // PASS -> AN nut han (chi hien gach). Cell dat tieu chi QoS thi khong co viec gi de lam o dong
+          // nay; truoc day hien nut disabled + tooltip, nhung mot nut khong bao gio bam duoc lap lai tren
+          // moi dong DAT chi lam ray cot ma khong them thong tin - cot "Ket luan" ngay ben canh da noi ro
+          // cell nay DAT roi
+          if (row.conclusion === "PASS") {
+            return <span style={{ color: "#bfbfbf" }}>-</span>;
           }
 
+          // INSUFFICIENT -> VAN CHO XUAT (truoc day disable). Ly do doi: phieu chi la lenh de NGUOI di
+          // kiem tra hien truong, ban than no khong sua gi ca - quyet dinh xu ly hay khong van la cua
+          // nguoi. Cell may KHONG ket luan duoc lai CANG dang de nguoi ngo toi: chan cung o day thi
+          // nhung cell thieu du lieu do se khong bao gio duoc ai xem lai.
+          // Hop xac nhan se hien Alert vang noi ro cell nay chua ket luan duoc (xem handleXacNhanXuat).
+          // Ban QoE (QoeCellsTable) xu su Y HET o ca 3 nhanh - 2 bang nam canh nhau trong cung 1 muc,
+          // xu su khac nhau o cung tinh huong la nguon nham lan
+          const chuaKetLuan = row.conclusion === "INSUFFICIENT";
           return (
-            <Button
-              size="small"
-              type="primary"
-              danger
-              loading={state?.loading}
-              // qua handleXacNhanXuat (hop xac nhan) chu KHONG goi thang handleXuatPhieu nhu ban cu
-              onClick={() => handleXacNhanXuat(row.cell_name)}
+            <Tooltip
+              title={
+                chuaKetLuan
+                  ? "Chua du du lieu (>=5/7 ngay moi phia) de ket luan - van cho xuat, ban tu quyet dinh"
+                  : "Cell khong dat tieu chi QoS - xuat phieu"
+              }
             >
-              Xuat phieu
-            </Button>
+              <Button
+                size="small"
+                type="primary"
+                danger={!chuaKetLuan} // do cho cell da ket luan khong dat; cell chua ket luan de mau thuong
+                loading={state?.loading}
+                // qua handleXacNhanXuat (hop xac nhan) chu KHONG goi thang handleXuatPhieu nhu ban cu
+                onClick={() => handleXacNhanXuat(row.cell_name, row.conclusion)}
+              >
+                Xuat phieu
+              </Button>
+            </Tooltip>
           );
         },
       }),
