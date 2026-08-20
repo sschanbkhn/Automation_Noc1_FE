@@ -194,7 +194,9 @@ export const DnCell: React.FC<{ session: SessionListItem }> = ({ session }) => {
   );
 };
 
-// Cot "Thoi gian": GOP ca luc bat dau lan luc ket thuc CR vao 1 o, dang "18/08 11:27 -> 11:28".
+// 2 cot thoi gian cua 1 session CR. TACH RIENG (truoc day gop 1 o dang "18/08 11:27 -> 11:28") theo yeu
+// cau: doc tung moc rieng de hon khi phai doi chieu voi log/bao cao ben ngoai, va sort/quet mat theo 1 cot
+// cung de hon la phai tach chuoi trong dau.
 //
 // ==== 2 TRUONG NAY LAY TU DAU (khong can BE bo sung gi) ====
 //  - created_at  = luc TAO session  -> moc BAT DAU. LUON co (da kiem: 52/52 session deu co gia tri)
@@ -202,39 +204,38 @@ export const DnCell: React.FC<{ session: SessionListItem }> = ({ session }) => {
 //    DUNG GIUA CHUNG, chua bao gio toi buoc 17 (da kiem: 24/52 session co executed_at NULL, va CA 24 deu
 //    dang status FAILED - khop chinh xac voi y nghia "chet giua chung")
 //
-// ==== TAI SAO GOP 1 COT thay vi tach "Bat dau" / "Ket thuc" ====
-//  1) 2 moc nay cach nhau VAI CHUC GIAY tren du lieu that (vd session 2641: 11:27:52 -> 11:28:13, session
-//     2710: 14:50:11 -> 14:50:21). Hai cot dong ho gan nhu trung nhau se bat nguoi doc dung lai so tung so
-//     roi moi nhan ra khong co gi khac - dung cai loi da phai bo cot "Thoi gian tao" ben tab Lich su CR.
-//  2) Bang nay da co 9 cot, trong do 2 cot rat rong (thanh tien do + chu trang thai). Them 1 cot ngay gio
-//     day du nua la bang phai cuon ngang.
-//  3) Dang "bat dau -> ket thuc" noi luon duoc QUAN HE giua 2 moc (chay het bao lau), thu ma 2 cot roi
-//     khong noi ra duoc.
-// Ngay chi hien o moc dau; moc cuoi chi hien gio NEU cung ngay, khac ngay thi hien ca ngay (CR chay qua
-// nua dem) - tranh doc nham 23:50 -> 00:10 thanh "chay lui ve qua khu"
-export const ThoiGianCrCell: React.FC<{ session: SessionListItem }> = ({ session }) => {
-  const batDau = session.created_at ? dayjs.utc(session.created_at).tz(MUI_GIO_VN) : null;
-  const ketThuc = session.executed_at ? dayjs.utc(session.executed_at).tz(MUI_GIO_VN) : null;
+// Ca 2 cot dung dinh dang NGAN "DD/MM HH:mm" (khong phai formatDateTime day du den giay): 2 moc chi cach
+// nhau vai chuc giay nen phan giay khong giup phan biet gi, ma lai lam moi cot rong them ~40px trong mot
+// bang da co 10 cot. Gia tri day du den giay van xem duoc qua Tooltip
+const dinhDangNgan = (value: string): string => dayjs.utc(value).tz(MUI_GIO_VN).format("DD/MM HH:mm");
+const dinhDangDayDu = (value: string): string =>
+  dayjs.utc(value).tz(MUI_GIO_VN).format("DD/MM/YYYY HH:mm:ss");
 
-  if (!batDau) {
+// Cot "Bat dau" = created_at (luc tao session)
+export const BatDauCell: React.FC<{ session: SessionListItem }> = ({ session }) => {
+  if (!session.created_at) {
     return <span style={{ color: "#bfbfbf" }}>-</span>;
   }
-
-  const cungNgay = ketThuc !== null && ketThuc.isSame(batDau, "day");
-  const nhanKetThuc = ketThuc ? (cungNgay ? ketThuc.format("HH:mm") : ketThuc.format("DD/MM HH:mm")) : null;
-
   return (
-    <Tooltip
-      title={
-        ketThuc
-          ? `Bat dau (tao session): ${batDau.format("DD/MM/YYYY HH:mm:ss")} - Ket thuc (buoc 17): ${ketThuc.format("DD/MM/YYYY HH:mm:ss")}`
-          : `Bat dau (tao session): ${batDau.format("DD/MM/YYYY HH:mm:ss")} - CR chua chay xong (chua toi buoc 17)`
-      }
-    >
-      <span style={{ whiteSpace: "nowrap" }}>
-        {batDau.format("DD/MM HH:mm")} -&gt;{" "}
-        {nhanKetThuc ?? <span style={{ color: R012_COLORS.dangerRed }}>(chua xong)</span>}
-      </span>
+    <Tooltip title={`Bat dau (tao session): ${dinhDangDayDu(session.created_at)}`}>
+      <span style={{ whiteSpace: "nowrap" }}>{dinhDangNgan(session.created_at)}</span>
+    </Tooltip>
+  );
+};
+
+// Cot "Ket thuc" = executed_at (ghi o buoc 17). NULL -> "-" mau do: KHONG phai thieu du lieu ma la CR
+// CHUA CHAY XONG - do la thong tin that su can nhin ra, nen to mau thay vi de xam nhu o trong
+export const KetThucCell: React.FC<{ session: SessionListItem }> = ({ session }) => {
+  if (!session.executed_at) {
+    return (
+      <Tooltip title="CR chua chay xong (chua toi buoc 17 - noi executed_at duoc ghi)">
+        <span style={{ color: R012_COLORS.dangerRed }}>-</span>
+      </Tooltip>
+    );
+  }
+  return (
+    <Tooltip title={`Ket thuc (buoc 17): ${dinhDangDayDu(session.executed_at)}`}>
+      <span style={{ whiteSpace: "nowrap" }}>{dinhDangNgan(session.executed_at)}</span>
     </Tooltip>
   );
 };

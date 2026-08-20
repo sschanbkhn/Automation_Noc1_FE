@@ -273,10 +273,11 @@ const SessionHistoryList: React.FC<SessionHistoryListProps> = ({ yeuCauLocTram =
           return <Tag color={STATUS_COLORS[status] ?? "default"}>{status}</Tag>;
         },
       }),
-      columnHelper.accessor("executed_at", {
-        header: "Thoi gian thuc thi",
-        cell: (info) => formatDateTime(info.getValue()),
-      }),
+      // DA BO cot "Thoi gian thuc thi" (executed_at): truong nay duoc ghi o BUOC 17 cua quy trinh CR nen
+      // NULL voi MOI session chet giua chung - tren du lieu that la 24/52 dong, tuc gan mot nua bang chi
+      // hien "-". Cot "Thoi gian tao" (created_at) ben duoi thi 52/52 dong deu co gia tri, va 2 moc nay
+      // cach nhau vai chuc giay nen giu 1 cot la du. Ai can doi chieu ca 2 moc thi xem muc "Tien trinh"
+      // ben tab Lich su phieu (cot Bat dau/Ket thuc) hoac Modal chi tiet session
       columnHelper.accessor("created_at", {
         header: "Thoi gian tao",
         cell: (info) => formatDateTime(info.getValue()),
@@ -398,7 +399,12 @@ const SessionHistoryList: React.FC<SessionHistoryListProps> = ({ yeuCauLocTram =
               hover, dung DUNG token tu theme.ts (khong hardcode hex o day) de dong bo voi StationSearchGrid.
               Ky thuat nth-child giong cach da khao sat o R003Monitor.tsx, khong can them thu vien CSS-in-JS moi */}
           <style>{`
-            .r012-session-table { width: 100%; border-collapse: collapse; }
+            /* BO "width: 100%" va THEM "white-space: nowrap": ep bang co dung 100% be rong container se lam
+               trinh duyet bop cac cot lai cho vua, va gia tri dai (ten tram) bi ngat xuong 2 dong. Gio bang
+               giu do rong TU NHIEN theo noi dung roi cuon ngang trong div overflow-x boc ngoai - dung cach
+               3 bang khong bao gio bi ngat dong dang lam (r012-qos-eval-table/r012-qoe-eval-table/
+               r012-cellparams-table) */
+            .r012-session-table { border-collapse: collapse; white-space: nowrap; }
             .r012-session-table thead th {
               text-align: left;
               padding: 10px 8px;
@@ -417,6 +423,9 @@ const SessionHistoryList: React.FC<SessionHistoryListProps> = ({ yeuCauLocTram =
             /* dat SAU 2 rule nth-child o tren de cung specificity nhung dung sau se thang, khong can !important */
             .r012-session-table tbody tr:hover { background-color: ${R012_COLORS.rowHoverBg}; }
           `}</style>
+          {/* boc overflow-x: sau khi bo width:100% o tren, bang co the rong hon container - cho no cuon
+              ngang RIENG trong khung cua no thay vi tran ra lam vo layout tab */}
+          <div style={{ overflowX: "auto" }}>
           <table className="r012-session-table">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
@@ -441,6 +450,7 @@ const SessionHistoryList: React.FC<SessionHistoryListProps> = ({ yeuCauLocTram =
               ))}
             </tbody>
           </table>
+          </div>
 
           <Pagination
             current={page}

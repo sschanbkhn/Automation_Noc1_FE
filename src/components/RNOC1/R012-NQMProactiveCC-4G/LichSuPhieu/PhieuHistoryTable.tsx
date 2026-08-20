@@ -10,6 +10,7 @@ import {
   Select,
   Spin,
   Tag,
+  Tooltip,
   message,
 } from "antd";
 import { Dayjs } from "dayjs";
@@ -390,7 +391,27 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
         enableSorting: false, // STT la vi tri hien thi, khong phai field that -> sort khong co y nghia
         cell: (info) => (page - 1) * size + info.row.index + 1,
       }),
-      columnHelper.accessor("cell_name", { header: "Cell" }),
+      columnHelper.accessor("cell_name", {
+        header: "Cell",
+        // nowrap o CSS bang da du cho ten cell dung khuon (~16-20 ky tu) nam gon 1 dong. maxWidth+ellipsis
+        // o day la DUONG LUI cho ten bat thuong dai: khong co no thi 1 ten dai se keo ca bang rong ra va
+        // day cac cot con lai ra ngoai vung nhin. Tooltip giu lai gia tri day du de khong mat thong tin
+        cell: (info) => (
+          <Tooltip title={info.getValue()}>
+            <span
+              style={{
+                display: "inline-block",
+                maxWidth: "220px",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                verticalAlign: "bottom",
+              }}
+            >
+              {info.getValue()}
+            </span>
+          </Tooltip>
+        ),
+      }),
       columnHelper.accessor("trang_thai", {
         header: "Trang thai",
         cell: (info) => {
@@ -603,7 +624,12 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
           {/* CSS scoped rieng cho bang nay (class r012-phieu-table) - dung DUNG token tu theme.ts de dong bo
               voi r012-session-table, khong hardcode hex o day */}
           <style>{`
-            .r012-phieu-table { width: 100%; border-collapse: collapse; }
+            /* NGUYEN NHAN ten cell bi ngat 2 dong: "width: 100%" ep bang co dung be rong container, 8 cot
+               chia nhau khong du cho nen trinh duyet ngat gia tri dai ("4G-SSN014M11-HNI") xuong dong. Bo
+               width:100% + them nowrap: bang giu do rong TU NHIEN theo noi dung roi cuon ngang trong div
+               overflow-x boc ngoai - dung cach 3 bang khong bao gio bi ngat dong dang lam
+               (r012-qos-eval-table / r012-qoe-eval-table / r012-cellparams-table) */
+            .r012-phieu-table { border-collapse: collapse; white-space: nowrap; }
             .r012-phieu-table thead th {
               text-align: left;
               padding: 10px 8px;
@@ -622,6 +648,9 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
             /* dat SAU 2 rule nth-child o tren de cung specificity nhung dung sau se thang, khong can !important */
             .r012-phieu-table tbody tr:hover { background-color: ${R012_COLORS.rowHoverBg}; }
           `}</style>
+          {/* boc overflow-x: sau khi bo width:100%, bang co the rong hon container (nhat la trong Modal
+              chi tiet session chi rong 800px) - cho cuon ngang RIENG trong khung cua no */}
+          <div style={{ overflowX: "auto" }}>
           <table className="r012-phieu-table">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
@@ -643,6 +672,7 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
               ))}
             </tbody>
           </table>
+          </div>
 
           {rows.length === 0 && (
             <Empty

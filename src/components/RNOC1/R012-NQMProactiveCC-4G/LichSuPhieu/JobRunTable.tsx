@@ -18,6 +18,9 @@ import { R012_COLORS } from "../theme";
 import { formatDateTime } from "../helpers/formatDateTime";
 import { JOB_RUN_STATUS_COLORS, JOB_RUN_STATUS_FILTER_OPTIONS } from "./jobRunStatus";
 import JobRunDetailModal from "./JobRunDetailModal";
+// Nut "Chay job xuat phieu" + modal xem truoc - dat TRONG muc nay (khong phai o cap tab) vi chay job va
+// xem lich su cac luot chay la cung mot viec, nguoi bam chay xong se nhin ngay xuong bang ben duoi
+import ChayJobModal from "./ChayJobModal";
 
 const { RangePicker } = DatePicker;
 
@@ -158,6 +161,7 @@ const JobRunTable: React.FC = () => {
 
   return (
     <div>
+      <ChayJobModal />
       {/* thanh cong cu loc - dung DUNG token mau tu theme.ts giong thanh loc cua PhieuHistoryTable/
           SessionHistoryList, khong bia mau moi.
           KHONG co o tim kiem tu do o day (nen cung khong can debounce nhu SessionHistoryList): GET

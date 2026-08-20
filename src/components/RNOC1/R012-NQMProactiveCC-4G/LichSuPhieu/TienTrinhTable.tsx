@@ -16,7 +16,8 @@ import { getSessions } from "../services/R012Service";
 import { SessionListItem, SessionListResponse } from "../types";
 import { R012_COLORS } from "../theme";
 import {
-  ThoiGianCrCell,
+  BatDauCell,
+  KetThucCell,
   TienTrinhBar,
   TrangThaiTienTrinhText,
   DnCell,
@@ -162,8 +163,12 @@ const TienTrinhTable: React.FC<TienTrinhTableProps> = ({ onXemLichSuCR }) => {
       // dong tren du lieu that) nen dung 1 nua bang khong hien ngay gi ca, du session do CO chay va CO moc
       // thoi gian - chi la chet giua chung. Gio hien ca 2 moc, xem ThoiGianCrCell
       columnHelper.accessor("created_at", {
-        header: "Thoi gian",
-        cell: (info) => <ThoiGianCrCell session={info.row.original} />,
+        header: "Bat dau",
+        cell: (info) => <BatDauCell session={info.row.original} />,
+      }),
+      columnHelper.accessor("executed_at", {
+        header: "Ket thuc",
+        cell: (info) => <KetThucCell session={info.row.original} />,
       }),
       // TACH lam 2 cot: thanh tien do va chu trang thai. Truoc day chung nam chung 1 o - o do rong gan gap
       // doi cac cot khac va la cho bop moi cot con lai khi bang co them cot (STT/DN vua them)

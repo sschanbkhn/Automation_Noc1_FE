@@ -25,6 +25,9 @@ import {
   QoeCellsResponse,
   QoeHistoryResponse,
   XoaSessionResponse,
+  XuatPhieuAutoRequest,
+  XemTruocXuatPhieuResponse,
+  ChayXuatPhieuAutoResponse,
 } from '../types';
 
 // ham goi GET /api/v1/stations - lay danh sach tram co phan trang
@@ -237,6 +240,37 @@ export const getJobRunDetail = async (id: number): Promise<JobRunDetail> => {
     // Notification va reject, component tu hien Alert loi
     const data: any = await r012Request.get(`/jobs/runs/${id}`, { timeout: 30000 });
     return data as JobRunDetail;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// ham goi POST /api/v1/jobs/xuat-phieu-auto/xem-truoc - DEM THU se xuat bao nhieu phieu cho khoang ngay
+// da chon, KHONG ghi gi ra ngoai. Endpoint DONG BO (tra ket qua ngay, khong phai 202 + background).
+export const xemTruocXuatPhieuAuto = async (
+  body: XuatPhieuAutoRequest
+): Promise<XemTruocXuatPhieuResponse> => {
+  try {
+    // 300s (5 phut) - KHONG dung 30s nhu cac endpoint doc DB: day la endpoint dong bo phai quet TUNG cell
+    // cua TUNG session trong khoang ngay (30 ngay x ~48 request/session), vai phut la binh thuong. De 30s
+    // se bao timeout OAN trong khi BE van dang chay dung, va nguoi dung se bam lai -> chay lai tu dau
+    const data: any = await r012Request.post('/jobs/xuat-phieu-auto/xem-truoc', body, { timeout: 300000 });
+    return data as XemTruocXuatPhieuResponse;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// ham goi POST /api/v1/jobs/xuat-phieu-auto - CHAY THAT, xuat phieu len CTS. BE tra 202 NGAY roi chay nen
+// (khong block), nen KHONG can timeout dai nhu /xem-truoc. 409 = dang co luot job chay do.
+// KHONG duoc goi tu dong/retry o tang service - day la WRITE API tao phieu THAT, cho component tu kiem soat
+// (phai xem truoc + xac nhan 2 lan, xem ChayJobModal.tsx)
+export const chayXuatPhieuAuto = async (
+  body: XuatPhieuAutoRequest
+): Promise<ChayXuatPhieuAutoResponse> => {
+  try {
+    const data: any = await r012Request.post('/jobs/xuat-phieu-auto', body, { timeout: 30000 });
+    return data as ChayXuatPhieuAutoResponse;
   } catch (error) {
     throw error;
   }

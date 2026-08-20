@@ -473,6 +473,50 @@ export interface QoeCellsResponse {
   data: QoeCellItem[];
 }
 
+// ==== POST /api/v1/jobs/xuat-phieu-auto/xem-truoc + POST /api/v1/jobs/xuat-phieu-auto (BE 95316d4) ====
+// CANH BAO NGUON GOC KIEU: 2 endpoint nay CHUA CO tren BE .196:8080 o thoi diem viet - openapi.json khong
+// co path nao khop "xuat-phieu-auto", va goi that ca 2 deu tra 404. Vi vay cac type duoi day lay theo DAC
+// TA do nguoi dung cung cap, KHONG doi chieu duoc voi openapi nhu moi type khac trong file nay. Khi BE len,
+// PHAI doi chieu lai truoc khi tin - nhat la cac cho da danh dau nullable "phong xa" ben duoi.
+//
+// tu_ngay/den_ngay: NGAY LICH GMT+7 dang "YYYY-MM-DD" (BE khai kieu `date` theo dac ta) - giong /phieu va
+// /jobs/runs, KHAC /sessions (endpoint do nhan `datetime` nen phai gui ISO, xem TienTrinhTable.tsx).
+// Rang buoc BE tu kiem: khoang toi da 30 ngay, tu_ngay <= den_ngay, den_ngay <= hom nay - 8 -> vuot thi 422
+export interface XuatPhieuAutoRequest {
+  tu_ngay: string; // YYYY-MM-DD (gio VN)
+  den_ngay: string; // YYYY-MM-DD (gio VN)
+}
+
+// 1 cell se duoc xuat phieu trong lan chay nay
+export interface XemTruocCellItem {
+  cell_name: string;
+  nguon: string; // QOS|QOE|CA_HAI - de string (khong dung NguonKhongDat) vi chua doi chieu duoc voi BE that
+  do_te: number | null; // chenh lech (TB truoc - TB sau), cang lon cang te
+  avg_before: number | null;
+  avg_after: number | null;
+}
+
+// 1 session co cell se duoc xuat phieu
+export interface XemTruocSessionItem {
+  cr_session_id: number;
+  tram_id: string;
+  tram_name: string | null;
+  executed_at: string | null;
+  so_cell_se_xuat: number;
+  // khai bao optional: neu BE that tra thieu key nay o mot nhanh nao do thi cho doc van chiu duoc thay vi
+  // no runtime khi .map() tren undefined
+  cells?: XemTruocCellItem[];
+}
+
+// response cua /xem-truoc - DONG BO (tra ket qua ngay), co the mat vai phut voi khoang 30 ngay
+export interface XemTruocXuatPhieuResponse {
+  tong_phieu_se_xuat: number;
+  sessions?: XemTruocSessionItem[];
+}
+
+// response cua POST /jobs/xuat-phieu-auto - BE tra 202 roi chay nen, chua khoa hinh dang cu the
+export type ChayXuatPhieuAutoResponse = Record<string, unknown>;
+
 // dung cho POST /api/v1/jobs/sync-rims - BE khai bao response la object additionalProperties true, chua co field co dinh
 export type SyncRimsResponse = Record<string, unknown>;
 
