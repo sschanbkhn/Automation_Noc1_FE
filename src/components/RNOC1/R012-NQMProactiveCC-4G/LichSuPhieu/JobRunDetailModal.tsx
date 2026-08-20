@@ -138,7 +138,8 @@ const JobRunDetailModal: React.FC<JobRunDetailModalProps> = ({ jobRunId, onClose
             {cellDaXuLy.length > 0 && (
               <>
                 <div style={groupTitleStyle}>Cell da xu ly ({cellDaXuLy.length})</div>
-                <table className="r012-jobrun-detail-table">
+                <div className="r012-table-scroll">
+<table className="r012-table r012-jobrun-detail-table">
                   <thead>
                     <tr>
                       <th>Cell</th>
@@ -163,6 +164,7 @@ const JobRunDetailModal: React.FC<JobRunDetailModalProps> = ({ jobRunId, onClose
                     ))}
                   </tbody>
                 </table>
+</div>
               </>
             )}
 
@@ -171,7 +173,8 @@ const JobRunDetailModal: React.FC<JobRunDetailModalProps> = ({ jobRunId, onClose
                 <div style={groupTitleStyle}>
                   Cell vuot gioi han ({cellVuot.length}) - KHONG duoc xuat tu dong, phai lam tay
                 </div>
-                <table className="r012-jobrun-detail-table">
+                <div className="r012-table-scroll">
+<table className="r012-table r012-jobrun-detail-table">
                   <thead>
                     <tr>
                       <th>Cell</th>
@@ -187,6 +190,7 @@ const JobRunDetailModal: React.FC<JobRunDetailModalProps> = ({ jobRunId, onClose
                     ))}
                   </tbody>
                 </table>
+</div>
               </>
             )}
 
@@ -233,7 +237,7 @@ const JobRunDetailModal: React.FC<JobRunDetailModalProps> = ({ jobRunId, onClose
           chi ton tai khi component do dang mount - Modal nay mo doc lap se khong co style. Vi vay tu khai
           bao class rieng .r012-jobrun-collapse, van dung DUNG token tu theme.ts nen nhin van dong bo */}
       <style>{`
-        .r012-jobrun-detail-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+        .r012-jobrun-detail-table { border-collapse: collapse; margin-bottom: 8px; }
         .r012-jobrun-detail-table thead th {
           text-align: left;
           padding: 6px 8px;

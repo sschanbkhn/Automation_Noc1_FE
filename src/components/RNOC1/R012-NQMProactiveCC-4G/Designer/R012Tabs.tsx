@@ -5,6 +5,9 @@ import LichSuCR from "../LichSuCR/LichSuCR";
 import CellXau from "../CellXau/CellXau";
 import LichSuPhieu from "../LichSuPhieu/LichSuPhieu";
 import { YeuCauLocTram } from "../LichSuCR/SessionHistoryList";
+// CSS bo cuc dung CHUNG cho moi bang trong module - nhung DUNG 1 LAN o day (goc module) thay vi lap lai
+// the <style> trong 12 file bang. Xem ly do day du trong common/r012TableStyle.tsx
+import { R012TableStyle } from "../common/r012TableStyle";
 
 // key cua tab "Lich su CR" - dat thanh hang so vi gio co cho khac (dieu huong tu tab Lich su phieu) tro
 // toi no, go lech chinh ta se lam nut bam khong ra tab nao ma cung khong bao loi gi
@@ -71,6 +74,9 @@ const R012Tabs: React.FC = () => {
         padding: "0.5rem 1rem",
       }}
     >
+      {/* CSS bo cuc bang dung chung - phai nam TRONG cay DOM cua module de moi bang con deu nhan duoc */}
+      <R012TableStyle />
+
       {/* CO dieu khien (activeKey + onChange) thay cho defaultActiveKey: xem ly do o comment state activeKey */}
       <Tabs activeKey={activeKey} onChange={setActiveKey} items={items} />
     </div>

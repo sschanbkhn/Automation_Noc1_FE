@@ -11,6 +11,7 @@
 // Xuat phieu o day goi CHINH endpoint POST /api/v1/phieu cua bang QoS - KHONG co endpoint rieng cho QoE:
 // 1 cell chi co 1 phieu bat ke phat hien ra no qua chi so nao (BE tu ghi nguon_khong_dat = QOS/QOE/CA_HAI).
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { OneLineCell } from "../../common/r012TableStyle";
 import { Alert, Button, Empty, Modal, Pagination, Select, Spin, Tag, Tooltip, message } from "antd";
 import {
   createColumnHelper,
@@ -262,7 +263,12 @@ const QoeCellsTable: React.FC<QoeCellsTableProps> = ({ sessionId, affectedCells,
         // tinh theo vi tri TUYET DOI (khong reset moi trang) - giong het bang QoS
         cell: (info) => pagination.pageIndex * pagination.pageSize + info.row.index + 1,
       }),
-      columnHelper.accessor("cell_name", { header: "Cell" }),
+      columnHelper.accessor("cell_name", {
+        header: "Cell",
+        // OneLineCell: ellipsis + Tooltip lam duong lui cho ten dai bat thuong - xem
+        // common/r012TableStyle.tsx
+        cell: (info) => <OneLineCell value={info.getValue()} />,
+      }),
       columnHelper.display({
         id: "tram_id",
         header: "Ma tram",
@@ -440,7 +446,7 @@ const QoeCellsTable: React.FC<QoeCellsTableProps> = ({ sessionId, affectedCells,
           <style>{`
             /* KHONG dat "width: 100%" - de bang giu do rong tu nhien theo noi dung roi CUON trong div
                overflow-x ben ngoai, dung nhu bang QoS (neu ep 100% thi cac cot bi bop lai qua nho) */
-            .r012-qoe-eval-table { border-collapse: collapse; white-space: nowrap; }
+            .r012-qoe-eval-table { border-collapse: collapse; }
             .r012-qoe-eval-table thead th {
               text-align: left;
               padding: 10px 8px;
@@ -464,8 +470,8 @@ const QoeCellsTable: React.FC<QoeCellsTableProps> = ({ sessionId, affectedCells,
             <>
               {/* header dung whiteSpace:nowrap nen tong chieu rong that su cua bang co the vuot chieu rong
                   Modal (800px) -> boc overflow-x de bang CUON RIENG, khong lam vo layout Modal */}
-              <div style={{ overflowX: "auto" }}>
-                <table className="r012-qoe-eval-table">
+              <div className="r012-table-scroll">
+                <table className="r012-table r012-qoe-eval-table">
                   <thead>
                     {table.getHeaderGroups().map((headerGroup) => (
                       <tr key={headerGroup.id}>

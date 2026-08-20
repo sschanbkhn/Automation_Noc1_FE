@@ -15,6 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getSessions } from "../services/R012Service";
 import { SessionListItem, SessionListResponse } from "../types";
 import { R012_COLORS } from "../theme";
+import { OneLineCell } from "../common/r012TableStyle";
 import {
   BatDauCell,
   KetThucCell,
@@ -156,7 +157,7 @@ const TienTrinhTable: React.FC<TienTrinhTableProps> = ({ onXemLichSuCR }) => {
       }),
       columnHelper.accessor("tram_name", {
         header: "Ten tram",
-        cell: (info) => info.getValue() ?? "-", // co the null theo schema
+        cell: (info) => <OneLineCell value={info.getValue()} />,
       }),
       // TRUOC DAY cot nay ten "Ngay CR" va doc executed_at - SAI o 2 diem: (1) executed_at la moc KET THUC
       // (ghi o buoc 17) chu khong phai "ngay CR" chung chung; (2) no NULL voi moi session FAILED (24/52
@@ -274,7 +275,7 @@ const TienTrinhTable: React.FC<TienTrinhTableProps> = ({ onXemLichSuCR }) => {
                   duoc, chi rieng ma tram la link. De con tro hinh ban tay tren ca dong se moi nguoi dung
                   bam vao cho khong co gi xay ra */}
               <style>{`
-                .r012-tien-trinh-table { width: 100%; border-collapse: collapse; }
+                .r012-tien-trinh-table { border-collapse: collapse; }
                 .r012-tien-trinh-table thead th {
                   text-align: left;
                   padding: 10px 8px;
@@ -291,7 +292,8 @@ const TienTrinhTable: React.FC<TienTrinhTableProps> = ({ onXemLichSuCR }) => {
                 .r012-tien-trinh-table tbody tr:nth-child(even) { background-color: ${R012_COLORS.tableRowAlt}; }
                 .r012-tien-trinh-table tbody tr:hover { background-color: ${R012_COLORS.rowHoverBg}; }
               `}</style>
-              <table className="r012-tien-trinh-table">
+              <div className="r012-table-scroll">
+<table className="r012-table r012-tien-trinh-table">
                 <thead>
                   {table.getHeaderGroups().map((headerGroup) => (
                     <tr key={headerGroup.id}>
@@ -313,6 +315,7 @@ const TienTrinhTable: React.FC<TienTrinhTableProps> = ({ onXemLichSuCR }) => {
                   ))}
                 </tbody>
               </table>
+</div>
 
               <Pagination
                 current={page}

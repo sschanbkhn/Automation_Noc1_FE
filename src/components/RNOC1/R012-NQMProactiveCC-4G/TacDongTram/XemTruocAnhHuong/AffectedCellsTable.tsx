@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { OneLineCell } from "../../common/r012TableStyle";
 import { Button, Pagination } from "antd";
 import {
   createColumnHelper,
@@ -78,7 +79,12 @@ const AffectedCellsTable: React.FC<AffectedCellsTableProps> = ({ previewData }) 
         // hien tai (getPaginationRowModel), nen phai cong them offset cua trang
         cell: (info) => pagination.pageIndex * pagination.pageSize + info.row.index + 1,
       }),
-      columnHelper.accessor("cell_name", { header: "Cell" }),
+      columnHelper.accessor("cell_name", {
+        header: "Cell",
+        // OneLineCell: ellipsis + Tooltip lam duong lui cho ten dai bat thuong - xem
+        // common/r012TableStyle.tsx
+        cell: (info) => <OneLineCell value={info.getValue()} />,
+      }),
       columnHelper.accessor("tram_id", { header: "Ma tram" }),
       columnHelper.accessor("huong_id", {
         header: "Huong",
@@ -139,7 +145,7 @@ const AffectedCellsTable: React.FC<AffectedCellsTableProps> = ({ previewData }) 
         <>
           {/* CSS scoped rieng cho bang nay, dung DUNG token tu theme.ts, dong bo voi cac bang con lai trong module */}
           <style>{`
-            .r012-affected-cells-table { width: 100%; border-collapse: collapse; }
+            .r012-affected-cells-table { border-collapse: collapse; }
             .r012-affected-cells-table thead th {
               text-align: left;
               padding: 10px 8px;
@@ -167,7 +173,8 @@ const AffectedCellsTable: React.FC<AffectedCellsTableProps> = ({ previewData }) 
             .r012-affected-cells-table tbody tr:nth-child(even) { background-color: ${R012_COLORS.tableRowAlt}; }
             .r012-affected-cells-table tbody tr:hover { background-color: ${R012_COLORS.rowHoverBg}; }
           `}</style>
-          <table className="r012-affected-cells-table">
+          <div className="r012-table-scroll">
+<table className="r012-table r012-affected-cells-table">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
@@ -187,6 +194,7 @@ const AffectedCellsTable: React.FC<AffectedCellsTableProps> = ({ previewData }) 
               ))}
             </tbody>
           </table>
+</div>
 
           {/* Pagination cua antd chi la UI dieu khien - state that nam trong TanStack Table (bien "pagination") */}
           <Pagination

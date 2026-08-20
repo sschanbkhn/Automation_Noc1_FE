@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { OneLineCell } from "../../common/r012TableStyle";
 import { Alert, Button, Modal, Pagination, Progress, Select, Tag, Tooltip, message } from "antd";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -261,7 +262,12 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
         // hien tai (getPaginationRowModel), nen phai cong them offset cua trang
         cell: (info) => pagination.pageIndex * pagination.pageSize + info.row.index + 1,
       }),
-      columnHelper.accessor("cell_name", { header: "Cell" }),
+      columnHelper.accessor("cell_name", {
+        header: "Cell",
+        // OneLineCell: ellipsis + Tooltip lam duong lui cho ten dai bat thuong - xem
+        // common/r012TableStyle.tsx
+        cell: (info) => <OneLineCell value={info.getValue()} />,
+      }),
       columnHelper.accessor("tram_id", {
         header: "Ma tram",
         cell: (info) => info.getValue() ?? "-",
@@ -437,7 +443,7 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
                 /* BO "width: 100%" (ban cu) - ep bang co dung 100% chieu rong container se lam cac cot bi
                    BOP lai qua nho, MAU THUAN voi div overflow-x:auto vua boc ben ngoai (muon bang GIU DUNG
                    do rong tu nhien theo noi dung roi CUON, khong bop) */
-                .r012-qos-eval-table { border-collapse: collapse; white-space: nowrap; }
+                .r012-qos-eval-table { border-collapse: collapse; }
                 .r012-qos-eval-table thead th {
                   text-align: left;
                   padding: 10px 8px;
@@ -461,8 +467,8 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
                 // co the vuot qua chieu rong Modal (800px, xem SessionHistoryList.tsx) -> bang se TRAN ra
                 // ngoai neu khong gioi han. Boc trong div overflow-x:auto de bang CUON NGANG rieng trong
                 // khung cua no, KHONG lam vo layout Modal ben ngoai
-                <div style={{ overflowX: "auto" }}>
-                  <table className="r012-qos-eval-table">
+                <div className="r012-table-scroll">
+                  <table className="r012-table r012-qos-eval-table">
                     <thead>
                       {table.getHeaderGroups().map((headerGroup) => (
                         <tr key={headerGroup.id}>

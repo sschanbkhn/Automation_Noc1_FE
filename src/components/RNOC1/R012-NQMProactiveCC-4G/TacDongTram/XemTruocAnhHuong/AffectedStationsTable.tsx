@@ -17,6 +17,7 @@ import { PreviewCrResponse } from "../../types";
 import { R012_COLORS } from "../../theme";
 // <th> dung chung cho MOI bang co sort trong module (click header + mui ten huong sort)
 import { SortableHeaderCell } from "../../common/SortableHeaderCell";
+import { OneLineCell } from "../../common/r012TableStyle";
 
 // dinh dang timestamp DDMMYYYY_HHMM cho ten file export - dung DUNG quy uoc da dung o CellParamsByHuong.tsx.
 // KHONG tach thanh helper dung chung vi ham chi 8 dong, tach som se la premature abstraction cho 1 ham qua nho
@@ -98,7 +99,7 @@ const AffectedStationsTable: React.FC<AffectedStationsTableProps> = ({ previewDa
       columnHelper.accessor("tram_id", { header: "Ma tram" }),
       columnHelper.accessor("tram_name", {
         header: "Ten tram",
-        cell: (info) => info.getValue() ?? "-", // co the null theo schema AffectedTramItem
+        cell: (info) => <OneLineCell value={info.getValue()} />,
       }),
       columnHelper.accessor("soCellAnhHuong", { header: "So cell bi anh huong" }),
       columnHelper.display({
@@ -182,7 +183,7 @@ const AffectedStationsTable: React.FC<AffectedStationsTableProps> = ({ previewDa
           {/* CSS scoped rieng cho bang nay, dung DUNG token tu theme.ts, dong bo voi StationSearchGrid.tsx
               va SessionHistoryList.tsx (header dam mau, dong xen ke, hover) */}
           <style>{`
-            .r012-affected-stations-table { width: 100%; border-collapse: collapse; }
+            .r012-affected-stations-table { border-collapse: collapse; }
             .r012-affected-stations-table thead th {
               text-align: left;
               padding: 10px 8px;
@@ -199,7 +200,8 @@ const AffectedStationsTable: React.FC<AffectedStationsTableProps> = ({ previewDa
             .r012-affected-stations-table tbody tr:nth-child(even) { background-color: ${R012_COLORS.tableRowAlt}; }
             .r012-affected-stations-table tbody tr:hover { background-color: ${R012_COLORS.rowHoverBg}; }
           `}</style>
-          <table className="r012-affected-stations-table">
+          <div className="r012-table-scroll">
+<table className="r012-table r012-affected-stations-table">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
@@ -219,6 +221,7 @@ const AffectedStationsTable: React.FC<AffectedStationsTableProps> = ({ previewDa
               ))}
             </tbody>
           </table>
+</div>
 
           {/* Pagination cua antd chi la UI dieu khien - state that (pageIndex/pageSize) nam trong TanStack
               Table (bien "pagination" o tren) de phoi hop dung voi getSortedRowModel/getPaginationRowModel */}

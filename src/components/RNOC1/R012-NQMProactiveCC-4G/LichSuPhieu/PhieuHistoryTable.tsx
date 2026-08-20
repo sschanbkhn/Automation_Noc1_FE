@@ -629,7 +629,7 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
                width:100% + them nowrap: bang giu do rong TU NHIEN theo noi dung roi cuon ngang trong div
                overflow-x boc ngoai - dung cach 3 bang khong bao gio bi ngat dong dang lam
                (r012-qos-eval-table / r012-qoe-eval-table / r012-cellparams-table) */
-            .r012-phieu-table { border-collapse: collapse; white-space: nowrap; }
+            .r012-phieu-table { border-collapse: collapse; }
             .r012-phieu-table thead th {
               text-align: left;
               padding: 10px 8px;
@@ -650,8 +650,8 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
           `}</style>
           {/* boc overflow-x: sau khi bo width:100%, bang co the rong hon container (nhat la trong Modal
               chi tiet session chi rong 800px) - cho cuon ngang RIENG trong khung cua no */}
-          <div style={{ overflowX: "auto" }}>
-          <table className="r012-phieu-table">
+          <div className="r012-table-scroll">
+          <table className="r012-table r012-phieu-table">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>

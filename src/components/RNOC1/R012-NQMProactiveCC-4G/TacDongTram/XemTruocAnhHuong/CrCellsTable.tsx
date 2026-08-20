@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { OneLineCell } from "../../common/r012TableStyle";
 import { Button, Pagination } from "antd";
 import {
   createColumnHelper,
@@ -88,7 +89,12 @@ const CrCellsTable: React.FC<CrCellsTableProps> = ({ previewData }) => {
         // STT tinh theo vi tri TUYET DOI - info.row.index la vi tri TRONG TRANG hien tai (getPaginationRowModel)
         cell: (info) => pagination.pageIndex * pagination.pageSize + info.row.index + 1,
       }),
-      columnHelper.accessor("cell_name", { header: "Cell" }),
+      columnHelper.accessor("cell_name", {
+        header: "Cell",
+        // OneLineCell: ellipsis + Tooltip lam duong lui cho ten dai bat thuong - xem
+        // common/r012TableStyle.tsx
+        cell: (info) => <OneLineCell value={info.getValue()} />,
+      }),
       columnHelper.accessor("tram_id", { header: "Ma tram" }),
       columnHelper.accessor("huong_id", {
         header: "Huong",
@@ -184,7 +190,7 @@ const CrCellsTable: React.FC<CrCellsTableProps> = ({ previewData }) => {
         <>
           {/* CSS scoped rieng cho bang nay, dung DUNG token tu theme.ts, dong bo voi cac bang con lai trong module */}
           <style>{`
-            .r012-cr-cells-table { width: 100%; border-collapse: collapse; }
+            .r012-cr-cells-table { border-collapse: collapse; }
             .r012-cr-cells-table thead th {
               text-align: left;
               padding: 10px 8px;
@@ -209,7 +215,8 @@ const CrCellsTable: React.FC<CrCellsTableProps> = ({ previewData }) => {
             .r012-cr-cells-table tbody tr:nth-child(even) { background-color: ${R012_COLORS.tableRowAlt}; }
             .r012-cr-cells-table tbody tr:hover { background-color: ${R012_COLORS.rowHoverBg}; }
           `}</style>
-          <table className="r012-cr-cells-table">
+          <div className="r012-table-scroll">
+<table className="r012-table r012-cr-cells-table">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
@@ -229,6 +236,7 @@ const CrCellsTable: React.FC<CrCellsTableProps> = ({ previewData }) => {
               ))}
             </tbody>
           </table>
+</div>
 
           {/* Pagination cua antd chi la UI dieu khien - state that nam trong TanStack Table (bien "pagination") */}
           <Pagination

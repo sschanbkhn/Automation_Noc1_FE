@@ -21,6 +21,7 @@ import EvaluationDetail from "./EvaluationDetail";
 import { R012_COLORS } from "../theme";
 // dinh dang thoi gian dung CHUNG toan module (ep UTC->GMT+7) - xem ly do trong file helper
 import { formatDateTime } from "../helpers/formatDateTime";
+import { OneLineCell } from "../common/r012TableStyle";
 
 const { RangePicker } = DatePicker;
 
@@ -263,7 +264,7 @@ const SessionHistoryList: React.FC<SessionHistoryListProps> = ({ yeuCauLocTram =
       columnHelper.accessor("tram_id", { header: "Ma tram" }),
       columnHelper.accessor("tram_name", {
         header: "Ten tram",
-        cell: (info) => info.getValue() ?? "-", // co the null theo schema
+        cell: (info) => <OneLineCell value={info.getValue()} />,
       }),
       columnHelper.accessor("action", { header: "Hanh dong" }),
       columnHelper.accessor("status", {
@@ -404,7 +405,7 @@ const SessionHistoryList: React.FC<SessionHistoryListProps> = ({ yeuCauLocTram =
                giu do rong TU NHIEN theo noi dung roi cuon ngang trong div overflow-x boc ngoai - dung cach
                3 bang khong bao gio bi ngat dong dang lam (r012-qos-eval-table/r012-qoe-eval-table/
                r012-cellparams-table) */
-            .r012-session-table { border-collapse: collapse; white-space: nowrap; }
+            .r012-session-table { border-collapse: collapse; }
             .r012-session-table thead th {
               text-align: left;
               padding: 10px 8px;
@@ -425,8 +426,8 @@ const SessionHistoryList: React.FC<SessionHistoryListProps> = ({ yeuCauLocTram =
           `}</style>
           {/* boc overflow-x: sau khi bo width:100% o tren, bang co the rong hon container - cho no cuon
               ngang RIENG trong khung cua no thay vi tran ra lam vo layout tab */}
-          <div style={{ overflowX: "auto" }}>
-          <table className="r012-session-table">
+          <div className="r012-table-scroll">
+          <table className="r012-table r012-session-table">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>

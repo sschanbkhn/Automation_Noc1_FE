@@ -213,7 +213,7 @@ const JobRunTable: React.FC = () => {
           {/* CSS scoped rieng cho bang nay (class r012-jobrun-table) - dung DUNG token tu theme.ts de dong
               bo voi r012-phieu-table/r012-session-table, khong hardcode hex o day */}
           <style>{`
-            .r012-jobrun-table { width: 100%; border-collapse: collapse; }
+            .r012-jobrun-table { border-collapse: collapse; }
             .r012-jobrun-table thead th {
               text-align: left;
               padding: 10px 8px;
@@ -232,7 +232,8 @@ const JobRunTable: React.FC = () => {
             /* dat SAU 2 rule nth-child o tren de cung specificity nhung dung sau se thang, khong can !important */
             .r012-jobrun-table tbody tr:hover { background-color: ${R012_COLORS.rowHoverBg}; }
           `}</style>
-          <table className="r012-jobrun-table">
+          <div className="r012-table-scroll">
+<table className="r012-table r012-jobrun-table">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
@@ -254,6 +255,7 @@ const JobRunTable: React.FC = () => {
               ))}
             </tbody>
           </table>
+</div>
 
           {rows.length === 0 && (
             <Empty
