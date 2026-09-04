@@ -162,6 +162,24 @@ export const getQoeHistory = async (
   }
 };
 
+// ham goi GET /api/v1/sessions/{session_id}/log-netact - doc file log NetAct cua 1 session (BE 7982ed7).
+// Tra ve TEXT THO (khong phai JSON) nen phai dat responseType='text': interceptor cua r012Request tra
+// thang response.data, voi text/plain thi day la chuoi.
+// 404 = session khong ton tai, chua co duong_dan_log, hoac file da bi don dep tren server - component
+// tu phan biet bang status code (xem EvaluationDetail.tsx)
+export const getLogNetact = async (sessionId: number): Promise<string> => {
+  try {
+    // log 1 luot chay CR co the vai tram KB (18 buoc + feedback tung DN) nen giu 60s thay vi 30s
+    const data: any = await r012Request.get(`/sessions/${sessionId}/log-netact`, {
+      responseType: 'text',
+      timeout: 60000,
+    });
+    return typeof data === 'string' ? data : String(data);
+  } catch (error) {
+    throw error;
+  }
+};
+
 // ham goi DELETE /api/v1/sessions/{session_id} - XOA VINH VIEN 1 session CR va toan bo du lieu lien quan
 // (cell param, log, phieu). BE CHI cho xoa khi status=FAILED, khac di tra 409 kem message giai thich ro -
 // FE KHONG tu doan ly do, cu hien nguyen van message do (xem SessionHistoryList.tsx).

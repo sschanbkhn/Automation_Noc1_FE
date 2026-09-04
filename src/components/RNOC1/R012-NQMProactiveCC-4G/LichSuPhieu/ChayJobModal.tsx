@@ -196,7 +196,9 @@ const ChayJobModal: React.FC = () => {
 
   return (
     <>
-      <Button type="primary" onClick={() => setMoModal(true)} style={{ marginBottom: "1rem" }}>
+      {/* KHONG con marginBottom: nut gio nam TRONG thanh loc (cung hang voi "Xoa loc"), margin cu
+          la cua thoi no dung o dong rieng phia tren va se lam lech cac nut cung hang */}
+      <Button type="primary" onClick={() => setMoModal(true)}>
         Chay job xuat phieu
       </Button>
 

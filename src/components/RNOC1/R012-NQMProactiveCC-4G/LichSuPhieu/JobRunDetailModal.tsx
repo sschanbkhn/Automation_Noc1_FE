@@ -11,7 +11,7 @@ import {
 import { R012_COLORS } from "../theme";
 // dinh dang thoi gian dung CHUNG toan module (ep UTC->GMT+7) - xem ly do trong file helper
 import { formatDateTime } from "../helpers/formatDateTime";
-import { JOB_RUN_STATUS_COLORS } from "./jobRunStatus";
+import { JOB_RUN_STATUS_COLORS, JOB_RUN_STATUS_LABELS } from "./jobRunStatus";
 // mau Tag ket qua xuat phieu tung cell trong chi_tiet - DUNG LAI bang mau cua phieu (SUCCESS/FAILED/...)
 // thay vi tu dinh nghia bang thu 3, vi day chinh la gia tri trang_thai do XuatPhieuUseCase tra ve, y het
 // cot trang thai cua bang Lich su phieu
@@ -288,7 +288,9 @@ const JobRunDetailModal: React.FC<JobRunDetailModalProps> = ({ jobRunId, onClose
           >
             <Descriptions.Item label="Loai job">{data.job_type}</Descriptions.Item>
             <Descriptions.Item label="Trang thai">
-              <Tag color={JOB_RUN_STATUS_COLORS[data.trang_thai] ?? "default"}>{data.trang_thai}</Tag>
+              <Tag color={JOB_RUN_STATUS_COLORS[data.trang_thai] ?? "default"}>
+                {JOB_RUN_STATUS_LABELS[data.trang_thai] ?? data.trang_thai}
+              </Tag>
             </Descriptions.Item>
             {/* DA BO muc "Che do" (Thu/That) - BE bo hoan toan che do chay thu, khong con field dry_run */}
             <Descriptions.Item label="Session quet">{data.so_session_quet}</Descriptions.Item>

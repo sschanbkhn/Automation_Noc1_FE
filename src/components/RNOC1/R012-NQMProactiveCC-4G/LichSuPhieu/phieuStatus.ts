@@ -69,3 +69,23 @@ export const PHIEU_STATUS_FILTER_OPTIONS = [
   { value: "KHONG_XUAT_HET_LUOT_THU", label: PHIEU_STATUS_LABELS.KHONG_XUAT_HET_LUOT_THU },
   { value: "KHONG_XUAT_THIEU_DU_LIEU", label: PHIEU_STATUS_LABELS.KHONG_XUAT_THIEU_DU_LIEU },
 ];
+
+// ==== PHAN LOAI LOI CTS (BE 7982ed7) ====
+// Truoc day CA HAI loai loi deu hien ra mot dong FAILED giong het nhau, nen nguoi van hanh khong biet
+// dong nao can lam gi: loi nghiep vu thi di truy vo ich, con loi ky thuat that thi chim giua dam do va
+// khong ai bao dev.
+//
+// Mau CO Y khac nhau: NGHIEP_VU dung XAM (default) vi KHONG co viec gi phai lam - to do se lam loang
+// dung nhung dong that su can xu ly, cung nguyen tac da ap cho KHONG_XUAT_THIEU_DU_LIEU o tren.
+export const PHAN_LOAI_LOI_TAG: Record<string, { label: string; color: string; tooltip: string }> = {
+  NGHIEP_VU: {
+    label: "Nghiep vu CTS",
+    color: "default",
+    tooltip: "CTS tu choi co ly do nghiep vu (vd cell da co phieu trong thang). Khong can xu ly",
+  },
+  KY_THUAT: {
+    label: "Loi ky thuat",
+    color: "error",
+    tooltip: "Loi he thong, can bao dev",
+  },
+};

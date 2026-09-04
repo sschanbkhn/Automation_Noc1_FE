@@ -16,7 +16,8 @@ import { JobRunListItem, JobRunListResponse, JobRunSortBy, JobRunTrangThai } fro
 import { R012_COLORS } from "../theme";
 // dinh dang thoi gian dung CHUNG toan module (ep UTC->GMT+7) - xem ly do trong file helper
 import { formatDateTime } from "../helpers/formatDateTime";
-import { JOB_RUN_STATUS_COLORS, JOB_RUN_STATUS_FILTER_OPTIONS } from "./jobRunStatus";
+import { JOB_RUN_STATUS_COLORS,
+  JOB_RUN_STATUS_LABELS, JOB_RUN_STATUS_FILTER_OPTIONS } from "./jobRunStatus";
 import JobRunDetailModal from "./JobRunDetailModal";
 // Nut "Chay job xuat phieu" + modal xem truoc - dat TRONG muc nay (khong phai o cap tab) vi chay job va
 // xem lich su cac luot chay la cung mot viec, nguoi bam chay xong se nhin ngay xuong bang ben duoi
@@ -116,6 +117,13 @@ const JobRunTable: React.FC = () => {
 
   const columns = useMemo(
     () => [
+      columnHelper.display({
+        id: "stt",
+        header: "STT",
+        enableSorting: false, // STT la vi tri hien thi, khong phai field that -> sort khong co y nghia
+        // phan trang chay o BE nen row.index la vi tri TRONG TRANG - phai cong offset cua trang
+        cell: (info) => (page - 1) * size + info.row.index + 1,
+      }),
       columnHelper.accessor("started_at", {
         header: "Bat dau",
         cell: (info) => formatDateTime(info.getValue()),
@@ -125,7 +133,11 @@ const JobRunTable: React.FC = () => {
         header: "Trang thai",
         cell: (info) => {
           const status = info.getValue();
-          return <Tag color={JOB_RUN_STATUS_COLORS[status] ?? "default"}>{status}</Tag>;
+          return (
+            <Tag color={JOB_RUN_STATUS_COLORS[status] ?? "default"}>
+              {JOB_RUN_STATUS_LABELS[status] ?? status}
+            </Tag>
+          );
         },
         // "trang_thai" cung nam trong enum sort_by cua BE
       }),
@@ -148,7 +160,9 @@ const JobRunTable: React.FC = () => {
         enableSorting: false,
       }),
     ],
-    []
+    // page/size: cot STT tinh offset tu 2 gia tri nay - thieu deps thi doi trang STT van
+    // hien so cua trang cu
+    [page, size]
   );
 
   const table = useReactTable({
@@ -161,7 +175,6 @@ const JobRunTable: React.FC = () => {
 
   return (
     <div>
-      <ChayJobModal />
       {/* thanh cong cu loc - dung DUNG token mau tu theme.ts giong thanh loc cua PhieuHistoryTable/
           SessionHistoryList, khong bia mau moi.
           KHONG co o tim kiem tu do o day (nen cung khong can debounce nhu SessionHistoryList): GET
@@ -195,6 +208,13 @@ const JobRunTable: React.FC = () => {
           placeholder={["Tu ngay", "Den ngay"]}
         />
         <Button onClick={handleClearFilters}>Xoa loc</Button>
+        {/* VIEC 6 - nut Chay job dua vao CUNG HANG voi thanh loc (truoc day o dong rieng phia tren).
+            marginLeft:auto day no sang PHAI, tach khoi nhom nut loc: day la hanh dong GHI (chay job that,
+            gui phieu len CTS) chu khong phai loc/xem - de sat canh "Xoa loc" se de bam nham.
+            ChayJobModal tu render ca nut lan Modal cua no */}
+        <div style={{ marginLeft: "auto" }}>
+          <ChayJobModal />
+        </div>
       </div>
 
       {isLoading && <Spin tip="Dang tai lich su chay job..." />}

@@ -166,14 +166,20 @@ export const TrangThaiTienTrinhText: React.FC<{ session: SessionListItem }> = ({
   return <span style={{ color: mau, whiteSpace: "nowrap", fontWeight: 600 }}>{nhan}</span>;
 };
 
-// Cot "DN": ty le lenh dien nang chay thanh cong tren tong so lenh cua session (so_dn_thanh_cong/so_dn_tong).
-//  - thieu so lieu (null hoac undefined) -> "-"  (session cu truoc dot BE bo sung 2 cot nay, VA hien tai la
-//    MOI dong vi BE .196 chua deploy - xem comment o types/index.ts)
+// Cot "Cell": ty le CELL provision thanh cong tren tong so cell cua session
+// (so_cell_thanh_cong/so_cell_tong).
+//
+// TRUOC DAY cot nay ten "DN" va doc so_dn_*: dem theo DN (tram) chu khong theo cell. Sai don vi do -
+// 1 managedObject trong XML NetAct la 1 CELL, MRBTS chi la noi cell cam vao, nen "3/4 tram" khong cho
+// biet bao nhieu cell that su doi duoc tham so. BE da doi han sang dem cell (commit 7982ed7).
+//
+//  - thieu so lieu (null hoac undefined) -> "-"  (session cu BE khong backfill, VA hien tai la MOI dong
+//    vi BE .196 chua deploy - xem comment o types/index.ts)
 //  - khong chay het (thanh cong < tong) -> to CAM de noi bat: day la session lam duoc mot phan, de bi luot
 //    qua nhat vi no khong hien ra la loi o bat ky cot nao khac
-export const DnCell: React.FC<{ session: SessionListItem }> = ({ session }) => {
-  const thanhCong = session.so_dn_thanh_cong;
-  const tong = session.so_dn_tong;
+export const CellProvisionCell: React.FC<{ session: SessionListItem }> = ({ session }) => {
+  const thanhCong = session.so_cell_thanh_cong;
+  const tong = session.so_cell_tong;
 
   if (typeof thanhCong !== "number" || typeof tong !== "number") {
     return <span style={{ color: "#bfbfbf" }}>-</span>;
@@ -186,7 +192,7 @@ export const DnCell: React.FC<{ session: SessionListItem }> = ({ session }) => {
   const motPhan = session.status === "PARTIAL_SUCCESS" || (tong > 0 && thanhCong < tong);
 
   return (
-    <Tooltip title={`${thanhCong}/${tong} lenh dien nang chay thanh cong`}>
+    <Tooltip title={`So cell provision thanh cong / tong so cell: ${thanhCong}/${tong}`}>
       <span style={motPhan ? { color: CAM_MOT_PHAN, fontWeight: 700 } : undefined}>
         {thanhCong}/{tong}
       </span>

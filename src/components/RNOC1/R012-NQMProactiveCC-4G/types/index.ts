@@ -119,13 +119,19 @@ export interface SessionListItem {
   // FE gui len: neu sau nay BE co tra 3 that thi cot Tien trinh van hien duoc thay vi vo kieu
   buoc_hien_tai: number;
 
-  // ==== TY LE DIEN NANG (them theo BE 854689a->d133fe1) ====
-  // so_dn_thanh_cong / so_dn_tong - so lenh DN chay thanh cong tren tong so lenh cua session.
-  // NULL o session CU (truoc dot nay BE khong ghi 2 cot nay va KHONG backfill) -> cot hien "-".
-  // CHUA CO tren BE .196:8080 o thoi diem viet (openapi.json: chuoi "so_dn" xuat hien 0 lan) nen hien tai
-  // MOI dong deu undefined -> khai bao optional, cho doc phai chiu duoc CA undefined LAN null
-  so_dn_thanh_cong?: number | null;
-  so_dn_tong?: number | null;
+  // ==== TY LE CELL PROVISION THANH CONG (BE 7982ed7, thay 2 truong so_dn_* cu) ====
+  // so_cell_thanh_cong / so_cell_tong - so CELL provision thanh cong tren tong so cell cua session,
+  // lay tu SUCCESSFUL MOS / FAILED MOS trong output NetAct.
+  //
+  // TAI SAO DOI TU DN SANG CELL: CR lam viec theo CELL chu khong theo tram. 1 managedObject trong XML
+  // NetAct = 1 CELL (LNCEL); MRBTS chi la noi cell cam vao. Con so co nghia voi nguoi van hanh la
+  // "5/5 cell", khong phai "3/3 tram". BE da XOA HAN 2 cot so_dn_* (khong doi ten) vi gia tri cu dem
+  // theo TRAM - giu lai duoi ten moi se thanh con so noi doi.
+  //
+  // NULL o session CU (BE khong backfill). CHUA CO tren BE .196:8080 o thoi diem viet (commit 7982ed7
+  // chua deploy) -> hien tai MOI dong deu undefined, cho doc phai chiu duoc CA undefined LAN null
+  so_cell_thanh_cong?: number | null;
+  so_cell_tong?: number | null;
 }
 
 // dung cho GET /api/v1/sessions - response tra ve danh sach session kem tong so
@@ -401,6 +407,9 @@ export interface PhieuHistoryQueryParams {
 // ?nguon= - gui gia tri ngoai 3 cai nay la sai hop dong
 export type NguonKhongDat = "QOS" | "QOE" | "CA_HAI";
 
+// 2 loai loi khi CTS tu choi phieu (BE 7982ed7) - xem PhieuHistoryItem.phan_loai_loi
+export type PhanLoaiLoi = "NGHIEP_VU" | "KY_THUAT";
+
 // dung cho GET /api/v1/phieu - 1 dong lich su phieu
 export interface PhieuHistoryItem {
   id: number; // id ban ghi lich su phieu
@@ -426,6 +435,16 @@ export interface PhieuHistoryItem {
   //     deploy lai thi MOI dong deu thieu truong nay -> cho doc PHAI chiu duoc undefined, khong duoc coi
   //     la luon co san (dung bai hoc da ghi o so_lan_thu ben duoi)
   nguon_khong_dat?: NguonKhongDat | null;
+  // NGHIEP_VU | KY_THUAT | null - phan loai loi khi CTS tu choi (BE 7982ed7).
+  //
+  // KHONG phai cot trong DB: BE suy tu error_message ngay luc tra ve, nen AP DUNG duoc ca cho phieu cu.
+  // Y nghia:
+  //   NGHIEP_VU - CTS tu choi CO LY, he thong chay dung (vd "Bad Cell ... dang xu ly cua thang 202608":
+  //               cell da co phieu trong thang). Nguoi van hanh KHONG phai lam gi.
+  //   KY_THUAT  - he thong minh hong: payload sai field, 4xx validation, timeout, 5xx -> phai bao dev.
+  //   null      - dong khong co loi.
+  // Optional: BE .196 chua deploy commit nay nen hien tai moi dong deu undefined
+  phan_loai_loi?: PhanLoaiLoi | null;
   // So lan da POST THAT len CTS ma van chua SUCCESS (cot cr_phieu.so_lan_thu ben BE - INTEGER NOT NULL
   // DEFAULT 0, xem models/cr_phieu.py). Job tu dong NGUNG thu cell nay khi cham tran XUAT_PHIEU_MAX_RETRY
   // va danh dau KHONG_XUAT_HET_LUOT_THU. FE dung de canh bao TRUOC KHI nguoi dung bam xuat tay: "da thu n

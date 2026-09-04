@@ -18,6 +18,8 @@ import QosEvaluationChart from "../TacDongTram/DanhGiaChatLuong/QosEvaluationCha
 import QosEvaluationTable from "../TacDongTram/DanhGiaChatLuong/QosEvaluationTable";
 // Bang danh gia QoE theo tung cell (nguon CEM) - dat canh bang QoS trong cung muc 5, xem file do
 import QoeCellsTable from "../TacDongTram/DanhGiaChatLuong/QoeCellsTable";
+// Nut + Modal xem log NetAct (VIEC 4) - xem ly do nut luon hien trong chinh file do
+import LogNetactModal from "./LogNetactModal";
 import { resolveCrDateGmt7 } from "../TacDongTram/DanhGiaChatLuong/qosEvaluation";
 // tai su dung LAI CellParamsByHuong (da tach tu CrResultsByDirection.tsx) - hien danh sach cell da tac dong
 // theo huong (giong Tab1 sau CR), o day la XEM LAI session da DONE nen chi truyen thang cell_params tinh,
@@ -138,6 +140,12 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
             <span style={{ overflowWrap: "break-word" }}>{data.plan_name ?? "-"}</span>
           </Descriptions.Item>
         </Descriptions>
+      ),
+      extra: (
+        // Dat o "extra" cua muc Collapse (goc phai header) chu khong nhet vao Descriptions: day la HANH
+        // DONG, khong phai mot truong thong tin cua tram. antd chan su kien cua extra khong lam mo/dong
+        // muc Collapse nen bam nut khong lam sap muc dang xem
+        <LogNetactModal sessionId={data.id} />
       ),
     },
     {

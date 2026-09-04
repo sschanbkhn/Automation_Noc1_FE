@@ -38,6 +38,7 @@ import {
   PHIEU_STATUS_LABELS,
   NGUON_FILTER_OPTIONS,
   NGUON_KHONG_DAT_LABELS,
+  PHAN_LOAI_LOI_TAG,
 } from "./phieuStatus";
 import PhieuDetailModal from "./PhieuDetailModal";
 
@@ -419,8 +420,25 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
           // PHIEU_STATUS_LABELS[status] ?? status: 2 trang thai KHONG_XUAT_* co nhan tieng Viet ngan, cac
           // trang thai con lai (SUCCESS/FAILED/PENDING) hien nguyen ten - va gia tri la ma BE them sau nay
           // cung van hien duoc nguyen van thay vi ra o rong
+          // Dong co loi: hien THEM 1 Tag phan loai ngay canh trang thai. Dat CUNG O chu khong tach cot
+          // rieng - phan loai chi co nghia khi doc kem trang thai (dong SUCCESS khong bao gio co), tach
+          // cot se tao mot cot gan nhu trong tron
+          const phanLoai = info.row.original.phan_loai_loi
+            ? PHAN_LOAI_LOI_TAG[info.row.original.phan_loai_loi]
+            : undefined;
           return (
-            <Tag color={PHIEU_STATUS_COLORS[status] ?? "default"}>{PHIEU_STATUS_LABELS[status] ?? status}</Tag>
+            <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap" }}>
+              <Tag color={PHIEU_STATUS_COLORS[status] ?? "default"} style={{ marginInlineEnd: 0 }}>
+                {PHIEU_STATUS_LABELS[status] ?? status}
+              </Tag>
+              {phanLoai && (
+                <Tooltip title={phanLoai.tooltip}>
+                  <Tag color={phanLoai.color} style={{ marginInlineEnd: 0 }}>
+                    {phanLoai.label}
+                  </Tag>
+                </Tooltip>
+              )}
+            </div>
           );
         },
       }),

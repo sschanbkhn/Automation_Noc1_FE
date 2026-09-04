@@ -21,7 +21,7 @@ import {
   KetThucCell,
   TienTrinhBar,
   TrangThaiTienTrinhText,
-  DnCell,
+  CellProvisionCell,
   PhieuCell,
   ConLaiCell,
   TIEN_TRINH_FILTER_OPTIONS,
@@ -190,9 +190,9 @@ const TienTrinhTable: React.FC<TienTrinhTableProps> = ({ onXemLichSuCR }) => {
         cell: (info) => <ConLaiCell session={info.row.original} />,
       }),
       columnHelper.display({
-        id: "dn",
-        header: "DN",
-        cell: (info) => <DnCell session={info.row.original} />,
+        id: "cell_provision",
+        header: "Cell",
+        cell: (info) => <CellProvisionCell session={info.row.original} />,
       }),
     ],
     [onXemLichSuCR, page, size]
