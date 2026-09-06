@@ -41,6 +41,7 @@ import {
   PHAN_LOAI_LOI_TAG,
 } from "./phieuStatus";
 import PhieuDetailModal from "./PhieuDetailModal";
+import { OneLineCell } from "../common/r012TableStyle";
 
 const { RangePicker } = DatePicker;
 
@@ -440,6 +441,25 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
               )}
             </div>
           );
+        },
+      }),
+      // Cot "Tram tat" - tram BI TAT cua CR sinh ra phieu nay (BE efd89d0 join san tram_id/tram_name).
+      // Phieu duoc xuat cho cell LAN CAN nen ten cell KHONG cho biet CR nao sinh ra no; truoc day muon
+      // biet phai mo tung dong ra xem cr_session_id roi tra cuu tiep.
+      // enableSorting:false - enum sort_by cua BE la id/cr_session_id/cell_name/trang_thai/created_at,
+      // KHONG co tram_id; gui sort_by ngoai enum se bi tra 422
+      columnHelper.display({
+        id: "tram_tat",
+        header: "Tram tat",
+        enableSorting: false,
+        cell: (info) => {
+          const r = info.row.original;
+          if (!r.tram_id && !r.tram_name) {
+            // phieu cu truoc dot BE bo sung 2 truong nay
+            return <span style={{ color: "#bfbfbf" }}>-</span>;
+          }
+          // OneLineCell nhu cac cot ten khac - chong ngat dong khi ten tram dai
+          return <OneLineCell value={r.tram_name ? `${r.tram_id} - ${r.tram_name}` : r.tram_id} />;
         },
       }),
       columnHelper.accessor("phieu_id", {

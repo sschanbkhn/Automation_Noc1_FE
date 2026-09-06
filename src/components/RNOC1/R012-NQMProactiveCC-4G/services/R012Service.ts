@@ -23,6 +23,7 @@ import {
   JobRunListResponse,
   JobRunDetail,
   QoeCellsResponse,
+  QosCellsResponse,
   QoeHistoryResponse,
   XoaSessionResponse,
   XuatPhieuAutoRequest,
@@ -101,6 +102,20 @@ export const getSessionDetail = async (sessionId: number): Promise<SessionDetail
   }
 };
 
+// ham goi GET /api/v1/sessions/{cr_session_id}/qos-cells - danh gia QoS theo TUNG CELL, KET LUAN DO BE
+// TINH (xem QosCellItem trong types/index.ts de biet vi sao khong tu tinh o FE nua)
+export const getQosCells = async (sessionId: number): Promise<QosCellsResponse> => {
+  try {
+    // 120s: BE goi CTS DONG BO cho tung cell (17 cell = 34 request truoc+sau). Timeout 30s nhu cac
+    // endpoint doc DB se bao timeout OAN trong khi BE van dang chay dung - dung ly do da dat 120s cho
+    // /qoe-cells
+    const data: any = await r012Request.get(`/sessions/${sessionId}/qos-cells`, { timeout: 120000 });
+    return data as QosCellsResponse;
+  } catch (error) {
+    throw error;
+  }
+};
+
 // ham goi GET /api/v1/sessions/{cr_session_id}/qoe-cells - danh gia QoE theo TUNG CELL cua 1 session
 // (TB truoc/sau CR, ket luan PASS/FAIL/INSUFFICIENT_DATA, diem thap nhat + so ngay dat sau CR)
 export const getQoeCells = async (sessionId: number): Promise<QoeCellsResponse> => {
@@ -157,24 +172,6 @@ export const getQoeHistory = async (
     // doc du lieu QoE da luu trong DB (khong goi CEM dong bo nhu /qoe-cells) nen giu timeout ngan 30s
     const data: any = await r012Request.get(`/qoe/${cellName}`, { params, timeout: 30000 });
     return data as QoeHistoryResponse;
-  } catch (error) {
-    throw error;
-  }
-};
-
-// ham goi GET /api/v1/sessions/{session_id}/log-netact - doc file log NetAct cua 1 session (BE 7982ed7).
-// Tra ve TEXT THO (khong phai JSON) nen phai dat responseType='text': interceptor cua r012Request tra
-// thang response.data, voi text/plain thi day la chuoi.
-// 404 = session khong ton tai, chua co duong_dan_log, hoac file da bi don dep tren server - component
-// tu phan biet bang status code (xem EvaluationDetail.tsx)
-export const getLogNetact = async (sessionId: number): Promise<string> => {
-  try {
-    // log 1 luot chay CR co the vai tram KB (18 buoc + feedback tung DN) nen giu 60s thay vi 30s
-    const data: any = await r012Request.get(`/sessions/${sessionId}/log-netact`, {
-      responseType: 'text',
-      timeout: 60000,
-    });
-    return typeof data === 'string' ? data : String(data);
   } catch (error) {
     throw error;
   }

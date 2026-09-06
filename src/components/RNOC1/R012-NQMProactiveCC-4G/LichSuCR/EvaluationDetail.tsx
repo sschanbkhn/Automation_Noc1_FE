@@ -18,8 +18,8 @@ import QosEvaluationChart from "../TacDongTram/DanhGiaChatLuong/QosEvaluationCha
 import QosEvaluationTable from "../TacDongTram/DanhGiaChatLuong/QosEvaluationTable";
 // Bang danh gia QoE theo tung cell (nguon CEM) - dat canh bang QoS trong cung muc 5, xem file do
 import QoeCellsTable from "../TacDongTram/DanhGiaChatLuong/QoeCellsTable";
-// Nut + Modal xem log NetAct (VIEC 4) - xem ly do nut luon hien trong chinh file do
-import LogNetactModal from "./LogNetactModal";
+// Canh bao QoS/QoE tinh tren 2 tap ngay khac nhau - xem ly do trong chinh file do
+import CanhBaoLechCuaSo from "./CanhBaoLechCuaSo";
 import { resolveCrDateGmt7 } from "../TacDongTram/DanhGiaChatLuong/qosEvaluation";
 // tai su dung LAI CellParamsByHuong (da tach tu CrResultsByDirection.tsx) - hien danh sach cell da tac dong
 // theo huong (giong Tab1 sau CR), o day la XEM LAI session da DONE nen chi truyen thang cell_params tinh,
@@ -141,12 +141,6 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
           </Descriptions.Item>
         </Descriptions>
       ),
-      extra: (
-        // Dat o "extra" cua muc Collapse (goc phai header) chu khong nhet vao Descriptions: day la HANH
-        // DONG, khong phai mot truong thong tin cua tram. antd chan su kien cua extra khong lam mo/dong
-        // muc Collapse nen bam nut khong lam sap muc dang xem
-        <LogNetactModal sessionId={data.id} />
-      ),
     },
     {
       key: "log-tac-dong",
@@ -194,6 +188,8 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
               affectedCells={data.affected_cells}
               crDateGmt7={crDateGmt7}
               chiSo={mucDanhGia === MUC_QOE ? "qoe" : "qos"}
+              // de chart doc nguong tu cache cua bang muc 5 (cung queryKey qos-cells/qoe-cells)
+              sessionId={data.id}
             />
           </>
         ) : (
@@ -208,6 +204,10 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
       children:
         crDateGmt7 !== null ? (
           <>
+            {/* Dat TREN Segmented: canh bao dung cho CA HAI bang, va phai doc duoc truoc khi nguoi dung
+                bat dau so sanh 2 con so */}
+            <CanhBaoLechCuaSo sessionId={data.id} />
+
             {/* Segmented con [QoS] [QoE] - CUNG state voi Segmented o muc 4, doi o dau cung dong bo ca hai */}
             <Segmented
               value={mucDanhGia}
@@ -223,8 +223,9 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
             {mucDanhGia === MUC_QOS && (
               <QosEvaluationTable
                 sessionId={data.id}
+                // affected_cells dung de suy cot "Ma tram" (endpoint /qos-cells khong tra tram_id)
                 affectedCells={data.affected_cells}
-                crDateGmt7={crDateGmt7}
+                enabled={mucDanhGia === MUC_QOS}
               />
             )}
             {/* QoE goi API LAZY qua prop enabled - CHI chay khi nguoi dung that su bam sang tab QoE.

@@ -445,6 +445,16 @@ export interface PhieuHistoryItem {
   //   null      - dong khong co loi.
   // Optional: BE .196 chua deploy commit nay nen hien tai moi dong deu undefined
   phan_loai_loi?: PhanLoaiLoi | null;
+  // ==== TRAM BI TAT (BE efd89d0) ====
+  // Phieu duoc xuat cho cell LAN CAN, nen ten cell KHONG cho biet CR nao sinh ra no. 2 truong nay la
+  // tram BI TAT (cr_session.tram_id/tram_name), do BE join san.
+  //
+  // TUYET DOI KHONG suy tu request_payload.SiteName: truong do la tram cua CHINH cell dang xuat phieu -
+  // ma phieu lai xuat cho cell lan can, nen 2 gia tri KHAC NHAU dung o nhung dong ta quan tam. Dung
+  // nham se sai AM THAM (van ra mot ma tram trong hop ly).
+  // null o phieu cu truoc dot nay
+  tram_id?: string | null;
+  tram_name?: string | null;
   // So lan da POST THAT len CTS ma van chua SUCCESS (cot cr_phieu.so_lan_thu ben BE - INTEGER NOT NULL
   // DEFAULT 0, xem models/cr_phieu.py). Job tu dong NGUNG thu cell nay khi cham tran XUAT_PHIEU_MAX_RETRY
   // va danh dau KHONG_XUAT_HET_LUOT_THU. FE dung de canh bao TRUOC KHI nguoi dung bam xuat tay: "da thu n
@@ -461,6 +471,76 @@ export interface PhieuHistoryResponse {
   page: number;
   size: number;
   data: PhieuHistoryItem[];
+}
+
+// ==== GET /api/v1/sessions/{cr_session_id}/qos-cells (danh gia QoS theo TUNG CELL) ====
+// DA XAC NHAN qua api/schemas/qos_schemas.py + api/routers/qos.py cua BE commit efd89d0.
+//
+// VI SAO FE GOI ENDPOINT NAY THAY VI TU TINH: luat danh gia la NGHIEP VU, chi duoc ton tai o MOT cho.
+// Truoc day FE tu tinh lai trong qosEvaluation.ts va da TROI KHOI BE 2 LAN:
+//   Lan 1 - FE thieu ve "avg_after >= 4 thi van DAT": gan nhan KHONG DAT cho cell 117449 (4.83 -> 4.33),
+//           nguoi dung bam nut xuat, BE tra DAT_KHONG_XUAT. FE noi mot dang, BE lam mot dang.
+//   Lan 2 - BE doi nguong 0.2 -> 0.5 va them dieu kien avg_after < 3.0, FE van giu 0.2.
+//   Lan 3 - chart van tu ket luan bang 0.2 sau khi bang da chuyen sang doc BE.
+// Ban sao troi la chuyen CHAC CHAN xay ra, khong phai rui ro. Gio doc thang ket luan tu BE, va FE KHONG
+// con giu ban sao nguong nao (05092026 - da xoa QOS_DIFF_CONCLUSION_THRESHOLD/QOS_MIN_DAYS_REQUIRED va
+// bo o ket luan khoi chart).
+//
+// === LUAT DANG AP DUNG (chi de DOC HIEU, tuyet doi khong code lai theo) ===
+// 2 dieu kien DOC LAP, vi pham bat ky cai nao la KHONG DAT:
+//   1) avg_after < nguong.muc_toi_thieu      -> KHONG DAT (san chat luong tuyet doi)
+//   2) tut qua nguong.delta_toi_da           -> KHONG DAT (muc tut tuong doi)
+// Thieu du lieu duoi nguong.so_ngay_toi_thieu o BAT KY phia nao -> INSUFFICIENT_DATA.
+// 2 BIEN: dung bang muc_toi_thieu VAN DAT; tut DUNG bang delta_toi_da VAN DAT.
+// 3 con so lay tu truong "nguong" cua chinh response, KHONG go cung o FE.
+//
+// ket_qua: "PASS" | "FAIL" | "INSUFFICIENT_DATA" - GIONG HET QoE (domain/services/evaluation_service.py
+// dong 76), nen bang QoS/QoE dung chung duoc bang mau/nhan
+export interface QosCellItem {
+  cell_name: string;
+  avg_before: number | null;
+  avg_after: number | null;
+  delta: number | null;
+  so_ngay_before: number;
+  so_ngay_after: number;
+  // de string (khong union) - cung ly do voi QoeCellItem.ket_qua: BE khai bao str tu do
+  ket_qua: string;
+}
+
+// Khoang ngay LICH GMT+7 cua 1 cua so danh gia. Day la cua so YEU CAU (tinh tu executed_at), KHONG phai
+// so ngay thuc su co du lieu - cai do nam o so_ngay_before/so_ngay_after cua TUNG cell
+export interface CuaSoNgay {
+  tu: string; // "YYYY-MM-DD"
+  den: string; // "YYYY-MM-DD"
+}
+
+// 3 nguong quyet dinh DAT/KHONG DAT, do BE tra ve theo tung lan danh gia (BE commit truoc).
+//
+// VI SAO BE PHAI TRA RA THAY VI FE TU BIET: FE tung hardcode 3 con so nay trong qosEvaluation.ts va ban
+// sao do DA TROI KHOI BE 3 LAN (thieu ve avg_after >= 4; khong theo kip 0.2 -> 0.5; khong biet co them
+// san 3.0). Ban sao troi la chuyen chac chan xay ra, khong phai rui ro.
+//
+// delta_toi_da la SO DUONG (BE da doi dau san) - FE dung thang, KHONG doi dau lai.
+// 2 BIEN can nho khi ve duong tham chieu:
+//   - tut DUNG bang delta_toi_da  -> VAN DAT (BE so sanh delta < -delta_toi_da)
+//   - avg_after DUNG bang muc_toi_thieu -> VAN DAT (BE so sanh avg_after < muc_toi_thieu)
+export interface NguongDanhGia {
+  delta_toi_da: number; // tut qua muc nay (huong GIAM) la KHONG DAT
+  muc_toi_thieu: number; // avg_after DUOI muc nay la KHONG DAT, khong lien quan delta
+  so_ngay_toi_thieu: number; // it hon so ngay nay o BAT KY phia nao -> INSUFFICIENT_DATA
+}
+
+export interface QosCellsResponse {
+  cr_session_id: number;
+  // 3 truong cua so - CAP RESPONSE (cua so nhu nhau cho moi cell trong session).
+  // QoS va QoE dung cung cong thuc cua so nhung SO NGAY THUC TE co du lieu thuong LECH nhau (CTS tre 1
+  // ngay, CEM tre 2 ngay + co lo thung) - doi chieu so_ngay_* cua 2 bang voi cua so goc thi biet lech o dau
+  ngay_cr: string; // "YYYY-MM-DD"
+  cua_so_before: CuaSoNgay;
+  cua_so_after: CuaSoNgay;
+  nguong: NguongDanhGia;
+  total: number;
+  data: QosCellItem[];
 }
 
 // ==== GET /api/v1/sessions/{cr_session_id}/qoe-cells (danh gia QoE theo TUNG CELL) ====
@@ -488,6 +568,12 @@ export interface QoeCellItem {
 
 export interface QoeCellsResponse {
   cr_session_id: number;
+  // GIONG HET QosCellsResponse - tai dung CuaSoNgay/NguongDanhGia thay vi khai bao rieng: 2 ban se lech
+  // nhau khi 1 ben doi (BE cung tai dung y het, xem api/schemas/qoe_schemas.py)
+  ngay_cr: string;
+  cua_so_before: CuaSoNgay;
+  cua_so_after: CuaSoNgay;
+  nguong: NguongDanhGia;
   total: number;
   data: QoeCellItem[];
 }

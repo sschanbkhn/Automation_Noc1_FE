@@ -113,7 +113,9 @@ const CrCellsTable: React.FC<CrCellsTableProps> = ({ previewData }) => {
         header: "Rsboost (cu -> moi)",
         enableSorting: false, // cot ghep 2 gia tri thanh 1 chuoi "cu -> moi", KHONG phai 1 gia tri don co the sap xep tu nhien
         // hien CA HAI gia tri du action_type la gi - rsboost_cu la dB that (vd 1.8), rsboost_moi la step
-        // chuan (vd 3.0), 2 don vi khac nhau nen KHONG duoc gop/tinh toan, chi hien canh nhau de NOC tu doi chieu
+        // chuan (vd 3.0), 2 don vi khac nhau nen KHONG duoc gop/tinh toan, chi hien canh nhau de NOC tu doi chieu.
+        // LUU Y cho nguoi grep sau nay: so 3.0 o day la STEP RSBOOST (dB), KHONG lien quan gi den
+        // nguong danh gia chat luong muc_toi_thieu=3.0 - trung so ngau nhien, 2 don vi khac han nhau
         cell: (info) => {
           const row = info.row.original;
           return `${row.rsboost_cu ?? "-"} -> ${row.rsboost_moi ?? "-"}`;

@@ -182,7 +182,9 @@ const TienTrinhTable: React.FC<TienTrinhTableProps> = ({ onXemLichSuCR }) => {
         cell: (info) => <TrangThaiTienTrinhText session={info.row.original} />,
       }),
       columnHelper.accessor("so_phieu_da_xuat", {
-        header: "Phieu",
+        // "Phieu/Cell" - o hien dang phan so so_phieu_da_xuat/so_cell_anh_huong, ten cot noi luon 2 ve cua
+        // phan so la gi nen khong can tooltip giai thich them
+        header: "Phieu/Cell",
         cell: (info) => <PhieuCell session={info.row.original} />,
       }),
       columnHelper.accessor("con_bao_nhieu_ngay", {

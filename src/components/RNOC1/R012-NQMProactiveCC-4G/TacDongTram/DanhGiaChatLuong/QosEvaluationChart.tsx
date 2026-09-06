@@ -1,11 +1,23 @@
 import React, { useMemo, useState } from "react";
-import { Select, Spin, Alert, Empty, Tag } from "antd";
-import { Bar, BarChart, Cell as RechartsCell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { Select, Spin, Alert, Empty } from "antd";
+import {
+  Bar,
+  BarChart,
+  Cell as RechartsCell,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ReferenceLine,
+  ResponsiveContainer,
+  CartesianGrid,
+} from "recharts";
 import { Dayjs } from "dayjs";
 import { useChiSoHistory, ChiSoChatLuong } from "../../hooks/useChiSoHistory";
+import { useQuery } from "@tanstack/react-query";
+import { QoeCellsResponse, QosCellsResponse } from "../../types";
 import { SessionAffectedCellItem } from "../../types";
 import { R012_COLORS } from "../../theme";
-import { DayGroup, QosConclusion, buildQosEvaluation, resolveQosWindow } from "./qosEvaluation";
+import { DayGroup, buildQosEvaluation, resolveQosWindow } from "./qosEvaluation";
 
 const GROUP_COLOR: Record<DayGroup, string> = {
   before: R012_COLORS.chartBeforeCr,
@@ -19,15 +31,6 @@ const GROUP_LABEL: Record<DayGroup, string> = {
   after: "Sau CR",
 };
 
-// mau/nhan Tag cho Ket luan (DAT/KHONG DAT/Chua du du lieu) - dung DUNG 3 gia tri co the tra ve tu
-// buildQosEvaluation() (type QosConclusion), khong bia them gia tri. SUA (yeu cau truc tiep user, khop
-// tieu chi MOI phia BE) - BO "ACTION_DISPLAY" rieng (Tieu chi 2 "Can xu ly" cu), chi con 1 ket luan DUY NHAT.
-const CONCLUSION_DISPLAY: Record<QosConclusion, { label: string; color: string }> = {
-  PASS: { label: "DAT", color: "green" },
-  FAIL: { label: "KHONG DAT", color: "red" },
-  INSUFFICIENT: { label: "Chua du du lieu", color: "default" },
-};
-
 interface QosEvaluationChartProps {
   affectedCells: SessionAffectedCellItem[];
   crDateGmt7: Dayjs;
@@ -36,6 +39,8 @@ interface QosEvaluationChartProps {
   // cung window 15 ngay (crDate-7..crDate+7), cung phan nhom before/cr_day/after, cung nguong ket luan,
   // cung kieu bieu do. Nhan ban ra file thu hai nghia la moi lan sua cach tinh phai nho sua ca 2 noi
   chiSo?: ChiSoChatLuong;
+  // de doc nguong tu cache cua bang muc 5 (cung queryKey) - xem comment o cho dung
+  sessionId: number;
 }
 
 // nhan hien thi theo chi so - chi khac ten goi, moi thu con lai dung chung
@@ -43,8 +48,28 @@ const CHI_SO_LABEL: Record<ChiSoChatLuong, string> = { qos: "QoS", qoe: "QoE" };
 
 // chart QoS 15 ngay (7 truoc + ngay CR + 7 sau) + ket luan DAT/KHONG DAT cho 1 cell dang chon - tuong ung
 // Buoc 1-3 Phan 3 (Danh gia chat luong, khu vuc SAU CR - khac man hinh preview truoc CR o CellQosHistoryChart.tsx)
-const QosEvaluationChart: React.FC<QosEvaluationChartProps> = ({ affectedCells, crDateGmt7, chiSo = "qos" }) => {
+const QosEvaluationChart: React.FC<QosEvaluationChartProps> = ({
+  affectedCells,
+  crDateGmt7,
+  chiSo = "qos",
+  sessionId,
+}) => {
   const nhanChiSo = CHI_SO_LABEL[chiSo];
+
+  // === NGUONG LAY TU BE, KHONG hardcode ===
+  // Endpoint chart dang goi (/qos/{cell}?from=&to=) CHI tra chuoi diem theo ngay, KHONG co nguong -
+  // nguong chi nam o /qos-cells va /qoe-cells. Doc DUNG CACHE ma bang muc 5 da nap (enabled:false,
+  // queryFn nem loi) thay vi tu goi: moi lan goi /qos-cells bat BE goi CTS cho tung cell (~34 request
+  // cho 17 cell), goi them 1 lan chi de lay 3 con so la khong dang.
+  // He qua: duong san chi ve khi nguoi dung DA mo bang muc 5. Khong co thi chart van dung, chi thieu
+  // duong tham chieu - CHAP NHAN duoc, va tot hon HAN cach cu (ve duong theo hang so hardcode 0.2 da
+  // troi khoi BE, tuc ve SAI ma van trong nhu dung).
+  const { data: cellsData } = useQuery<QosCellsResponse | QoeCellsResponse>({
+    queryKey: ["r012", `${chiSo}-cells`, sessionId],
+    queryFn: () => Promise.reject(new Error("chi doc cache, khong tu goi")),
+    enabled: false,
+  });
+  const nguong = cellsData?.nguong;
   // null nghia la chua chon cell nao
   const [selectedCell, setSelectedCell] = useState<string | null>(null);
 
@@ -127,6 +152,24 @@ const QosEvaluationChart: React.FC<QosEvaluationChartProps> = ({ affectedCells, 
                   />
                   {/* Ngay chua co du lieu (qos=null) -> Recharts KHONG ve shape cho cot do ("cot rong").
                       radius: bo goc TREN cot cho mem mai hon cot vuong mac dinh cua Recharts (Viec 3) */}
+                  {/* Duong SAN chat luong - ve o dung nguong.muc_toi_thieu BE tra ve. Day la nguong
+                      DUY NHAT ve duoc tren truc nay: truc Y la thang diem 1-5 nen muc_toi_thieu (3.0)
+                      la mot muc diem; con delta_toi_da la HIEU giua 2 trung binh, khong phai mot muc
+                      diem nen khong ve thanh duong ngang duoc - no hien o khoi so lieu ben duoi.
+                      Khong co nguong (chua mo bang muc 5) thi khong ve - KHONG doan mot so nao */}
+                  {nguong && (
+                    <ReferenceLine
+                      y={nguong.muc_toi_thieu}
+                      stroke={R012_COLORS.dangerRed}
+                      strokeDasharray="4 4"
+                      label={{
+                        value: `San ${nguong.muc_toi_thieu}`,
+                        position: "insideTopRight",
+                        fill: R012_COLORS.dangerRed,
+                        fontSize: 11,
+                      }}
+                    />
+                  )}
                   <Bar dataKey="qos" radius={[6, 6, 0, 0]} maxBarSize={40}>
                     {evaluation.chartData.map((entry) => (
                       <RechartsCell key={entry.dateKey} fill={GROUP_COLOR[entry.group]} />
@@ -166,7 +209,12 @@ const QosEvaluationChart: React.FC<QosEvaluationChartProps> = ({ affectedCells, 
               borderRadius: "8px",
             }}
           >
-            <div style={{ fontWeight: 600, marginBottom: "6px" }}>Ket qua danh gia (chenh lech TB truoc/sau CR)</div>
+            <div style={{ fontWeight: 600, marginBottom: "6px" }}>So lieu trung binh (truoc/sau CR)</div>
+            {/* KHONG con o "Ket luan" (05092026). Ket luan DAT/KHONG DAT chi do BE quyet dinh va hien o
+                bang muc 5 ngay ben duoi - chart tu ket luan bang ban sao nguong da lam FE lech BE 3 lan,
+                va lan cuoi se hien "DAT" ngay canh bang hien "KHONG DAT" cho CUNG mot cell.
+                3 con so duoi day GIU LAI vi chung la PHEP TINH thuan tuy (trung binh, hieu), khong dinh
+                gi den nguong. */}
             <div style={{ display: "flex", flexWrap: "wrap", gap: "24px", alignItems: "center" }}>
               <div>
                 <div style={{ fontSize: "0.8rem", color: "#595959" }}>TB {nhanChiSo} truoc CR (7 ngay)</div>
@@ -177,15 +225,15 @@ const QosEvaluationChart: React.FC<QosEvaluationChartProps> = ({ affectedCells, 
                 <strong>{evaluation.avgAfter !== null ? evaluation.avgAfter.toFixed(2) : "-"}</strong>
               </div>
               <div>
-                <div style={{ fontSize: "0.8rem", color: "#595959" }}>Chenh lech (truoc - sau)</div>
+                <div style={{ fontSize: "0.8rem", color: "#595959" }}>
+                  Chenh lech (truoc - sau)
+                  {/* Hien nguong BE ngay canh con so - de nguoi doc TU doi chieu. KHONG tu ket luan
+                      DAT/KHONG DAT o day: ket luan chi do BE quyet dinh va nam o bang muc 5 */}
+                  {nguong ? ` - nguong ${nguong.delta_toi_da}` : ""}
+                </div>
                 <strong>{evaluation.diff !== null ? evaluation.diff.toFixed(2) : "-"}</strong>
               </div>
-              <div>
-                <div style={{ fontSize: "0.8rem", color: "#595959" }}>Ket luan</div>
-                <Tag color={CONCLUSION_DISPLAY[evaluation.conclusion].color} style={{ fontSize: "0.9rem" }}>
-                  {CONCLUSION_DISPLAY[evaluation.conclusion].label}
-                </Tag>
-              </div>
+
             </div>
           </div>
         </>

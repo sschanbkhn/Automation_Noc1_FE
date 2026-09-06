@@ -34,6 +34,7 @@ import {
   SessionAffectedCellItem,
 } from "../../types";
 import { R012_COLORS } from "../../theme";
+import { moTaCuaSoBang, moTaSoNgay } from "../../helpers/cuaSoNgay";
 import { SortableHeaderCell } from "../../common/SortableHeaderCell";
 // dung LAI ham dat ten file export cua bang QoS (da export de khong phai nhan ban) - 2 bang xuat file
 // cung mot quy uoc ten thi ghep bao cao moi de
@@ -243,6 +244,13 @@ const QoeCellsTable: React.FC<QoeCellsTableProps> = ({ sessionId, affectedCells,
   }, [affectedCells]);
 
   const rows = useMemo(() => data?.data ?? [], [data?.data]);
+  // cua so ngay do BE tra o cap response - xem helpers/cuaSoNgay.ts.
+  // useMemo: object nay duoc dua vao deps cua useMemo "columns"; tao moi moi lan render se lam columns
+  // tinh lai lien tuc
+  const cuaSo = useMemo(
+    () => (data ? { ngayCr: data.ngay_cr, before: data.cua_so_before, after: data.cua_so_after } : null),
+    [data]
+  );
 
   const filteredRows = useMemo(
     () => rows.filter((r) => !ketQuaFilter || r.ket_qua === ketQuaFilter),
@@ -280,7 +288,7 @@ const QoeCellsTable: React.FC<QoeCellsTableProps> = ({ sessionId, affectedCells,
         // Tooltip kem SO NGAY co du lieu that: "3.80" tinh tu 7 ngay va "3.80" tinh tu 1 ngay dang tin cay
         // rat khac nhau, ma nhin con so tran thi khong the biet duoc
         cell: (info) => (
-          <Tooltip title={`Tinh tu ${info.row.original.so_ngay_before} ngay co du lieu`}>
+          <Tooltip title={`Tinh tu ${moTaSoNgay(info.row.original.so_ngay_before, cuaSo?.before)} co du lieu`}>
             {soHoacGach(info.getValue())}
           </Tooltip>
         ),
@@ -288,7 +296,7 @@ const QoeCellsTable: React.FC<QoeCellsTableProps> = ({ sessionId, affectedCells,
       columnHelper.accessor("avg_after", {
         header: "TB sau CR",
         cell: (info) => (
-          <Tooltip title={`Tinh tu ${info.row.original.so_ngay_after} ngay co du lieu`}>
+          <Tooltip title={`Tinh tu ${moTaSoNgay(info.row.original.so_ngay_after, cuaSo?.after)} co du lieu`}>
             {soHoacGach(info.getValue())}
           </Tooltip>
         ),
@@ -366,7 +374,7 @@ const QoeCellsTable: React.FC<QoeCellsTableProps> = ({ sessionId, affectedCells,
         },
       }),
     ],
-    [pagination, tramTheoCell, phieuByCell, phieuTuServer, handleXacNhanXuat]
+    [pagination, tramTheoCell, phieuByCell, phieuTuServer, handleXacNhanXuat, cuaSo]
   );
 
   const table = useReactTable({
@@ -420,6 +428,11 @@ const QoeCellsTable: React.FC<QoeCellsTableProps> = ({ sessionId, affectedCells,
   return (
     <div style={{ marginTop: "1.5rem" }}>
       <h4 style={{ margin: "0 0 0.5rem 0" }}>Danh gia QoE toan bo cell cua session ({rows.length})</h4>
+      {moTaCuaSoBang(cuaSo?.ngayCr, cuaSo?.before, cuaSo?.after) && (
+        <div style={{ color: "#8c8c8c", fontSize: "0.85rem", marginBottom: "0.5rem" }}>
+          {moTaCuaSoBang(cuaSo?.ngayCr, cuaSo?.before, cuaSo?.after)}
+        </div>
+      )}
 
       {rows.length === 0 ? (
         <Empty description="Session nay khong co cell nao de danh gia QoE" />
