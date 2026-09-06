@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from "react";
-import { Select, Spin, Alert, Empty } from "antd";
+import { Segmented, Select, Spin, Alert, Empty } from "antd";
 import { Bar, BarChart, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-import { useQosHistory } from "../../hooks/useQosHistory";
+// hook DUNG CHUNG cho ca 2 chi so - tu chuan hoa ten truong qoe->qos nen moi thu phia sau chi phai biet
+// 1 hinh dang. Truoc day file nay dung useQosHistory (chi QoS) nen man hinh xem truoc KHONG he co QoE
+import { useChiSoHistory, ChiSoChatLuong } from "../../hooks/useChiSoHistory";
 import { PreviewCrResponse, QosHistoryPoint } from "../../types";
 import { R012_COLORS } from "../../theme";
 // dinh dang thoi gian dung CHUNG toan module (ep UTC->GMT+7, khong phu thuoc TZ trinh duyet) - dung DUNG
@@ -23,6 +25,8 @@ dayjs.extend(timezone);
 // huong QoS HIEN TAI cua cell truoc khi quyet dinh trigger CR
 const QOS_DISPLAY_DAYS = 7;
 
+const CHI_SO_LABEL: Record<ChiSoChatLuong, string> = { qos: "QoS", qoe: "QoE" };
+
 interface CellQosHistoryChartProps {
   previewData: PreviewCrResponse;
 }
@@ -37,6 +41,7 @@ interface QosChartPoint {
   label: string; // "DD/MM" hien tren truc X
   qos: number | null; // null nghia la CHUA co du lieu ngay do (CTS thieu ngay) - GIU LAI diem null de cot do
   // hien RONG, khong bo qua ngay (giu truc X du 7 ngay lien tiep)
+  thieuDuLieu: boolean; // de dem/liet ke cac ngay thieu o chu thich duoi chart
 }
 
 // window [hom nay-7, hom nay-1] (Viec 1) - "hom nay" la ngay du kien CR (preview, CHUA trigger that), nen
@@ -69,8 +74,16 @@ function buildQosChartData(points: QosHistoryPoint[]): QosChartPoint[] {
     const dateKey = d.format("DD/MM/YYYY");
     result.push({
       dateKey,
-      label: d.format("DD/MM"),
+      label: byDateKey.has(dateKey) ? d.format("DD/MM") : `${d.format("DD/MM")}*`,
       qos: byDateKey.has(dateKey) ? (byDateKey.get(dateKey) as number) : null,
+      // Viec 3 - danh dau "*" NGAY TREN NHAN TRUC X cho ngay khong co du lieu.
+      // Recharts khong ve cot cho qos=null nen cho do da RONG san (dung y muon: giu cot rong de thay la
+      // thieu du lieu, KHONG ve 0 - ve 0 se bi doc thanh "QoS = 0 diem", te nhat co the, khac han
+      // "khong do duoc"). Nhung khoang trong khong tu noi duoc no la "thieu du lieu" hay "ngoai pham vi",
+      // ma tooltip thi phai re chuot moi thay. Dau "*" + chu thich duoi chart lam no doc duoc ngay tu xa.
+      // CHON cach nay thay vi ve cot xam nhat: mot cot co chieu cao - du mau gi - van bi doc thanh mot
+      // GIA TRI. Danh dau tren nhan thi khong the nham voi so lieu.
+      thieuDuLieu: !byDateKey.has(dateKey),
     });
   }
   return result;
@@ -78,7 +91,7 @@ function buildQosChartData(points: QosHistoryPoint[]): QosChartPoint[] {
 
 // chart QoS 7 ngay GAN NHAT (truoc ngay du kien trigger CR) cho 1 cell bi anh huong trong preview - Viec 1.
 // Component nay CHI nhan previewData da co san tu state cua TacDongTram.tsx (khong tu goi API preview),
-// chi tu goi rieng API lich su QoS (qua useQosHistory) khi NOC chon 1 cell tu dropdown
+// chi tu goi rieng API lich su chi so (qua useChiSoHistory) khi NOC chon 1 cell tu dropdown
 const CellQosHistoryChart: React.FC<CellQosHistoryChartProps> = ({ previewData }) => {
   // dropdown lay THANG tu cells_bi_anh_huong (TOAN BO cell bi anh huong trong preview - xem types/index.ts).
   // Dung Set loc trung theo cell_name phong truong hop trung ten
@@ -97,11 +110,17 @@ const CellQosHistoryChart: React.FC<CellQosHistoryChartProps> = ({ previewData }
   // null nghia la chua chon cell nao - dropdown "1 cell/lan" nen chi can 1 state don, khong phai mang
   const [selectedCell, setSelectedCell] = useState<string | null>(null);
 
+  // Chi so dang xem. DUNG CHUNG dropdown chon cell voi QoS - doi chi so KHONG lam mat cell dang chon,
+  // nguoi dung xem duoc ca 2 goc cua cung 1 cell ma khong phai chon lai
+  const [chiSo, setChiSo] = useState<ChiSoChatLuong>("qos");
+  const nhanChiSo = CHI_SO_LABEL[chiSo];
+
   // window tinh 1 LAN moi lan render (khong doi theo cell dang chon) - dung {from,to} (Gap 1 BE) thay vi
   // {days} de neo DUNG "hom nay-7 -> hom nay-1", KHONG phu thuoc dinh nghia "days neo vao hom qua" cua BE
   const { from, to } = useMemo(() => resolveQosWindow(), []);
 
-  const { data, isLoading, isError, error } = useQosHistory(selectedCell, { from, to });
+  // CUNG MOT CUA SO cho ca 2 chi so - CO CHU DICH, xem ghi chu ben duoi tieu de
+  const { data, isLoading, isError, error } = useChiSoHistory(chiSo, selectedCell, { from, to });
 
   const chartData = useMemo(() => (data ? buildQosChartData(data.data) : []), [data]);
 
@@ -109,14 +128,26 @@ const CellQosHistoryChart: React.FC<CellQosHistoryChartProps> = ({ previewData }
 
   return (
     <div>
-      <h4 style={{ margin: "0 0 0.5rem 0" }}>Chart QoS 7 ngay gan nhat</h4>
+      <h4 style={{ margin: "0 0 0.5rem 0" }}>Chart {nhanChiSo} 7 ngay gan nhat</h4>
+
+      {/* Segmented dat TREN dropdown: doi chi so la doi NGUON du lieu cua ca chart, con dropdown chi doi
+          cell - de nguoc thu tu se lam nguoi dung tuong chi so thuoc ve cell dang chon */}
+      <Segmented
+        value={chiSo}
+        onChange={(v) => setChiSo(v as ChiSoChatLuong)}
+        options={[
+          { value: "qos", label: "QoS" },
+          { value: "qoe", label: "QoE" },
+        ]}
+        style={{ marginBottom: "0.5rem" }}
+      />
 
       <label htmlFor="r012-qos-cell-select" style={{ display: "block", fontWeight: 600, marginBottom: "4px" }}>
-        Chon cell de xem QoS:
+        Chon cell de xem {nhanChiSo}:
       </label>
       <Select
         id="r012-qos-cell-select"
-        placeholder="Chon 1 cell de xem QoS lich su"
+        placeholder={`Chon 1 cell de xem ${nhanChiSo} lich su`}
         style={{ width: 340, marginBottom: "1rem" }}
         value={selectedCell ?? undefined}
         onChange={(value: string) => setSelectedCell(value)}
@@ -144,7 +175,7 @@ const CellQosHistoryChart: React.FC<CellQosHistoryChartProps> = ({ previewData }
 
       {selectedCell !== null && !isLoading && !isError && !hasAnyData && (
         <Empty
-          description={`Chua co du lieu QoS cho ${selectedCell} trong 7 ngay gan day`}
+          description={`Chua co du lieu ${nhanChiSo} cho ${selectedCell} trong 7 ngay gan day`}
           image={Empty.PRESENTED_IMAGE_SIMPLE}
         />
       )}
@@ -160,7 +191,7 @@ const CellQosHistoryChart: React.FC<CellQosHistoryChartProps> = ({ previewData }
             {/* domain co dinh [0,5] theo dung thang diem QoS (yeu cau nghiep vu) */}
             <YAxis domain={[0, 5]} allowDecimals tickLine={false} axisLine={{ stroke: R012_COLORS.tableBorder }} />
             <Tooltip
-              formatter={(value: number | null) => [value === null ? "Chua co du lieu" : `${value} diem`, "QoS"]}
+              formatter={(value: number | null) => [value === null ? "Chua co du lieu" : `${value} diem`, nhanChiSo]}
               // cursor: highlight nhe khi hover (mac dinh Recharts la xam dam qua tuong phan) - dung lai
               // primaryPale (rat nhat) de hover khong lan at mau cot that
               cursor={{ fill: R012_COLORS.primaryPale }}
@@ -173,6 +204,23 @@ const CellQosHistoryChart: React.FC<CellQosHistoryChartProps> = ({ previewData }
             <Bar dataKey="qos" fill={R012_COLORS.chartPreview} radius={[6, 6, 0, 0]} maxBarSize={48} />
           </BarChart>
         </ResponsiveContainer>
+
+      )}
+      {/* Viec 3 - chu thich cho cac cot rong. Khoang trong tren chart khong tu noi duoc no la "thieu
+          du lieu" hay "ngoai pham vi"; dong nay noi ro CA ngay nao thieu LAN vi sao, doc duoc ma khong
+          phai re chuot tung cot.
+          KHONG dung tu "loi": du lieu do cham la binh thuong (CTS/CEM tong hop theo ngay, do that
+          07/09: QoS moi den 04/09, QoE den 05/09), khong co gi de di sua */}
+      {chartData.some((p) => p.thieuDuLieu) && (
+        <div style={{ color: "#8c8c8c", fontSize: "0.85rem", marginTop: "4px" }}>
+          * {chartData.filter((p) => p.thieuDuLieu).length}/{chartData.length} ngay chua co du lieu (
+          {chartData
+            .filter((p) => p.thieuDuLieu)
+            .map((p) => p.label.replace("*", ""))
+            .join(", ")}
+          ) - {nhanChiSo} tong hop theo ngay nen vai ngay gan nhat thuong chua ve kip. Cot de RONG, khong
+          phai 0 diem.
+        </div>
       )}
     </div>
   );

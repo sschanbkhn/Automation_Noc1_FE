@@ -386,33 +386,17 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
   const total = data?.total ?? 0;
 
   const columns = useMemo(() => {
+    // THU TU COT (07092026, yeu cau truc tiep user):
+    //   STT | Session | Trang thai | Ma phieu | Nguon | Cell anh huong | ID tram tat | Tram tat |
+    //   Thoi diem | Thao tac
+    // Doc tu TRAI sang di theo mach: phieu nay thuoc dau (Session) -> no ra sao (Trang thai, Ma phieu,
+    // Nguon) -> no ve cai gi (Cell anh huong, tram tat) -> khi nao -> lam gi.
     const baseColumns: any[] = [
       columnHelper.display({
         id: "stt",
         header: "STT",
         enableSorting: false, // STT la vi tri hien thi, khong phai field that -> sort khong co y nghia
         cell: (info) => (page - 1) * size + info.row.index + 1,
-      }),
-      columnHelper.accessor("cell_name", {
-        header: "Cell",
-        // nowrap o CSS bang da du cho ten cell dung khuon (~16-20 ky tu) nam gon 1 dong. maxWidth+ellipsis
-        // o day la DUONG LUI cho ten bat thuong dai: khong co no thi 1 ten dai se keo ca bang rong ra va
-        // day cac cot con lai ra ngoai vung nhin. Tooltip giu lai gia tri day du de khong mat thong tin
-        cell: (info) => (
-          <Tooltip title={info.getValue()}>
-            <span
-              style={{
-                display: "inline-block",
-                maxWidth: "220px",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                verticalAlign: "bottom",
-              }}
-            >
-              {info.getValue()}
-            </span>
-          </Tooltip>
-        ),
       }),
       columnHelper.accessor("trang_thai", {
         header: "Trang thai",
@@ -441,25 +425,6 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
               )}
             </div>
           );
-        },
-      }),
-      // Cot "Tram tat" - tram BI TAT cua CR sinh ra phieu nay (BE efd89d0 join san tram_id/tram_name).
-      // Phieu duoc xuat cho cell LAN CAN nen ten cell KHONG cho biet CR nao sinh ra no; truoc day muon
-      // biet phai mo tung dong ra xem cr_session_id roi tra cuu tiep.
-      // enableSorting:false - enum sort_by cua BE la id/cr_session_id/cell_name/trang_thai/created_at,
-      // KHONG co tram_id; gui sort_by ngoai enum se bi tra 422
-      columnHelper.display({
-        id: "tram_tat",
-        header: "Tram tat",
-        enableSorting: false,
-        cell: (info) => {
-          const r = info.row.original;
-          if (!r.tram_id && !r.tram_name) {
-            // phieu cu truoc dot BE bo sung 2 truong nay
-            return <span style={{ color: "#bfbfbf" }}>-</span>;
-          }
-          // OneLineCell nhu cac cot ten khac - chong ngat dong khi ten tram dai
-          return <OneLineCell value={r.tram_name ? `${r.tram_id} - ${r.tram_name}` : r.tram_id} />;
         },
       }),
       columnHelper.accessor("phieu_id", {
@@ -492,12 +457,70 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
           return <Tag>{NGUON_KHONG_DAT_LABELS[v] ?? v}</Tag>;
         },
       }),
+      columnHelper.accessor("cell_name", {
+        // "Cell anh huong" chu khong phai "Cell": phieu duoc xuat cho cell LAN CAN bi anh huong boi CR,
+        // khong phai cell cua tram bi tat. Ten cu de doc nham thanh "cell cua tram nay"
+        header: "Cell anh huong",
+        // nowrap o CSS bang da du cho ten cell dung khuon (~16-20 ky tu) nam gon 1 dong. maxWidth+ellipsis
+        // o day la DUONG LUI cho ten bat thuong dai: khong co no thi 1 ten dai se keo ca bang rong ra va
+        // day cac cot con lai ra ngoai vung nhin. Tooltip giu lai gia tri day du de khong mat thong tin
+        cell: (info) => (
+          <Tooltip title={info.getValue()}>
+            <span
+              style={{
+                display: "inline-block",
+                maxWidth: "220px",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                verticalAlign: "bottom",
+              }}
+            >
+              {info.getValue()}
+            </span>
+          </Tooltip>
+        ),
+      }),
+      // 2 cot "ID tram tat" + "Tram tat" - tram BI TAT cua CR sinh ra phieu nay (BE efd89d0 join san
+      // tram_id/tram_name). Phieu duoc xuat cho cell LAN CAN nen ten cell KHONG cho biet CR nao sinh ra no.
+      //
+      // TACH 2 COT (truoc day ghep thanh 1 chuoi "113517 - 4G-TTI047M-HNI"): BE tra RIENG 2 truong, FE
+      // ghep lai roi lai bat nguoi doc tu tach ra bang mat. Tach ra thi doc/loc/copy tung gia tri deu de
+      // hon, va ma tram (6 ky tu co dinh) khong bi ten tram dai keo theo.
+      // enableSorting:false ca hai - enum sort_by cua BE la id/cr_session_id/cell_name/trang_thai/
+      // created_at, KHONG co tram_id/tram_name; gui sort_by ngoai enum se bi tra 422
+      columnHelper.display({
+        id: "tram_tat_id",
+        header: "ID tram tat",
+        enableSorting: false,
+        cell: (info) => {
+          const v = info.row.original.tram_id;
+          // phieu cu truoc dot BE bo sung 2 truong nay
+          return v ?? <span style={{ color: "#bfbfbf" }}>-</span>;
+        },
+      }),
+      columnHelper.display({
+        id: "tram_tat_ten",
+        header: "Tram tat",
+        enableSorting: false,
+        cell: (info) => {
+          const v = info.row.original.tram_name;
+          if (!v) {
+            return <span style={{ color: "#bfbfbf" }}>-</span>;
+          }
+          // OneLineCell nhu cac cot ten khac - chong ngat dong khi ten tram dai
+          return <OneLineCell value={v} />;
+        },
+      }),
     ];
 
     // cot "Session" chi hien o tab TAT CA - khi dang xem trong chi tiet 1 session thi moi dong deu cung 1
-    // gia tri, hien them 1 cot lap lai la thua cho
+    // gia tri, hien them 1 cot lap lai la thua cho.
+    // splice(1,0,...) chu khong push: cot nay phai nam o VI TRI 2 (ngay sau STT) - day la thu dau tien
+    // nguoi truc doi chieu khi truy mot phieu. push se day no xuong cuoi nhu ban cu
     if (sessionId === undefined) {
-      baseColumns.push(
+      baseColumns.splice(
+        1,
+        0,
         columnHelper.accessor("cr_session_id", {
           header: "Session",
           cell: (info) => info.getValue() ?? "-",
