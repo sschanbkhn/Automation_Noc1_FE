@@ -113,6 +113,15 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
   // isLoading/isError/error dung de hien loading/error state ngay canh nut, khong can state rieng
   const previewMutation = usePreview();
 
+  // BE R012 tra {error_code, message, session_id} qua DomainError handler -> doc "message" TRUOC.
+  // "detail" la format mac dinh cua FastAPI, chi xuat hien voi loi CHUA qua handler (vd validate Pydantic)
+  // va la MANG OBJECT -> de fallback sau, tranh hien [object Object].
+  // (3 cho khac trong FE dang dat detail truoc - se ra soat rieng, khong sua trong commit nay.)
+  const previewErrorMessage =
+    (previewMutation.error as any)?.response?.data?.message ||
+    (previewMutation.error as any)?.response?.data?.detail ||
+    (previewMutation.error as Error)?.message;
+
   // khai bao cot bang dung DUNG cac field co that trong StationItem (types/index.ts) - khong bia them cot
   // STT khong phai field tu BE, chi la so thu tu hien thi tinh theo vi tri dong + trang hien tai
   const columns = useMemo(
@@ -326,7 +335,7 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
               type="warning"
               message="Khong xem truoc duoc anh huong"
               description={
-                (previewMutation.error as Error)?.message ||
+                previewErrorMessage ||
                 "Tram co the khong co tram lan can, hoac CDS khong tra du lieu. Vui long thu lai."
               }
               style={{ marginTop: "0.5rem" }}
