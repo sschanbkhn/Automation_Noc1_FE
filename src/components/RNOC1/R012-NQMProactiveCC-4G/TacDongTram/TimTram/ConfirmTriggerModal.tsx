@@ -4,6 +4,8 @@ import { triggerCr } from "../../services/R012Service";
 import { StationItem, TriggerCrRequest } from "../../types";
 // token mau xanh duong dung chung toan module - dong bo mau modal nay voi phan con lai (Viec 1/2)
 import { R012_COLORS } from "../../theme";
+// doc message loi THAT tu BE thay vi loi chung cua axios - xem WHY day du trong chinh file do
+import { layThongBaoLoi } from "../../helpers/layThongBaoLoi";
 
 // props nhan tu TacDongTram.tsx: open/onClose de dieu khien hien/an modal, station la tram dang duoc chon o Zone A
 // TacDongTram.tsx la noi giu state chung nay vi ca StationSearchGrid va ConfirmTriggerModal deu can biet den no
@@ -52,8 +54,9 @@ const ConfirmTriggerModal: React.FC<ConfirmTriggerModalProps> = ({ open, station
       message.success(response.message || "Da kich hoat CR thanh cong");
       onClose();
     } catch (error) {
-      // loi trigger that bai phai hien ro cho NOC biet, khong duoc de UI im lang hoac crash
-      message.error((error as Error)?.message || "Trigger CR that bai, vui long thu lai");
+      // loi trigger that bai phai hien ro cho NOC biet, khong duoc de UI im lang hoac crash. GOP ve ham
+      // dung chung layThongBaoLoi (27092026) - xem WHY day du trong helpers/layThongBaoLoi.ts
+      message.error(layThongBaoLoi(error, "Trigger CR that bai, vui long thu lai"));
     } finally {
       setSubmitting(false);
     }

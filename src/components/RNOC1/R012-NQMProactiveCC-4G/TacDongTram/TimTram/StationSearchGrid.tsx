@@ -18,6 +18,8 @@ import { usePreview } from "../../hooks/usePreview";
 import { StationItem, StationsQueryParams, PreviewCrResponse } from "../../types";
 // token mau dung chung toan module - xem theme.ts de biet ly do chon tung gia tri
 import { R012_COLORS } from "../../theme";
+// doc message loi THAT tu BE thay vi loi chung cua axios - xem WHY day du trong chinh file do
+import { layThongBaoLoi } from "../../helpers/layThongBaoLoi";
 
 // props nhan tu TacDongTram.tsx: ham nay duoc goi khi NOC bam nut "Trigger CR" cho 1 tram
 // TacDongTram.tsx se dung ham nay de mo ConfirmTriggerModal va truyen dung station da chon xuong modal
@@ -113,14 +115,13 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
   // isLoading/isError/error dung de hien loading/error state ngay canh nut, khong can state rieng
   const previewMutation = usePreview();
 
-  // BE R012 tra {error_code, message, session_id} qua DomainError handler -> doc "message" TRUOC.
-  // "detail" la format mac dinh cua FastAPI, chi xuat hien voi loi CHUA qua handler (vd validate Pydantic)
-  // va la MANG OBJECT -> de fallback sau, tranh hien [object Object].
-  // (3 cho khac trong FE dang dat detail truoc - se ra soat rieng, khong sua trong commit nay.)
-  const previewErrorMessage =
-    (previewMutation.error as any)?.response?.data?.message ||
-    (previewMutation.error as any)?.response?.data?.detail ||
-    (previewMutation.error as Error)?.message;
+  // GOP ve ham dung chung layThongBaoLoi (helpers/layThongBaoLoi.ts) - truoc day tu doc response.data.message/
+  // detail rieng o day, gio dung CHUNG logic voi moi cho khac trong module (27092026). Chuoi mac dinh GIU
+  // NGUYEN y het truoc khi gop, truyen qua tham so macDinh thay vi ghep bang `||` o noi goi
+  const previewErrorMessage = layThongBaoLoi(
+    previewMutation.error,
+    "Tram co the khong co tram lan can, hoac CDS khong tra du lieu. Vui long thu lai."
+  );
 
   // khai bao cot bang dung DUNG cac field co that trong StationItem (types/index.ts) - khong bia them cot
   // STT khong phai field tu BE, chi la so thu tu hien thi tinh theo vi tri dong + trang hien tai
@@ -230,7 +231,7 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
         <Alert
           type="error"
           message="Khong tai duoc danh sach tram"
-          description={(error as Error)?.message || "Loi khong xac dinh"}
+          description={layThongBaoLoi(error, "Loi khong xac dinh")}
           style={{ marginBottom: "1rem" }}
         />
       )}
@@ -334,10 +335,7 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
             <Alert
               type="warning"
               message="Khong xem truoc duoc anh huong"
-              description={
-                previewErrorMessage ||
-                "Tram co the khong co tram lan can, hoac CDS khong tra du lieu. Vui long thu lai."
-              }
+              description={previewErrorMessage}
               style={{ marginTop: "0.5rem" }}
               showIcon
             />

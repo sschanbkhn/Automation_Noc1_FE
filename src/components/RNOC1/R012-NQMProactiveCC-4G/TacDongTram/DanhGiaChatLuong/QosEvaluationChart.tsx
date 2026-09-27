@@ -5,6 +5,8 @@ import { Dayjs } from "dayjs";
 import { useQosHistory } from "../../hooks/useQosHistory";
 import { SessionAffectedCellItem } from "../../types";
 import { R012_COLORS } from "../../theme";
+// doc message loi THAT tu BE thay vi loi chung cua axios - xem WHY day du trong chinh file do
+import { layThongBaoLoi } from "../../helpers/layThongBaoLoi";
 import { DayGroup, QosConclusion, buildQosEvaluation, resolveQosWindow } from "./qosEvaluation";
 
 const GROUP_COLOR: Record<DayGroup, string> = {
@@ -86,7 +88,7 @@ const QosEvaluationChart: React.FC<QosEvaluationChartProps> = ({ affectedCells, 
         <Alert
           type="error"
           message="Khong tai duoc QoS"
-          description={(error as Error)?.message || "Loi khong xac dinh"}
+          description={layThongBaoLoi(error, "Loi khong xac dinh")}
         />
       )}
 

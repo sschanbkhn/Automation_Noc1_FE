@@ -24,6 +24,8 @@ import { CR_STATUS_COLOR } from "./crSessionStatus";
 import { R012_COLORS } from "../theme";
 // dinh dang thoi gian dung CHUNG toan module (ep UTC->GMT+7) - xem ly do trong file helper
 import { formatDateTime } from "../helpers/formatDateTime";
+// doc message loi THAT tu BE thay vi loi chung cua axios - xem WHY day du trong chinh file do
+import { layThongBaoLoi } from "../helpers/layThongBaoLoi";
 
 const { RangePicker } = DatePicker;
 
@@ -263,7 +265,7 @@ const SessionHistoryList: React.FC = () => {
         <Alert
           type="error"
           message="Khong tai duoc lich su CR"
-          description={(error as Error)?.message || "Loi khong xac dinh"}
+          description={layThongBaoLoi(error, "Loi khong xac dinh")}
           style={{ marginBottom: "1rem" }}
         />
       )}

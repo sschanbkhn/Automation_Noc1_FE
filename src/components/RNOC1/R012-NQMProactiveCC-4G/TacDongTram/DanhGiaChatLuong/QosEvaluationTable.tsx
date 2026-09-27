@@ -16,6 +16,8 @@ import * as XLSX from "xlsx";
 import { Dayjs } from "dayjs";
 import { PhieuHistoryItem, PhieuHistoryResponse, SessionAffectedCellItem } from "../../types";
 import { R012_COLORS } from "../../theme";
+// doc message loi THAT tu BE thay vi loi chung cua axios - xem WHY day du trong chinh file do
+import { layThongBaoLoi } from "../../helpers/layThongBaoLoi";
 import { SortableHeaderCell } from "../../common/SortableHeaderCell";
 import { getLichSuPhieu, xuatPhieu } from "../../services/R012Service";
 import { CellEvalRow, QosConclusion, evaluateAllAffectedCells, resolveQosWindow } from "./qosEvaluation";
@@ -173,7 +175,8 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
       } else if (status === 503) {
         message.error("Loi ket noi CTS");
       } else {
-        message.error(error?.response?.data?.detail || error?.response?.data?.message || "Xuat phieu that bai, vui long thu lai");
+        // GOP ve ham dung chung layThongBaoLoi (27092026) - xem WHY day du trong helpers/layThongBaoLoi.ts
+        message.error(layThongBaoLoi(error, "Xuat phieu that bai, vui long thu lai"));
       }
     }
     // sessionId la prop, khong doi trong 1 lan mo bang - deps [] + sessionId la du (khong can setPhieuByCell,

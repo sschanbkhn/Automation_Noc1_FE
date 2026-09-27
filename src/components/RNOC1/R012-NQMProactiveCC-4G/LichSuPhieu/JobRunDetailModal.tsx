@@ -11,6 +11,8 @@ import {
 import { R012_COLORS } from "../theme";
 // dinh dang thoi gian dung CHUNG toan module (ep UTC->GMT+7) - xem ly do trong file helper
 import { formatDateTime } from "../helpers/formatDateTime";
+// doc message loi THAT tu BE thay vi loi chung cua axios - xem WHY day du trong chinh file do
+import { layThongBaoLoi } from "../helpers/layThongBaoLoi";
 import { JOB_RUN_STATUS_COLORS } from "./jobRunStatus";
 // mau Tag ket qua xuat phieu tung cell trong chi_tiet - DUNG LAI bang mau cua phieu (SUCCESS/FAILED/...)
 // thay vi tu dinh nghia bang thu 3, vi day chinh la gia tri trang_thai do XuatPhieuUseCase tra ve, y het
@@ -297,7 +299,7 @@ const JobRunDetailModal: React.FC<JobRunDetailModalProps> = ({ jobRunId, onClose
         <Alert
           type="error"
           message="Khong tai duoc chi tiet luot chay"
-          description={(error as Error)?.message || "Loi khong xac dinh"}
+          description={layThongBaoLoi(error, "Loi khong xac dinh")}
         />
       )}
 

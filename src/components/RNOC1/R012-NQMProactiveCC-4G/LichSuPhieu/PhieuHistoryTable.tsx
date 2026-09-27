@@ -32,6 +32,8 @@ import { PhieuHistoryItem, PhieuHistoryResponse } from "../types";
 import { R012_COLORS } from "../theme";
 // dinh dang thoi gian dung CHUNG toan module (ep UTC->GMT+7) - xem ly do trong file helper
 import { formatDateTime } from "../helpers/formatDateTime";
+// doc message loi THAT tu BE thay vi loi chung cua axios - xem WHY day du trong chinh file do
+import { layThongBaoLoi } from "../helpers/layThongBaoLoi";
 import { PHIEU_STATUS_COLORS, PHIEU_STATUS_FILTER_OPTIONS, PHIEU_STATUS_LABELS } from "./phieuStatus";
 import PhieuDetailModal from "./PhieuDetailModal";
 
@@ -208,9 +210,8 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
         } else if (status === 503) {
           message.error("Loi ket noi CTS");
         } else {
-          message.error(
-            error?.response?.data?.detail || error?.response?.data?.message || "Xuat phieu that bai, vui long thu lai"
-          );
+          // GOP ve ham dung chung layThongBaoLoi (27092026) - xem WHY day du trong helpers/layThongBaoLoi.ts
+          message.error(layThongBaoLoi(error, "Xuat phieu that bai, vui long thu lai"));
         }
       } finally {
         // finally (khong phai dat o ca 2 nhanh): du thanh cong hay loi thi nut cung phai mo khoa lai
@@ -483,7 +484,7 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
         <Alert
           type="error"
           message="Khong tai duoc lich su phieu"
-          description={(error as Error)?.message || "Loi khong xac dinh"}
+          description={layThongBaoLoi(error, "Loi khong xac dinh")}
           style={{ marginBottom: "1rem" }}
         />
       )}

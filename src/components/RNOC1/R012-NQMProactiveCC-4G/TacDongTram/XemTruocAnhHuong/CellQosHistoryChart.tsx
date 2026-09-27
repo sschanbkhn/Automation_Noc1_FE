@@ -11,6 +11,8 @@ import { R012_COLORS } from "../../theme";
 // helper nay de convert timestamp that tu BE, KHONG tu viet lai logic UTC->GMT+7 lan 2 (xem ly do trong
 // file helper: BE tra field khong dong nhat co/khong co hau to "Z")
 import { formatDateTime } from "../../helpers/formatDateTime";
+// doc message loi THAT tu BE thay vi loi chung cua axios - xem WHY day du trong chinh file do
+import { layThongBaoLoi } from "../../helpers/layThongBaoLoi";
 
 // tu extend lai plugin ngay trong file nay (KHONG dua vao side-effect import formatDateTime.ts da extend san)
 // de file nay tu chu, khong phu thuoc thu tu import - dayjs.extend goi lai nhieu lan van an toan (idempotent)
@@ -138,7 +140,7 @@ const CellQosHistoryChart: React.FC<CellQosHistoryChartProps> = ({ previewData }
         <Alert
           type="error"
           message="Khong tai duoc QoS"
-          description={(error as Error)?.message || "Loi khong xac dinh"}
+          description={layThongBaoLoi(error, "Loi khong xac dinh")}
         />
       )}
 
