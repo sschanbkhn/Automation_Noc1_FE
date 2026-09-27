@@ -438,7 +438,16 @@ export interface JobRunListItem {
 // hien JSON tho khi gap hinh dang la (xem JobRunDetailModal.tsx)
 export interface JobRunCellDaXuLy {
   cell_name: string;
-  do_te: number; // chenh lech (TB truoc CR - TB sau CR), cang lon cang te -> uu tien xuat phieu truoc
+  // chenh lech (TB truoc CR - TB sau CR). LOI THOI phan "cang lon cang te -> uu tien xuat phieu truoc"
+  // (09/2026, BE doi thu tu sang khoa_uu_tien_xuat_phieu()): do_te GIO CHI CON la so bao cao, KHONG con
+  // quyet dinh thu tu xuat phieu nua - thu tu that su dua vao nhom truoc, roi do_giam, roi avg_after (xem
+  // domain/services/evaluation_service.py::khoa_uu_tien_xuat_phieu ben BE). Giu lai field nay vi BE van tra,
+  // va cell nhanh LOI (dong 749) van chi ghi duoc do_te, khong co nhom/do_giam
+  do_te: number;
+  // 2 field MOI (09/2026) - THAT SU quyet dinh thu tu xuat phieu, thay cho do_te. OPTIONAL vi job_run_log
+  // cu (chay truoc 09/2026) KHONG co 2 truong nay - FE phai chiu duoc undefined
+  nhom?: number; // 0 = co chi so TB sau < 3.0 (duoi muc toi thieu, uu tien tuyet doi), 1 = con lai
+  do_giam?: number; // muc tut LON NHAT giua QoS va QoE (max(0, truoc - sau) cua 2 chi so)
   // SUCCESS|FAILED|DAT_KHONG_XUAT (trang_thai tra ve tu XuatPhieuUseCase.execute, DRY_RUN da bi bo), HOAC chuoi
   // "LOI: <mo ta>" khi goi xuat phieu nem exception (dong 749) - nen KHONG khai bao union cung o day
   ket_qua: string;
@@ -450,6 +459,11 @@ export interface JobRunCellDaXuLy {
 export interface JobRunCellVuotGioiHan {
   cell_name: string;
   do_te: number;
+  // 2 field MOI (09/2026) - THAT SU quyet dinh thu tu xuat phieu, thay cho do_te (BE ghi CUNG khoa
+  // uu_tien_xuat_phieu() cho ca nhanh nay, xem xuat_phieu_use_case.py dong 1884-1887). OPTIONAL vi
+  // job_run_log cu (chay truoc 09/2026) KHONG co 2 truong nay - FE phai chiu duoc undefined
+  nhom?: number; // 0 = co chi so TB sau < 3.0 (duoi muc toi thieu, uu tien tuyet doi), 1 = con lai
+  do_giam?: number; // muc tut LON NHAT giua QoS va QoE (max(0, truoc - sau) cua 2 chi so)
 }
 
 // 1 phan tu cua chi_tiet.sessions - co DUNG 2 dang:

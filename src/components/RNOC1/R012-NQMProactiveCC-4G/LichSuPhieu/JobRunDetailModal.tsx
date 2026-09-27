@@ -59,6 +59,21 @@ const groupTitleStyle: React.CSSProperties = {
 const formatDoTe = (value: number | undefined): string =>
   typeof value === "number" ? value.toFixed(3) : "-";
 
+// nhom/do_giam (09/2026) - 2 truong THAT SU quyet dinh thu tu xuat phieu, thay cho do_te (xem comment
+// JobRunCellDaXuLy.do_te trong types/index.ts). OPTIONAL: job_run_log cu (truoc 09/2026) khong co, hien "—"
+const formatNhom = (nhom: number | undefined): string => {
+  if (nhom === 0) {
+    return "Duoi san";
+  }
+  if (nhom === 1) {
+    return "Tut nhieu";
+  }
+  return "—";
+};
+
+const formatDoGiam = (value: number | undefined): string =>
+  typeof value === "number" ? value.toFixed(3) : "—";
+
 // danh sach ten cell thuan (cell_da_co_phieu / cell_vuot_so_lan_thu deu la list[str]) - hien bang Tag cho
 // gon, day la nhung nhom thuong chi vai cell
 const CellNameTags: React.FC<{ names: string[]; color?: string }> = ({ names, color }) => (
@@ -142,7 +157,13 @@ const JobRunDetailModal: React.FC<JobRunDetailModalProps> = ({ jobRunId, onClose
                   <thead>
                     <tr>
                       <th>Cell</th>
-                      <th>Do te</th>
+                      {/* 2 cot MOI dat TRUOC "Do te (cu)": nhom/do_giam moi la thu THAT SU quyet dinh
+                          thu tu xuat phieu (xem formatNhom/formatDoGiam) - dat truoc de doc tu trai qua
+                          phai theo dung thu tu uu tien, "Do te (cu)" doi ten de nguoi doc biet no khong
+                          con quyet dinh thu tu nua, chi con la so bao cao */}
+                      <th>Nhom</th>
+                      <th>Do giam</th>
+                      <th>Do sut</th>
                       <th>Ket qua</th>
                       <th>Ma phieu</th>
                     </tr>
@@ -151,6 +172,8 @@ const JobRunDetailModal: React.FC<JobRunDetailModalProps> = ({ jobRunId, onClose
                     {cellDaXuLy.map((cell) => (
                       <tr key={cell.cell_name}>
                         <td>{cell.cell_name}</td>
+                        <td>{formatNhom(cell.nhom)}</td>
+                        <td>{formatDoGiam(cell.do_giam)}</td>
                         <td>{formatDoTe(cell.do_te)}</td>
                         <td>
                           {/* ket_qua co the la trang thai chuan (SUCCESS/FAILED/DAT_KHONG_XUAT)
@@ -175,13 +198,19 @@ const JobRunDetailModal: React.FC<JobRunDetailModalProps> = ({ jobRunId, onClose
                   <thead>
                     <tr>
                       <th>Cell</th>
-                      <th>Do te</th>
+                      {/* dung LAI y het thu tu cot cua bang "Cell da xu ly" o tren: BE ghi nhom/do_giam
+                          CUNG mot khoa cho ca 2 nhanh (xuat_phieu_use_case.py dong 1884-1887) */}
+                      <th>Nhom</th>
+                      <th>Do giam</th>
+                      <th>Do sut</th>
                     </tr>
                   </thead>
                   <tbody>
                     {cellVuot.map((cell) => (
                       <tr key={cell.cell_name}>
                         <td>{cell.cell_name}</td>
+                        <td>{formatNhom(cell.nhom)}</td>
+                        <td>{formatDoGiam(cell.do_giam)}</td>
                         <td>{formatDoTe(cell.do_te)}</td>
                       </tr>
                     ))}
