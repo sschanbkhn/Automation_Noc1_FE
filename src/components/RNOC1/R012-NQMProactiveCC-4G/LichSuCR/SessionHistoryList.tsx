@@ -17,6 +17,9 @@ import debounce from "lodash/debounce";
 import { getSessions } from "../services/R012Service";
 import { SessionListItem, SessionListResponse, SessionsQueryParams } from "../types";
 import EvaluationDetail from "./EvaluationDetail";
+// mau Tag theo trang thai session - GOP VE 1 hang so dung chung voi EvaluationDetail.tsx (27092026), xem
+// crSessionStatus.ts de biet day du 9 trang thai + ly do tach mau list/badge
+import { CR_STATUS_COLOR } from "./crSessionStatus";
 // token mau dung chung toan module - xem theme.ts de biet ly do chon tung gia tri
 import { R012_COLORS } from "../theme";
 // dinh dang thoi gian dung CHUNG toan module (ep UTC->GMT+7) - xem ly do trong file helper
@@ -27,20 +30,10 @@ const { RangePicker } = DatePicker;
 // khoi tao column helper rieng cho SessionListItem, giup TanStack Table bao dam kieu du lieu dung ngay luc khai bao cot
 const columnHelper = createColumnHelper<SessionListItem>();
 
-// mau Tag theo tung trang thai session - dung DUNG cac gia tri status that co the co tu BE
-// (domain/entities/cr_session.py CrStatus: RUNNING/DONE/FAILED, + EVAL_PENDING/EVALUATED tu evaluate_cr_use_case.py)
-const STATUS_COLORS: Record<string, string> = {
-  RUNNING: "processing",
-  DONE: "success",
-  FAILED: "error",
-  EVAL_PENDING: "warning",
-  EVALUATED: "success",
-  EVALUATING: "processing",
-};
-
 // options loc theo trang thai - CHI 3 gia tri DONE/FAILED/RUNNING theo yeu cau nghiep vu (khong dua het
-// tat ca status trong STATUS_COLORS o tren vao, vi EVAL_PENDING/EVALUATED/EVALUATING la trang thai danh gia
-// sau CR, ngoai pham vi bo loc nay). value "" nghia la "Tat ca" - KHONG gui param status len BE khi chon muc nay
+// tat ca trang thai trong CR_STATUS_COLOR (crSessionStatus.ts) vao, vi cac trang thai con lai la buoc
+// danh gia/xu ly sau CR, ngoai pham vi bo loc nay). value "" nghia la "Tat ca" - KHONG gui param status len
+// BE khi chon muc nay
 const STATUS_FILTER_OPTIONS = [
   { value: "", label: "Tat ca" },
   { value: "DONE", label: "DONE" },
@@ -183,7 +176,7 @@ const SessionHistoryList: React.FC = () => {
         header: "Trang thai",
         cell: (info) => {
           const status = info.getValue();
-          return <Tag color={STATUS_COLORS[status] ?? "default"}>{status}</Tag>;
+          return <Tag color={CR_STATUS_COLOR[status]?.list ?? "default"}>{status}</Tag>;
         },
       }),
       columnHelper.accessor("executed_at", {

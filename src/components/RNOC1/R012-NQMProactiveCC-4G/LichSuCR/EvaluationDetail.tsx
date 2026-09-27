@@ -32,22 +32,14 @@ import PhieuHistoryTable from "../LichSuPhieu/PhieuHistoryTable";
 import { R012_COLORS } from "../theme";
 // dinh dang thoi gian dung CHUNG toan module (ep UTC->GMT+7) - xem ly do trong file helper
 import { formatDateTime } from "../helpers/formatDateTime";
+// mau badge trang thai - GOP VE 1 hang so dung chung voi SessionHistoryList.tsx (27092026), xem
+// crSessionStatus.ts de biet day du 9 trang thai + ly do tach mau list/badge (DONE/EVALUATED/FAILED dung
+// mau KHAC voi bang danh sach, CO CHU DICH - xem comment trong file do)
+import { CR_STATUS_COLOR } from "./crSessionStatus";
 
 interface EvaluationDetailProps {
   sessionId: number | null;
 }
-
-// mau badge trang thai: DONE/EVALUATED dung xanh duong de dong bo voi theme chung cua modal.
-// FAILED CO Y GIU MAU DO (khong doi thanh xanh) vi day la trang thai loi can NOC nhan biet ngay bang mat -
-// neu doi thanh xanh se mat tin hieu canh bao, phan tac dung voi muc dich cua mau badge trang thai
-const STATUS_TAG_COLOR: Record<string, string> = {
-  DONE: "blue",
-  EVALUATED: "blue",
-  FAILED: "red",
-  RUNNING: "processing",
-  EVAL_PENDING: "warning",
-  EVALUATING: "processing",
-};
 
 const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
   // tu goi API rieng theo sessionId (khong nhan du lieu san tu SessionHistoryList) - giu component doc lap,
@@ -115,7 +107,7 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
           <Descriptions.Item label="Hanh dong">{data.action}</Descriptions.Item>
           {/* badge mau thay cho text thuong, dung DUNG gia tri status that tu BE (khong bia them gia tri) */}
           <Descriptions.Item label="Trang thai">
-            <Tag color={STATUS_TAG_COLOR[data.status] ?? "default"}>{data.status}</Tag>
+            <Tag color={CR_STATUS_COLOR[data.status]?.badge ?? "default"}>{data.status}</Tag>
           </Descriptions.Item>
           <Descriptions.Item label="Thoi gian thuc thi">{formatDateTime(data.executed_at)}</Descriptions.Item>
           <Descriptions.Item label="Thoi gian danh gia">{formatDateTime(data.evaluated_at)}</Descriptions.Item>

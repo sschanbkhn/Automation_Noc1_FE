@@ -157,9 +157,9 @@ const JobRunDetailModal: React.FC<JobRunDetailModalProps> = ({ jobRunId, onClose
                   <thead>
                     <tr>
                       <th>Cell</th>
-                      {/* 2 cot MOI dat TRUOC "Do te (cu)": nhom/do_giam moi la thu THAT SU quyet dinh
+                      {/* 2 cot MOI dat TRUOC "Do sut": nhom/do_giam moi la thu THAT SU quyet dinh
                           thu tu xuat phieu (xem formatNhom/formatDoGiam) - dat truoc de doc tu trai qua
-                          phai theo dung thu tu uu tien, "Do te (cu)" doi ten de nguoi doc biet no khong
+                          phai theo dung thu tu uu tien, "Do sut" doi ten de nguoi doc biet no khong
                           con quyet dinh thu tu nua, chi con la so bao cao */}
                       <th>Nhom</th>
                       <th>Do giam</th>
