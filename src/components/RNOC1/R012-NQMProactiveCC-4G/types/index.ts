@@ -281,6 +281,14 @@ export interface CrCellItem {
   rsboost_moi: number | null; // gia tri rsboost du kien sau CR (step chuan), co the null theo schema
   qrxlevmin_cu: number | null; // gia tri qrxlevmin hien tai (truoc CR), co the null theo schema
   qrxlevmin_moi: number | null; // gia tri qrxlevmin du kien sau CR, co the null theo schema
+  // 2 field MOI (quyet dinh BE 03/10/2026, luat chon cell CR moi thay band theo huong_id) - OPTIONAL:
+  // BE tren .196:8080 HIEN CHUA CO 2 truong nay (da doi chieu openapi.json that 04/10/2026 - 0 hit ca hai
+  // ten). FE phai chiu duoc undefined cho den khi .196 deploy lai.
+  band?: string | null; // band CUA CHINH CELL LAN CAN nay ("1800 F1"/"1800 F2", suy tu LNCEL trong DN cua
+  // no) - KHONG phai band cua huong tram tat. Giai thich VI SAO cell nay duoc/khong duoc chon (vd 2 cell
+  // cung priority nhung khac band)
+  sector?: number | null; // so sector CUA TRAM TAT ma cell nay dang lam lan can (Y = huong_id % 10 ben BE,
+  // vd 1/2/4) - KHAC huong_id (id huong rieng cua chinh cell lan can)
 }
 
 // dung cho POST /api/v1/cr/preview, field cell_ngoai_pham_vi_chi_tiet - ban CHI TIET cua cell_ngoai_pham_vi

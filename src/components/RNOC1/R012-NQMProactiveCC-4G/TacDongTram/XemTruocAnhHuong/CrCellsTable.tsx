@@ -41,6 +41,10 @@ interface CrCellRow {
   rsboost_moi: number | null;
   qrxlevmin_cu: number | null;
   qrxlevmin_moi: number | null;
+  // 2 field MOI (quyet dinh BE 03/10/2026) - xem comment day du o CrCellItem (types/index.ts). Optional:
+  // BE .196 hien chua deploy, co the undefined
+  band?: string | null;
+  sector?: number | null;
 }
 
 const columnHelper = createColumnHelper<CrCellRow>();
@@ -67,6 +71,8 @@ const CrCellsTable: React.FC<CrCellsTableProps> = ({ previewData }) => {
         rsboost_moi: c.rsboost_moi,
         qrxlevmin_cu: c.qrxlevmin_cu,
         qrxlevmin_moi: c.qrxlevmin_moi,
+        band: c.band,
+        sector: c.sector,
       })),
     [previewData]
   );
@@ -98,9 +104,19 @@ const CrCellsTable: React.FC<CrCellsTableProps> = ({ previewData }) => {
         cell: (info) => <OneLineCell value={info.getValue()} />,
       }),
       columnHelper.accessor("tram_id", { header: "Ma tram (lan can)" }),
-      columnHelper.accessor("huong_id", {
-        header: "Huong",
-        cell: (info) => info.getValue() ?? "-", // co the null theo schema CrCellItem
+      // Band CUA CHINH CELL LAN CAN ("1800 F1"/"1800 F2", suy tu LNCEL) - giai thich VI SAO cell nay
+      // duoc/khong duoc chon (vd 2 cell cung priority nhung khac band). "—" khi BE cu chua tra (optional)
+      columnHelper.accessor("band", {
+        header: "Band (cell lan can)",
+        cell: (info) => info.getValue() ?? "—",
+      }),
+      // Doi tu "Huong" (hien huong_id cua CHINH cell lan can - de nham la huong cua tram tat) sang
+      // "Sector (tram tat)" hien field "sector" MOI (Y = huong_id % 10 cua TRAM TAT, quyet dinh BE
+      // 03/10/2026) - dung dung cai nguoi dung can biet: cell nay dang lam lan can cho SECTOR NAO cua tram
+      // tat. "—" khi BE cu chua tra (optional)
+      columnHelper.accessor("sector", {
+        header: "Sector (tram tat)",
+        cell: (info) => info.getValue() ?? "—",
       }),
       columnHelper.accessor("action_type", {
         header: "Hanh dong",
@@ -147,14 +163,16 @@ const CrCellsTable: React.FC<CrCellsTableProps> = ({ previewData }) => {
     getPaginationRowModel: getPaginationRowModel(),
   });
 
-  // export TOAN BO rows (khong chi trang dang xem) - dung DUNG cot yeu cau: ma tram, cell_name, huong_id,
-  // action_type, priority, rsboost cu/moi, qrxlevmin cu/moi - gia tri so xuat "" (rong) khi null thay vi
-  // chu "-" de o Excel van la kieu so
+  // export TOAN BO rows (khong chi trang dang xem) - MIRROR dung cac cot dang hien tren bang (ma tram,
+  // cell_name, band, sector, action_type, priority, rsboost cu/moi, qrxlevmin cu/moi) - gia tri so xuat
+  // "" (rong) khi null thay vi chu "-" de o Excel van la kieu so. band/sector dung "-" (khong phai "—")
+  // giong quy uoc cac cot chuoi con lai trong export nay
   const handleExportExcel = () => {
     const exportRows = rows.map((r) => ({
       ma_tram: r.tram_id,
       cell_name: r.cell_name,
-      huong_id: r.huong_id ?? "-",
+      band: r.band ?? "-",
+      sector: r.sector ?? "-",
       action_type: r.action_type ?? "-",
       priority: r.priority ?? "",
       rsboost_cu: r.rsboost_cu ?? "",

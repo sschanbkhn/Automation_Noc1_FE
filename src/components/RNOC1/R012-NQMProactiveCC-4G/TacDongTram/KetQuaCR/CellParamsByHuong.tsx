@@ -43,6 +43,21 @@ function formatTimestampForFileName(date: Date): string {
   return `${dd}${mm}${yyyy}_${hh}${min}`;
 }
 
+// Suy SECTOR cua TRAM TAT tu huong_id (04/10/2026, yeu cau truc tiep user). huong_id BE tra dang chuoi
+// 2 ky tu "XY": X = ma band (rank uu tien, xem BAND_PRIORITY ben BE), Y = SECTOR cua TRAM TAT (Y = huong_id
+// % 10). Truoc day cot nay hien NGUYEN VAN huong_id (vd "52") - de nguoi xem tuong day la 1 con so co y
+// nghia khac han (vd nham thanh "band 2100" MHz) trong khi that ra chi la Y=2 (sector 2 cua tram tat) ghep
+// voi X=5 (band). Hien dung Y (sector) moi la thong tin nguoi van hanh can: "cell lan can nay dang bu cho
+// SECTOR NAO cua tram da tat".
+// null khi huong_id null (cell khong xac dinh duoc huong) HOAC parse that bai (du lieu la, phong thu).
+const tinhSectorTramTat = (huongId: string | null): number | null => {
+  if (!huongId) {
+    return null;
+  }
+  const so = Number(huongId);
+  return Number.isNaN(so) ? null : so % 10;
+};
+
 // xac dinh cap gia tri "truoc CR -> sau CR" DUNG theo action_type cua tung cell - 1 cell chi thuoc DUNG 1
 // loai tham so (rsboost HOAC qrxlevmin), khong phai luc nao cung co ca 2, nen phai chon dung cap de export
 // khong bi nham gia tri (vd cell rsboost thi khong dung nham cap qrxlevmin dang null)
@@ -64,9 +79,10 @@ const columnHelper = createColumnHelper<CellParamDetailItem>();
 // TOAN BO cell bat ke huong nao, thay vi phai doc rai rac nhieu bang nho
 const CellParamsByHuong: React.FC<CellParamsByHuongProps> = ({ cellParams, sessionId }) => {
   const [sorting, setSorting] = useState<SortingState>([
-    // mac dinh sort Huong tang dan roi Priority tang dan (Viec 2 yeu cau) - TanStack Table ho tro multi-sort
-    // qua thu tu phan tu trong mang SortingState, phan tu dau la tieu chi CHINH
-    { id: "huong_id", desc: false },
+    // mac dinh sort Sector tang dan roi Priority tang dan (Viec 2 yeu cau, doi tu "huong_id" sang "sector"
+    // 04/10/2026 - xem WHY o tinhSectorTramTat phia tren) - TanStack Table ho tro multi-sort qua thu tu
+    // phan tu trong mang SortingState, phan tu dau la tieu chi CHINH
+    { id: "sector", desc: false },
     { id: "priority", desc: false },
   ]);
   // Viec 5: phan trang mac dinh 5 dong/trang, selector 5/10/20/50 - giong cac bang khac trong module
@@ -77,13 +93,13 @@ const CellParamsByHuong: React.FC<CellParamsByHuongProps> = ({ cellParams, sessi
     setPagination((p) => ({ ...p, pageIndex: 0 }));
   }, [cellParams]);
 
-  // xuat TAT CA cell chung 1 sheet theo dung yeu cau - moi dong ung voi 1 cell, cot lay dung ten field yeu
-  // cau: huong_id, cell_name, param_type, gia_tri_cu, gia_tri_moi, priority
+  // xuat TAT CA cell chung 1 sheet theo dung yeu cau - moi dong ung voi 1 cell. MIRROR dung cot dang hien
+  // tren bang: sector (suy tu huong_id, 04/10/2026), cell_name, param_type, gia_tri_cu, gia_tri_moi, priority
   const handleExportExcel = () => {
     const rows = cellParams.map((cellParam) => {
       const { before, after } = resolveBeforeAfter(cellParam);
       return {
-        huong_id: cellParam.huong_id ?? "-",
+        sector: tinhSectorTramTat(cellParam.huong_id) ?? "-",
         cell_name: cellParam.cell_name,
         param_type: cellParam.action_type ?? "-",
         gia_tri_cu: before,
@@ -110,9 +126,12 @@ const CellParamsByHuong: React.FC<CellParamsByHuongProps> = ({ cellParams, sessi
         // hien tai (getPaginationRowModel, Viec 5), nen phai cong them offset cua trang
         cell: (info) => pagination.pageIndex * pagination.pageSize + info.row.index + 1,
       }),
-      columnHelper.accessor("huong_id", {
-        header: "Huong",
-        cell: (info) => info.getValue() ?? "-", // co the null theo schema (cell khong xac dinh duoc huong)
+      // "(tram tat)" - gia tri la SECTOR cua TRAM TAT (suy tu huong_id % 10), KHONG phai huong rieng cua
+      // cell lan can o cot ben duoi - xem WHY day du o tinhSectorTramTat phia tren dau file
+      columnHelper.accessor((row) => tinhSectorTramTat(row.huong_id), {
+        id: "sector",
+        header: "Sector (tram tat)",
+        cell: (info) => info.getValue() ?? "—",
       }),
       // "(lan can)" - bang nay liet ke cac cell LAN CAN da duoc dieu chinh rsboost/qrxlevmin trong CR, khong
       // phai cell cua tram tat (tram tat khong co cell_params - no la doi tuong BI shutdown, khong phai
