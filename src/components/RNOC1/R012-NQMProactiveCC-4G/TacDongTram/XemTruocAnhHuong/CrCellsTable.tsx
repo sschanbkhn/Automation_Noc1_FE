@@ -89,13 +89,15 @@ const CrCellsTable: React.FC<CrCellsTableProps> = ({ previewData }) => {
         // STT tinh theo vi tri TUYET DOI - info.row.index la vi tri TRONG TRANG hien tai (getPaginationRowModel)
         cell: (info) => pagination.pageIndex * pagination.pageSize + info.row.index + 1,
       }),
+      // "(lan can)" - cell trong bang nay LA cell LAN CAN se THAT SU chay CR (tap con cua "Cell bi anh
+      // huong"), KHONG phai cell cua tram tat - xem ly do day du o AffectedCellsTable.tsx
       columnHelper.accessor("cell_name", {
-        header: "Cell",
+        header: "Cell (lan can)",
         // OneLineCell: ellipsis + Tooltip lam duong lui cho ten dai bat thuong - xem
         // common/r012TableStyle.tsx
         cell: (info) => <OneLineCell value={info.getValue()} />,
       }),
-      columnHelper.accessor("tram_id", { header: "Ma tram" }),
+      columnHelper.accessor("tram_id", { header: "Ma tram (lan can)" }),
       columnHelper.accessor("huong_id", {
         header: "Huong",
         cell: (info) => info.getValue() ?? "-", // co the null theo schema CrCellItem

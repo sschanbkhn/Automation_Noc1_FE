@@ -39,6 +39,15 @@ const R012Tabs: React.FC = () => {
       key: KEY_TAB_LICH_SU_CR,
       label: "Lịch sử CR",
       children: <LichSuCR yeuCauLocTram={yeuCauLocTram} />,
+      // 03102026, yeu cau truc tiep user: bo loc tram (o tim/trang thai/khoang ngay trong
+      // SessionHistoryList.tsx) dang bi "nho" qua cac lan chuyen tab, vi antd Tabs MAC DINH giu nguyen cac
+      // tab khong active trong DOM (khong unmount) nen state loc cu khong bao gio bi xoa. destroyOnHidden
+      // (prop hien hanh cua antd 5.25+, thay the destroyInactiveTabPane da deprecated) ep REMOUNT lai noi
+      // dung tab nay moi lan duoc mo -> moi lan mo tab la state mac dinh, hien tat ca.
+      // CHI dat o RIENG tab nay (khong dat o cap <Tabs> toan cuc): tab "Tac dong tram" dang giu SSE song
+      // (useSseStream trong TacDongTram.tsx) de theo doi CR dang chay - unmount/remount tab do khi chuyen
+      // qua lai se LAM MAT ket noi SSE dang theo doi, mot regression nghiem trong hon han loi dang sua.
+      destroyOnHidden: true,
     },
     // DOI CHO tab "Lich su phieu" LEN TRUOC "Cell xau" (truoc day nguoc lai). Ly do: 3 tab Tac dong tram /
     // Lich su CR / Lich su phieu deu la NOI DUNG CUA R012, doc CUNG 1 BE (FastAPI R012) va la 3 buoc lien

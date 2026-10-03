@@ -294,13 +294,19 @@ export interface CellNgoaiPhamViChiTiet {
 }
 
 // dung cho POST /api/v1/cr/preview, field oss_se_dung - OSS/NetAct se duoc dung khi trigger CR THAT cho
-// tram nay (BE commit d84215b, 27092026). CHI lo instance_id/host, TUYET DOI KHONG co user/password (BE
-// co y khong tra, xem domain/value_objects/oss_instance.py). Muc dich: cho NOC THAY truoc OSS nao se nhan
-// lenh TRUOC khi bam nut chay that - phat hien nham OSS (vd do sai mau ten cell) truoc khi anh huong live
-// network, khong phai sau khi da SSH xong
+// tram nay (BE commit d84215b, 27092026). Muc dich: cho NOC THAY truoc OSS nao se nhan lenh TRUOC khi bam
+// nut chay that - phat hien nham OSS (vd do sai mau ten cell) truoc khi anh huong live network, khong phai
+// sau khi da SSH xong.
+//
+// CHI con instance_id - "host" DA BI BE XOA KHOI SCHEMA (BE commit 72c5b56, 03/10/2026): "IP NetAct la
+// thong tin ha tang noi bo, KHONG can thiet cho nguoi dung quyet dinh 'co bam nut chay khong' (chi can
+// biet TEN GOI instance_id de nhan ra dung/sai OSS) - lo IP qua API cong khai la thua rui ro an ninh so
+// voi loi ich mang lai" (nguyen van ly do tu api/schemas/cr_schemas.py ben BE). BE .196:8080 hien TAI
+// (03/10/2026) VAN con tra "host" (chua deploy commit nay) nhung FE KHONG con doc truong do nua - TypeScript
+// structural typing khong bao loi khi JSON thuc te co du key thua, chi field khai bao trong interface moi
+// duoc dung
 export interface OssSeDung {
   instance_id: string; // ma dinh danh OSS/NetAct, bat buoc theo schema
-  host: string; // host/IP cua OSS do, bat buoc theo schema
 }
 
 // dung cho POST /api/v1/cr/preview - response chinh, request body dung chung TriggerCrRequest (tram_id + action)
@@ -529,6 +535,8 @@ export interface QosCellItem {
   cell_name: string;
   avg_before: number | null;
   avg_after: number | null;
+  // avg_before - avg_after. DUONG = TUT (SUA 03/10/2026, truoc day AM = tut - xem lich su doi dau trong
+  // domain/services/evaluation_service.py ben BE). FE dung THANG gia tri BE tra, khong tu doi dau
   delta: number | null;
   so_ngay_before: number;
   so_ngay_after: number;
@@ -549,9 +557,11 @@ export interface CuaSoNgay {
 // sao do DA TROI KHOI BE 3 LAN (thieu ve avg_after >= 4; khong theo kip 0.2 -> 0.5; khong biet co them
 // san 3.0). Ban sao troi la chuyen chac chan xay ra, khong phai rui ro.
 //
-// delta_toi_da la SO DUONG (BE da doi dau san) - FE dung thang, KHONG doi dau lai.
+// delta_toi_da la SO DUONG (BE da doi dau san) - FE dung thang, KHONG doi dau lai. delta (QosCellItem/
+// QoeCellItem) CUNG la so DUONG = tut (sua 03/10/2026, GIONG huong voi delta_toi_da - ca 2 CUNG chieu nen
+// so sanh truc tiep duoc, khong con phai doi dau 1 ben).
 // 2 BIEN can nho khi ve duong tham chieu:
-//   - tut DUNG bang delta_toi_da  -> VAN DAT (BE so sanh delta < -delta_toi_da)
+//   - tut DUNG bang delta_toi_da  -> VAN DAT (BE so sanh delta > delta_toi_da)
 //   - avg_after DUNG bang muc_toi_thieu -> VAN DAT (BE so sanh avg_after < muc_toi_thieu)
 export interface NguongDanhGia {
   delta_toi_da: number; // tut qua muc nay (huong GIAM) la KHONG DAT
@@ -585,7 +595,7 @@ export interface QoeCellItem {
   // voi QoE (CEM thung du lieu), khong phai loi he thong
   avg_before: number | null; // diem QoE trung binh TRUOC CR
   avg_after: number | null; // diem QoE trung binh SAU CR
-  delta: number | null; // chenh lech (sau - truoc)
+  delta: number | null; // avg_before - avg_after. DUONG = TUT (sua 03/10/2026, truoc day AM = tut)
   so_ngay_before: number; // so ngay THAT SU co du lieu trong window truoc CR, bat buoc theo schema
   so_ngay_after: number; // so ngay THAT SU co du lieu trong window sau CR, bat buoc theo schema
   // PASS|FAIL|INSUFFICIENT_DATA. De kieu string (KHONG phai union): BE khai bao la "type": "string" tu do

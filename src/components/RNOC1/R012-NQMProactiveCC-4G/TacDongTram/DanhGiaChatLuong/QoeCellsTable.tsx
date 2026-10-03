@@ -303,8 +303,10 @@ const QoeCellsTable: React.FC<QoeCellsTableProps> = ({ sessionId, affectedCells,
           </Tooltip>
         ),
       }),
+      // BE tra delta = avg_before - avg_after, DUONG = TUT (sua 03/10/2026) - doi ten cot cho ro chieu,
+      // tranh nguoi doc hieu nham dau "+"/"-" nguoc
       columnHelper.accessor("delta", {
-        header: "Chenh lech",
+        header: "Chenh lech (truoc - sau)",
         cell: (info) => soHoacGach(info.getValue()),
       }),
       columnHelper.accessor("ket_qua", {

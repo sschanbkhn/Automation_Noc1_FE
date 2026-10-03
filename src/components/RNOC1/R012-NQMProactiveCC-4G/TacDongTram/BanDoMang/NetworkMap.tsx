@@ -129,15 +129,12 @@ const ThieuTileOverlay: React.FC = () => (
   </div>
 );
 
-// zoom mac dinh khi xem 1 tram rieng le. TRUOC DAY la 15 - NGOAI khoang tile offline nen mo ra la trang
-// ngay lap tuc.
-//
-// CO Y DAT SO 13 CUNG, KHONG bam theo TILE_MAX_ZOOM nua (04092026): TILE_MAX_ZOOM da nang len 14 nhung
-// tile z14 CHUA duoc copy len .197. Neu de bang TILE_MAX_ZOOM thi MOI LAN chon 1 tram, ban do se mo ra
-// o dung muc zoom chua co tile -> nguoi dung thay man hinh TRANG ngay tu dau ma khong lam gi ca. Zoom 14
-// phai la thu nguoi dung TU CHON di vao, khong phai mac dinh dat ho vao do.
-// Khi da copy tile z14/z15 len .197 thi co the nang so nay len cho khop.
-const SINGLE_STATION_ZOOM = 13;
+// zoom mac dinh khi xem 1 tram rieng le. GAN LAI = TILE_MAX_ZOOM (03102026, yeu cau truc tiep user) -
+// truoc do tung tach rieng = 13 (hardcode, 04092026) vi TILE_MAX_ZOOM da nang len 14 nhung tile z14 CHUA
+// duoc copy len .197, so trung se mo ban do ngay o muc chua co tile. Nay gan lai theo TILE_MAX_ZOOM (15):
+// ThieuTileOverlay (xem useTileErrorTracker ben duoi) van la luoi an toan neu server thieu tile - hien
+// canh bao thay vi man hinh trang cam nin.
+const SINGLE_STATION_ZOOM = TILE_MAX_ZOOM;
 
 // icon dang cham tron mau ve bang L.divIcon (KHONG can them file anh moi) de phan biet tram_goc (do) va
 // tram_bi_anh_huong (xanh duong) tren cung 1 ban do preview - marker mac dinh cua Leaflet (defaultIcon o tren)

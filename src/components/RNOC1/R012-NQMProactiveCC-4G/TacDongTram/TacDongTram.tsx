@@ -201,7 +201,9 @@ const TacDongTram: React.FC = () => {
           <Alert
             type="info"
             showIcon
-            message={`NetAct se dung: ${previewData.oss_se_dung.instance_id} (${previewData.oss_se_dung.host})`}
+            // CHI hien instance_id - "host" (IP NetAct) da bi BE xoa khoi schema (bao mat, xem comment
+            // OssSeDung trong types/index.ts) nen khong con de hien o day
+            message={`NetAct se dung: ${previewData.oss_se_dung.instance_id}`}
             style={{ marginBottom: "0.75rem" }}
           />
         )}

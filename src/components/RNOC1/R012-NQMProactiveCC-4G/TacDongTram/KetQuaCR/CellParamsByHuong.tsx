@@ -114,8 +114,11 @@ const CellParamsByHuong: React.FC<CellParamsByHuongProps> = ({ cellParams, sessi
         header: "Huong",
         cell: (info) => info.getValue() ?? "-", // co the null theo schema (cell khong xac dinh duoc huong)
       }),
+      // "(lan can)" - bang nay liet ke cac cell LAN CAN da duoc dieu chinh rsboost/qrxlevmin trong CR, khong
+      // phai cell cua tram tat (tram tat khong co cell_params - no la doi tuong BI shutdown, khong phai
+      // doi tuong duoc dieu chinh tham so)
       columnHelper.accessor("cell_name", {
-        header: "Cell",
+        header: "Cell (lan can)",
         // OneLineCell: ellipsis + Tooltip lam duong lui cho ten dai bat thuong - xem
         // common/r012TableStyle.tsx
         cell: (info) => <OneLineCell value={info.getValue()} />,

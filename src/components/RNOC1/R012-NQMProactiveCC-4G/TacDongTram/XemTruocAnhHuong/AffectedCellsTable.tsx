@@ -79,13 +79,16 @@ const AffectedCellsTable: React.FC<AffectedCellsTableProps> = ({ previewData }) 
         // hien tai (getPaginationRowModel), nen phai cong them offset cua trang
         cell: (info) => pagination.pageIndex * pagination.pageSize + info.row.index + 1,
       }),
+      // "(lan can)" - MOI cell trong bang nay la cell LAN CAN bi anh huong boi CR, KHONG phai cell cua
+      // tram tat. Khong ghi ro de nguoi doc de nham, nhat la khi doi chieu voi cot "Cell anh huong" (cung
+      // nghia, cell lan can) va "ID tram tat"/"Tram tat" (khac nghia, tram_goc) o bang Lich su phieu
       columnHelper.accessor("cell_name", {
-        header: "Cell",
+        header: "Cell (lan can)",
         // OneLineCell: ellipsis + Tooltip lam duong lui cho ten dai bat thuong - xem
         // common/r012TableStyle.tsx
         cell: (info) => <OneLineCell value={info.getValue()} />,
       }),
-      columnHelper.accessor("tram_id", { header: "Ma tram" }),
+      columnHelper.accessor("tram_id", { header: "Ma tram (lan can)" }),
       columnHelper.accessor("huong_id", {
         header: "Huong",
         cell: (info) => info.getValue() ?? "-", // co the null theo schema AffectedCellItem

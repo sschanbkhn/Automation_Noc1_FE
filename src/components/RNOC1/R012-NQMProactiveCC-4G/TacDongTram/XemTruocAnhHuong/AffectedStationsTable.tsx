@@ -96,9 +96,12 @@ const AffectedStationsTable: React.FC<AffectedStationsTableProps> = ({ previewDa
         // (getPaginationRowModel dang duoc dung) nen phai cong them offset cua trang
         cell: (info) => pagination.pageIndex * pagination.pageSize + info.row.index + 1,
       }),
-      columnHelper.accessor("tram_id", { header: "Ma tram" }),
+      // "(lan can)" - bang nay liet ke TRAM LAN CAN bi anh huong (KHONG phai tram tat/tram_goc dang bi
+      // shutdown). Khong ghi ro de nguoi doc de nham day la thong tin cua tram tat, nhat la khi doi chieu
+      // voi cot "ID tram tat"/"Tram tat" o bang Lich su phieu (PhieuHistoryTable.tsx)
+      columnHelper.accessor("tram_id", { header: "Ma tram (lan can)" }),
       columnHelper.accessor("tram_name", {
-        header: "Ten tram",
+        header: "Ten tram (lan can)",
         cell: (info) => <OneLineCell value={info.getValue()} />,
       }),
       columnHelper.accessor("soCellAnhHuong", { header: "So cell bi anh huong" }),
