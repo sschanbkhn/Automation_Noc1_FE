@@ -27,7 +27,7 @@ L.Marker.prototype.options.icon = defaultIcon; // ap dung cho moi Marker trong f
 // ==== TILE OFFLINE ====
 // Server .196/.197 va may nguoi dung KHONG CO INTERNET (self-host noi bo) nen KHONG dung duoc tile cong
 // cong cua OpenStreetMap nua - truoc day URL tro thang ra https://{s}.tile.openstreetmap.org/... lam ban do
-// trang tron. Gio doc tu bo tile offline (Viet Nam, zoom 6-13) dat tai /home/auto/osm-tiles tren .197,
+// trang tron. Gio doc tu bo tile offline (Viet Nam) dat tai /home/auto/osm-tiles tren .197,
 // phuc vu qua symlink /home/auto/FE/tiles -> ra duong dan web /tiles/.
 //
 // BO tham so {s} (subdomain a/b/c): do la ky thuat xoay subdomain de tang so ket noi song song toi CDN cong
@@ -38,11 +38,20 @@ L.Marker.prototype.options.icon = defaultIcon; // ap dung cho moi Marker trong f
 // de hon va it rui ro hon sua file nguon.
 const TILE_URL = process.env.R012_TILE_URL || "/tiles/{z}/{x}/{y}.png";
 
-// Bo tile chi co zoom 6-13. Neu de nguoi dung phong to qua 13, Leaflet se xin nhung tile KHONG TON TAI ->
+// Bo tile co gioi han zoom. Neu de nguoi dung phong to qua muc co tile, Leaflet se xin tile KHONG TON TAI ->
 // o trang lo cho tren nen ban do -> nguoi dung tuong he thong hong. Chan o tang UI (khong cho zoom qua muc)
 // tot hon nhieu so voi de no loi roi moi bao.
 const TILE_MIN_ZOOM = 6;
-const TILE_MAX_ZOOM = 13;
+// 15 (nang tu 13, 02102026). LUU Y rieng cho NHANH NAY: nhanh thembv-rnoc-all-uc-dev-env chua merge buoc
+// nang 13->14 ma master da lam truoc do (04092026) - gia tri doc duoc truoc khi sua la 13, KHONG phai 14
+// nhu gia dinh ban dau cua yeu cau. Nang THANG len 15 (khong dung o buoc trung gian 14) de khop dung so
+// cuoi cung duoc yeu cau.
+//
+// Chua xac nhan duoc bo tile tren .197 da co du z14/z15 hay chua (ngoai pham vi sua lan nay, chi sua code
+// FE). Neu server CHUA co du tile cho 2 muc zoom moi, ThieuTileOverlay (useTileErrorTracker ben duoi) van
+// tu canh bao "Khong tai duoc ban do nen" sau 5 tile loi - giong CHINH co che master da dua vao khi nang
+// 13->14 luc con chua kip copy tile len .197. Neu sau nay xac nhan tile da du, co the xoa ghi chu nay.
+const TILE_MAX_ZOOM = 15;
 
 // So tile loi truoc khi ket luan "khong tai duoc ban do nen". KHONG canh bao ngay tu tile dau tien: vai tile
 // ria khung nhin thieu la chuyen binh thuong voi bo tile cat theo bien gioi (vd o bien, ngoai bien Viet Nam)
@@ -116,8 +125,11 @@ const ThieuTileOverlay: React.FC = () => (
   </div>
 );
 
-// zoom mac dinh khi xem 1 tram rieng le. TRUOC DAY la 15 - NGOAI khoang tile offline (6-13) nen mo ra la
-// trang ngay lap tuc. Ha ve 13 = muc gan nhat bo tile co, van du chi tiet de dinh vi khu vuc quanh tram
+// zoom mac dinh khi xem 1 tram rieng le. TRUOC DAY tung la 15 rieng (hardcode) - khi do NGOAI khoang tile
+// offline (con 13) nen mo ra la trang ngay lap tuc, da ha xuong = TILE_MAX_ZOOM (13) de tranh trang.
+// 02102026: TILE_MAX_ZOOM chinh no da nang len 15, nen gia tri nay GIAN TIEP quay lai 15 - KHONG phai vo
+// tinh lap lai loi cu: ThieuTileOverlay (xem useTileErrorTracker) van la luoi an toan neu tile z14/z15
+// chua co tren server, hien canh bao thay vi trang cam nin nhu lan truoc.
 const SINGLE_STATION_ZOOM = TILE_MAX_ZOOM;
 
 // icon dang cham tron mau ve bang L.divIcon (KHONG can them file anh moi) de phan biet tram_goc (do) va
@@ -187,7 +199,7 @@ const NetworkMap: React.FC<NetworkMapProps> = ({ station, previewData }) => {
       <MapContainer
         center={center}
         zoom={SINGLE_STATION_ZOOM}
-        // chan zoom trong dung khoang bo tile offline co (6-13) - xem comment o TILE_MIN_ZOOM/TILE_MAX_ZOOM
+        // chan zoom trong dung khoang bo tile offline co - xem comment o TILE_MIN_ZOOM/TILE_MAX_ZOOM
         minZoom={TILE_MIN_ZOOM}
         maxZoom={TILE_MAX_ZOOM}
         style={{ height: "400px", width: "100%" }}
@@ -305,9 +317,9 @@ const PreviewMap: React.FC<{ data: PreviewCrResponse }> = ({ data }) => {
           // la du de Leaflet TU fit vua khung nhin quanh het marker, khong can tu tinh center/zoom thu cong
           bounds={bounds}
           boundsOptions={{ padding: [40, 40] }} // chua khoang trong quanh marker ria, tranh marker nam sat vien khung ban do
-          // chan zoom trong dung khoang bo tile offline co (6-13). Leaflet tu fit bounds nhung se KHONG
-          // phong qua 13 - truong hop cac tram rat gan nhau, ban do dung lai o 13 thay vi zoom sau vao vung
-          // khong co tile
+          // chan zoom trong dung khoang bo tile offline co. Leaflet tu fit bounds nhung se KHONG phong
+          // qua TILE_MAX_ZOOM - truong hop cac tram rat gan nhau, ban do dung lai o muc do thay vi zoom
+          // sau vao vung khong co tile
           minZoom={TILE_MIN_ZOOM}
           maxZoom={TILE_MAX_ZOOM}
           style={{ height: "400px", width: "100%" }}

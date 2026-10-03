@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Row, Col, Collapse } from "antd";
+import { Row, Col, Collapse, Alert } from "antd";
 import type { CollapseProps } from "antd";
 // khu vuc tim kiem va chon tram, xac nhan trigger CR - tuong ung Zone A trong UI_DESIGN.md
 // doi ten tu ZoneA sang TimTram de ten thu muc phan anh dung chuc nang thay vi ten generic theo vi tri layout
@@ -15,6 +15,9 @@ import AffectedStationsTable from "./XemTruocAnhHuong/AffectedStationsTable";
 import AffectedCellsTable from "./XemTruocAnhHuong/AffectedCellsTable";
 // bang cell CHAY CR (MOI, tach rieng khoi bang cell bi anh huong o tren - Phan 1, schema BE moi 22072026)
 import CrCellsTable from "./XemTruocAnhHuong/CrCellsTable";
+// bang cell bi LOAI khoi pham vi quan ly (27092026, BE commit d84215b/ed59418) - xem WHY day du trong
+// chinh file do
+import CellNgoaiPhamViTable from "./XemTruocAnhHuong/CellNgoaiPhamViTable";
 import CellQosHistoryChart from "./XemTruocAnhHuong/CellQosHistoryChart";
 // khu vuc ket qua CR theo tung huong va log tien trinh CR - tuong ung Zone C trong UI_DESIGN.md
 // doi ten tu ZoneC sang KetQuaCR cho dung chuc nang hien thi
@@ -126,6 +129,16 @@ const TacDongTram: React.FC = () => {
           children: <CellQosHistoryChart previewData={previewData} />,
         }
       );
+      // muc "Cell bi loai khoi pham vi" CHI them vao Collapse khi THAT SU co cell bi loai - rong thi
+      // khong chiem 1 muc Collapse vo ich (nhat quan voi CellNgoaiPhamViTable tu return null khi rong,
+      // nhung kiem o day truoc de khong tao ca 1 Collapse.Panel rong)
+      if (previewData.cell_ngoai_pham_vi_chi_tiet && previewData.cell_ngoai_pham_vi_chi_tiet.length > 0) {
+        items.push({
+          key: "cell-ngoai-pham-vi",
+          label: `Cell bi loai khoi pham vi (${previewData.cell_ngoai_pham_vi_chi_tiet.length})`,
+          children: <CellNgoaiPhamViTable previewData={previewData} />,
+        });
+      }
     }
     return items;
   }, [selectedStationForView, previewData]);
@@ -178,6 +191,20 @@ const TacDongTram: React.FC = () => {
             background-color: ${R012_COLORS.primaryPale};
           }
         `}</style>
+        {/* "NetAct se dung" (27092026) - CO Y dat NGOAI Collapse (luon hien, khong thu gon duoc): day la
+            thong tin AN TOAN, NOC phai THAY truoc khi bam nut "Trigger CR" that o Zone A ben tren - giau
+            trong 1 muc Collapse mac dinh thu gon se danh mat dung muc dich ("phat hien nham OSS truoc khi
+            anh huong live network", xem comment OssSeDung trong types/index.ts). optional + null deu an:
+            BE .196 chua deploy truong nay (undefined), hoac BE tra null that su khi khong con cell nao
+            route duoc OSS nao - ca 2 truong hop deu khong co gi de hien */}
+        {previewData?.oss_se_dung && (
+          <Alert
+            type="info"
+            showIcon
+            message={`NetAct se dung: ${previewData.oss_se_dung.instance_id} (${previewData.oss_se_dung.host})`}
+            style={{ marginBottom: "0.75rem" }}
+          />
+        )}
         <Collapse className="r012-collapse" defaultActiveKey={["map"]} items={zoneBCollapseItems} />
       </div>
       {/* CHI render zone-c khi da co activeCrSessionId (da trigger CR) - truoc day zone-c luon hien du

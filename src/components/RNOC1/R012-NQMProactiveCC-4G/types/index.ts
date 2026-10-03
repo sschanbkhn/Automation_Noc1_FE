@@ -237,12 +237,41 @@ export interface CrCellItem {
   qrxlevmin_moi: number | null; // gia tri qrxlevmin du kien sau CR, co the null theo schema
 }
 
+// dung cho POST /api/v1/cr/preview, field cell_ngoai_pham_vi_chi_tiet - ban CHI TIET cua cell_ngoai_pham_vi
+// (list[str] cu - BE giu nguyen, KHONG doi kieu vi FE dang doc). ly_do la MA CO DINH (xem BE
+// domain/services/neighbor_cell_filter.py::LY_DO_*), KHONG phai chuoi da dien giai - FE tu map ma -> text
+// hien thi (xem CellNgoaiPhamViTable.tsx), tranh doi chu 1 cho phai sua ca 2 phia (FE + BE)
+export interface CellNgoaiPhamViChiTiet {
+  cell_name: string; // ten cell bi loai, bat buoc theo schema
+  ly_do: string; // ma ly do (vd "CELL_ID_PHANG") - de string (khong phai union) vi BE co the them ma moi,
+  // FE phai hien duoc ma la thay vi vo khi gap gia tri chua biet
+}
+
+// dung cho POST /api/v1/cr/preview, field oss_se_dung - OSS/NetAct se duoc dung khi trigger CR THAT cho
+// tram nay (BE commit d84215b, 27092026). CHI lo instance_id/host, TUYET DOI KHONG co user/password (BE
+// co y khong tra, xem domain/value_objects/oss_instance.py). Muc dich: cho NOC THAY truoc OSS nao se nhan
+// lenh TRUOC khi bam nut chay that - phat hien nham OSS (vd do sai mau ten cell) truoc khi anh huong live
+// network, khong phai sau khi da SSH xong
+export interface OssSeDung {
+  instance_id: string; // ma dinh danh OSS/NetAct, bat buoc theo schema
+  host: string; // host/IP cua OSS do, bat buoc theo schema
+}
+
 // dung cho POST /api/v1/cr/preview - response chinh, request body dung chung TriggerCrRequest (tram_id + action)
 export interface PreviewCrResponse {
   tram_goc: PreviewTramGoc; // tram bi tac dong CR truc tiep, bat buoc theo schema
   cells_bi_anh_huong: AffectedCellItem[]; // TOAN BO cell nam trong vung anh huong, bat buoc theo schema
   tram_bi_anh_huong: AffectedTramItem[]; // TOAN BO tram lan can bi anh huong (khong kem tram_goc), bat buoc theo schema
   cells_chay_cr: CrCellItem[]; // cell se THAT SU chay CR (tap con cua cells_bi_anh_huong), bat buoc theo schema
+  // 2 truong MOI (27092026, dinh tuyen OSS theo tung cell - BE commit d84215b/ed59418). Khai bao OPTIONAL:
+  // BE tren .196:8080 HIEN CHUA CO 2 truong nay (da doi chieu openapi.json that ngay 02/10/2026 - 0 hit ca
+  // 2 ten field) - cho den khi .196 duoc deploy lai thi MOI response deu thieu 2 truong nay, FE PHAI chiu
+  // duoc undefined, khong duoc coi la luon co san (dung bai hoc da ghi o nhieu field tuong tu khac trong
+  // file nay, vd so_lan_thu/phan_loai_loi cua PhieuHistoryItem)
+  cell_ngoai_pham_vi_chi_tiet?: CellNgoaiPhamViChiTiet[];
+  // null khi KHONG con cell nao route duoc OSS nao (BE tra null tuong minh, KHAC voi undefined cua truong
+  // hop .196 chua deploy) - 2 nguyen nhan khac nhau nhung cung 1 cach xu ly o FE: khong co gi de hien
+  oss_se_dung?: OssSeDung | null;
 }
 
 // dung cho GET /api/v1/qos/{cell_name} - BE khai bao additionalProperties true, chua co field co dinh trong schema
