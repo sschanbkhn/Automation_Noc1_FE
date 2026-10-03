@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { OneLineCell } from "../../common/r012TableStyle";
 import { Button, Pagination } from "antd";
 import {
   createColumnHelper,
@@ -113,7 +114,12 @@ const CellParamsByHuong: React.FC<CellParamsByHuongProps> = ({ cellParams, sessi
         header: "Huong",
         cell: (info) => info.getValue() ?? "-", // co the null theo schema (cell khong xac dinh duoc huong)
       }),
-      columnHelper.accessor("cell_name", { header: "Cell" }),
+      columnHelper.accessor("cell_name", {
+        header: "Cell",
+        // OneLineCell: ellipsis + Tooltip lam duong lui cho ten dai bat thuong - xem
+        // common/r012TableStyle.tsx
+        cell: (info) => <OneLineCell value={info.getValue()} />,
+      }),
       columnHelper.accessor("action_type", {
         header: "Hanh dong",
         cell: (info) => info.getValue() ?? "-",
@@ -182,7 +188,7 @@ const CellParamsByHuong: React.FC<CellParamsByHuongProps> = ({ cellParams, sessi
         /* Viec 4: BO "width: 100%" - bang nay hien co 7 cot (them cot Huong sau khi gop, Viec 2), header
            "whiteSpace: nowrap" (SortableHeaderCell) nen co the rong hon Modal 800px (EvaluationDetail.tsx)
            - de bang GIU DUNG do rong tu nhien roi CUON qua div overflow-x:auto ben ngoai, KHONG bop cot */
-        .r012-cellparams-table { border-collapse: collapse; white-space: nowrap; }
+        .r012-cellparams-table { border-collapse: collapse; }
         .r012-cellparams-table thead th {
           text-align: left;
           padding: 10px 8px;
@@ -201,8 +207,8 @@ const CellParamsByHuong: React.FC<CellParamsByHuongProps> = ({ cellParams, sessi
       `}</style>
       {/* Viec 4: boc trong div overflow-x:auto de bang CUON NGANG rieng trong khung cua no khi rong hon
           Modal ben ngoai, KHONG lam vo layout Modal (giong cach da lam o QosEvaluationTable.tsx) */}
-      <div style={{ overflowX: "auto" }}>
-        <table className="r012-cellparams-table">
+      <div className="r012-table-scroll">
+        <table className="r012-table r012-cellparams-table">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>

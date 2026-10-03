@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { OneLineCell } from "../../common/r012TableStyle";
 import { Button, Pagination } from "antd";
 import {
   createColumnHelper,
@@ -78,7 +79,12 @@ const AffectedCellsTable: React.FC<AffectedCellsTableProps> = ({ previewData }) 
         // hien tai (getPaginationRowModel), nen phai cong them offset cua trang
         cell: (info) => pagination.pageIndex * pagination.pageSize + info.row.index + 1,
       }),
-      columnHelper.accessor("cell_name", { header: "Cell" }),
+      columnHelper.accessor("cell_name", {
+        header: "Cell",
+        // OneLineCell: ellipsis + Tooltip lam duong lui cho ten dai bat thuong - xem
+        // common/r012TableStyle.tsx
+        cell: (info) => <OneLineCell value={info.getValue()} />,
+      }),
       columnHelper.accessor("tram_id", { header: "Ma tram" }),
       columnHelper.accessor("huong_id", {
         header: "Huong",
@@ -139,7 +145,7 @@ const AffectedCellsTable: React.FC<AffectedCellsTableProps> = ({ previewData }) 
         <>
           {/* CSS scoped rieng cho bang nay, dung DUNG token tu theme.ts, dong bo voi cac bang con lai trong module */}
           <style>{`
-            .r012-affected-cells-table { width: 100%; border-collapse: collapse; }
+            .r012-affected-cells-table { border-collapse: collapse; }
             .r012-affected-cells-table thead th {
               text-align: left;
               padding: 10px 8px;
@@ -152,22 +158,27 @@ const AffectedCellsTable: React.FC<AffectedCellsTableProps> = ({ previewData }) 
               padding: 8px;
               border-bottom: 1px solid ${R012_COLORS.tableBorder};
             }
-            /* Cot "Cell" (cot thu 2, ngay sau STT): ten cell dai (vd "HNI1234_L1800_1") truoc day bi ngat
-               thanh 2 dong lam chieu cao hang gap doi va bang nhin lo cho. nowrap giu ten tren DUNG 1 hang.
-               Cap voi width:1% - day la cach chuan de trinh duyet cap cho cot dung be rong NOI DUNG that
-               ("1%" nghia la "nho nhat co the", nhung nowrap khong cho ep nho hon ten cell) roi chia phan
-               du cho cac cot con lai; KHONG dat px cung vi ten cell dai ngan khac nhau tuy tram.
-               nth-child(2) bam theo thu tu cot khai bao co dinh trong "columns" o tren (STT, Cell, ...) */
-            .r012-affected-cells-table thead th:nth-child(2),
-            .r012-affected-cells-table tbody td:nth-child(2) {
-              white-space: nowrap;
-              width: 1%;
-            }
+            /* DA BO rule "th/td:nth-child(2) { white-space: nowrap; width: 1%; }" (07092026).
+                 MUC DICH CU cua no: hoi bang con dung "width:100%" + table-layout:auto, dat width:1% len
+                 cot Cell la meo chuan de trinh duyet cap cho cot do dung be rong noi dung roi chia phan du
+                 cho cac cot khac, kem nowrap giu ten cell tren 1 dong.
+                 VI SAO PHAI BO: tu khi gop CSS chung (.r012-table) bang co them "min-width: max-content",
+                 va width:1% tro thanh THU PHAM lam bang tran ngang. Co che: phan tram tren o bang duoc
+                 giai theo be rong BANG, nen "cot nay = 1% bang" cong voi noi dung khong co lai duoc
+                 (nowrap, ~133px) bat trinh duyet suy ra be rong bang toi thieu ~ 133/0.01 = 13300px. Truoc
+                 day "width:100%" con ghim bang vao container nen khong lo ra; them min-width:max-content
+                 thi khong con gi ghim nua -> bang phinh ra that.
+                 SO DO: noi dung that cua bang nay chi ~295px (CrCellsTable ~778px) - con xa 1920px, tuc
+                 KHONG co ly do gi de tran neu khong co rule nay.
+                 MUC DICH CU VAN DUOC GIU: .r012-table da dat "white-space: nowrap" cho MOI td/th (khong
+                 rieng cot 2), va cot Cell dung OneLineCell (maxWidth + ellipsis + Tooltip) nen ten dai van
+                 gon 1 dong. Bo rule nay KHONG mat gi. */
             .r012-affected-cells-table tbody tr:nth-child(odd) { background-color: #ffffff; }
             .r012-affected-cells-table tbody tr:nth-child(even) { background-color: ${R012_COLORS.tableRowAlt}; }
             .r012-affected-cells-table tbody tr:hover { background-color: ${R012_COLORS.rowHoverBg}; }
           `}</style>
-          <table className="r012-affected-cells-table">
+          <div className="r012-table-scroll">
+<table className="r012-table r012-affected-cells-table">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
@@ -187,6 +198,7 @@ const AffectedCellsTable: React.FC<AffectedCellsTableProps> = ({ previewData }) 
               ))}
             </tbody>
           </table>
+</div>
 
           {/* Pagination cua antd chi la UI dieu khien - state that nam trong TanStack Table (bien "pagination") */}
           <Pagination

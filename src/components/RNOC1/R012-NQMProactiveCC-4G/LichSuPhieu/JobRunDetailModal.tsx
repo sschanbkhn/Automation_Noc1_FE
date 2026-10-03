@@ -13,7 +13,7 @@ import { R012_COLORS } from "../theme";
 import { formatDateTime } from "../helpers/formatDateTime";
 // doc message loi THAT tu BE thay vi loi chung cua axios - xem WHY day du trong chinh file do
 import { layThongBaoLoi } from "../helpers/layThongBaoLoi";
-import { JOB_RUN_STATUS_COLORS } from "./jobRunStatus";
+import { JOB_RUN_STATUS_COLORS, JOB_RUN_STATUS_LABELS } from "./jobRunStatus";
 // mau Tag ket qua xuat phieu tung cell trong chi_tiet - DUNG LAI bang mau cua phieu (SUCCESS/FAILED/...)
 // thay vi tu dinh nghia bang thu 3, vi day chinh la gia tri trang_thai do XuatPhieuUseCase tra ve, y het
 // cot trang thai cua bang Lich su phieu
@@ -155,7 +155,8 @@ const JobRunDetailModal: React.FC<JobRunDetailModalProps> = ({ jobRunId, onClose
             {cellDaXuLy.length > 0 && (
               <>
                 <div style={groupTitleStyle}>Cell da xu ly ({cellDaXuLy.length})</div>
-                <table className="r012-jobrun-detail-table">
+                <div className="r012-table-scroll">
+<table className="r012-table r012-jobrun-detail-table">
                   <thead>
                     <tr>
                       <th>Cell</th>
@@ -188,6 +189,7 @@ const JobRunDetailModal: React.FC<JobRunDetailModalProps> = ({ jobRunId, onClose
                     ))}
                   </tbody>
                 </table>
+</div>
               </>
             )}
 
@@ -196,7 +198,8 @@ const JobRunDetailModal: React.FC<JobRunDetailModalProps> = ({ jobRunId, onClose
                 <div style={groupTitleStyle}>
                   Cell vuot gioi han ({cellVuot.length}) - KHONG duoc xuat tu dong, phai lam tay
                 </div>
-                <table className="r012-jobrun-detail-table">
+                <div className="r012-table-scroll">
+<table className="r012-table r012-jobrun-detail-table">
                   <thead>
                     <tr>
                       <th>Cell</th>
@@ -218,6 +221,7 @@ const JobRunDetailModal: React.FC<JobRunDetailModalProps> = ({ jobRunId, onClose
                     ))}
                   </tbody>
                 </table>
+</div>
               </>
             )}
 
@@ -264,7 +268,7 @@ const JobRunDetailModal: React.FC<JobRunDetailModalProps> = ({ jobRunId, onClose
           chi ton tai khi component do dang mount - Modal nay mo doc lap se khong co style. Vi vay tu khai
           bao class rieng .r012-jobrun-collapse, van dung DUNG token tu theme.ts nen nhin van dong bo */}
       <style>{`
-        .r012-jobrun-detail-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+        .r012-jobrun-detail-table { border-collapse: collapse; margin-bottom: 8px; }
         .r012-jobrun-detail-table thead th {
           text-align: left;
           padding: 6px 8px;
@@ -315,7 +319,9 @@ const JobRunDetailModal: React.FC<JobRunDetailModalProps> = ({ jobRunId, onClose
           >
             <Descriptions.Item label="Loai job">{data.job_type}</Descriptions.Item>
             <Descriptions.Item label="Trang thai">
-              <Tag color={JOB_RUN_STATUS_COLORS[data.trang_thai] ?? "default"}>{data.trang_thai}</Tag>
+              <Tag color={JOB_RUN_STATUS_COLORS[data.trang_thai] ?? "default"}>
+                {JOB_RUN_STATUS_LABELS[data.trang_thai] ?? data.trang_thai}
+              </Tag>
             </Descriptions.Item>
             {/* DA BO muc "Che do" (Thu/That) - BE bo hoan toan che do chay thu, khong con field dry_run */}
             <Descriptions.Item label="Session quet">{data.so_session_quet}</Descriptions.Item>

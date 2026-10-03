@@ -20,6 +20,7 @@ import { StationItem, StationsQueryParams, PreviewCrResponse } from "../../types
 import { R012_COLORS } from "../../theme";
 // doc message loi THAT tu BE thay vi loi chung cua axios - xem WHY day du trong chinh file do
 import { layThongBaoLoi } from "../../helpers/layThongBaoLoi";
+import { OneLineCell } from "../../common/r012TableStyle";
 
 // props nhan tu TacDongTram.tsx: ham nay duoc goi khi NOC bam nut "Trigger CR" cho 1 tram
 // TacDongTram.tsx se dung ham nay de mo ConfirmTriggerModal va truyen dung station da chon xuong modal
@@ -139,6 +140,7 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
       }),
       columnHelper.accessor("tram_name", {
         header: "Ten tram",
+        cell: (info) => <OneLineCell value={info.getValue()} />,
         // sort_by="tram_name" nam trong enum BE ho tro - duoc phep sort
       }),
       columnHelper.accessor("ten_quan_ly", {
@@ -244,7 +246,7 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
               tung dong theo du lieu dong), rieng hover dat SAU 2 rule nth-child de thang o dong KHONG chon,
               nhung khong dung !important nen hover se KHONG de len mau cua dong dang chon - dung y muon */}
           <style>{`
-            .r012-station-table { width: 100%; border-collapse: collapse; }
+            .r012-station-table { border-collapse: collapse; }
             .r012-station-table thead th {
               text-align: left;
               padding: 10px 8px;
@@ -262,7 +264,8 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
             .r012-station-table tbody tr:nth-child(even) { background-color: ${R012_COLORS.tableRowAlt}; }
             .r012-station-table tbody tr:hover { background-color: ${R012_COLORS.rowHoverBg}; }
           `}</style>
-          <table className="r012-station-table">
+          <div className="r012-table-scroll">
+<table className="r012-table r012-station-table">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
@@ -291,6 +294,7 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
               ))}
             </tbody>
           </table>
+</div>
 
           <Pagination
             current={page}

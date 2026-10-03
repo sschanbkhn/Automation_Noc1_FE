@@ -22,6 +22,13 @@ import {
   JobRunQueryParams,
   JobRunListResponse,
   JobRunDetail,
+  QoeCellsResponse,
+  QosCellsResponse,
+  QoeHistoryResponse,
+  XoaSessionResponse,
+  XuatPhieuAutoRequest,
+  XemTruocXuatPhieuResponse,
+  ChayXuatPhieuAutoResponse,
 } from '../types';
 
 // ham goi GET /api/v1/stations - lay danh sach tram co phan trang
@@ -95,6 +102,35 @@ export const getSessionDetail = async (sessionId: number): Promise<SessionDetail
   }
 };
 
+// ham goi GET /api/v1/sessions/{cr_session_id}/qos-cells - danh gia QoS theo TUNG CELL, KET LUAN DO BE
+// TINH (xem QosCellItem trong types/index.ts de biet vi sao khong tu tinh o FE nua)
+export const getQosCells = async (sessionId: number): Promise<QosCellsResponse> => {
+  try {
+    // 120s: BE goi CTS DONG BO cho tung cell (17 cell = 34 request truoc+sau). Timeout 30s nhu cac
+    // endpoint doc DB se bao timeout OAN trong khi BE van dang chay dung - dung ly do da dat 120s cho
+    // /qoe-cells
+    const data: any = await r012Request.get(`/sessions/${sessionId}/qos-cells`, { timeout: 120000 });
+    return data as QosCellsResponse;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// ham goi GET /api/v1/sessions/{cr_session_id}/qoe-cells - danh gia QoE theo TUNG CELL cua 1 session
+// (TB truoc/sau CR, ket luan PASS/FAIL/INSUFFICIENT_DATA, diem thap nhat + so ngay dat sau CR)
+export const getQoeCells = async (sessionId: number): Promise<QoeCellsResponse> => {
+  try {
+    // ENDPOINT NANG NHAT trong nhom doc: BE goi CEM cho TUNG cell (~14 request cho 1 session binh thuong)
+    // roi moi tong hop tra ve - KHONG dung timeout 30s nhu cac endpoint doc DB thuan ben canh, se bao
+    // timeout oan trong khi BE van dang chay dung. Dat 120s giong /cr/preview (endpoint nang tuong tu, cung
+    // goi he thong ngoai dong bo)
+    const data: any = await r012Request.get(`/sessions/${sessionId}/qoe-cells`, { timeout: 120000 });
+    return data as QoeCellsResponse;
+  } catch (error) {
+    throw error;
+  }
+};
+
 // ham goi GET /api/v1/qos/{cell_name} - lay so lieu QoS cua 1 cell
 // BE khai bao schema additionalProperties true nen giu nguyen kieu QosMetrics (Record), khong bia field
 export const getQos = async (cellName: string): Promise<QosMetrics> => {
@@ -120,6 +156,47 @@ export const getQosHistory = async (
     // endpoint nay khong goi CDS (doc lich su QoS da luu trong DB) nen giu timeout ngan hon
     const data: any = await r012Request.get(`/qos/${cellName}`, { params, timeout: 30000 });
     return data as QosHistoryResponse;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// ham goi GET /api/v1/qoe/{cell_name} - lich su QoE theo ngay. DUNG CHUNG khuon params voi getQosHistory
+// ({days} hoac {from,to}) - DA XAC NHAN qua goi that: endpoint nay nhan y het cac param do.
+// Response KHAC /qos/{cell_name} DUNG 1 CHO: ten truong diem la "qoe" thay vi "qos" (xem QoeHistoryPoint)
+export const getQoeHistory = async (
+  cellName: string,
+  params: QosHistoryQueryParams = {}
+): Promise<QoeHistoryResponse> => {
+  try {
+    // doc du lieu QoE da luu trong DB (khong goi CEM dong bo nhu /qoe-cells) nen giu timeout ngan 30s
+    const data: any = await r012Request.get(`/qoe/${cellName}`, { params, timeout: 30000 });
+    return data as QoeHistoryResponse;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// ham goi DELETE /api/v1/sessions/{session_id} - XOA VINH VIEN 1 session CR va toan bo du lieu lien quan
+// (cell param, log, phieu). BE CHI cho xoa khi status=FAILED, khac di tra 409 kem message giai thich ro -
+// FE KHONG tu doan ly do, cu hien nguyen van message do (xem SessionHistoryList.tsx).
+// Tra ve {ten_bang: so_dong_da_xoa}
+export const xoaSession = async (sessionId: number): Promise<XoaSessionResponse> => {
+  try {
+    const data: any = await r012Request.delete(`/sessions/${sessionId}`, { timeout: 30000 });
+    return data as XoaSessionResponse;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// ham goi DELETE /api/v1/phieu/{phieu_id} - xoa 1 DONG lich su phieu. BE chi chan trang_thai=SUCCESS
+// (phieu da len CTS that thi khong the xoa o day) -> 409; cac trang thai con lai deu xoa duoc de cell quay
+// lai trang thai chua xu ly va co the xuat lai
+export const xoaPhieu = async (phieuId: number): Promise<unknown> => {
+  try {
+    const data: any = await r012Request.delete(`/phieu/${phieuId}`, { timeout: 30000 });
+    return data;
   } catch (error) {
     throw error;
   }
@@ -178,6 +255,37 @@ export const getJobRunDetail = async (id: number): Promise<JobRunDetail> => {
     // Notification va reject, component tu hien Alert loi
     const data: any = await r012Request.get(`/jobs/runs/${id}`, { timeout: 30000 });
     return data as JobRunDetail;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// ham goi POST /api/v1/jobs/xuat-phieu-auto/xem-truoc - DEM THU se xuat bao nhieu phieu cho khoang ngay
+// da chon, KHONG ghi gi ra ngoai. Endpoint DONG BO (tra ket qua ngay, khong phai 202 + background).
+export const xemTruocXuatPhieuAuto = async (
+  body: XuatPhieuAutoRequest
+): Promise<XemTruocXuatPhieuResponse> => {
+  try {
+    // 300s (5 phut) - KHONG dung 30s nhu cac endpoint doc DB: day la endpoint dong bo phai quet TUNG cell
+    // cua TUNG session trong khoang ngay (30 ngay x ~48 request/session), vai phut la binh thuong. De 30s
+    // se bao timeout OAN trong khi BE van dang chay dung, va nguoi dung se bam lai -> chay lai tu dau
+    const data: any = await r012Request.post('/jobs/xuat-phieu-auto/xem-truoc', body, { timeout: 300000 });
+    return data as XemTruocXuatPhieuResponse;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// ham goi POST /api/v1/jobs/xuat-phieu-auto - CHAY THAT, xuat phieu len CTS. BE tra 202 NGAY roi chay nen
+// (khong block), nen KHONG can timeout dai nhu /xem-truoc. 409 = dang co luot job chay do.
+// KHONG duoc goi tu dong/retry o tang service - day la WRITE API tao phieu THAT, cho component tu kiem soat
+// (phai xem truoc + xac nhan 2 lan, xem ChayJobModal.tsx)
+export const chayXuatPhieuAuto = async (
+  body: XuatPhieuAutoRequest
+): Promise<ChayXuatPhieuAutoResponse> => {
+  try {
+    const data: any = await r012Request.post('/jobs/xuat-phieu-auto', body, { timeout: 30000 });
+    return data as ChayXuatPhieuAutoResponse;
   } catch (error) {
     throw error;
   }

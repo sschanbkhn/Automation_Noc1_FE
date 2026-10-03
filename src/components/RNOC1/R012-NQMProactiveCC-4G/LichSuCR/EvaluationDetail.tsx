@@ -1,6 +1,6 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Alert, Card, Collapse, Descriptions, Empty, Spin, Tag } from "antd";
+import { Alert, Card, Collapse, Descriptions, Empty, Segmented, Spin, Tag } from "antd";
 import type { CollapseProps } from "antd";
 import { getSessionDetail } from "../services/R012Service";
 import { SessionDetailResponse } from "../types";
@@ -16,6 +16,10 @@ import { SessionDetailResponse } from "../types";
 // can gia tri nay qua props. QosEvaluationSection.tsx cu da XOA (het noi nao dung sau khi doi cach nay)
 import QosEvaluationChart from "../TacDongTram/DanhGiaChatLuong/QosEvaluationChart";
 import QosEvaluationTable from "../TacDongTram/DanhGiaChatLuong/QosEvaluationTable";
+// Bang danh gia QoE theo tung cell (nguon CEM) - dat canh bang QoS trong cung muc 5, xem file do
+import QoeCellsTable from "../TacDongTram/DanhGiaChatLuong/QoeCellsTable";
+// Canh bao QoS/QoE tinh tren 2 tap ngay khac nhau - xem ly do trong chinh file do
+import CanhBaoLechCuaSo from "./CanhBaoLechCuaSo";
 import { resolveCrDateGmt7 } from "../TacDongTram/DanhGiaChatLuong/qosEvaluation";
 // tai su dung LAI CellParamsByHuong (da tach tu CrResultsByDirection.tsx) - hien danh sach cell da tac dong
 // theo huong (giong Tab1 sau CR), o day la XEM LAI session da DONE nen chi truyen thang cell_params tinh,
@@ -41,7 +45,16 @@ interface EvaluationDetailProps {
   sessionId: number | null;
 }
 
+// 2 muc cua Segmented con trong muc 5 "Bang danh gia chi tiet"
+const MUC_QOS = "qos";
+const MUC_QOE = "qoe";
 const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
+  // QoS la mac dinh CHI vi thu tu quen mat (QoS co truoc, va la chi so duoc dung nhieu hon) - KHONG con vi
+  // "QoS quan trong hon": theo hop dong BE moi, cell khong dat o BAT KY chi so nao (QoS hoac QoE) deu phai
+  // xuat phieu, hai bang gio ngang hang nhau va ca hai deu co nut xuat.
+  // State nay cung chinh la cong tac LAZY cho QoE - xem comment tai cho dung ben duoi
+  const [mucDanhGia, setMucDanhGia] = useState<string>(MUC_QOS);
+
   // tu goi API rieng theo sessionId (khong nhan du lieu san tu SessionHistoryList) - giu component doc lap,
   // dung chung queryKey voi cac noi khac de TanStack Query tu dung chung cache cho cung 1 session
   const { data, isLoading, isError } = useQuery<SessionDetailResponse>({
@@ -144,7 +157,32 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
       // chart 7 ngay CHI giu o khu vuc preview (TacDongTram.tsx)
       children:
         crDateGmt7 !== null ? (
-          <QosEvaluationChart affectedCells={data.affected_cells} crDateGmt7={crDateGmt7} />
+          <>
+            {/* Segmented DUNG CHUNG state "mucDanhGia" voi muc 5 ben duoi (khong phai state rieng): chon
+                QoE o day thi bang danh gia o muc 5 cung chuyen sang QoE. Neu de 2 cong tac doc lap thi rat
+                de roi vao canh chart dang la QoE ma bang lai la QoS - doc cheo 2 chi so cua nhau ma khong
+                nhan ra. Chart va bang luon noi ve CUNG mot chi so */}
+            <Segmented
+              value={mucDanhGia}
+              onChange={(value) => setMucDanhGia(value as string)}
+              options={[
+                { value: MUC_QOS, label: "QoS" },
+                { value: MUC_QOE, label: "QoE" },
+              ]}
+              style={{ marginBottom: "12px" }}
+            />
+            {/* DUNG LAI nguyen component chart cua QoS, chi truyen chiSo khac - xem QosEvaluationChartProps.
+                key ep remount khi doi chi so de dropdown chon cell tro ve trang thai ban dau, tranh canh
+                dang chon cell X o QoS, chuyen sang QoE lai hien so lieu cu vai nhip truoc khi query moi ve */}
+            <QosEvaluationChart
+              key={mucDanhGia}
+              affectedCells={data.affected_cells}
+              crDateGmt7={crDateGmt7}
+              chiSo={mucDanhGia === MUC_QOE ? "qoe" : "qos"}
+              // de chart doc nguong tu cache cua bang muc 5 (cung queryKey qos-cells/qoe-cells)
+              sessionId={data.id}
+            />
+          </>
         ) : (
           // CR chua thuc thi xong (status DONE/RUNNING nhung chua co executed_at) thi chua co moc ngay CR
           // de tinh window 15 ngay, khong the danh gia
@@ -156,7 +194,46 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
       label: "5. Bang danh gia chi tiet",
       children:
         crDateGmt7 !== null ? (
-          <QosEvaluationTable sessionId={data.id} affectedCells={data.affected_cells} crDateGmt7={crDateGmt7} />
+          <>
+            {/* Dat TREN Segmented: canh bao dung cho CA HAI bang, va phai doc duoc truoc khi nguoi dung
+                bat dau so sanh 2 con so */}
+            <CanhBaoLechCuaSo sessionId={data.id} />
+
+            {/* Segmented con [QoS] [QoE] - CUNG state voi Segmented o muc 4, doi o dau cung dong bo ca hai */}
+            <Segmented
+              value={mucDanhGia}
+              onChange={(value) => setMucDanhGia(value as string)}
+              options={[
+                { value: MUC_QOS, label: "QoS" },
+                { value: MUC_QOE, label: "QoE" },
+              ]}
+              style={{ marginBottom: "12px" }}
+            />
+            {/* QoS: GIU NGUYEN bang cu, khong sua gi. Render co dieu kien (khong phai an bang CSS) de khi
+                dang xem QoE thi bang QoS khong con chay cac query /qos/{cell} nen phia sau */}
+            {mucDanhGia === MUC_QOS && (
+              <QosEvaluationTable
+                sessionId={data.id}
+                // affected_cells dung de suy cot "Ma tram" (endpoint /qos-cells khong tra tram_id)
+                affectedCells={data.affected_cells}
+                enabled={mucDanhGia === MUC_QOS}
+              />
+            )}
+            {/* QoE goi API LAZY qua prop enabled - CHI chay khi nguoi dung that su bam sang tab QoE.
+                TAI SAO: 1 lan goi /qoe-cells = BE ban ~14 request sang CEM (moi cell 1 request) roi moi tra
+                ve. Goi san moi lan mo modal se lam moi lan xem chi tiet session deu phai cho chung ay
+                request - trong khi phan lon luot mo modal la de xem log/tham so chu khong dung toi QoE.
+                Muc 5 nay lai con nam trong Collapse dang DONG mac dinh, nen khi chua mo muc thi children
+                chua render, cong them 1 lop tiet kiem nua */}
+            {mucDanhGia === MUC_QOE && (
+              <QoeCellsTable
+                sessionId={data.id}
+                // affected_cells dung de suy cot "Ma tram" (endpoint /qoe-cells khong tra tram_id)
+                affectedCells={data.affected_cells}
+                enabled={mucDanhGia === MUC_QOE}
+              />
+            )}
+          </>
         ) : (
           <Empty description="Cho CR thuc thi xong moi co the tinh bang danh gia chi tiet" />
         ),

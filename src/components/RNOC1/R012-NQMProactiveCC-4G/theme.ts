@@ -46,7 +46,7 @@ export const R012_COLORS = {
   // ---- token cho Log tac dong (trang thai tung buoc CR, LichSuCR/CrLogTimeline.tsx) ----
   // 3 trang thai that BE tra ve qua cr_log.status: "running"|"success"|"failed". failed TAI SU DUNG dangerRed
   // o tren (KHONG tao ban sao) - do la mau do DUY NHAT toan module cho trang thai loi, giu 1 nguon de dong bo
-  // voi marker tram_goc/badge FAILED (STATUS_TAG_COLOR trong EvaluationDetail.tsx).
+  // voi marker tram_goc/badge FAILED (CR_STATUS_COLOR trong LichSuCR/crSessionStatus.ts).
   statusRunning: "#94a3b8", // xam trung tinh - buoc dang chay/trung gian, CO Y KHONG dung xanh duong thuong hieu (primary/primaryLight) de tranh nham voi cac phan tu UI "active" khac cua module
   statusSuccess: "#16a34a", // xanh la (green-600) - buoc hoan thanh thanh cong, cung do dam voi dangerRed (red-600) de 2 mau doi xung ve cuong do khi dat canh nhau
 };

@@ -18,8 +18,11 @@ import { R012_COLORS } from "../theme";
 import { formatDateTime } from "../helpers/formatDateTime";
 // doc message loi THAT tu BE thay vi loi chung cua axios - xem WHY day du trong chinh file do
 import { layThongBaoLoi } from "../helpers/layThongBaoLoi";
-import { JOB_RUN_STATUS_COLORS, JOB_RUN_STATUS_FILTER_OPTIONS } from "./jobRunStatus";
+import { JOB_RUN_STATUS_COLORS, JOB_RUN_STATUS_LABELS, JOB_RUN_STATUS_FILTER_OPTIONS } from "./jobRunStatus";
 import JobRunDetailModal from "./JobRunDetailModal";
+// Nut "Chay job xuat phieu" + modal xem truoc - dat TRONG muc nay (khong phai o cap tab) vi chay job va
+// xem lich su cac luot chay la cung mot viec, nguoi bam chay xong se nhin ngay xuong bang ben duoi
+import ChayJobModal from "./ChayJobModal";
 
 const { RangePicker } = DatePicker;
 
@@ -27,7 +30,10 @@ const columnHelper = createColumnHelper<JobRunListItem>();
 
 const JobRunTable: React.FC = () => {
   const [page, setPage] = useState<number>(1);
-  const [size, setSize] = useState<number>(20); // 20 la default cua BE theo schema JobRunQueryParams
+  // 10 dong/trang (KHONG dung default 20 cua BE): dong bo voi 2 muc con lai cua tab (Phieu, Tien trinh) -
+  // doi qua lai giua 3 muc ma so dong nhay tu 10 sang 20 lam nguoi dung tuong du lieu doi. Van gui size
+  // tuong minh len BE nen khong phu thuoc default cua BE
+  const [size, setSize] = useState<number>(10);
 
   // trang thai dang loc - "" nghia la khong gui param trang_thai (BE tra ve ca 3 trang thai)
   const [statusFilter, setStatusFilter] = useState<"" | JobRunTrangThai>("");
@@ -112,6 +118,13 @@ const JobRunTable: React.FC = () => {
 
   const columns = useMemo(
     () => [
+      columnHelper.display({
+        id: "stt",
+        header: "STT",
+        enableSorting: false, // STT la vi tri hien thi, khong phai field that -> sort khong co y nghia
+        // phan trang chay o BE nen row.index la vi tri TRONG TRANG - phai cong offset cua trang
+        cell: (info) => (page - 1) * size + info.row.index + 1,
+      }),
       columnHelper.accessor("started_at", {
         header: "Bat dau",
         cell: (info) => formatDateTime(info.getValue()),
@@ -121,7 +134,11 @@ const JobRunTable: React.FC = () => {
         header: "Trang thai",
         cell: (info) => {
           const status = info.getValue();
-          return <Tag color={JOB_RUN_STATUS_COLORS[status] ?? "default"}>{status}</Tag>;
+          return (
+            <Tag color={JOB_RUN_STATUS_COLORS[status] ?? "default"}>
+              {JOB_RUN_STATUS_LABELS[status] ?? status}
+            </Tag>
+          );
         },
         // "trang_thai" cung nam trong enum sort_by cua BE
       }),
@@ -144,7 +161,9 @@ const JobRunTable: React.FC = () => {
         enableSorting: false,
       }),
     ],
-    []
+    // page/size: cot STT tinh offset tu 2 gia tri nay - thieu deps thi doi trang STT van
+    // hien so cua trang cu
+    [page, size]
   );
 
   const table = useReactTable({
@@ -190,6 +209,13 @@ const JobRunTable: React.FC = () => {
           placeholder={["Tu ngay", "Den ngay"]}
         />
         <Button onClick={handleClearFilters}>Xoa loc</Button>
+        {/* VIEC 6 - nut Chay job dua vao CUNG HANG voi thanh loc (truoc day o dong rieng phia tren).
+            marginLeft:auto day no sang PHAI, tach khoi nhom nut loc: day la hanh dong GHI (chay job that,
+            gui phieu len CTS) chu khong phai loc/xem - de sat canh "Xoa loc" se de bam nham.
+            ChayJobModal tu render ca nut lan Modal cua no */}
+        <div style={{ marginLeft: "auto" }}>
+          <ChayJobModal />
+        </div>
       </div>
 
       {isLoading && <Spin tip="Dang tai lich su chay job..." />}
@@ -208,7 +234,7 @@ const JobRunTable: React.FC = () => {
           {/* CSS scoped rieng cho bang nay (class r012-jobrun-table) - dung DUNG token tu theme.ts de dong
               bo voi r012-phieu-table/r012-session-table, khong hardcode hex o day */}
           <style>{`
-            .r012-jobrun-table { width: 100%; border-collapse: collapse; }
+            .r012-jobrun-table { border-collapse: collapse; }
             .r012-jobrun-table thead th {
               text-align: left;
               padding: 10px 8px;
@@ -227,7 +253,8 @@ const JobRunTable: React.FC = () => {
             /* dat SAU 2 rule nth-child o tren de cung specificity nhung dung sau se thang, khong can !important */
             .r012-jobrun-table tbody tr:hover { background-color: ${R012_COLORS.rowHoverBg}; }
           `}</style>
-          <table className="r012-jobrun-table">
+          <div className="r012-table-scroll">
+<table className="r012-table r012-jobrun-table">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
@@ -249,6 +276,7 @@ const JobRunTable: React.FC = () => {
               ))}
             </tbody>
           </table>
+</div>
 
           {rows.length === 0 && (
             <Empty
@@ -265,8 +293,9 @@ const JobRunTable: React.FC = () => {
             total={total}
             showSizeChanger
             // khai bao TUONG MINH cac muc <= 100: BE gioi han size le=100 (thap hon /phieu la 200), de antd
-            // tu quyet dinh danh sach mac dinh thi mot ban antd khac co the them muc lon hon -> 422
-            pageSizeOptions={[10, 20, 50, 100]}
+            // tu quyet dinh danh sach mac dinh thi mot ban antd khac co the them muc lon hon -> 422.
+            // Dung CUNG bo muc voi 2 muc con lai cua tab (5/10/20/50) cho nhat quan
+            pageSizeOptions={[5, 10, 20, 50]}
             showTotal={(t) => `Tong ${t} luot chay`}
             onChange={(newPage, newSize) => {
               // antd Pagination tra ve ca page va pageSize trong 1 callback, phai cap nhat ca 2 de dong bo voi BE

@@ -19,15 +19,6 @@ dayjs.extend(timezone);
 // GOP LAI thanh 1 TIEU CHI DUY NHAT khop dung BE: chenh lech TB QoS 7 ngay truoc/sau CR. "Can xu ly" KHONG
 // con ton tai rieng - chenh lech GIO CHINH LA "Ket luan".
 
-// chenh lech (TB truoc - TB sau) <= nguong nay -> DAT, > nguong -> KHONG DAT. Khop
-// EvaluationService._XUAT_PHIEU_QOS_THRESHOLD_DELTA=-0.2 phia BE (avg_after-avg_before>=-0.2 tuong duong
-// TB truoc-TB sau<=0.2 - cung 1 dieu kien, chi doi dau de doc tu nhien hon ("chenh lech" duong = giam).
-export const QOS_DIFF_CONCLUSION_THRESHOLD = 0.2;
-// so ngay CO DATA toi thieu MOI PHIA (truoc VA sau CR, DOC LAP) de du tin cay ket luan - khop
-// MIN_DAYS_REQUIRED=5 phia BE (domain/services/evaluation_service.py). Thieu 1 trong 2 phia -> INSUFFICIENT,
-// KHONG con dua vao "windowFullyElapsed" (da bo - so ngay thuc te <5 tu nhien da bao gom truong hop cua so
-// chua troi qua het, khong can co rieng nua).
-export const QOS_MIN_DAYS_REQUIRED = 5;
 
 export type DayGroup = "before" | "cr_day" | "after";
 
@@ -39,16 +30,19 @@ export interface QosEvalChartPoint {
 }
 
 // ket luan DUY NHAT (khong con tach 2 tieu chi): PASS="DAT", FAIL="KHONG DAT", INSUFFICIENT="Chua du du lieu"
-export type QosConclusion = "PASS" | "FAIL" | "INSUFFICIENT";
-
+// KHONG CON truong "conclusion" (05092026). Ket luan DAT/KHONG DAT gio CHI do BE quyet dinh va tra ve
+// qua /qos-cells, /qoe-cells. File nay chi con lam VIEC TINH THUAN TUY (trung binh, chenh lech, gom 15
+// ngay theo nhom) - khong con hang so nghiep vu nao.
+//
+// VI SAO BO: FE tung tu tinh ket luan bang ban sao nguong, va ban sao do da TROI KHOI BE 3 LAN. Lan cuoi
+// (BE doi 0.2 -> 0.5 va them san 3.0) se lam chart hien "DAT" ngay canh bang hien "KHONG DAT" cho CUNG
+// mot cell, trong CUNG mot modal. Bo han cho FE tu ket luan la cach duy nhat khong bao gio troi lai.
 export interface QosEvalResult {
-  // avgBefore/avgAfter LUON duoc tinh tu so ngay THUC TE co data (kem ca khi < QOS_MIN_DAYS_REQUIRED) -
-  // khop cach BE lam (EvaluationService.evaluate(): "avg tinh TRUOC, roi moi check nguong" de van co gia
-  // tri tham khao ke ca khi INSUFFICIENT). null CHI khi hoan toan 0 ngay co data.
+  // avgBefore/avgAfter tinh tu so ngay THUC TE co data - day la PHEP TINH, khong phai luat nghiep vu,
+  // nen giu lai o FE duoc. null CHI khi hoan toan 0 ngay co data.
   avgBefore: number | null;
   avgAfter: number | null;
   diff: number | null; // avgBefore - avgAfter, null neu avgBefore hoac avgAfter la null
-  conclusion: QosConclusion; // DAT/KHONG DAT theo diff, hoac INSUFFICIENT neu thieu du lieu 1 trong 2 phia
   chartData: QosEvalChartPoint[];
 }
 
@@ -109,80 +103,5 @@ export function buildQosEvaluation(crDateGmt7: Dayjs, points: QosHistoryPoint[])
   const avgAfter = afterValues.length > 0 ? afterValues.reduce((sum, v) => sum + v, 0) / afterValues.length : null;
   const diff = avgBefore !== null && avgAfter !== null ? avgBefore - avgAfter : null;
 
-  // TU GIA DINH khop dung BE (application/xuat_phieu_use_case.py comment TU GIA DINH tuong tu) - "chua du
-  // du lieu" nghia la CHUA DU >=5/7 NGAY moi phia, KHONG phai doi hoi CHINH XAC ca 7/7 (CTS thuong xuyen
-  // thieu vai ngay, "missing day la binh thuong" - xem API_CONTRACTS.md SS2 phia BE). Kiem tra DOC LAP tren
-  // so ngay THUC TE (beforeValues.length/afterValues.length), KHONG con "windowFullyElapsed" rieng nhu ban
-  // cu - cua so chua troi qua het tu nhien se cho so ngay thuc te <5 (CTS khong the co du lieu ngay tuong
-  // lai), nen 1 dieu kien nay la DU, don gian hoa dung huong "no over-engineering".
-  const conclusion: QosConclusion =
-    beforeValues.length >= QOS_MIN_DAYS_REQUIRED && afterValues.length >= QOS_MIN_DAYS_REQUIRED
-      ? (diff as number) <= QOS_DIFF_CONCLUSION_THRESHOLD
-        ? "PASS"
-        : "FAIL"
-      : "INSUFFICIENT";
-
-  return { avgBefore, avgAfter, diff, conclusion, chartData };
-}
-
-// 1 dong ket qua danh gia cho 1 cell - dung cho bang toan bo affected_cells (QosEvaluationTable)
-export interface CellEvalRow {
-  cell_name: string;
-  tram_id: string | null;
-  avgBefore: number | null;
-  avgAfter: number | null;
-  diff: number | null;
-  conclusion: QosConclusion;
-}
-
-// gioi han 5 request DONG THOI/lan - tranh ban het 47 request len BE/CTS gateway cung 1 luc gay qua tai
-// hoac bi CDS/CTS chan (rate limit), ma van nhanh hon goi tuan tu tung cell 1 (47 lan doi noi tiep)
-const EVAL_CONCURRENCY = 5;
-
-// tinh danh gia QoS cho TOAN BO affected_cells cua 1 session - goi /qos/{cell}?from=&to= THEO TUNG NHOM
-// EVAL_CONCURRENCY cell 1 luc (Promise.all trong 1 nhom, cac nhom chay TUAN TU), goi onProgress sau MOI
-// nhom de UI hien tien do "da xong X/47" thay vi doi den khi xong het moi thay ket qua
-export async function evaluateAllAffectedCells(
-  cells: SessionAffectedCellItem[],
-  crDateGmt7: Dayjs,
-  window: { from: string; to: string },
-  onProgress: (done: number, total: number) => void
-): Promise<CellEvalRow[]> {
-  const rows: CellEvalRow[] = [];
-  for (let i = 0; i < cells.length; i += EVAL_CONCURRENCY) {
-    const batch = cells.slice(i, i + EVAL_CONCURRENCY);
-    // eslint-disable-next-line no-await-in-loop -- CO Y doi tuan tu giua cac nhom (Promise.all trong nhom,
-    // nhung nhom voi nhom phai noi tiep) de gioi han dung so luong request dong thoi toi da, khong the
-    // Promise.all() TOAN BO 47 cell cung luc (se pha vo chinh muc dich gioi han concurrency)
-    const batchRows = await Promise.all(
-      batch.map(async (cell): Promise<CellEvalRow> => {
-        try {
-          const history = await getQosHistory(cell.cell_name, window);
-          const evalResult = buildQosEvaluation(crDateGmt7, history.data);
-          return {
-            cell_name: cell.cell_name,
-            tram_id: cell.tram_id,
-            avgBefore: evalResult.avgBefore,
-            avgAfter: evalResult.avgAfter,
-            diff: evalResult.diff,
-            conclusion: evalResult.conclusion,
-          };
-        } catch {
-          // 1 cell loi (vd CDS/CTS timeout rieng cell do) KHONG duoc lam hong ca danh sach - danh dau
-          // "Chua du du lieu" (INSUFFICIENT), thay vi de Promise.all() reject va mat toan bo ket qua da co
-          return {
-            cell_name: cell.cell_name,
-            tram_id: cell.tram_id,
-            avgBefore: null,
-            avgAfter: null,
-            diff: null,
-            conclusion: "INSUFFICIENT",
-          };
-        }
-      })
-    );
-    rows.push(...batchRows);
-    onProgress(rows.length, cells.length);
-  }
-  return rows;
+  return { avgBefore, avgAfter, diff, chartData };
 }

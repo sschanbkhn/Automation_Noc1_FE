@@ -5,12 +5,12 @@ import {
   DatePicker,
   Empty,
   Input,
-  InputNumber,
   Modal,
   Pagination,
   Select,
   Spin,
   Tag,
+  Tooltip,
   message,
 } from "antd";
 import { Dayjs } from "dayjs";
@@ -27,15 +27,23 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import debounce from "lodash/debounce";
 // <th> dung chung cho MOI bang co sort trong module (click header + mui ten huong sort)
 import { SortableHeaderCell } from "../common/SortableHeaderCell";
-import { getLichSuPhieu, xuatPhieu } from "../services/R012Service";
-import { PhieuHistoryItem, PhieuHistoryResponse } from "../types";
+import { getLichSuPhieu, xuatPhieu, xoaPhieu } from "../services/R012Service";
+import { NguonKhongDat, PhieuHistoryItem, PhieuHistoryResponse } from "../types";
 import { R012_COLORS } from "../theme";
 // dinh dang thoi gian dung CHUNG toan module (ep UTC->GMT+7) - xem ly do trong file helper
 import { formatDateTime } from "../helpers/formatDateTime";
 // doc message loi THAT tu BE thay vi loi chung cua axios - xem WHY day du trong chinh file do
 import { layThongBaoLoi } from "../helpers/layThongBaoLoi";
-import { PHIEU_STATUS_COLORS, PHIEU_STATUS_FILTER_OPTIONS, PHIEU_STATUS_LABELS } from "./phieuStatus";
+import {
+  PHIEU_STATUS_COLORS,
+  PHIEU_STATUS_FILTER_OPTIONS,
+  PHIEU_STATUS_LABELS,
+  NGUON_FILTER_OPTIONS,
+  NGUON_KHONG_DAT_LABELS,
+  PHAN_LOAI_LOI_TAG,
+} from "./phieuStatus";
 import PhieuDetailModal from "./PhieuDetailModal";
+import { OneLineCell } from "../common/r012TableStyle";
 
 const { RangePicker } = DatePicker;
 
@@ -68,6 +76,11 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
   // an ngam DRY_RUN nhu truoc vi trang thai do da bi bo han - xem phieuStatus.ts)
   const [statusFilter, setStatusFilter] = useState<string>("");
 
+  // nguon phat hien cell khong dat dang loc - "" = khong gui param nguon, tuc lay TAT CA nguon.
+  // LUU Y: BE tren .196:8080 CHUA trien khai param nay (xem PhieuHistoryQueryParams.nguon trong
+  // types/index.ts) - gui len khong loi nhung cung chua loc gi cho den khi BE duoc deploy lai
+  const [nguonFilter, setNguonFilter] = useState<string>("");
+
   // cell_name dang goi POST /phieu - dung de disable RIENG nut cua dong do trong luc cho response. Khoa theo
   // cell_name (khong phai vi tri hang) vi sort/loc/phan trang lam vi tri hang doi, con cell_name la khoa
   // nghiep vu on dinh - cung ly do da dung o QosEvaluationTable.tsx::phieuByCell
@@ -87,18 +100,26 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
   // khoang ngay loc tren created_at - null nghia la khong loc theo ngay
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(null);
 
-  // Loc theo session CR - O RIENG, KHONG gop vao o tim kiem q. Ly do: 2 kieu tim khac han nhau.
-  //  - q: BE chay ILIKE %q% tren cell_name/phieu_id -> tim chuoi GAN DUNG, go "10" se khop ca "SSN10",
-  //    "PH_10023", "1105"...
-  //  - session_id: so CHINH XAC, BE so sanh bang.
-  // Gop chung 1 o thi go "10" se ra lan lon phieu cua session 10 voi moi cell/phieu co chuoi "10" ben trong -
-  // nguoi dung khong the biet dong nao la thu minh can. Tach o rieng thi moi o tra dung mot loai ket qua.
-  // null = khong loc theo session
-  const [sessionFilter, setSessionFilter] = useState<number | null>(null);
+  // === GOP o "Session ID" VAO o tim kiem (truoc day la 2 o rieng) ===
+  // 2 kieu tim van khac han nhau ve ban chat va van duoc gui len 2 param KHAC nhau:
+  //  - q: BE chay ILIKE %q% tren cell_name/phieu_id -> tim chuoi GAN DUNG
+  //  - session_id: so CHINH XAC, BE so sanh bang
+  // Nhung nguoi dung KHONG can phai chon truoc minh dang tim kieu nao: 2 loai gia tri nay tu phan biet
+  // duoc bang chinh hinh dang cua chung. Ten cell luon co chu ("4G-SSN014M11-HNI"), so session thi TOAN SO.
+  // Nen o day tu nhan dang: go toan chu so -> gui session_id; con lai -> gui q.
+  // Danh doi DUY NHAT: ma phieu cung toan so ("19652") nen go ma phieu se bi hieu la so session. Chap nhan
+  // duoc vi tim theo ma phieu la viec hiem (nguoi ta doc ma phieu tu bang chu khong go vao de tim), trong
+  // khi loc theo session la thao tac hang ngay - va o tim ghi ro thu tu uu tien trong placeholder
+  const searchTermTrimmed = searchTerm.trim();
+  const oTimLaSo = searchTermTrimmed !== "" && /^\d+$/.test(searchTermTrimmed);
 
   // session_id THAT SU gui len BE: uu tien prop sessionId (dang dung trong EvaluationDetail - da khoa cung
-  // 1 session, o loc khong hien) roi moi den o loc cua tab rieng
-  const effectiveSessionId = sessionId ?? sessionFilter ?? undefined;
+  // 1 session) roi moi den gia tri suy tu o tim cua tab rieng
+  const effectiveSessionId = sessionId ?? (oTimLaSo ? Number(searchTermTrimmed) : undefined);
+
+  // chi gui q khi o tim KHONG phai toan so - neu khong se vua gui session_id vua gui q va BE loc giao ca 2,
+  // ra bang rong
+  const qParam = !oTimLaSo && searchTermTrimmed !== "" ? searchTermTrimmed : undefined;
 
   // dong dang xem chi tiet - null nghia la Modal dang dong
   const [selectedPhieu, setSelectedPhieu] = useState<PhieuHistoryItem | null>(null);
@@ -153,18 +174,65 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
     setPage(1);
   };
 
-  const handleSessionFilterChange = (value: number | null) => {
-    setSessionFilter(value);
-    setPage(1); // doi bo loc -> ve trang 1, tranh hien trang trong gay hieu lam het du lieu
+  const handleNguonFilterChange = (value: string) => {
+    setNguonFilter(value);
+    setPage(1); // doi bo loc -> ve trang 1, giong cac bo loc con lai
   };
+
+  // id dong phieu dang goi DELETE - disable RIENG nut cua dong do trong luc cho response
+  const [dangXoaPhieuId, setDangXoaPhieuId] = useState<number | null>(null);
+
+  // Goi THAT DELETE /api/v1/phieu/{id}. Xoa 1 DONG lich su phieu (khong phai xoa phieu ben CTS) de cell
+  // quay lai trang thai chua xu ly va co the xuat lai
+  // useCallback: "columns" (useMemo ben duoi) tham chieu toi ham nay qua handleXacNhanXoaPhieu,
+  // tham chieu khong on dinh se lam useMemo tinh lai moi render
+  const handleXoaPhieu = useCallback(async (id: number) => {
+    setDangXoaPhieuId(id);
+    try {
+      await xoaPhieu(id);
+      message.success(`Da xoa dong phieu ${id}`);
+      // invalidate theo TIEN TO ["r012","phieu-history"] - lam moi CA bang nay, CA 2 bang danh gia
+      // QoS/QoE trong modal chi tiet session (chung doc cung tien to de biet cell nao da co phieu)
+      await queryClient.invalidateQueries({ queryKey: ["r012", "phieu-history"] });
+    } catch (error: any) {
+      const status = error?.response?.status;
+      // 409 = phieu da len CTS that (trang_thai=SUCCESS), BE chan xoa. Hien NGUYEN VAN message cua BE thay
+      // vi tu dien lai - BE la noi nam du dieu kien de giai thich
+      if (status === 409) {
+        // GOP ve ham dung chung layThongBaoLoi (03102026, merge master->dev) - xem WHY day du trong
+        // helpers/layThongBaoLoi.ts
+        message.warning(layThongBaoLoi(error, `Phieu ${id} da len CTS, khong xoa duoc o day`));
+      } else {
+        message.error(layThongBaoLoi(error, "Xoa phieu that bai"));
+      }
+    } finally {
+      setDangXoaPhieuId(null);
+    }
+  }, [queryClient]);
+
+  const handleXacNhanXoaPhieu = useCallback((id: number) => {
+    Modal.confirm({
+      title: "Xac nhan xoa dong phieu",
+      okText: "Xoa",
+      okButtonProps: { danger: true },
+      cancelText: "Huy",
+      width: 520,
+      content: (
+        <p style={{ marginTop: 0 }}>
+          Xoa dong phieu nay? Cell se quay lai trang thai chua xu ly va co the xuat lai.
+        </p>
+      ),
+      onOk: () => handleXoaPhieu(id),
+    });
+  }, [handleXoaPhieu]);
 
   const handleClearFilters = () => {
     setStatusFilter("");
+    setNguonFilter("");
     setSearchInput("");
     setSearchTerm("");
     debouncedApplySearch.cancel(); // huy lan go dang cho, neu khong no se ghi de searchTerm rong sau 400ms
     setDateRange(null);
-    setSessionFilter(null);
     setPage(1);
   };
 
@@ -210,7 +278,8 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
         } else if (status === 503) {
           message.error("Loi ket noi CTS");
         } else {
-          // GOP ve ham dung chung layThongBaoLoi (27092026) - xem WHY day du trong helpers/layThongBaoLoi.ts
+          // GOP ve ham dung chung layThongBaoLoi (03102026, merge master->dev) - xem WHY day du trong
+          // helpers/layThongBaoLoi.ts
           message.error(layThongBaoLoi(error, "Xuat phieu that bai, vui long thu lai"));
         }
       } finally {
@@ -291,6 +360,7 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
       page,
       size,
       statusFilter,
+      nguonFilter,
       searchTerm,
       tuNgay,
       denNgay,
@@ -301,7 +371,9 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
       getLichSuPhieu({
         session_id: effectiveSessionId,
         trang_thai: statusFilter || undefined,
-        q: searchTerm || undefined, // khong gui q rong de BE khoi chay ILIKE thua
+        // "" (Tat ca) -> undefined, axios tu bo key undefined khoi query string nen khong gui param thua
+        nguon: (nguonFilter || undefined) as NguonKhongDat | undefined,
+        q: qParam, // undefined khi o tim la so (luc do da gui session_id) hoac khi o tim rong
         tu_ngay: tuNgay,
         den_ngay: denNgay,
         page,
@@ -316,6 +388,11 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
   const total = data?.total ?? 0;
 
   const columns = useMemo(() => {
+    // THU TU COT (07092026, yeu cau truc tiep user):
+    //   STT | Session | Trang thai | Ma phieu | Nguon | Cell anh huong | ID tram tat | Tram tat |
+    //   Thoi diem | Thao tac
+    // Doc tu TRAI sang di theo mach: phieu nay thuoc dau (Session) -> no ra sao (Trang thai, Ma phieu,
+    // Nguon) -> no ve cai gi (Cell anh huong, tram tat) -> khi nao -> lam gi.
     const baseColumns: any[] = [
       columnHelper.display({
         id: "stt",
@@ -323,7 +400,6 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
         enableSorting: false, // STT la vi tri hien thi, khong phai field that -> sort khong co y nghia
         cell: (info) => (page - 1) * size + info.row.index + 1,
       }),
-      columnHelper.accessor("cell_name", { header: "Cell" }),
       columnHelper.accessor("trang_thai", {
         header: "Trang thai",
         cell: (info) => {
@@ -331,8 +407,25 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
           // PHIEU_STATUS_LABELS[status] ?? status: 2 trang thai KHONG_XUAT_* co nhan tieng Viet ngan, cac
           // trang thai con lai (SUCCESS/FAILED/PENDING) hien nguyen ten - va gia tri la ma BE them sau nay
           // cung van hien duoc nguyen van thay vi ra o rong
+          // Dong co loi: hien THEM 1 Tag phan loai ngay canh trang thai. Dat CUNG O chu khong tach cot
+          // rieng - phan loai chi co nghia khi doc kem trang thai (dong SUCCESS khong bao gio co), tach
+          // cot se tao mot cot gan nhu trong tron
+          const phanLoai = info.row.original.phan_loai_loi
+            ? PHAN_LOAI_LOI_TAG[info.row.original.phan_loai_loi]
+            : undefined;
           return (
-            <Tag color={PHIEU_STATUS_COLORS[status] ?? "default"}>{PHIEU_STATUS_LABELS[status] ?? status}</Tag>
+            <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap" }}>
+              <Tag color={PHIEU_STATUS_COLORS[status] ?? "default"} style={{ marginInlineEnd: 0 }}>
+                {PHIEU_STATUS_LABELS[status] ?? status}
+              </Tag>
+              {phanLoai && (
+                <Tooltip title={phanLoai.tooltip}>
+                  <Tag color={phanLoai.color} style={{ marginInlineEnd: 0 }}>
+                    {phanLoai.label}
+                  </Tag>
+                </Tooltip>
+              )}
+            </div>
           );
         },
       }),
@@ -344,12 +437,92 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
         // sort_by chua duoc xac nhan nam trong enum cua BE
         enableSorting: false,
       }),
+      // Cot "Nguon" - cell nay bi phat hien khong dat qua chi so nao (QoS / QoE / ca hai). Tu khi QoE ngang
+      // hang QoS, 1 dong phieu khong con tu noi len duoc no sinh ra tu dau, ma do la thu can biet dau tien
+      // khi doi chieu lai voi bang danh gia.
+      // enableSorting:false - enum sort_by cua BE la id/cr_session_id/cell_name/trang_thai/created_at,
+      // KHONG co nguon_khong_dat (da doi chieu openapi.json), gui sort_by ngoai enum se bi tra 422
+      columnHelper.accessor("nguon_khong_dat", {
+        header: "Nguon",
+        enableSorting: false,
+        cell: (info) => {
+          const v = info.getValue();
+          // "-" cho CA HAI truong hop khong co gia tri, va ca hai deu BINH THUONG:
+          //  - null: phieu cu xuat truoc dot doi nay (BE khong backfill)
+          //  - undefined: BE tren .196 chua deploy truong nay -> hien tai MOI dong deu vao nhanh nay
+          if (!v) {
+            return <span style={{ color: "#bfbfbf" }}>-</span>;
+          }
+          // KHONG to mau theo nguon: mau trong bang nay da danh cho TRANG THAI phieu (do = loi, xanh =
+          // thanh cong). Them mau thu hai cho nguon se tranh tin hieu voi cot Trang thai ngay ben canh -
+          // nguon khong phai chuyen tot/xau, chi la thong tin phan loai
+          return <Tag>{NGUON_KHONG_DAT_LABELS[v] ?? v}</Tag>;
+        },
+      }),
+      columnHelper.accessor("cell_name", {
+        // "Cell anh huong" chu khong phai "Cell": phieu duoc xuat cho cell LAN CAN bi anh huong boi CR,
+        // khong phai cell cua tram bi tat. Ten cu de doc nham thanh "cell cua tram nay"
+        header: "Cell anh huong",
+        // nowrap o CSS bang da du cho ten cell dung khuon (~16-20 ky tu) nam gon 1 dong. maxWidth+ellipsis
+        // o day la DUONG LUI cho ten bat thuong dai: khong co no thi 1 ten dai se keo ca bang rong ra va
+        // day cac cot con lai ra ngoai vung nhin. Tooltip giu lai gia tri day du de khong mat thong tin
+        cell: (info) => (
+          <Tooltip title={info.getValue()}>
+            <span
+              style={{
+                display: "inline-block",
+                maxWidth: "220px",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                verticalAlign: "bottom",
+              }}
+            >
+              {info.getValue()}
+            </span>
+          </Tooltip>
+        ),
+      }),
+      // 2 cot "ID tram tat" + "Tram tat" - tram BI TAT cua CR sinh ra phieu nay (BE efd89d0 join san
+      // tram_id/tram_name). Phieu duoc xuat cho cell LAN CAN nen ten cell KHONG cho biet CR nao sinh ra no.
+      //
+      // TACH 2 COT (truoc day ghep thanh 1 chuoi "113517 - 4G-TTI047M-HNI"): BE tra RIENG 2 truong, FE
+      // ghep lai roi lai bat nguoi doc tu tach ra bang mat. Tach ra thi doc/loc/copy tung gia tri deu de
+      // hon, va ma tram (6 ky tu co dinh) khong bi ten tram dai keo theo.
+      // enableSorting:false ca hai - enum sort_by cua BE la id/cr_session_id/cell_name/trang_thai/
+      // created_at, KHONG co tram_id/tram_name; gui sort_by ngoai enum se bi tra 422
+      columnHelper.display({
+        id: "tram_tat_id",
+        header: "ID tram tat",
+        enableSorting: false,
+        cell: (info) => {
+          const v = info.row.original.tram_id;
+          // phieu cu truoc dot BE bo sung 2 truong nay
+          return v ?? <span style={{ color: "#bfbfbf" }}>-</span>;
+        },
+      }),
+      columnHelper.display({
+        id: "tram_tat_ten",
+        header: "Tram tat",
+        enableSorting: false,
+        cell: (info) => {
+          const v = info.row.original.tram_name;
+          if (!v) {
+            return <span style={{ color: "#bfbfbf" }}>-</span>;
+          }
+          // OneLineCell nhu cac cot ten khac - chong ngat dong khi ten tram dai
+          return <OneLineCell value={v} />;
+        },
+      }),
     ];
 
     // cot "Session" chi hien o tab TAT CA - khi dang xem trong chi tiet 1 session thi moi dong deu cung 1
-    // gia tri, hien them 1 cot lap lai la thua cho
+    // gia tri, hien them 1 cot lap lai la thua cho.
+    // splice(1,0,...) chu khong push: cot nay phai nam o VI TRI 2 (ngay sau STT) - day la thu dau tien
+    // nguoi truc doi chieu khi truy mot phieu. push se day no xuong cuoi nhu ban cu
     if (sessionId === undefined) {
-      baseColumns.push(
+      baseColumns.splice(
+        1,
+        0,
         columnHelper.accessor("cr_session_id", {
           header: "Session",
           cell: (info) => info.getValue() ?? "-",
@@ -379,8 +552,8 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
           // Con lai (FAILED / PENDING / KHONG_XUAT_VUOT_GIOI_HAN / KHONG_XUAT_HET_LUOT_THU) deu la "chua co
           // phieu" nen deu cho xuat tay. Rieng 2 trang thai KHONG_XUAT_* chinh la truong hop nut nay sinh ra
           // de phuc vu: job tu dong da CHU DONG bo qua chung, chi con duong xuat tay
-          if (row.trang_thai === "SUCCESS") return null;
-          return (
+          const nutXuat =
+            row.trang_thai === "SUCCESS" ? null : (
             <Button
               size="small"
               danger // do - nhac day la hanh dong ghi that ra he thong ngoai, khong phai nut xem/tinh toan
@@ -395,12 +568,38 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
               Xuat
             </Button>
           );
+
+          // Nut XOA hien khi trang_thai !== SUCCESS - dung dieu kien BE dat ra (SUCCESS bi tra 409 vi phieu
+          // da len CTS that). AN han o dong SUCCESS thay vi disable: 2 nut xam canh nhau o moi dong da xong
+          // chi lam ray bang
+          const nutXoa =
+            row.trang_thai === "SUCCESS" ? null : (
+              <Button
+                size="small"
+                danger
+                loading={dangXoaPhieuId === row.id}
+                onClick={(e) => {
+                  e.stopPropagation(); // ca hang co onClick mo Modal chi tiet, khong chan se mo chong len
+                  handleXacNhanXoaPhieu(row.id);
+                }}
+              >
+                Xoa
+              </Button>
+            );
+
+          if (!nutXuat && !nutXoa) return null;
+          return (
+            <div style={{ display: "flex", gap: "6px" }}>
+              {nutXuat}
+              {nutXoa}
+            </div>
+          );
         },
       })
     );
 
     return baseColumns;
-  }, [page, size, sessionId, dangXuatCell, handleXacNhanXuat]);
+  }, [page, size, sessionId, dangXuatCell, handleXacNhanXuat, dangXoaPhieuId, handleXacNhanXoaPhieu]);
 
   const table = useReactTable({
     data: rows,
@@ -434,11 +633,21 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
             onChange={handleStatusFilterChange}
             options={PHIEU_STATUS_FILTER_OPTIONS}
             style={{ width: "200px" }}
+            prefix="Trang thai:"
+          />
+          {/* Select loc theo NGUON. Co prefix "Nguon:" vi dat canh Select trang thai o tren, 2 o Select tron
+              giong nhau se khong biet o nao loc cai gi neu chua bam mo (cung ly do da them prefix cho o kia) */}
+          <Select
+            value={nguonFilter}
+            onChange={handleNguonFilterChange}
+            options={NGUON_FILTER_OPTIONS}
+            style={{ width: "160px" }}
+            prefix="Nguon:"
           />
           <Input.Search
-            // KHONG con chu "(trong trang)" nhu ban cu: gio tim tren TOAN BO du lieu qua BE. Placeholder ghi
-            // ro tim duoc theo 2 thu de nguoi dung khong phai doan
-            placeholder="Tim theo cell hoac ma phieu"
+            // Placeholder liet ke ca 3 thu tim duoc - nguoi dung khong phai doan, cung khong phai chon
+            // truoc "tim theo gi" (o nay tu nhan dang theo kieu du lieu go vao, xem oTimLaSo o tren)
+            placeholder="Tim theo cell / ma phieu / so session"
             allowClear
             // value theo searchInput (cap nhat ngay tung phim) chu KHONG phai searchTerm (tre 400ms), de o
             // input khong bi giat/tre khi go
@@ -450,22 +659,6 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
             }}
             style={{ flex: "1 1 220px", minWidth: "180px", maxWidth: "260px" }}
           />
-          {/* O loc session CHI hien o tab rieng. Trong EvaluationDetail (co prop sessionId) thi bang da khoa
-              cung 1 session roi - bay them o nay ra chi gay hieu nham la co the doi sang session khac.
-              Dieu kien bam theo `sessionId === undefined` chu khong dua vao shouldShowFilters: co the co
-              noi truyen showFilters={true} KEM sessionId, luc do van phai an o nay */}
-          {sessionId === undefined && (
-            <InputNumber
-              value={sessionFilter}
-              onChange={handleSessionFilterChange}
-              placeholder="Session ID"
-              // min=1 + precision=0: id la so nguyen duong, chan luon gia tri am/thap phan ngay tai o nhap
-              // thay vi de BE tra 422
-              min={1}
-              precision={0}
-              style={{ width: "130px" }}
-            />
-          )}
           <RangePicker
             value={dateRange}
             onChange={handleDateRangeChange}
@@ -494,7 +687,12 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
           {/* CSS scoped rieng cho bang nay (class r012-phieu-table) - dung DUNG token tu theme.ts de dong bo
               voi r012-session-table, khong hardcode hex o day */}
           <style>{`
-            .r012-phieu-table { width: 100%; border-collapse: collapse; }
+            /* NGUYEN NHAN ten cell bi ngat 2 dong: "width: 100%" ep bang co dung be rong container, 8 cot
+               chia nhau khong du cho nen trinh duyet ngat gia tri dai ("4G-SSN014M11-HNI") xuong dong. Bo
+               width:100% + them nowrap: bang giu do rong TU NHIEN theo noi dung roi cuon ngang trong div
+               overflow-x boc ngoai - dung cach 3 bang khong bao gio bi ngat dong dang lam
+               (r012-qos-eval-table / r012-qoe-eval-table / r012-cellparams-table) */
+            .r012-phieu-table { border-collapse: collapse; }
             .r012-phieu-table thead th {
               text-align: left;
               padding: 10px 8px;
@@ -513,7 +711,10 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
             /* dat SAU 2 rule nth-child o tren de cung specificity nhung dung sau se thang, khong can !important */
             .r012-phieu-table tbody tr:hover { background-color: ${R012_COLORS.rowHoverBg}; }
           `}</style>
-          <table className="r012-phieu-table">
+          {/* boc overflow-x: sau khi bo width:100%, bang co the rong hon container (nhat la trong Modal
+              chi tiet session chi rong 800px) - cho cuon ngang RIENG trong khung cua no */}
+          <div className="r012-table-scroll">
+          <table className="r012-table r012-phieu-table">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
@@ -534,13 +735,14 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
               ))}
             </tbody>
           </table>
+          </div>
 
           {rows.length === 0 && (
             <Empty
               // MOI bo loc deu chay tren BE nen "rong" chi con 1 nghia: khong ban ghi nao khop. Khong con
               // phai phan biet "rong that" voi "rong do loc client trong trang" nhu ban cu
               description={
-                searchTerm || statusFilter || dateRange || sessionFilter !== null
+                searchTerm || statusFilter || nguonFilter || dateRange
                   ? "Khong co phieu nao khop bo loc"
                   : "Chua co phieu nao"
               }
