@@ -143,6 +143,18 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
         cell: (info) => <OneLineCell value={info.getValue()} />,
         // sort_by="tram_name" nam trong enum BE ho tro - duoc phep sort
       }),
+      // DA XAC NHAN qua goi that GET /stations tren .196:8080 (04/10/2026): field "vendor" da co va co du
+      // lieu that, gia tri thuoc {NOKIA, ERICSSON, HUAWEI, ZTE, UNKNOWN}. "—" khi rong (optional/null).
+      columnHelper.accessor("vendor", {
+        header: "Vendor",
+        // KHONG duoc enableSorting:true - "vendor" KHONG nam trong enum sort_by cua BE (da doi chieu
+        // openapi.json that: /stations.sort_by chi nhan "tram_id"|"tram_name"|"ma_tinh"). Bang nay la
+        // SERVER-SIDE sort thuan (xem comment o duoi, khong dang ky getSortedRowModel) - bat sort cho cot
+        // nay se gui sort_by=vendor len BE va bi tra 422 ngay khi nguoi dung bam mui ten, giong 4 cot
+        // ten_quan_ly/ma_csht/trang_thai/cr_status ben duoi cung bi chan vi cung ly do
+        enableSorting: false,
+        cell: (info) => info.getValue() ?? "—",
+      }),
       columnHelper.accessor("ten_quan_ly", {
         header: "Don vi quan ly",
         enableSorting: false, // "ten_quan_ly" KHONG nam trong enum sort_by cua BE (xem StationsQueryParams) - sort cot nay se bi BE tra 422

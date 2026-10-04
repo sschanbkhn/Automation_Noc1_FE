@@ -29,6 +29,12 @@ export interface StationItem {
   trang_thai: string; // trang thai tram, bat buoc theo schema
   cr_status: string | null; // trang thai CR gan nhat cua tram, co the null theo schema
   cr_session_id: number | null; // id session CR gan nhat, co the null theo schema
+  // THEM 04/10/2026 (BE api/schemas/station_schemas.py) - gia tri cua enum Vendor BE da CHUAN HOA (KHONG
+  // phai ten_thiet_bi tho tu DB), thuc te luon thuoc {NOKIA, ERICSSON, HUAWEI, ZTE, UNKNOWN}. Optional:
+  // DA XAC NHAN qua goi that GET /stations tren .196:8080 - field NAY da co va co du lieu that (vd
+  // tram_id=0 -> "ZTE", tram_id=105128 -> "NOKIA"), nhung van khai optional + nullable dung schema BE
+  // (str | None = None, khong bat buoc) thay vi coi la luon ton tai
+  vendor?: string | null;
 }
 
 // dung cho GET /api/v1/stations - response tra ve danh sach tram co phan trang
