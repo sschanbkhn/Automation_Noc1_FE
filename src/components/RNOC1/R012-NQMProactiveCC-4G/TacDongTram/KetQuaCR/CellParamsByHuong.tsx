@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { OneLineCell } from "../../common/r012TableStyle";
-import { Button, Pagination } from "antd";
+import { Button, Pagination, Tag } from "antd";
 import {
   createColumnHelper,
   useReactTable,
@@ -56,6 +56,16 @@ const tinhSectorTramTat = (huongId: string | null): number | null => {
   }
   const so = Number(huongId);
   return Number.isNaN(so) ? null : so % 10;
+};
+
+// Nhan hien thi cho MA ly do "ngoai dieu kien moi" (THEM 04/10/2026, BE
+// domain/services/danh_gia_dieu_kien_cr_moi.py) - ma la hop dong on dinh giua FE/BE, text la dien giai
+// rieng cua FE. Ma la ngoai bang nay (BE them ma moi ma FE chua kip cap nhat) van hien duoc NGUYEN VAN ma
+// do thay vi rong/vo - xem cell ben duoi
+const NGOAI_DIEU_KIEN_MOI_LABELS: Record<string, string> = {
+  BAND_KHONG_PHAI_1800: "Khong phai band 1800",
+  KHONG_XAC_DINH_BAND: "Khong xac dinh band",
+  VUOT_2_CELL_SECTOR: "Vuot 2 cell/sector",
 };
 
 // xac dinh cap gia tri "truoc CR -> sau CR" DUNG theo action_type cua tung cell - 1 cell chi thuoc DUNG 1
@@ -141,6 +151,28 @@ const CellParamsByHuong: React.FC<CellParamsByHuongProps> = ({ cellParams, sessi
         // OneLineCell: ellipsis + Tooltip lam duong lui cho ten dai bat thuong - xem
         // common/r012TableStyle.tsx
         cell: (info) => <OneLineCell value={info.getValue()} />,
+      }),
+      // THEM 04/10/2026 - cell co the co NHIEU ly do cung luc (BE tra list[str], khong phai 1 chuoi don) nen
+      // hien NHIEU Tag canh nhau. Mang rong hoac undefined (BE .196 chua deploy truong nay) deu la "dat du
+      // dieu kien moi, khong co gi de hien" - KHONG phai loi, hien "-" cho gon thay vi de o trong kho doc
+      columnHelper.accessor("ngoai_dieu_kien_moi", {
+        header: "Ngoai dieu kien moi",
+        enableSorting: false, // mang, khong phai 1 gia tri don co the sap xep tu nhien
+        cell: (info) => {
+          const lyDoList = info.getValue();
+          if (!lyDoList || lyDoList.length === 0) {
+            return "-";
+          }
+          return (
+            <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+              {lyDoList.map((ma) => (
+                <Tag key={ma} color="orange">
+                  {NGOAI_DIEU_KIEN_MOI_LABELS[ma] ?? ma}
+                </Tag>
+              ))}
+            </div>
+          );
+        },
       }),
       columnHelper.accessor("action_type", {
         header: "Hanh dong",

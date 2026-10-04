@@ -16,6 +16,12 @@ export interface StationsQueryParams {
   // enableSorting:false vi gui sort_by ngoai enum se bi BE tra 422
   sort_by?: "tram_id" | "tram_name" | "ma_tinh";
   order?: "asc" | "desc"; // mac dinh "desc" theo schema BE - CHI co y nghia khi da truyen sort_by
+  // THEM 04/10/2026 (api/routers/stations.py) - loc theo NHIEU vendor cung luc. BE nhan qua LAP LAI tham so
+  // URL (?vendor=NOKIA&vendor=HUAWEI), KHONG phai "vendor[]=" hay chuoi phan cach dau phay - axios tu lam
+  // dung dieu nay khi gui 1 mang cho 1 key (xem cau hinh paramsSerializer rieng trong StationSearchGrid.tsx,
+  // KHONG sua services/r012Request.ts dung chung). Chi 4 gia tri BE cho phep - KHONG co UNKNOWN (BE co y
+  // loai, xem comment _VendorFilter ben BE: UNKNOWN la ket luan loi du lieu, khong phai vendor loc duoc)
+  vendor?: ("NOKIA" | "ERICSSON" | "HUAWEI" | "ZTE")[];
 }
 
 // dung cho GET /api/v1/stations - 1 dong du lieu tram trong response
@@ -138,6 +144,12 @@ export interface SessionListItem {
   // chua deploy) -> hien tai MOI dong deu undefined, cho doc phai chiu duoc CA undefined LAN null
   so_cell_thanh_cong?: number | null;
   so_cell_tong?: number | null;
+
+  // THEM 04/10/2026 (quyet dinh 04/10/2026, BE CHI DOC - khong sua CR cu) - so cell CHAY CR cua session nay
+  // dang "ngoai dieu kien moi" (band/sector chot 03-04/10/2026). 0 (hoac undefined o BE cu) cho session
+  // chua chay CR hoac dat du dieu kien. Chi tiet TUNG cell + ly do nam o CellParamDetailItem.ngoai_dieu_kien_moi
+  // (GET /sessions/{id}). Optional: BE .196 hien CHUA deploy truong nay (da doi chieu openapi.json 04/10/2026)
+  so_cell_ngoai_dieu_kien_moi?: number;
 }
 
 // dung cho GET /api/v1/sessions - response tra ve danh sach session kem tong so
@@ -156,6 +168,12 @@ export interface CellParamDetailItem {
   rsboost_new: number | null; // gia tri rsboost moi sau CR, co the null theo schema
   qrxlevmin_before_cr: number | null; // gia tri qrxlevmin truoc CR, co the null theo schema
   qrxlevmin_new: number | null; // gia tri qrxlevmin moi sau CR, co the null theo schema
+  // THEM 04/10/2026 (quyet dinh 04/10/2026) - gan nhan LUC DOC theo luat band/sector MOI (chot 03-04/10/2026),
+  // KHONG sua du lieu cu. Mang RONG = dat du dieu kien moi. 3 ma ly do THAT co the co (xem BE
+  // domain/services/danh_gia_dieu_kien_cr_moi.py): BAND_KHONG_PHAI_1800 / KHONG_XAC_DINH_BAND /
+  // VUOT_2_CELL_SECTOR - ma khac (BE them sau) van phai hien duoc nguyen van, khong doan/bia nhan moi.
+  // Optional: BE .196 hien CHUA deploy truong nay
+  ngoai_dieu_kien_moi?: string[];
 }
 
 // dung cho GET /api/v1/sessions/{session_id} - 1 dong log tien trinh CR, BE gio DA PERSIST that (22072026,
@@ -511,6 +529,12 @@ export interface PhieuHistoryItem {
   // LUU Y giai doan chuyen tiep: BE dang bo sung field nay vao GET /phieu, response cu se KHONG co no ->
   // moi cho doc phai chiu duoc undefined (vd `(so_lan_thu ?? 0) > 0`), khong duoc coi la luon co san
   so_lan_thu: number;
+  // THEM 04/10/2026 (quyet dinh 04/10/2026) - gan nhan LUC DOC theo luat MOI (toi da 2 phieu/sector cua
+  // tram tat), KHONG sua du lieu cu. true = trong cung (cr_session_id, sector), day la phieu SUCCESS thu 3
+  // tro di tinh theo created_at. null (KHONG phai false) cho dong KHONG phai SUCCESS - truong nay CHI co y
+  // nghia tren SUCCESS, "false" se bi hieu nham la "da xac nhan KHONG vuot" trong khi that ra la "khong ap
+  // dung". Optional: BE .196 hien CHUA deploy truong nay
+  vuot_2_phieu_sector?: boolean | null;
 }
 
 // dung cho GET /api/v1/phieu - response phan trang. KHAC SessionListResponse ({total, data}): endpoint nay

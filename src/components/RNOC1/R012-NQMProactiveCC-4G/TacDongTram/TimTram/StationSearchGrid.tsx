@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Input, Pagination, Button, Alert, Spin } from "antd";
+import { Input, Pagination, Button, Alert, Spin, Checkbox } from "antd";
 import {
   createColumnHelper,
   useReactTable,
@@ -37,6 +37,15 @@ interface StationSearchGridProps {
 
 // khoi tao column helper rieng cho kieu StationItem, giup TanStack Table bao dam kieu du lieu dung ngay luc khai bao cot
 const columnHelper = createColumnHelper<StationItem>();
+
+// 4 gia tri DUNG DUNG enum _VendorFilter ben BE (api/routers/stations.py) - KHONG co UNKNOWN (BE co y loai,
+// xem comment vendor?: trong types/index.ts::StationsQueryParams)
+const VENDOR_OPTIONS = [
+  { label: "NOKIA", value: "NOKIA" },
+  { label: "ERICSSON", value: "ERICSSON" },
+  { label: "HUAWEI", value: "HUAWEI" },
+  { label: "ZTE", value: "ZTE" },
+];
 
 const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSelectStation, onPreviewResult }) => {
   // searchInput: gia tri hien thi TRUC TIEP tren o Input.Search, cap nhat ngay khi go phim
@@ -77,6 +86,19 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
     };
   }, [debouncedApplySearch]);
 
+  // bo loc vendor (THEM 04/10/2026) - mang RONG nghia la "tat ca" (KHONG gui param vendor len BE), giong
+  // quy uoc value="" cua cac Select loc khac trong module (vd statusFilter). Khong dung Set vi Checkbox.Group
+  // da tra ve mang san, khong can cau truc tra trung nhanh nao them
+  const [vendorFilter, setVendorFilter] = useState<string[]>([]);
+
+  // doi lua chon vendor -> ve trang 1, giong moi bo loc khac trong bang nay (handleDateRangeChange kieu mau
+  // o cac file khac trong module). Checkbox.Group cua antd ban nay khong co generic rieng (CheckboxGroupProps<T=any>)
+  // nen checkedValue la any[] - ep ve string[] vi VENDOR_OPTIONS.value luon la string
+  const handleVendorFilterChange = (checkedValue: any[]) => {
+    setVendorFilter(checkedValue as string[]);
+    setPage(1);
+  };
+
   // sort SERVER-SIDE (BE vua bo sung param sort_by/order, xem StationsQueryParams trong types/index.ts) -
   // dung state SortingState cua TanStack Table CHI de dieu khien icon mui ten + click header qua
   // SortableHeaderCell, KHONG dang ky getSortedRowModel (se sort lai lan 2 tren client, thua va co the
@@ -106,6 +128,8 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
     size,
     sort_by: sortBy,
     order: sortOrder,
+    // mang rong -> undefined (giong quy uoc q): "chua chon vendor nao" = "tat ca", khong gui param thua
+    vendor: vendorFilter.length > 0 ? (vendorFilter as StationsQueryParams["vendor"]) : undefined,
   });
 
   // du lieu tram lay tu response that, fallback mang rong khi chua co data (dang loading lan dau)
@@ -155,8 +179,9 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
         enableSorting: false,
         cell: (info) => info.getValue() ?? "—",
       }),
+      // doi nhan "Don vi quan ly" -> "Ten cho quan ly" (04/10/2026, yeu cau truc tiep user)
       columnHelper.accessor("ten_quan_ly", {
-        header: "Don vi quan ly",
+        header: "Ten cho quan ly",
         enableSorting: false, // "ten_quan_ly" KHONG nam trong enum sort_by cua BE (xem StationsQueryParams) - sort cot nay se bi BE tra 422
         cell: (info) => info.getValue() ?? "-", // field co the null theo schema, hien "-" khi khong co du lieu
       }),
@@ -236,6 +261,13 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
         }}
         style={{ marginBottom: "1rem" }}
       />
+
+      {/* Checkbox chon nhieu vendor (THEM 04/10/2026) - khong o nao duoc chon = "tat ca" (xem vendorFilter
+          o tren). Dat NGAY DUOI o tim, truoc bang, giong vi tri cac bo loc khac trong module */}
+      <div style={{ marginBottom: "1rem", display: "flex", alignItems: "center", gap: "8px" }}>
+        <span style={{ fontWeight: 600 }}>Vendor:</span>
+        <Checkbox.Group options={VENDOR_OPTIONS} value={vendorFilter} onChange={handleVendorFilterChange} />
+      </div>
 
       {/* hien loading ro rang khi dang cho BE tra du lieu, tranh hien bang rong gay hieu lam la khong co tram nao */}
       {isLoading && <Spin tip="Dang tai danh sach tram..." />}

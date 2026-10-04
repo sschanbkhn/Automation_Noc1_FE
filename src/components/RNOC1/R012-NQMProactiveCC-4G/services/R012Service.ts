@@ -31,6 +31,40 @@ import {
   ChayXuatPhieuAutoResponse,
 } from '../types';
 
+// axios 0.21.x (ban dang dung, xem package.json) tu serialize 1 param kieu MANG thanh "vendor[]=A&vendor[]=B"
+// (xem node_modules/axios/lib/helpers/buildURL.js: "if (utils.isArray(val)) { key = key + '[]'; }"). BE
+// GET /stations lai doi dung quy uoc FastAPI chuan "lap lai key THUONG" (?vendor=NOKIA&vendor=HUAWEI,
+// api/routers/stations.py::vendor: list[...] = Query(default=None)) - KHONG co "[]", gui "vendor[]=" se bi
+// FastAPI hieu la param "vendor[]" khac, khong khop "vendor" -> loc im lang khong co tac dung.
+// paramsSerializer RIENG cho DUNG 1 ham nay (KHONG sua services/r012Request.ts dung chung - cac endpoint
+// khac trong module khong co param nao kieu mang nen khong can doi gi ca).
+// encode() COPY Y HET logic cua axios goc (cung file buildURL.js) de KHONG doi khac gi cach encode cac
+// param scalar dang hoat dong dung (vd o tim "q" co the chua dau cach/dau tieng Viet) - DIEM KHAC DUY NHAT
+// la nhanh mang: khong noi them "[]" vao key.
+const encodeQueryValue = (val: string): string =>
+  encodeURIComponent(val)
+    .replace(/%3A/gi, ":")
+    .replace(/%24/g, "$")
+    .replace(/%2C/gi, ",")
+    .replace(/%20/g, "+")
+    .replace(/%5B/gi, "[")
+    .replace(/%5D/gi, "]");
+
+const serializeStationsParams = (params: Record<string, unknown>): string => {
+  const parts: string[] = [];
+  Object.keys(params).forEach((key) => {
+    const val = params[key];
+    if (val === null || val === undefined) {
+      return;
+    }
+    const values = Array.isArray(val) ? val : [val];
+    values.forEach((v) => {
+      parts.push(`${encodeQueryValue(key)}=${encodeQueryValue(String(v))}`);
+    });
+  });
+  return parts.join("&");
+};
+
 // ham goi GET /api/v1/stations - lay danh sach tram co phan trang
 // chi goi API va tra ve dung raw response theo type StationListResponse, khong tinh toan/format them
 export const getStations = async (params?: StationsQueryParams): Promise<StationListResponse> => {
@@ -38,7 +72,13 @@ export const getStations = async (params?: StationsQueryParams): Promise<Station
     // r012Request da co interceptor tra ve response.data, nen ket qua o day chinh la body JSON that
     // endpoint nay khong goi CDS (chi doc du lieu tram da dong bo san) nen giu timeout ngan hon
     // 30s thay vi dung mac dinh 60s cua ca instance (mac dinh danh cho cac endpoint co goi CDS)
-    const data: any = await r012Request.get('/stations', { params, timeout: 30000 });
+    // paramsSerializer: xem comment serializeStationsParams phia tren - BAT BUOC co de param "vendor"
+    // (mang) gui dung dang "vendor=A&vendor=B", khong phai "vendor[]=A&vendor[]=B" mac dinh cua axios
+    const data: any = await r012Request.get('/stations', {
+      params,
+      timeout: 30000,
+      paramsSerializer: serializeStationsParams,
+    });
     return data as StationListResponse;
   } catch (error) {
     // loi da duoc interceptor cua r012Request hien Notification, o day ném lai de hook goi ham nay tu quyet dinh xu ly tiep

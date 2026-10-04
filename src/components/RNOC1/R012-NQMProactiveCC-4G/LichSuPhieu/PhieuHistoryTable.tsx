@@ -425,6 +425,14 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
                   </Tag>
                 </Tooltip>
               )}
+              {/* THEM 04/10/2026 - gan nhan luat MOI (toi da 2 phieu/sector cua tram tat). BE CHI tra true
+                  tren dong SUCCESS (false/null deu khong hien - xem comment vuot_2_phieu_sector trong
+                  types/index.ts, false "khong ap dung" khac han "da xac nhan khong vuot") */}
+              {info.row.original.vuot_2_phieu_sector === true && (
+                <Tag color="orange" style={{ marginInlineEnd: 0 }}>
+                  Vuot 2 phieu/sector (luat moi)
+                </Tag>
+              )}
             </div>
           );
         },

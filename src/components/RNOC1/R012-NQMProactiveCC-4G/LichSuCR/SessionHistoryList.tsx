@@ -268,7 +268,18 @@ const SessionHistoryList: React.FC<SessionHistoryListProps> = ({ yeuCauLocTram =
         header: "Trang thai",
         cell: (info) => {
           const status = info.getValue();
-          return <Tag color={CR_STATUS_COLOR[status]?.list ?? "default"}>{status}</Tag>;
+          const soNgoaiDieuKien = info.row.original.so_cell_ngoai_dieu_kien_moi;
+          return (
+            <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap" }}>
+              <Tag color={CR_STATUS_COLOR[status]?.list ?? "default"}>{status}</Tag>
+              {/* THEM 04/10/2026 - dat CUNG O voi Trang thai (khong tach cot rieng): hau het session co gia
+                  tri nay = 0 (dat du dieu kien), tach cot se tao mot cot gan nhu luon trong, giong cach
+                  "phan_loai_loi" da lam o PhieuHistoryTable.tsx */}
+              {typeof soNgoaiDieuKien === "number" && soNgoaiDieuKien > 0 && (
+                <Tag color="orange">{soNgoaiDieuKien} cell ngoai dieu kien moi</Tag>
+              )}
+            </div>
+          );
         },
       }),
       // DA BO cot "Thoi gian thuc thi" (executed_at): truong nay duoc ghi o BUOC 17 cua quy trinh CR nen
