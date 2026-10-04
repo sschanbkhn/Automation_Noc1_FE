@@ -22,6 +22,11 @@ export interface StationsQueryParams {
   // KHONG sua services/r012Request.ts dung chung). Chi 4 gia tri BE cho phep - KHONG co UNKNOWN (BE co y
   // loai, xem comment _VendorFilter ben BE: UNKNOWN la ket luan loi du lieu, khong phai vendor loc duoc)
   vendor?: ("NOKIA" | "ERICSSON" | "HUAWEI" | "ZTE")[];
+  // THEM 04/10/2026 (BE chua deploy, api/routers/stations.py) - loc theo NHIEU khu vuc cung luc, CUNG quy
+  // uoc lap lai tham so URL voi vendor o tren (?khu_vuc=KV1&khu_vuc=KV3), dung CHUNG serializeStationsParams
+  // (services/R012Service.ts) vi ham do da generic cho MOI key kieu mang, khong rieng cho "vendor". Chi 3
+  // gia tri BE cho phep (xem Literal _KhuVucFilter ben BE: domain/value_objects/khu_vuc.py)
+  khu_vuc?: ("KV1" | "KV2" | "KV3")[];
 }
 
 // dung cho GET /api/v1/stations - 1 dong du lieu tram trong response
@@ -41,6 +46,10 @@ export interface StationItem {
   // tram_id=0 -> "ZTE", tram_id=105128 -> "NOKIA"), nhung van khai optional + nullable dung schema BE
   // (str | None = None, khong bat buoc) thay vi coi la luon ton tai
   vendor?: string | null;
+  // THEM 04/10/2026 (BE chua deploy, api/schemas/station_schemas.py) - KV1/KV2/KV3, suy TU ma_tinh qua
+  // domain/value_objects/khu_vuc.py::khu_vuc_tu_ma_tinh(), KHONG phai cot rieng trong RIMS. Optional vi
+  // ma_tinh co the NULL hoac chua xac nhan trong bang tra khu vuc (xem chu y trong chinh file BE do)
+  khu_vuc?: string | null;
 }
 
 // dung cho GET /api/v1/stations - response tra ve danh sach tram co phan trang

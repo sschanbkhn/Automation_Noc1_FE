@@ -21,8 +21,8 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { useQuery } from "@tanstack/react-query";
-import { getJobRuns } from "../services/R012Service";
-import { JobRunListResponse } from "../types";
+import { getJobRuns, getLichSuPhieu } from "../services/R012Service";
+import { JobRunListResponse, PhieuHistoryResponse } from "../types";
 import { formatDateTime } from "../helpers/formatDateTime";
 
 // dayjs.extend goi lai cho chac (helpers/formatDateTime cung extend 2 plugin nay). extend la idempotent -
@@ -63,14 +63,31 @@ const JobHealthAlert: React.FC = () => {
     staleTime: THOI_GIAN_CON_TUOI_MS,
   });
 
+  // SUA 04/10/2026 (BE + FE, quyet dinh 04/10/2026) - canh bao "phieu xuat loi" KHONG con lay tu
+  // job_run_log.so_phieu_that_bai nua. BUG GOC: cot do la LICH SU dong bang tai THOI DIEM luot chay ket
+  // thuc (xem adapters/postgres/job_run_log_repo.py phia BE) - neu nguoi dung XOA 1 phieu loi SAU khi job
+  // da chay xong, con so nay KHONG tu giam, nen canh bao van hien "Co 2 phieu xuat loi" du da xoa ca 2.
+  // Doi sang dem SONG qua GET /phieu?trang_thai=FAILED (tong so FAILED HIEN TAI, da tu dong loai phieu da
+  // xoa mem o tang BE - xem adapters/postgres/cr_phieu_repo.py::_filter_conditions()) - luon khop THUC TE
+  // tai thoi diem hoi, khong phu thuoc luot job nao da chay truoc do.
+  const { data: phieuFailedData, isLoading: dangTaiSoLoi, isError: loiTaiSoLoi } =
+    useQuery<PhieuHistoryResponse>({
+      queryKey: ["r012", "phieu", "failed-count"],
+      // size=1: CHI can "total" (tong so khop filter), khong can noi dung tung dong.
+      queryFn: () => getLichSuPhieu({ trang_thai: "FAILED", page: 1, size: 1 }),
+      refetchInterval: CHU_KY_LAM_MOI_MS,
+      staleTime: THOI_GIAN_CON_TUOI_MS,
+    });
+
   // Dang tai / loi goi API -> KHONG hien gi. Loi mang da co interceptor cua r012Request bao bang
   // Notification roi; hien them 1 canh bao mau vang o day se bi doc nham thanh "job co van de" trong khi
   // that ra la khong doc duoc trang thai job
-  if (isLoading || isError) {
+  if (isLoading || isError || dangTaiSoLoi || loiTaiSoLoi) {
     return null;
   }
 
   const luotMoiNhat = data?.data?.[0] ?? null;
+  const soPhieuLoiHienTai = phieuFailedData?.total ?? 0;
 
   const bayGio = dayjs().tz(MUI_GIO_VN);
   const soPhutTrongNgay = bayGio.hour() * 60 + bayGio.minute();
@@ -107,10 +124,11 @@ const JobHealthAlert: React.FC = () => {
     }
   }
 
-  // Phieu loi xet tren luot chay moi nhat bat ke luot do co phai hom nay hay khong: phieu that bai la viec
-  // TON DONG chua ai xu ly, khong tu het di sau 1 dem
-  if (luotMoiNhat && luotMoiNhat.so_phieu_that_bai > 0) {
-    canhBao.push(`Co ${luotMoiNhat.so_phieu_that_bai} phieu xuat loi`);
+  // Phieu loi la so SONG hien tai (khong phu thuoc luot chay nao) - phieu that bai la viec TON DONG chua
+  // ai xu ly, khong tu het di sau 1 dem; xoa 1 phieu loi se lam so nay giam NGAY trong lan refetch ke tiep
+  // (toi da CHU_KY_LAM_MOI_MS), khac han con so dong bang cu cua job_run_log.
+  if (soPhieuLoiHienTai > 0) {
+    canhBao.push(`Co ${soPhieuLoiHienTai} phieu xuat loi`);
   }
 
   if (canhBao.length === 0) {

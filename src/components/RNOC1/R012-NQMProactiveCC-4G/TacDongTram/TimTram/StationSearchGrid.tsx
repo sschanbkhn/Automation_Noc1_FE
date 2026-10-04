@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Input, Pagination, Button, Alert, Spin, Checkbox } from "antd";
+import { Input, Pagination, Button, Alert, Spin } from "antd";
 import {
   createColumnHelper,
   useReactTable,
@@ -10,6 +10,9 @@ import {
 // <th> dung chung cho MOI bang co sort trong module (click header + mui ten huong sort) - xem ly do
 // tach rieng trong chinh file do
 import { SortableHeaderCell } from "../../common/SortableHeaderCell";
+// TACH (04/10/2026, yeu cau truc tiep user) component loc checkbox nhieu chon dung CHUNG cho tieu de cot -
+// xem WHY day du trong chinh file do. Dung cho ca cot Vendor lan Khu vuc ben duoi
+import { ColumnCheckboxFilterHeader } from "../../common/ColumnCheckboxFilterHeader";
 // dung debounce co san tu lodash (da la dependency co san trong package.json) thay vi tu viet lai
 // setTimeout/clearTimeout, tranh trung lap logic da duoc thu vien xu ly va test san
 import debounce from "lodash/debounce";
@@ -45,6 +48,14 @@ const VENDOR_OPTIONS = [
   { label: "ERICSSON", value: "ERICSSON" },
   { label: "HUAWEI", value: "HUAWEI" },
   { label: "ZTE", value: "ZTE" },
+];
+
+// 3 gia tri DUNG DUNG enum _KhuVucFilter ben BE (api/routers/stations.py, BE CHUA DEPLOY tai thoi diem
+// them - xem comment khu_vuc?: trong types/index.ts::StationsQueryParams)
+const KHU_VUC_OPTIONS = [
+  { label: "KV1", value: "KV1" },
+  { label: "KV2", value: "KV2" },
+  { label: "KV3", value: "KV3" },
 ];
 
 const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSelectStation, onPreviewResult }) => {
@@ -87,15 +98,33 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
   }, [debouncedApplySearch]);
 
   // bo loc vendor (THEM 04/10/2026) - mang RONG nghia la "tat ca" (KHONG gui param vendor len BE), giong
-  // quy uoc value="" cua cac Select loc khac trong module (vd statusFilter). Khong dung Set vi Checkbox.Group
-  // da tra ve mang san, khong can cau truc tra trung nhanh nao them
+  // quy uoc value="" cua cac Select loc khac trong module (vd statusFilter)
   const [vendorFilter, setVendorFilter] = useState<string[]>([]);
 
-  // doi lua chon vendor -> ve trang 1, giong moi bo loc khac trong bang nay (handleDateRangeChange kieu mau
-  // o cac file khac trong module). Checkbox.Group cua antd ban nay khong co generic rieng (CheckboxGroupProps<T=any>)
-  // nen checkedValue la any[] - ep ve string[] vi VENDOR_OPTIONS.value luon la string
-  const handleVendorFilterChange = (checkedValue: any[]) => {
-    setVendorFilter(checkedValue as string[]);
+  // bam "Loc" trong popover tieu de cot Vendor (ColumnCheckboxFilterHeader) moi goi ham nay - tick xong
+  // phai bam "Loc" roi moi THAT su ap dung + ve trang 1 + goi lai API
+  const handleVendorApply = (value: string[]) => {
+    setVendorFilter(value);
+    setPage(1);
+  };
+
+  // bam "Bo loc" trong popover - xoa het lua chon, ve trang 1 + goi lai API (giong ve trang thai "tat ca")
+  const handleVendorClear = () => {
+    setVendorFilter([]);
+    setPage(1);
+  };
+
+  // bo loc khu vuc (THEM 04/10/2026, BE CHUA DEPLOY) - CUNG co che voi vendorFilter o tren: mang rong =
+  // "tat ca", dung CUNG 1 component ColumnCheckboxFilterHeader + cung quy uoc Loc/Bo loc ve trang 1
+  const [khuVucFilter, setKhuVucFilter] = useState<string[]>([]);
+
+  const handleKhuVucApply = (value: string[]) => {
+    setKhuVucFilter(value);
+    setPage(1);
+  };
+
+  const handleKhuVucClear = () => {
+    setKhuVucFilter([]);
     setPage(1);
   };
 
@@ -130,6 +159,9 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
     order: sortOrder,
     // mang rong -> undefined (giong quy uoc q): "chua chon vendor nao" = "tat ca", khong gui param thua
     vendor: vendorFilter.length > 0 ? (vendorFilter as StationsQueryParams["vendor"]) : undefined,
+    // cung quy uoc voi vendor o tren - BE nhan qua serializeStationsParams (services/R012Service.ts), ham
+    // do da generic cho MOI key kieu mang nen KHONG can sua gi them de "khu_vuc" gui dung dang lap lai key
+    khu_vuc: khuVucFilter.length > 0 ? (khuVucFilter as StationsQueryParams["khu_vuc"]) : undefined,
   });
 
   // du lieu tram lay tu response that, fallback mang rong khi chua co data (dang loading lan dau)
@@ -170,12 +202,38 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
       // DA XAC NHAN qua goi that GET /stations tren .196:8080 (04/10/2026): field "vendor" da co va co du
       // lieu that, gia tri thuoc {NOKIA, ERICSSON, HUAWEI, ZTE, UNKNOWN}. "—" khi rong (optional/null).
       columnHelper.accessor("vendor", {
-        header: "Vendor",
+        // tieu de cot la popover filter dung chung (ColumnCheckboxFilterHeader) - bam vao chu "Vendor"/icon
+        // loc se bung Checkbox doc + nut Loc/Bo loc, giong UX filter cot Excel
+        header: () => (
+          <ColumnCheckboxFilterHeader
+            label="Vendor"
+            options={VENDOR_OPTIONS}
+            appliedValue={vendorFilter}
+            onApply={handleVendorApply}
+            onClear={handleVendorClear}
+          />
+        ),
         // KHONG duoc enableSorting:true - "vendor" KHONG nam trong enum sort_by cua BE (da doi chieu
         // openapi.json that: /stations.sort_by chi nhan "tram_id"|"tram_name"|"ma_tinh"). Bang nay la
         // SERVER-SIDE sort thuan (xem comment o duoi, khong dang ky getSortedRowModel) - bat sort cho cot
         // nay se gui sort_by=vendor len BE va bi tra 422 ngay khi nguoi dung bam mui ten, giong 4 cot
         // ten_quan_ly/ma_csht/trang_thai/cr_status ben duoi cung bi chan vi cung ly do
+        enableSorting: false,
+        cell: (info) => info.getValue() ?? "—",
+      }),
+      // THEM 04/10/2026 (BE chua deploy, yeu cau truc tiep user) - dat NGAY CANH cot Vendor, cung co che
+      // filter + cung "—" khi rong nhu vendor o tren
+      columnHelper.accessor("khu_vuc", {
+        header: () => (
+          <ColumnCheckboxFilterHeader
+            label="Khu vuc"
+            options={KHU_VUC_OPTIONS}
+            appliedValue={khuVucFilter}
+            onApply={handleKhuVucApply}
+            onClear={handleKhuVucClear}
+          />
+        ),
+        // "khu_vuc" KHONG nam trong enum sort_by cua BE (_StationSortBy chi "tram_id"|"tram_name"|"ma_tinh")
         enableSorting: false,
         cell: (info) => info.getValue() ?? "—",
       }),
@@ -200,7 +258,11 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
         cell: (info) => info.getValue() ?? "-", // field co the null theo schema (tram chua tung trigger CR)
       }),
     ],
-    [page, size]
+    // them vendorFilter/khuVucFilter vao deps: tieu de 2 cot nay (ColumnCheckboxFilterHeader) can nhan dung
+    // appliedValue MOI nhat de to mau icon dung luc (xem isFiltered trong ColumnCheckboxFilterHeader) -
+    // cac ham handle...Apply/handle...Clear KHONG can vao deps vi la ham khai bao lai moi render nhung
+    // cung noi dung (khong anh huong behavior)
+    [page, size, vendorFilter, khuVucFilter]
   );
 
   // khoi tao table instance cua TanStack Table v8 - phan trang/sort deu da xu ly o phia BE (server-side).
@@ -261,13 +323,6 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
         }}
         style={{ marginBottom: "1rem" }}
       />
-
-      {/* Checkbox chon nhieu vendor (THEM 04/10/2026) - khong o nao duoc chon = "tat ca" (xem vendorFilter
-          o tren). Dat NGAY DUOI o tim, truoc bang, giong vi tri cac bo loc khac trong module */}
-      <div style={{ marginBottom: "1rem", display: "flex", alignItems: "center", gap: "8px" }}>
-        <span style={{ fontWeight: 600 }}>Vendor:</span>
-        <Checkbox.Group options={VENDOR_OPTIONS} value={vendorFilter} onChange={handleVendorFilterChange} />
-      </div>
 
       {/* hien loading ro rang khi dang cho BE tra du lieu, tranh hien bang rong gay hieu lam la khong co tram nao */}
       {isLoading && <Spin tip="Dang tai danh sach tram..." />}
