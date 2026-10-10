@@ -284,9 +284,21 @@ export interface PreviewTramGoc {
 // nhieu do tram_goc tat), KHONG phai la cell se chay CR (xem CrCellItem rieng ben duoi) - vi vay KHONG co
 // rsboost/qrxlevmin/priority/action_type, chi co thong tin dinh danh cell. Lay dung tu OpenAPI schema AffectedCellItem
 export interface AffectedCellItem {
-  cell_name: string; // ten cell, bat buoc theo schema
+  // SUA (BUOC 4b, 08/10/2026, BE chua deploy tai .196) - WIDEN tu "string" (bat buoc) sang "string | null":
+  // nhanh HO co the co cell CAN_GHEP_TEN (vendor khac Nokia hoac chua sync cell_infor, BE KHONG resolve
+  // duoc ten/DN) - van PHAI tra ra de nguoi dung "biet" (yeu cau truc tiep user), cell_name/tram_id deu None
+  // cho truong hop nay. Nhanh CDS (BE cu) KHONG BAO GIO tra null o day - widen kieu la LOOSEN AN TOAN,
+  // KHONG doi hanh vi cu cho .196 hien tai (van la string that).
+  cell_name: string | null;
   huong_id: string | null; // id huong cua cell, co the null theo schema
-  tram_id: string; // ma tram cha chua cell nay, bat buoc theo schema
+  tram_id: string | null; // SUA (BUOC 4b) - cung ly do voi cell_name o tren (LNBTS suy tu dist_name, None cho cell CAN_GHEP_TEN)
+  // 5 field OPTIONAL THEM (BUOC 4b, 08/10/2026, BE chua deploy tai .196) - CHI co gia tri khi
+  // previewData.nguon_du_lieu la "HO ..." (undefined/[] cho nhanh CDS cu, FE PHAI chiu duoc thieu)
+  pct_ho?: number | null; // % HO (0-1, CHUA nhan 100 - xem domain/services/ho_cell_selector.py::pct = attempt/tong_goc) cua cell nay roi vao sector cua tram tat
+  so_ho?: number | null; // so luong HO attempt thuc te
+  sr?: number | null; // ty le thanh cong HO (0-1, CHUA nhan 100) trung binh co trong so
+  layer?: string | null; // "L1"|"L2"|"Z"|"KHONG_XAC_DINH" - xem domain/services/ho_delaunay.py
+  co?: string[]; // ma co dinh: "BAT_THUONG"|"CAN_GHEP_TEN" (co the rong [], co the nhieu ma cung luc)
 }
 
 // dung cho POST /api/v1/cr/preview, field tram_bi_anh_huong - 1 tram lan can bi anh huong (KHONG kem danh
@@ -322,6 +334,13 @@ export interface CrCellItem {
   // cung priority nhung khac band)
   sector?: number | null; // so sector CUA TRAM TAT ma cell nay dang lam lan can (Y = huong_id % 10 ben BE,
   // vd 1/2/4) - KHAC huong_id (id huong rieng cua chinh cell lan can)
+  // 4 field OPTIONAL THEM (BUOC 4b, 08/10/2026, BE chua deploy tai .196) - CUNG y nghia voi AffectedCellItem
+  // o tren, CHI khac KHONG co "co" rieng (1 cell vao B nghia la KHONG BAT_THUONG/CAN_GHEP_TEN - xem WHY day
+  // du trong api/schemas/cr_schemas.py::CrCellItem ben BE)
+  pct_ho?: number | null; // % HO (0-1, CHUA nhan 100)
+  so_ho?: number | null;
+  sr?: number | null; // ty le thanh cong HO (0-1, CHUA nhan 100)
+  layer?: string | null; // "L1"|"L2"|"Z"|"KHONG_XAC_DINH"
 }
 
 // dung cho POST /api/v1/cr/preview, field cell_ngoai_pham_vi_chi_tiet - ban CHI TIET cua cell_ngoai_pham_vi
@@ -350,6 +369,129 @@ export interface OssSeDung {
   instance_id: string; // ma dinh danh OSS/NetAct, bat buoc theo schema
 }
 
+// dung cho POST /api/v1/cr/preview, field quan_he_day_du (BUOC 4b, 08/10/2026, BE chua deploy) - 1 dong
+// "sector cua X -> 1 tram dich" (TOAN BO quan he, KHONG chi phan da chon vao A/B) - xem
+// TriggerCrUseCase._lay_du_lieu_goc_ho() ben BE, key "quan_he_day_du". CHI co gia tri khi nguon_du_lieu la HO
+export interface QuanHeDayDuItem {
+  sector: number; // sector cua X (tram goc) phat sinh HO nay
+  target_enb: number; // LNBTS cua tram dich
+  target_lcr: number; // source_sector (0-9) cua tram dich - KHONG phai LNCEL local id, xem WHY trong models/cell_vi_tri_uoc_luong.py ben BE
+  pct_trong_sector: number; // ty le (0-1, CHUA nhan 100) HO cua sector nay roi vao tram dich nay
+  ho_attempt: number; // so luong HO attempt thuc te
+  ho_sr: number | null; // ty le thanh cong HO (0-1, CHUA nhan 100) trung binh co trong so, co the null (sr_w=0)
+  layer: string; // "L1"|"L2"|"Z"|"KHONG_XAC_DINH"
+}
+
+// dung cho POST /api/v1/cr/preview, field ban_do (BUOC 4c, 10/10/2026, BE chua deploy) - du lieu PHU TRO de
+// ve ban do xem truoc CR (X/CRAN/L1/L2/tram bi anh huong/duong bao). CHI co gia tri khi nguon_du_lieu la HO
+// (null cho nhanh CDS) - xem TriggerCrUseCase._xay_du_lieu_ban_do() ben BE
+
+// 1 vi tri uoc luong cua 1 "cell" CRAN - LUU Y: "lcr" o day la source_sector (0-9, DAI DIEN CA NHOM cell
+// cung sector sau buoc gop 09/10/2026), KHONG PHAI ten/DN 1 cell cu the - BE KHONG tra cell_name o day
+// (xem models/cell_vi_tri_uoc_luong.py ben BE, "lcr" KHONG PHAI LNCEL local id goc)
+export interface BanDoViTriUocLuongCell {
+  lcr: number;
+  // THEM (yeu cau truc tiep user, 10/10/2026) - ten cell dai dien cho sector nay cua X, suy tu dn_map theo
+  // (x_enb, real_lcr % 10 == lcr) LAY LCR THAT NHO NHAT khi nhieu band cung sector - xem WHY day du trong
+  // TriggerCrUseCase._xay_du_lieu_ban_do() ben BE. null khi khong tim duoc cell nao khop (vd chua sync
+  // cell_infor) - FE hien "Sector <lcr>" thay the trong truong hop nay
+  cell_name: string | null;
+  lat: number;
+  lon: number;
+  ty_le_ho_tin_cay: number; // 0-1, CHUA nhan 100
+  so_tram_dich: number;
+  ngay_du_lieu: string; // ISO date "YYYY-MM-DD"
+}
+
+export interface BanDoXBlock {
+  lat: number | null;
+  lon: number | null;
+  ma_tinh: string | null;
+  ten_tinh: string | null;
+  khu_vuc: string | null; // "KV1"|"KV2"|"KV3"|null
+  co: string[]; // subset cua PreviewCrResponse.x_co ("TOA_DO_DUNG_CHUNG"|"HO_DI_XA"|"IT_DU_LIEU")
+  // CHI co gia tri (khong null) khi X la TOA_DO_DUNG_CHUNG (CRAN) - null cho tram toa do binh thuong
+  vi_tri_uoc_luong_cell: BanDoViTriUocLuongCell[] | null;
+  // 3 truong THEM (yeu cau truc tiep user, 10/10/2026) - "TAM" dung de sap goc/ve duong bao, KHAC lat/lon
+  // o tren (luon la toa do RIMS/tong dai THAT cua X, KHONG doi): neu X la CRAN, lat/lon la vi tri tong dai/
+  // baseband (KHONG phai anten that) nen dung lam tam se SAI huong cac tram bi anh huong toa ra - tam_lat/
+  // tam_lon la TRUNG BINH vi tri cac cell DA uoc luong cua CHINH X (vi_tri_uoc_luong_cell o tren), CHINH XAC
+  // hon lat/lon RIMS. tam_la_tong_dai=true khi KHONG the tinh duoc trung binh nay (CRAN nhung 0 cell uoc
+  // luong duoc) - luc do tam_lat/tam_lon FALLBACK ve CHINH lat/lon (tong dai), FE PHAI bao ro do tin cay
+  // thap qua ghi chu rieng (xem TriggerCrUseCase._xay_du_lieu_ban_do() ben BE)
+  tam_lat: number | null;
+  tam_lon: number | null;
+  tam_la_tong_dai: boolean;
+}
+
+// 1 diem tram trong vong L1/L2 quanh X - xem TriggerCrUseCase._diem_tram_phan_lop() ben BE
+export interface BanDoDiemTram {
+  tram_id: string;
+  ten: string | null;
+  lat: number | null;
+  lon: number | null;
+}
+
+// 1 cell (lan can) trong nhom "tram bi anh huong" - vi tri CO THE khong xac dinh duoc (tram dich la
+// TOA_DO_DUNG_CHUNG nhung khong co ban ghi uoc luong cho dung lcr nay, hoac tram dich thieu toa do RIMS)
+export interface BanDoCellAnhHuong {
+  cell_name: string | null;
+  target_enb: number;
+  target_lcr: number;
+  pct_ho: number; // 0-1, CHUA nhan 100
+  lat: number | null;
+  lon: number | null;
+  khong_xac_dinh_vi_tri: boolean; // true -> KHONG ve len map (lat/lon se la null), chi liet ke o tooltip cua X
+}
+
+export interface BanDoTramBiAnhHuong {
+  tram_id: string;
+  ten: string | null;
+  lat: number | null;
+  lon: number | null;
+  tong_pct_ho: number; // tong pct_ho cua TOAN BO cell thuoc tram nay - CO THE > 1 (nhieu sector cua X cung HO sang)
+  cells: BanDoCellAnhHuong[];
+}
+
+// SUA (yeu cau truc tiep user, 10/10/2026) - THAY THE HOAN TOAN convex hull cu (bao_loi(), da XOA ben BE)
+// bang "duong bao hinh sao" (domain/services/geo_utils.py::duong_bao_hinh_sao()): X o trong, MOI tram bi
+// anh huong la 1 dinh nam quanh, noi thanh 1 vong khep kin - KHAC convex hull (co the bo sot diem lom).
+// 1 diem tren duong bao - la 1 tram_bi_anh_huong (hoac 1 trong cac vi tri uoc luong cua no neu la CRAN,
+// MOI vi tri la 1 dinh rieng) HOAC CHINH X (khi x_tren_vien=true, xem BanDoDuongBao.x_tren_vien)
+export interface BanDoDuongBaoDiem {
+  tram_id: string;
+  ten: string | null;
+  lat: number;
+  lon: number;
+  // KHONG co khi diem nay LA CHINH X duoc chen vao polygon (xem la_x) - X khong co % HO rieng cua no
+  pct_ho?: number;
+  // true CHI KHI day la diem X duoc chen them lam 1 dinh (xem x_tren_vien) - moi diem BINH THUONG (tram bi
+  // anh huong) deu KHONG co key nay (undefined), KHONG phai false
+  la_x?: boolean;
+}
+
+export interface BanDoDuongBao {
+  // >= 3 diem -> co polygon (list dinh DA sap theo goc quanh X, CHUA khep kin - FE tu noi dinh cuoi ve dinh
+  // dau). < 3 diem -> null, dung "doan" thay the (xem duoi)
+  polygon: BanDoDuongBaoDiem[] | null;
+  // CHI co gia tri khi polygon la null (< 3 diem, khong du de tao 1 vung kin) - FE ve TUNG doan thang RIENG
+  // tu TAM (BanDoXBlock.tam_lat/tam_lon) den TUNG diem trong day, KHONG noi cac diem nay voi nhau
+  doan: BanDoDuongBaoDiem[];
+  // true khi co 1 "khoang trong goc" > 180 do quanh X (vd X o ria vung anh huong, khong co du du lieu bao
+  // het 360 do) - BE DA TU chen X vao lam 1 dinh cua polygon trong truong hop nay (xem "la_x" o tren). FE
+  // CHI can biet de hieu VI SAO polygon co 1 dinh la X, KHONG can xu ly gi them ("ve BINH THUONG" theo
+  // polygon da co san la du, se tu nhien ra hinh quat)
+  x_tren_vien: boolean;
+}
+
+export interface PreviewBanDo {
+  x: BanDoXBlock;
+  l1: BanDoDiemTram[]; // da sap theo goc quanh X (BE tu sap, FE KHONG sort lai) - dung de ve Polyline khep kin
+  l2: BanDoDiemTram[]; // cung quy uoc voi l1
+  tram_bi_anh_huong: BanDoTramBiAnhHuong[];
+  duong_bao: BanDoDuongBao;
+}
+
 // dung cho POST /api/v1/cr/preview - response chinh, request body dung chung TriggerCrRequest (tram_id + action)
 export interface PreviewCrResponse {
   tram_goc: PreviewTramGoc; // tram bi tac dong CR truc tiep, bat buoc theo schema
@@ -365,6 +507,17 @@ export interface PreviewCrResponse {
   // null khi KHONG con cell nao route duoc OSS nao (BE tra null tuong minh, KHAC voi undefined cua truong
   // hop .196 chua deploy) - 2 nguyen nhan khac nhau nhung cung 1 cach xu ly o FE: khong co gi de hien
   oss_se_dung?: OssSeDung | null;
+  // 4 truong OPTIONAL THEM (BUOC 4b+4c, 08-10/10/2026, BE CHUA DEPLOY tai .196) - CHI co gia tri khi tram
+  // nay chay nhanh HO (import_ho_neighbor.py), null/undefined/[] cho nhanh CDS (BE cu, hanh vi GIU NGUYEN)
+  nguon_du_lieu?: string | null; // vd "HO NA09, 7 ngay den 2026-09-28"
+  x_co?: string[]; // co cua tram goc (X): "TOA_DO_DUNG_CHUNG"|"HO_DI_XA"|"IT_DU_LIEU" (co the nhieu ma cung luc)
+  quan_he_day_du?: QuanHeDayDuItem[]; // TOAN BO quan he sector-X -> tram dich (khong chi phan da chon vao A/B)
+  ban_do?: PreviewBanDo | null; // du lieu ve ban do (X/CRAN/L1/L2/tram bi anh huong/duong bao)
+  // THEM (yeu cau truc tiep user, 10/10/2026) - danh sach SO SECTOR (CUA X) duoi N_MIN_HO_SECTOR (it du
+  // lieu HO, van xu ly nhung can canh bao - xem domain/services/ho_cell_selector.py ben BE). Rong [] khi
+  // khong co sector nao duoi nguong/nhanh CDS. Truoc day chi co ma co dinh "IT_DU_LIEU" trong x_co (KHONG
+  // kem so sector) - truong nay BO SUNG CHINH xac so sector con thieu, thay cho viec hien chung chung
+  sectors_it_du_lieu?: number[];
 }
 
 // dung cho GET /api/v1/qos/{cell_name} - BE khai bao additionalProperties true, chua co field co dinh trong schema
@@ -829,6 +982,31 @@ export interface JobRunChiTiet {
 // nay: class JobRunDetail(JobRunListItem))
 export interface JobRunDetail extends JobRunListItem {
   chi_tiet: JobRunChiTiet | null;
+}
+
+// dung cho GET /api/v1/stations/map?ma_tinh=... (BUOC 4c, 10/10/2026, BE chua deploy) - query param, PHAI
+// truyen ma_tinh (bat buoc, dung 3 ky tu - xem Query(..., min_length=3, max_length=3) ben BE)
+export interface StationsMapQueryParams {
+  ma_tinh: string;
+}
+
+// dang THO BE tra ve - dang GON (columns+rows, KHONG lap ten truong) vi 1 tinh co toi ~6.200 tram (vd HNI).
+// "columns" liet ke THU TU field THAT (xem StationsMapResponse ben BE) - FE (R012Service.getStationsMap())
+// tu ZIP lai tra cuu qua TEN COT, KHONG gia dinh thu tu co dinh, de khong vo khi BE doi thu tu columns
+export interface StationsMapResponse {
+  columns: string[];
+  rows: unknown[][];
+}
+
+// 1 diem tram DA ZIP san (tu StationsMapResponse qua R012Service.getStationsMap(), xem comment o do) - dang
+// FE thuc su dung trong hook/component, KHONG phai dang THO cua response
+export interface StationMapPoint {
+  tram_id: string;
+  ten: string;
+  lat: number | null;
+  lon: number | null;
+  vendor: string;
+  toa_do_dung_chung: boolean; // true = tram CRAN (TOA_DO_DUNG_CHUNG), xem domain/services/ho_delaunay.py ben BE
 }
 
 // dung cho GET /api/v1/jobs/runs - response phan trang {total, page, size, data}, y het PhieuHistoryResponse

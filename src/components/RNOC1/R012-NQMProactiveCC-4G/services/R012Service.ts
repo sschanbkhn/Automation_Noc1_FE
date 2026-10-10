@@ -29,6 +29,8 @@ import {
   XuatPhieuAutoRequest,
   XemTruocXuatPhieuResponse,
   ChayXuatPhieuAutoResponse,
+  StationsMapResponse,
+  StationMapPoint,
 } from '../types';
 
 // axios 0.21.x (ban dang dung, xem package.json) tu serialize 1 param kieu MANG thanh "vendor[]=A&vendor[]=B"
@@ -82,6 +84,36 @@ export const getStations = async (params?: StationsQueryParams): Promise<Station
     return data as StationListResponse;
   } catch (error) {
     // loi da duoc interceptor cua r012Request hien Notification, o day ném lai de hook goi ham nay tu quyet dinh xu ly tiep
+    throw error;
+  }
+};
+
+// ham goi GET /api/v1/stations/map?ma_tinh=... (BUOC 4c, 10/10/2026, BE chua deploy) - TOAN BO tram co toa
+// do cua 1 tinh, dung cho ban do xem truoc CR (context cac tram cung tinh quanh X). response THO cua BE la
+// dang GON (columns+rows, xem StationsMapResponse trong types/index.ts) - ZIP lai thanh StationMapPoint[] o
+// day (tra cuu qua TEN COT thuc te trong "columns", KHONG gia dinh thu tu co dinh) de cac noi goi khac
+// (hook/component) khong phai tu zip lai, giong tinh than cac service khac trong file nay tra ve du lieu da
+// dung dang san sang dung, khong bia them field nao ngoai 6 cot BE thuc su tra
+export const getStationsMap = async (ma_tinh: string): Promise<StationMapPoint[]> => {
+  try {
+    const data: any = await r012Request.get('/stations/map', { params: { ma_tinh } });
+    const res = data as StationsMapResponse;
+    const idx = (ten: string) => res.columns.indexOf(ten);
+    const iTramId = idx('tram_id');
+    const iTen = idx('ten');
+    const iLat = idx('lat');
+    const iLon = idx('lon');
+    const iVendor = idx('vendor');
+    const iCran = idx('toa_do_dung_chung');
+    return res.rows.map((row) => ({
+      tram_id: String(row[iTramId]),
+      ten: String(row[iTen]),
+      lat: row[iLat] as number | null,
+      lon: row[iLon] as number | null,
+      vendor: String(row[iVendor]),
+      toa_do_dung_chung: Boolean(row[iCran]),
+    }));
+  } catch (error) {
     throw error;
   }
 };

@@ -13,6 +13,9 @@ import { R012_COLORS } from "../../theme";
 // tach marker trung toa do (nhieu tram treo cung 1 cot, cell chi khac huong anten) - xem ly do day du
 // trong chinh file do, ke ca ly do KHONG chon cach tang maxZoom
 import { tachMarkerChongNhau, suyHuongTuTenCell } from "./tachMarkerChongNhau";
+// ban do rieng cho nhanh HO (BUOC 4c, 10/10/2026, yeu cau truc tiep user) - CHI dung khi previewData.ban_do
+// co gia tri (nhanh HO), xem nhanh re trong PreviewMap() ben duoi
+import PreviewMapHo from "./PreviewMapHo";
 
 // gan lai icon mac dinh bang anh da import qua webpack, thay vi de Leaflet tu doan duong dan (se sai khi bundle)
 // chi can lam 1 lan khi module duoc load, khong can lam lai moi lan render
@@ -39,12 +42,14 @@ L.Marker.prototype.options.icon = defaultIcon; // ap dung cho moi Marker trong f
 // Qua bien moi truong de doi duong dan ma khong phai sua code. LUU Y: dotenv-webpack nhung gia tri nay LUC
 // BUILD (khong phai doc luc chay), nen doi bien VAN PHAI build lai - van hon hardcode vi sua 1 dong .env
 // de hon va it rui ro hon sua file nguon.
-const TILE_URL = process.env.R012_TILE_URL || "/tiles/{z}/{x}/{y}.png";
+// export (BUOC 4c, 10/10/2026) - PreviewMapHo.tsx (ban do rieng cho nhanh HO) dung LAI chinh cac hang so/
+// helper nay thay vi khai bao ban sao, tranh 2 noi co the lech nhau (vd doi URL tile o day quen doi noi kia)
+export const TILE_URL = process.env.R012_TILE_URL || "/tiles/{z}/{x}/{y}.png";
 
 // Bo tile co gioi han zoom. Neu de nguoi dung phong to qua muc co tile, Leaflet se xin tile KHONG TON TAI ->
 // o trang lo cho tren nen ban do -> nguoi dung tuong he thong hong. Chan o tang UI (khong cho zoom qua muc)
 // tot hon nhieu so voi de no loi roi moi bao.
-const TILE_MIN_ZOOM = 6;
+export const TILE_MIN_ZOOM = 6;
 // 15 (nang tu 13, 02102026). LUU Y rieng cho NHANH NAY: nhanh thembv-rnoc-all-uc-dev-env chua merge buoc
 // nang 13->14 ma master da lam truoc do (04092026) - gia tri doc duoc truoc khi sua la 13, KHONG phai 14
 // nhu gia dinh ban dau cua yeu cau. Nang THANG len 15 (khong dung o buoc trung gian 14) de khop dung so
@@ -55,21 +60,21 @@ const TILE_MIN_ZOOM = 6;
 // FE). Neu server CHUA co du tile cho 2 muc zoom moi, ThieuTileOverlay (useTileErrorTracker ben duoi) van
 // tu canh bao "Khong tai duoc ban do nen" sau 5 tile loi - giong CHINH co che master da dua vao khi nang
 // 13->14 luc con chua kip copy tile len .197. Neu sau nay xac nhan tile da du, co the xoa ghi chu nay.
-const TILE_MAX_ZOOM = 15;
+export const TILE_MAX_ZOOM = 15;
 
 // So tile loi truoc khi ket luan "khong tai duoc ban do nen". KHONG canh bao ngay tu tile dau tien: vai tile
 // ria khung nhin thieu la chuyen binh thuong voi bo tile cat theo bien gioi (vd o bien, ngoai bien Viet Nam)
 // - bao ngay se la bao dong gia. Vuot 5 tile moi la dau hieu ca lop nen khong ve duoc.
-const TILE_ERROR_THRESHOLD = 5;
+export const TILE_ERROR_THRESHOLD = 5;
 
 // Ghi cong OpenStreetMap - BAT BUOC theo giay phep ODbL KE CA khi phuc vu tile offline tu server rieng,
 // vi du lieu ban do van la cua OSM
-const TILE_ATTRIBUTION =
+export const TILE_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
 // Theo doi su kien 'tileerror' cua Leaflet de biet lop nen co ve duoc khong.
 // resetKey: doi tram / doi du lieu preview -> xoa bo dem, neu khong 1 lan loi cu se treo canh bao mai mai
-function useTileErrorTracker(resetKey: string) {
+export function useTileErrorTracker(resetKey: string) {
   const [thieuTile, setThieuTile] = useState<boolean>(false);
   // dem bang ref (khong phai state): moi tile loi deu ban su kien, dung state se render lai vai chuc lan
   // vo ich - chi can render lai DUNG 1 lan luc vuot nguong
@@ -99,7 +104,7 @@ function useTileErrorTracker(resetKey: string) {
 // Noi ro "marker va vi tri tram van hien dung": khung ban do van dung kich thuoc, marker va popup van ve
 // dung toa do - CHI THIEU moi anh nen. Khong co dong nay thi nguoi dung nhin o trang se tuong toan bo tinh
 // nang ban do hong va bo khong dung, trong khi thu ho can (vi tri tram) van con nguyen.
-const ThieuTileOverlay: React.FC = () => (
+export const ThieuTileOverlay: React.FC = () => (
   <div
     style={{
       position: "absolute",
@@ -134,12 +139,12 @@ const ThieuTileOverlay: React.FC = () => (
 // duoc copy len .197, so trung se mo ban do ngay o muc chua co tile. Nay gan lai theo TILE_MAX_ZOOM (15):
 // ThieuTileOverlay (xem useTileErrorTracker ben duoi) van la luoi an toan neu server thieu tile - hien
 // canh bao thay vi man hinh trang cam nin.
-const SINGLE_STATION_ZOOM = TILE_MAX_ZOOM;
+export const SINGLE_STATION_ZOOM = TILE_MAX_ZOOM;
 
 // icon dang cham tron mau ve bang L.divIcon (KHONG can them file anh moi) de phan biet tram_goc (do) va
 // tram_bi_anh_huong (xanh duong) tren cung 1 ban do preview - marker mac dinh cua Leaflet (defaultIcon o tren)
 // chi co 1 mau xanh duong nen khong dung truc tiep duoc cho ca 2 vai tro cung luc
-const buildDotIcon = (color: string, sizePx: number) =>
+export const buildDotIcon = (color: string, sizePx: number) =>
   L.divIcon({
     className: "", // ghi de rong de bo class mac dinh "leaflet-div-icon" (co nen/border vuong trang xau), tu ve toan bo qua html
     html: `<div style="background:${color};width:${sizePx}px;height:${sizePx}px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 4px rgba(0,0,0,0.6);"></div>`,
@@ -247,8 +252,18 @@ interface ValidCoordTram {
 
 // tach rieng component cho che do preview (nhieu marker) - giu NetworkMap chinh o tren gon, de doc theo tung che do
 const PreviewMap: React.FC<{ data: PreviewCrResponse }> = ({ data }) => {
-  // bo dem tile RIENG cua che do preview - reset khi preview cho 1 tram goc khac (du lieu doi hoan toan)
+  // bo dem tile RIENG cua che do preview - reset khi preview cho 1 tram goc khac (du lieu doi hoan toan).
+  // Hook PHAI goi TRUOC moi nhanh return ben duoi (quy tac hook cua React, giong NetworkMap() o tren) -
+  // ke ca nhanh BUOC 4c ngay sau day (PreviewMapHo tu co bo dem tile RIENG cua no, bo dem nay KHONG dung
+  // toi trong nhanh do, nhung VAN PHAI goi de giu thu tu hook on dinh qua moi lan render)
   const { thieuTile, eventHandlers } = useTileErrorTracker(data.tram_goc.tram_id);
+
+  // BUOC 4c (10/10/2026, yeu cau truc tiep user) - ban do RIENG, PHONG PHU HON cho nhanh HO (X/CRAN/L1/L2/
+  // duong bao/legend) khi BE co tra ban_do. "field moi la OPTIONAL" - nhanh CDS (BE cu, ban_do undefined/
+  // null) GIU NGUYEN logic marker don gian cu phia duoi, KHONG bi anh huong gi
+  if (data.ban_do) {
+    return <PreviewMapHo data={data} />;
+  }
 
   // FIX (Phan 1, ban sua theo schema BE moi 22072026): BE da tach rieng tram_bi_anh_huong (mang PHANG,
   // KHONG con lap lai tram_goc ben trong nhu tram_lan_can cu) va cells_bi_anh_huong (mang PHANG rieng,

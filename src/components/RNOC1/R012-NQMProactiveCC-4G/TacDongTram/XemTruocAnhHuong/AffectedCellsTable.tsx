@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { OneLineCell } from "../../common/r012TableStyle";
-import { Button, Pagination } from "antd";
+import { Button, Pagination, Tag } from "antd";
 import {
   createColumnHelper,
   useReactTable,
@@ -18,6 +18,8 @@ import { PreviewCrResponse } from "../../types";
 import { R012_COLORS } from "../../theme";
 // <th> dung chung cho MOI bang co sort trong module (click header + mui ten huong sort)
 import { SortableHeaderCell } from "../../common/SortableHeaderCell";
+// nhan hien thi cho ma co dinh cua nhanh HO (BUOC 4b, 08/10/2026) - xem WHY day du trong chinh file do
+import { CELL_CO_LABELS, formatPctHo, layNhanLayer } from "../../helpers/hoLabels";
 
 // dinh dang timestamp DDMMYYYY_HHMM cho ten file export - dung DUNG quy uoc da dung o CellParamsByHuong.tsx
 // va AffectedStationsTable.tsx. KHONG tach thanh helper dung chung vi ham chi 8 dong, tach som se la
@@ -33,9 +35,17 @@ function formatTimestampForFileName(date: Date): string {
 }
 
 interface CellRow {
-  cell_name: string;
-  tram_id: string; // ma tram cha - tram_id cua tram_bi_anh_huong chua cell nay
+  // SUA (BUOC 4b, 08/10/2026) - WIDEN sang nullable: cell CAN_GHEP_TEN (nhanh HO, BE chua deploy) khong co
+  // ten/ma tram - xem WHY day du o AffectedCellItem (types/index.ts)
+  cell_name: string | null;
+  tram_id: string | null; // ma tram cha - tram_id cua tram_bi_anh_huong chua cell nay
   huong_id: string | null;
+  // 5 field OPTIONAL THEM (BUOC 4b) - undefined/[] cho nhanh CDS (BE cu)
+  pct_ho?: number | null;
+  so_ho?: number | null;
+  sr?: number | null;
+  layer?: string | null;
+  co?: string[];
 }
 
 const columnHelper = createColumnHelper<CellRow>();
@@ -56,6 +66,11 @@ const AffectedCellsTable: React.FC<AffectedCellsTableProps> = ({ previewData }) 
         cell_name: c.cell_name,
         tram_id: c.tram_id,
         huong_id: c.huong_id,
+        pct_ho: c.pct_ho,
+        so_ho: c.so_ho,
+        sr: c.sr,
+        layer: c.layer,
+        co: c.co,
       })),
     [previewData]
   );
@@ -84,14 +99,53 @@ const AffectedCellsTable: React.FC<AffectedCellsTableProps> = ({ previewData }) 
       // nghia, cell lan can) va "ID tram tat"/"Tram tat" (khac nghia, tram_goc) o bang Lich su phieu
       columnHelper.accessor("cell_name", {
         header: "Cell (lan can)",
-        // OneLineCell: ellipsis + Tooltip lam duong lui cho ten dai bat thuong - xem
-        // common/r012TableStyle.tsx
-        cell: (info) => <OneLineCell value={info.getValue()} />,
+        // SUA (BUOC 4b) - cell_name co the null (cell CAN_GHEP_TEN, nhanh HO) - hien "(chua co ten cell)"
+        // thay vi OneLineCell rong de NOC biet NGAY la thieu du lieu, khong phai loi hien thi
+        cell: (info) => (info.getValue() ? <OneLineCell value={info.getValue() as string} /> : "(chua co ten cell)"),
       }),
-      columnHelper.accessor("tram_id", { header: "Ma tram (lan can)" }),
+      columnHelper.accessor("tram_id", {
+        header: "Ma tram (lan can)",
+        cell: (info) => info.getValue() ?? "-", // SUA (BUOC 4b) - co the null cung voi cell_name (cell CAN_GHEP_TEN)
+      }),
       columnHelper.accessor("huong_id", {
         header: "Huong",
         cell: (info) => info.getValue() ?? "-", // co the null theo schema AffectedCellItem
+      }),
+      // 4 cot MOI (BUOC 4b, 08/10/2026, BE chua deploy) - "—" khi undefined (nhanh CDS/BE cu chua tra)
+      columnHelper.accessor("pct_ho", {
+        header: "% HO",
+        cell: (info) => formatPctHo(info.getValue()),
+      }),
+      columnHelper.accessor("so_ho", {
+        header: "So HO",
+        cell: (info) => info.getValue() ?? "—",
+      }),
+      columnHelper.accessor("sr", {
+        header: "SR",
+        cell: (info) => formatPctHo(info.getValue()),
+      }),
+      columnHelper.accessor("layer", {
+        header: "Layer",
+        cell: (info) => layNhanLayer(info.getValue()),
+      }),
+      columnHelper.accessor("co", {
+        header: "Co",
+        enableSorting: false, // mang Tag, khong co thu tu sap xep tu nhien
+        cell: (info) => {
+          const co = info.getValue();
+          if (!co || co.length === 0) {
+            return "—";
+          }
+          return (
+            <>
+              {co.map((ma) => (
+                <Tag key={ma} color="orange">
+                  {CELL_CO_LABELS[ma] ?? ma}
+                </Tag>
+              ))}
+            </>
+          );
+        },
       }),
     ],
     [pagination]
@@ -108,13 +162,19 @@ const AffectedCellsTable: React.FC<AffectedCellsTableProps> = ({ previewData }) 
     getPaginationRowModel: getPaginationRowModel(),
   });
 
-  // export TOAN BO rows (khong chi trang dang xem) - dung DUNG cot yeu cau: ma tram, cell_name, huong_id.
-  // KHONG co rsboost/qrxlevmin/priority/action_type vi AffectedCellItem (schema that) khong co cac field nay
+  // export TOAN BO rows (khong chi trang dang xem) - MIRROR cac cot dang hien tren bang (THEM 5 cot HO,
+  // BUOC 4b). gia tri % de RAW (0-1, khong *100) trong Excel - de nguoi dung tu dinh dang % trong Excel
+  // thay vi FE tu nhan 100 (tranh nham don vi neu ho doi chieu lai voi so lieu goc)
   const handleExportExcel = () => {
     const exportRows = rows.map((r) => ({
-      ma_tram: r.tram_id,
-      cell_name: r.cell_name,
+      ma_tram: r.tram_id ?? "-",
+      cell_name: r.cell_name ?? "(chua co ten cell)",
       huong_id: r.huong_id ?? "-",
+      pct_ho: r.pct_ho ?? "",
+      so_ho: r.so_ho ?? "",
+      sr: r.sr ?? "",
+      layer: layNhanLayer(r.layer),
+      co: r.co && r.co.length > 0 ? r.co.map((ma) => CELL_CO_LABELS[ma] ?? ma).join(", ") : "-",
     }));
     const worksheet = XLSX.utils.json_to_sheet(exportRows);
     const workbook = XLSX.utils.book_new();

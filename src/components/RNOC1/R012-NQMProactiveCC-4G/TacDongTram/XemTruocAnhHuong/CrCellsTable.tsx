@@ -18,6 +18,8 @@ import { PreviewCrResponse } from "../../types";
 import { R012_COLORS } from "../../theme";
 // <th> dung chung cho MOI bang co sort trong module (click header + mui ten huong sort)
 import { SortableHeaderCell } from "../../common/SortableHeaderCell";
+// nhan hien thi cho ma co dinh/format % cua nhanh HO (BUOC 4b, 08/10/2026) - xem WHY day du trong chinh file do
+import { formatPctHo, layNhanLayer } from "../../helpers/hoLabels";
 
 // dinh dang timestamp DDMMYYYY_HHMM cho ten file export - dung DUNG quy uoc da dung o cac bang preview
 // khac. KHONG tach thanh helper dung chung vi ham chi 8 dong, tach som se la premature abstraction
@@ -45,6 +47,11 @@ interface CrCellRow {
   // BE .196 hien chua deploy, co the undefined
   band?: string | null;
   sector?: number | null;
+  // 4 field OPTIONAL THEM (BUOC 4b, 08/10/2026, BE chua deploy) - undefined cho nhanh CDS (BE cu)
+  pct_ho?: number | null;
+  so_ho?: number | null;
+  sr?: number | null;
+  layer?: string | null;
 }
 
 const columnHelper = createColumnHelper<CrCellRow>();
@@ -73,6 +80,10 @@ const CrCellsTable: React.FC<CrCellsTableProps> = ({ previewData }) => {
         qrxlevmin_moi: c.qrxlevmin_moi,
         band: c.band,
         sector: c.sector,
+        pct_ho: c.pct_ho,
+        so_ho: c.so_ho,
+        sr: c.sr,
+        layer: c.layer,
       })),
     [previewData]
   );
@@ -117,6 +128,25 @@ const CrCellsTable: React.FC<CrCellsTableProps> = ({ previewData }) => {
       columnHelper.accessor("sector", {
         header: "Sector (tram tat)",
         cell: (info) => info.getValue() ?? "—",
+      }),
+      // 4 cot MOI (BUOC 4b, 08/10/2026, BE chua deploy) - "—" khi undefined (nhanh CDS/BE cu chua tra).
+      // KHONG co cot "Co" nhu AffectedCellsTable: 1 cell vao duoc B nghia la KHONG BAT_THUONG/CAN_GHEP_TEN
+      // (xem WHY day du o CrCellItem, types/index.ts)
+      columnHelper.accessor("pct_ho", {
+        header: "% HO",
+        cell: (info) => formatPctHo(info.getValue()),
+      }),
+      columnHelper.accessor("so_ho", {
+        header: "So HO",
+        cell: (info) => info.getValue() ?? "—",
+      }),
+      columnHelper.accessor("sr", {
+        header: "SR",
+        cell: (info) => formatPctHo(info.getValue()),
+      }),
+      columnHelper.accessor("layer", {
+        header: "Layer",
+        cell: (info) => layNhanLayer(info.getValue()),
       }),
       columnHelper.accessor("action_type", {
         header: "Hanh dong",
@@ -173,6 +203,11 @@ const CrCellsTable: React.FC<CrCellsTableProps> = ({ previewData }) => {
       cell_name: r.cell_name,
       band: r.band ?? "-",
       sector: r.sector ?? "-",
+      // 4 cot MOI (BUOC 4b) - gia tri % de RAW (0-1, khong *100), giong quy uoc export AffectedCellsTable.tsx
+      pct_ho: r.pct_ho ?? "",
+      so_ho: r.so_ho ?? "",
+      sr: r.sr ?? "",
+      layer: layNhanLayer(r.layer),
       action_type: r.action_type ?? "-",
       priority: r.priority ?? "",
       rsboost_cu: r.rsboost_cu ?? "",

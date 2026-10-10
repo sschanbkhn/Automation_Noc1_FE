@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Row, Col, Collapse, Alert } from "antd";
+import { Row, Col, Collapse, Alert, Tag } from "antd";
 import type { CollapseProps } from "antd";
 // khu vuc tim kiem va chon tram, xac nhan trigger CR - tuong ung Zone A trong UI_DESIGN.md
 // doi ten tu ZoneA sang TimTram de ten thu muc phan anh dung chuc nang thay vi ten generic theo vi tri layout
@@ -19,6 +19,9 @@ import CrCellsTable from "./XemTruocAnhHuong/CrCellsTable";
 // chinh file do
 import CellNgoaiPhamViTable from "./XemTruocAnhHuong/CellNgoaiPhamViTable";
 import CellQosHistoryChart from "./XemTruocAnhHuong/CellQosHistoryChart";
+// bang "Quan he day du" (BUOC 4b, 08/10/2026, yeu cau truc tiep user, BE chua deploy) - xem WHY day du
+// trong chinh file do
+import QuanHeDayDuTable from "./XemTruocAnhHuong/QuanHeDayDuTable";
 // khu vuc ket qua CR theo tung huong va log tien trinh CR - tuong ung Zone C trong UI_DESIGN.md
 // doi ten tu ZoneC sang KetQuaCR cho dung chuc nang hien thi
 // QosSparkline (Widget F33) va QoeQosCharts (Zone E) da XOA HAN (khong con dung o dau trong module) - CTS
@@ -29,6 +32,8 @@ import SseProgressLog from "./KetQuaCR/SseProgressLog";
 import { StationItem, PreviewCrResponse } from "../types";
 // token mau xanh duong dung chung toan module - dong bo mau header Collapse (Viec 1) voi phan con lai
 import { R012_COLORS } from "../theme";
+// nhan hien thi cho ma co dinh "x_co" cua tram goc (BUOC 4b, 08/10/2026) - xem WHY day du trong chinh file do
+import { layDanhSachNhanXCo } from "../helpers/hoLabels";
 // goi useSseStream DUY NHAT 1 LAN o cap TacDongTram nay, KHONG goi rieng trong tung component con cua Zone C -
 // neu goi nhieu lan se mo nhieu ket noi EventSource trung lap toi CUNG 1 session_id, gay lang phi tai nguyen
 // va co the loi (nhieu socket cung tranh nhau doc/dong 1 session tren BE)
@@ -139,6 +144,16 @@ const TacDongTram: React.FC = () => {
           children: <CellNgoaiPhamViTable previewData={previewData} />,
         });
       }
+      // muc "Quan he day du" (BUOC 4b, 08/10/2026) - CHI them khi THAT SU co du lieu (nhanh HO), giong
+      // quy uoc "Cell bi loai khoi pham vi" ngay tren - thu gon theo mac dinh (KHONG nam trong
+      // defaultActiveKey), NOC tu bam mo rong khi can xem (yeu cau "bang thu gon, bam mo rong")
+      if (previewData.quan_he_day_du && previewData.quan_he_day_du.length > 0) {
+        items.push({
+          key: "quan-he-day-du",
+          label: `Quan he day du (${previewData.quan_he_day_du.length})`,
+          children: <QuanHeDayDuTable previewData={previewData} />,
+        });
+      }
     }
     return items;
   }, [selectedStationForView, previewData]);
@@ -197,6 +212,38 @@ const TacDongTram: React.FC = () => {
             anh huong live network", xem comment OssSeDung trong types/index.ts). optional + null deu an:
             BE .196 chua deploy truong nay (undefined), hoac BE tra null that su khi khong con cell nao
             route duoc OSS nao - ca 2 truong hop deu khong co gi de hien */}
+        {/* "Nguon du lieu" + "Co cua tram X" (BUOC 4b, 08/10/2026, yeu cau truc tiep user) - CHI co khi tram
+            nay chay nhanh HO (nguon_du_lieu luon co gia tri cho nhanh HO, undefined cho nhanh CDS). Dat
+            NGOAI Collapse (luon hien) giong "NetAct se dung" ben duoi - day la ngu canh NOC can biet NGAY
+            TRUOC khi doc cac bang/ban do o duoi (vd biet truoc sao X la CRAN hay sao sector nao it du lieu),
+            khong nen giau trong 1 muc Collapse mac dinh thu gon */}
+        {previewData?.nguon_du_lieu && (
+          <Alert
+            type="info"
+            showIcon
+            message={`Nguon du lieu: ${previewData.nguon_du_lieu}`}
+            style={{ marginBottom: "0.5rem" }}
+          />
+        )}
+        {previewData?.x_co && previewData.x_co.length > 0 && (
+          <Alert
+            type="warning"
+            showIcon
+            message={
+              <>
+                Co cua tram {previewData.tram_goc.tram_name ?? previewData.tram_goc.tram_id}:{" "}
+                {/* "IT_DU_LIEU" duoc khai trien thanh 1 nhan/sector qua sectors_it_du_lieu (THEM 10/10/2026) -
+                    xem layDanhSachNhanXCo() de biet WHY khong con dung X_CO_LABELS truc tiep o day */}
+                {layDanhSachNhanXCo(previewData.x_co, previewData.sectors_it_du_lieu).map((nhan) => (
+                  <Tag key={nhan} color="orange" style={{ marginLeft: "4px" }}>
+                    {nhan}
+                  </Tag>
+                ))}
+              </>
+            }
+            style={{ marginBottom: "0.75rem" }}
+          />
+        )}
         {previewData?.oss_se_dung && (
           <Alert
             type="info"
