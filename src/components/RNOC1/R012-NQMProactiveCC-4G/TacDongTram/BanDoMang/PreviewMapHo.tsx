@@ -29,6 +29,12 @@ import { PreviewCrResponse, BanDoCellAnhHuong, BanDoDuongBaoDiem } from "../../t
 import { R012_COLORS } from "../../theme";
 import { useStationsMap } from "../../hooks/useStationsMap";
 import { layDanhSachNhanXCo, formatPctHo } from "../../helpers/hoLabels";
+// SUA (11/10/2026, loi runtime sau deploy 9463f85) - import TU mapCommon.tsx (KHONG con tu "./NetworkMap"
+// nua) - xem WHY day du trong chinh file mapCommon.tsx: NetworkMap.tsx import PreviewMapHo.tsx (file nay),
+// neu file nay LAI import nguoc tu "./NetworkMap" se tao VONG LAP import giua 2 file, gay crash "buildDotIcon
+// is not a function" LUC NAP MODULE (goi buildDotIcon() o cap module ben duoi TRUOC KHI NetworkMap.tsx kip
+// chay toi dong gan gia tri cho no, do dang ket qua giua chung o doan import PreviewMapHo.tsx). mapCommon.tsx
+// la module LA (khong import NetworkMap.tsx/PreviewMapHo.tsx) nen KHONG con vong lap nao de xay ra loi nay.
 import {
   TILE_URL,
   TILE_MIN_ZOOM,
@@ -38,11 +44,11 @@ import {
   useTileErrorTracker,
   ThieuTileOverlay,
   buildDotIcon,
-} from "./NetworkMap";
+} from "./mapCommon";
 
 // marker do CHAC CHAN cho X (tram goc bi tat, vi tri la CHINH toa do RIMS/khong phai CRAN hoac CRAN nhung
-// khong uoc luong duoc) - TAI SU DUNG buildDotIcon export tu NetworkMap.tsx (KHONG dinh nghia ban sao), to
-// hon tramGocIcon cu (18px) 1 chut vi ban do nay co THEM nhieu lop markers khac chong len nhau
+// khong uoc luong duoc) - TAI SU DUNG buildDotIcon export tu mapCommon.tsx (KHONG dinh nghia ban sao), to
+// hon tramGocIcon cu (18px, NetworkMap.tsx) 1 chut vi ban do nay co THEM nhieu lop markers khac chong len nhau
 const xIconDacDinh = buildDotIcon(R012_COLORS.dangerRed, 22);
 
 // marker X net dut (SUA 10/10/2026, yeu cau truc tiep user) - khi X la CRAN VA uoc luong duoc "tam" (trung
