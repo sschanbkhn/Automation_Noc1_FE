@@ -25,7 +25,7 @@ import {
 } from "react-leaflet";
 import L, { Map as LeafletMap } from "leaflet";
 import { Button, Tag } from "antd";
-import { PreviewCrResponse, BanDoCellAnhHuong, BanDoDuongBaoDiem } from "../../types";
+import { PreviewCrResponse, BanDoCellAnhHuong, BanDoDuongBaoDiem, AffectedCellItem } from "../../types";
 import { R012_COLORS } from "../../theme";
 import { useStationsMap } from "../../hooks/useStationsMap";
 import { layDanhSachNhanXCo, formatPctHo } from "../../helpers/hoLabels";
@@ -64,14 +64,27 @@ const buildDashedDotIcon = (color: string, sizePx: number) =>
   });
 const xIconUocLuong = buildDashedDotIcon(R012_COLORS.dangerRed, 22);
 
-// mau xam trung tinh cho tram cung tinh (context) - TAI SU DUNG token statusRunning da co san trong
-// theme.ts (vai tro goc la "buoc dang chay" cua CrLogTimeline, nhung ban chat la 1 mau xam trung tinh KHONG
-// mang y nghia "active" nao - dung lai de tranh bia them 1 mau xam moi khong co trong theme.ts)
-const MAU_TRAM_CUNG_TINH = R012_COLORS.statusRunning;
-// marker rieng cho vi tri TONG DAI cua X khi X la CRAN (THEM 10/10/2026) - to hon cham tron tram cung tinh
-// 1 chut (16px, co vien trang + shadow qua buildDotIcon) de phan biet "day la 1 diem DAC BIET" chu khong
-// phai 1 tram thuong trong lop ngu canh
-const tongDaiIcon = buildDotIcon(MAU_TRAM_CUNG_TINH, 16);
+// SUA (11/10/2026, yeu cau truc tiep user) - mau TIM NHAT rieng cho tram cung tinh (context), TACH KHOI
+// token statusRunning (xam) cu: "noi hon nen OSM nhung nhat hon tram bi anh huong" - tim nhat (#a78bfa,
+// violet-400) du tuong phan voi nen OSM (vang nhat/trang) hon mau xam cu, nhung van NHAT HON han mau xanh
+// duong dac (primary, fillOpacity cao) cua marker "tram bi anh huong" nen khong gay nham lan ve muc do quan
+// trong. Vien dam hon (#7c3aed, violet-600) de vien ro net tren nen nhat. KHONG co san trong theme.ts (gia
+// tri moi, rieng cho muc dich nay) nen khai bao truc tiep o day, khong dung token chung
+const MAU_TRAM_CUNG_TINH_NEN = "#a78bfa";
+const MAU_TRAM_CUNG_TINH_VIEN = "#7c3aed";
+// ban kinh hien thi THAT (px) cua cham tron tram cung tinh (4-5px theo yeu cau) - KHAC voi ban kinh VUNG BAT
+// CHUOT lon hon o duoi (BAN_KINH_BAT_CHUOT_TRAM_CUNG_TINH), xem comment tai noi dung CircleMarker
+const BAN_KINH_TRAM_CUNG_TINH = 4;
+// vung bat chuot (invisible, lon hon han cham tron hien thi) - de de hover/click hon o zoom thap khi cham
+// chi con 4px that su rat kho trung chuot. CircleMarker THAT hien thi (4px, tim nhat) duoc ve SAU, interactive
+// false, de khong tranh su kien voi vong bat chuot nay
+const BAN_KINH_BAT_CHUOT_TRAM_CUNG_TINH = 8;
+
+// marker rieng cho vi tri TONG DAI cua X khi X la CRAN (THEM 10/10/2026) - mau XAM (TAI SU DUNG token
+// statusRunning co san trong theme.ts, KHAC han mau tim cua tram cung tinh o tren - 2 khai niem khac nhau,
+// "tong dai CRAN" la 1 DIEM DUY NHAT dac biet, khong phai 1 phan cua lop ngu canh tram cung tinh) - to hon
+// cham tron tram cung tinh 1 chut (16px, co vien trang + shadow qua buildDotIcon)
+const tongDaiIcon = buildDotIcon(R012_COLORS.statusRunning, 16);
 
 // khoang fillOpacity cho marker "tram bi anh huong" - thap nhat van du nhin thay (0.35), cao nhat la 1
 // (dam nhat). Cong thuc noi suy TUYEN TINH theo tong_pct_ho/maxTongPct trong CHINH preview nay (tuong doi,
@@ -96,6 +109,16 @@ const NAN_WEIGHT_MAX = 6;
 // chi hien nhan %HO canh moi dinh tu zoom nay tro len (yeu cau truc tiep user) - duoi muc nay cac dinh qua
 // gan nhau tren man hinh, chu se de len nhau khong doc duoc
 const ZOOM_HIEN_NHAN_NAN = 14;
+// THEM (11/10/2026, yeu cau truc tiep user) - nhan %HO CHI hien cho tram >= nguong nay (0.05 = 5%, fraction
+// CHUA nhan 100 - xem formatPctHo trong hoLabels.ts); tram nho hon van co tia (do day van ty le %HO binh
+// thuong) nhung KHONG gan nhan permanent de tranh ban do qua nhieu chu so chi/de len nhau - % chinh xac cua
+// tram nho van xem duoc qua Tooltip hover cua CHINH marker tram do (xem CircleMarker "tram bi anh huong" ben
+// duoi, Tooltip o do KHONG bi gioi han nguong nay)
+const NGUONG_HIEN_NHAN_PCT = 0.05;
+// THEM (11/10/2026, yeu cau truc tiep user) - "dat nhan lech ra ngoai theo huong nan, khong de len X": day
+// vi tri nhan ra xa TAM mot doan = ty le nay NHAN voi do dai vector (tam -> dinh), tuc nhan nam LUI RA SAU
+// dinh (xa TAM/X hon chinh dinh do) thay vi dat dung tai toa do dinh (de chong len marker tram tai do)
+const NAN_LABEL_OFFSET_RATIO = 0.15;
 
 function tinhDoDayNan(pctHo: number, maxPctHo: number): number {
   if (maxPctHo <= 0) {
@@ -103,6 +126,44 @@ function tinhDoDayNan(pctHo: number, maxPctHo: number): number {
   }
   const ti_le = Math.min(1, Math.max(0, pctHo / maxPctHo));
   return NAN_WEIGHT_MIN + (NAN_WEIGHT_MAX - NAN_WEIGHT_MIN) * ti_le;
+}
+
+// THEM (11/10/2026, yeu cau truc tiep user) - khoang cach THAT (km) tu TAM den 1 tram bi anh huong, dung cho
+// Popup/Tooltip (B10). BE HIEN KHONG tra san field "km" nao cho tram_bi_anh_huong (da doi chieu truc tiep
+// application/trigger_cr_use_case.py::_xay_du_lieu_ban_do() + api/schemas/cr_schemas.py::AffectedCellItem -
+// khong co key "km" o ca 2 noi) nen FE tu tinh (haversine chuan) - dung dung "neu co" theo yeu cau, phan
+// "neu co" KHONG ap dung duoc o day vi BE chua co, FE tiep tuc tu tinh nhu truoc
+const BAN_KINH_TRAI_DAT_KM = 6371;
+function tinhKhoangCachKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * BAN_KINH_TRAI_DAT_KM * Math.asin(Math.sqrt(a));
+}
+
+// SUA (11/10/2026, yeu cau truc tiep user) - "Layer" cua 1 TRAM bi anh huong gio lay TU DU LIEU BE THAT
+// (AffectedCellItem.layer trong data.cells_bi_anh_huong - danh sach A o CAP TREN CUNG cua PreviewCrResponse,
+// KHONG phai suy tu banDo.l1/l2 nhu ban truoc - da BO cach lam cu vi "tu suy" co the SAI lech voi gia tri
+// THAT BE da tinh, vd truong hop KHONG_XAC_DINH). TOAN BO cell cung tram_dich_id deu CHIA SE 1 gia tri layer
+// DUY NHAT (BE gan layer theo PHAN LOAI CUA TRAM DICH, khong phai tung cell rieng - xem domain/services/
+// ho_cell_selector.py: "Tram dich la TOA_DO_DUNG_CHUNG (BAT KE X co la gi): layer gan = KHONG_XAC_DINH"), nen
+// chi can lay gia tri cua CELL DAU TIEN khop tram_id la du, khong co nguy co mau thuan giua cac cell
+function layLayerCuaTramTuBE(tramId: string, cellsBiAnhHuong: AffectedCellItem[]): string | null {
+  const cell = cellsBiAnhHuong.find((c) => c.tram_id === tramId && c.layer !== null && c.layer !== undefined);
+  return cell?.layer ?? null;
+}
+
+// "KHONG_XAC_DINH" (BE gan khi TRAM DICH la CRAN - TOA_DO_DUNG_CHUNG, xem WHY day du o
+// layLayerCuaTramTuBE()) - hien ro "(CRAN)" theo yeu cau truc tiep user, thay vi chi "Khong xac dinh" chung
+// chung nhu layNhanLayer() dung chung trong hoLabels.ts (ham do dung cho ngu canh CELL/sector khac, KHONG
+// doi o day de tranh anh huong cac bang khac dang dung chung ham do)
+function layNhanLayerTramBiAnhHuong(layer: string | null): string {
+  if (!layer) {
+    return "-";
+  }
+  return layer === "KHONG_XAC_DINH" ? "Khong xac dinh (CRAN)" : layer;
 }
 
 // lop "Nan" (THEM 10/10/2026, yeu cau truc tiep user) - tia duong thang tu TAM den TUNG dinh duong bao
@@ -129,19 +190,33 @@ const NanLayer: React.FC<{ tam: [number, number]; diem: BanDoDuongBaoDiem[] }> =
 
   return (
     <>
-      {diemCoTyLe.map((d) => (
-        <Polyline
-          key={`${d.tram_id}-${d.lat}-${d.lon}`}
-          positions={[tam, [d.lat, d.lon]]}
-          pathOptions={{ color: R012_COLORS.primaryDark, weight: tinhDoDayNan(d.pct_ho as number, maxPctHo) }}
-        >
-          {zoom >= ZOOM_HIEN_NHAN_NAN && (
-            <Tooltip permanent direction="center" position={[d.lat, d.lon]}>
-              {formatPctHo(d.pct_ho)}
-            </Tooltip>
-          )}
-        </Polyline>
-      ))}
+      {diemCoTyLe.map((d) => {
+        const pct = d.pct_ho as number;
+        // nhan lech ra ngoai (yeu cau truc tiep user) - diem neo cua Tooltip la TAM + vector (tam->dinh)
+        // nhan them he so NAN_LABEL_OFFSET_RATIO, tuc LUI RA SAU dinh (xa tam hon chinh dinh), KHONG de ngay
+        // tai toa do dinh (se de len marker tram tai do) va cang KHONG the de len X (X nam o tam, huong lech
+        // la huong RA XA tam/X)
+        const diemNhan: [number, number] = [
+          tam[0] + (d.lat - tam[0]) * (1 + NAN_LABEL_OFFSET_RATIO),
+          tam[1] + (d.lon - tam[1]) * (1 + NAN_LABEL_OFFSET_RATIO),
+        ];
+        return (
+          <Polyline
+            key={`${d.tram_id}-${d.lat}-${d.lon}`}
+            positions={[tam, [d.lat, d.lon]]}
+            pathOptions={{ color: R012_COLORS.primaryDark, weight: tinhDoDayNan(pct, maxPctHo) }}
+          >
+            {/* THEM (11/10/2026): nhan CHI hien tu zoom 14 TRO LEN VA tram >= 5% (NGUONG_HIEN_NHAN_PCT) -
+                tram nho hon van co tia (do day van ty le binh thuong), % van xem duoc qua Tooltip hover cua
+                CHINH marker tram do (khong gioi han nguong nay) */}
+            {zoom >= ZOOM_HIEN_NHAN_NAN && pct >= NGUONG_HIEN_NHAN_PCT && (
+              <Tooltip permanent direction="center" position={diemNhan}>
+                {formatPctHo(pct)}
+              </Tooltip>
+            )}
+          </Polyline>
+        );
+      })}
     </>
   );
 };
@@ -183,54 +258,132 @@ const DuongKe: React.FC<{ mau: string }> = ({ mau }) => (
     }}
   />
 );
-
-// chu giai mau (B8) - dat co dinh goc duoi-phai ban do, KHONG chan tuong tac map (vi tri rieng voi
-// LayersControl o goc tren-phai de khong de len nhau)
-const Legend: React.FC = () => (
-  <div
+// THEM (11/10/2026) - duong ke NET DUT, dung rieng cho "Duong bao vung anh huong" (SUA B6: doi sang net dut
+// de phan biet voi "Nan" net lien, xem comment pathOptions cua Polygon duong bao ben duoi)
+const DuongKeNetDut: React.FC<{ mau: string }> = ({ mau }) => (
+  <span
     style={{
-      position: "absolute",
-      bottom: 8,
-      right: 8,
-      background: "rgba(255,255,255,0.92)",
-      padding: "8px 10px",
-      borderRadius: 4,
-      fontSize: "0.75rem",
-      lineHeight: 1.7,
-      zIndex: 600,
-      boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
-      maxWidth: 220,
+      display: "inline-block",
+      width: 14,
+      height: 0,
+      borderTop: `2px dashed ${mau}`,
+      marginRight: 6,
+      verticalAlign: "middle",
     }}
-  >
-    <div>
-      <ChamTron mau={MAU_TRAM_CUNG_TINH} /> Tram cung tinh
-    </div>
-    <div>
-      <ChamTron mau={R012_COLORS.dangerRed} /> Tram X (goc, bi tat)
-    </div>
-    <div>
-      <VongNetDut mau={R012_COLORS.dangerRed} /> X - vi tri uoc luong (CRAN)
-    </div>
-    <div>
-      <ChamTron mau={MAU_TRAM_CUNG_TINH} /> Tong dai CRAN (toa do RIMS goc cua X)
-    </div>
-    <div>
-      <VongNetDut mau={R012_COLORS.primary} /> Vi tri uoc luong cell CRAN
-    </div>
-    <div>
-      <ChamTron mau={R012_COLORS.primary} /> Tram bi anh huong (dam = %HO cao)
-    </div>
-    <div>
-      <DuongKe mau={R012_COLORS.primaryDark} /> Nan / duong bao vung anh huong
-    </div>
-    <div>
-      <DuongKe mau={R012_COLORS.chartCrDay} /> Vong L1
-    </div>
-    <div>
-      <DuongKe mau={R012_COLORS.primaryLight} /> Vong L2
-    </div>
-  </div>
+  />
 );
+
+// SUA (11/10/2026, yeu cau truc tiep user) - chu giai mau gio THU GON duoc (B3: "nho lai, thu gon duoc, MAC
+// DINH THU GON") VA CHI hien cac muc THAT SU lien quan den preview dang xem (B4: "muc CRAN chi hien khi X
+// la CRAN") - nhan props dieu kien tu PreviewMapHo de biet CHINH XAC lop nao dang duoc ve, tranh hien 1 dong
+// chu giai cho 1 thu khong co tren ban do (vd "Vi tri uoc luong cell CRAN" khi X la CRAN nhung 0 cell nao
+// uoc luong duoc - dung flag RIENG cho tung dong, khong dung 1 flag "isCran" chung chung cho tat ca)
+interface LegendProps {
+  coXUocLuong: boolean; // marker X dang o dang net dut (coViTriUocLuongRieng)
+  coTongDaiRieng: boolean; // marker "Tong dai CRAN" rieng co dang hien
+  coViTriUocLuongCell: boolean; // CircleMarker net dut vi tri uoc luong tung cell co dang hien
+  coDuongBao: boolean;
+  coNan: boolean;
+  coL1: boolean;
+  coL2: boolean;
+}
+
+const Legend: React.FC<LegendProps> = ({
+  coXUocLuong,
+  coTongDaiRieng,
+  coViTriUocLuongCell,
+  coDuongBao,
+  coNan,
+  coL1,
+  coL2,
+}) => {
+  // MAC DINH THU GON (B3, yeu cau truc tiep user) - chi 1 nut nho "Chu giai" hien san, bam de mo rong xem
+  // chi tiet, bam lai de thu gon
+  const [moRong, setMoRong] = useState(false);
+
+  return (
+    <div style={{ position: "absolute", bottom: 8, right: 8, zIndex: 600 }}>
+      <button
+        type="button"
+        onClick={() => setMoRong((v) => !v)}
+        style={{
+          display: "block",
+          marginLeft: "auto",
+          background: "rgba(255,255,255,0.92)",
+          border: `1px solid ${R012_COLORS.tableBorder}`,
+          borderRadius: 4,
+          padding: "4px 8px",
+          fontSize: "0.75rem",
+          fontWeight: 600,
+          color: R012_COLORS.primaryDark,
+          cursor: "pointer",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
+        }}
+      >
+        Chu giai {moRong ? "▾" : "▸"}
+      </button>
+      {moRong && (
+        <div
+          style={{
+            marginTop: 4,
+            background: "rgba(255,255,255,0.92)",
+            padding: "8px 10px",
+            borderRadius: 4,
+            fontSize: "0.75rem",
+            lineHeight: 1.7,
+            boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
+            maxWidth: 220,
+          }}
+        >
+          <div>
+            <ChamTron mau={MAU_TRAM_CUNG_TINH_NEN} /> Tram cung tinh
+          </div>
+          <div>
+            <ChamTron mau={R012_COLORS.dangerRed} /> Tram X (goc, bi tat)
+          </div>
+          {coXUocLuong && (
+            <div>
+              <VongNetDut mau={R012_COLORS.dangerRed} /> X - vi tri uoc luong (CRAN)
+            </div>
+          )}
+          {coTongDaiRieng && (
+            <div>
+              <ChamTron mau={R012_COLORS.statusRunning} /> Tong dai CRAN (toa do RIMS goc cua X)
+            </div>
+          )}
+          {coViTriUocLuongCell && (
+            <div>
+              <VongNetDut mau={R012_COLORS.primary} /> Vi tri uoc luong cell CRAN
+            </div>
+          )}
+          <div>
+            <ChamTron mau={R012_COLORS.primary} /> Tram bi anh huong (dam = %HO cao)
+          </div>
+          {coNan && (
+            <div>
+              <DuongKe mau={R012_COLORS.primaryDark} /> Nan (ty le %HO, net lien)
+            </div>
+          )}
+          {coDuongBao && (
+            <div>
+              <DuongKeNetDut mau={R012_COLORS.statusSuccess} /> Duong bao vung anh huong (net dut)
+            </div>
+          )}
+          {coL1 && (
+            <div>
+              <DuongKe mau={R012_COLORS.chartCrDay} /> Vong L1
+            </div>
+          )}
+          {coL2 && (
+            <div>
+              <DuongKe mau={R012_COLORS.primaryLight} /> Vong L2
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 interface PreviewMapHoProps {
   data: PreviewCrResponse;
@@ -350,10 +503,40 @@ const PreviewMapHo: React.FC<PreviewMapHoProps> = ({ data }) => {
   // tong dai CHI ve duoc khi CHINH no co toa do (x.lat/x.lon - toa do RIMS goc, co the null doc lap voi tam -
   // xem comment BanDoXBlock.tam_lat trong types/index.ts)
   const hienThiTongDaiRieng = coViTriUocLuongRieng && x.lat !== null && x.lon !== null;
+  // THEM (11/10/2026, B4) - flag CHINH XAC khop voi dieu kien render CircleMarker vi tri uoc luong cell ben
+  // duoi, dung truyen cho Legend de "muc CRAN chi hien khi X la CRAN" (va CHI khi THAT SU co marker nao ve)
+  const coViTriUocLuongCell = (x.vi_tri_uoc_luong_cell?.length ?? 0) > 0;
+  const coDuongBao = duongBaoPolygonPositions.length >= 3;
+  const coNan = danhSachDinhDuongBao.length > 0;
+  const coL1 = l1Positions.length >= 2;
+  const coL2 = l2Positions.length >= 2;
 
   return (
     <div>
-      <div style={{ position: "relative" }}>
+      {/* SUA (11/10/2026, B2, yeu cau truc tiep user): icon mac dinh cua LayersControl (anh layers.png/
+          layers-2x.png cua leaflet.css) hien ra O TRANG - duong dan anh qua CSS url() cua thu vien node_modules
+          KHONG duoc webpack resolve dung trong production (khac marker-icon.png/marker-icon-2x.png o
+          NetworkMap.tsx: 2 anh do duoc import TRUC TIEP qua JS nen KHONG phu thuoc CSS url() resolution).
+          THAY vi do webpack asset-pipeline cho 1 file CSS cua thu vien ngoai (rui ro, kho kiem chung lai
+          bang mat), DUNG PHUONG AN DON GIAN HON da duoc chinh user chap thuan: thay the hoan toan background-
+          image bang nut CHU "Lop" qua CSS thuan (scope rieng duoi class r012-preview-map-ho de KHONG anh
+          huong ban do khac trong module neu sau nay co them LayersControl o cho khac) */}
+      <style>{`
+        .r012-preview-map-ho .leaflet-control-layers-toggle {
+          background-image: none;
+          width: auto;
+          height: 26px;
+          line-height: 26px;
+          padding: 0 8px;
+          font-size: 12px;
+          font-weight: 700;
+          color: #333;
+        }
+        .r012-preview-map-ho .leaflet-control-layers-toggle::after {
+          content: "Lop";
+        }
+      `}</style>
+      <div className="r012-preview-map-ho" style={{ position: "relative" }}>
         <MapContainer
           center={[tamLat, tamLon]}
           // B7: "Giu hanh vi cu: chon tram mo o zoom 15" - mo CO DINH tai zoom nay tren TAM cua X (KHONG tu
@@ -373,25 +556,48 @@ const PreviewMapHo: React.FC<PreviewMapHoProps> = ({ data }) => {
         >
           <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} eventHandlers={eventHandlers} />
 
-          {/* B2: moi tram cung tinh - CircleMarker xam nho, Tooltip ten tram khi re chuot (KHONG dung Popup -
-              Popup can click, Tooltip hien ngay khi hover, dung voi yeu cau "khi re chuot") */}
+          {/* SUA (11/10/2026, B8+B9, yeu cau truc tiep user): moi tram cung tinh - gio GOM 2 CircleMarker
+              chong 1 vi tri: (1) vong BAT CHUOT lon hon (8px, trong suot) mang Tooltip (hover)/Popup (click
+              - ten/ma tram/vendor/KV), (2) cham VE THAT nho hon (4px, tim nhat #a78bfa, vien dam #7c3aed,
+              non-interactive) chi de HIEN THI. Tach lam 2 lop vi can VUNG BAT CHUOT lon hon nhieu so voi
+              KICH THUOC HIEN THI (4-5px qua nho de de trung chuot o nhieu muc zoom), nhung KHONG muon ve 1
+              cham to 8px (se qua noi bat, lan at tram bi anh huong) - ca 2 lop deu la CircleMarker (Path) nen
+              VAN duoc Leaflet render qua Canvas (preferCanvas tren MapContainer), KHONG anh huong hieu nang */}
           {tramCungTinh?.map(
             (t) =>
               t.lat !== null &&
               t.lon !== null && (
-                <CircleMarker
-                  key={t.tram_id}
-                  center={[t.lat, t.lon]}
-                  radius={3}
-                  pathOptions={{
-                    color: MAU_TRAM_CUNG_TINH,
-                    fillColor: MAU_TRAM_CUNG_TINH,
-                    fillOpacity: 0.6,
-                    weight: 1,
-                  }}
-                >
-                  <Tooltip>{t.ten}</Tooltip>
-                </CircleMarker>
+                <React.Fragment key={t.tram_id}>
+                  <CircleMarker
+                    center={[t.lat, t.lon]}
+                    radius={BAN_KINH_BAT_CHUOT_TRAM_CUNG_TINH}
+                    pathOptions={{ opacity: 0, fillOpacity: 0, weight: 0 }}
+                  >
+                    <Tooltip>{t.ten}</Tooltip>
+                    <Popup>
+                      <div>
+                        <strong>{t.ten}</strong>
+                      </div>
+                      <div>Ma tram: {t.tram_id}</div>
+                      <div>Vendor: {t.vendor}</div>
+                      {/* KV suy tu x.khu_vuc (KHONG phai field rieng tu /stations/map - BE chi tra 6 cot co
+                          dinh, xem StationMapPoint trong types/index.ts) - HOP LE vi query ma_tinh=x.ma_tinh
+                          nen MOI tram trong tramCungTinh CHAC CHAN cung tinh, tuc CUNG khu vuc voi X */}
+                      {x.khu_vuc && <div>Khu vuc: {x.khu_vuc}</div>}
+                    </Popup>
+                  </CircleMarker>
+                  <CircleMarker
+                    center={[t.lat, t.lon]}
+                    radius={BAN_KINH_TRAM_CUNG_TINH}
+                    interactive={false}
+                    pathOptions={{
+                      color: MAU_TRAM_CUNG_TINH_VIEN,
+                      fillColor: MAU_TRAM_CUNG_TINH_NEN,
+                      fillOpacity: 0.85,
+                      weight: 1.5,
+                    }}
+                  />
+                </React.Fragment>
               )
           )}
 
@@ -428,12 +634,17 @@ const PreviewMapHo: React.FC<PreviewMapHoProps> = ({ data }) => {
                     weight: 2,
                   }}
                 >
-                  <Tooltip>{`${t.ten ?? t.tram_id} - tong ${formatPctHo(t.tong_pct_ho)} HO`}</Tooltip>
+                  {/* SUA (11/10/2026, B10, yeu cau truc tiep user) - Layer gio lay TU DU LIEU BE THAT
+                      (data.cells_bi_anh_huong, xem layLayerCuaTramTuBE) thay vi tu suy tu l1/l2. Khoang cach
+                      km VAN tu FE tinh (BE chua co field nay, xem WHY day du o tinhKhoangCachKm) */}
+                  <Tooltip>{`${t.ten ?? t.tram_id} - ${layNhanLayerTramBiAnhHuong(layLayerCuaTramTuBE(t.tram_id, data.cells_bi_anh_huong))}, ${tinhKhoangCachKm(tamLat, tamLon, t.lat, t.lon).toFixed(1)} km - tong ${formatPctHo(t.tong_pct_ho)} HO`}</Tooltip>
                   <Popup>
                     <div>
                       <strong>{t.ten ?? t.tram_id}</strong>
                     </div>
                     <div>Ma tram: {t.tram_id}</div>
+                    <div>Layer: {layNhanLayerTramBiAnhHuong(layLayerCuaTramTuBE(t.tram_id, data.cells_bi_anh_huong))}</div>
+                    <div>Khoang cach: {tinhKhoangCachKm(tamLat, tamLon, t.lat, t.lon).toFixed(1)} km</div>
                     <div>Tong % HO: {formatPctHo(t.tong_pct_ho)}</div>
                     <ul style={{ paddingLeft: "1rem", margin: "4px 0 0" }}>
                       {t.cells
@@ -520,11 +731,20 @@ const PreviewMapHo: React.FC<PreviewMapHoProps> = ({ data }) => {
                 KHONG tu tinh lai) - CHI khi BE co tra polygon (>= 3 dinh, xem BanDoDuongBao trong
                 types/index.ts). x_tren_vien=true (X la 1 dinh cua polygon nay) KHONG can xu ly gi rieng -
                 ve DUNG mang nay la tu nhien ra hinh quat, giong yeu cau "van ve binh thuong" */}
-            {duongBaoPolygonPositions.length >= 3 && (
+            {coDuongBao && (
               <LayersControl.Overlay name="Duong bao vung anh huong" checked>
+                {/* SUA (11/10/2026, B6, yeu cau truc tiep user): NET DUT (dashArray) + mau rieng (statusSuccess,
+                    xanh la - KHAC han primaryDark cua "Nan" net lien ben duoi) de 2 lop phan biet ro rang khi
+                    cung hien 1 luc, khong con dung CHUNG 1 mau nhu truoc. fillOpacity GIU NGUYEN ~0.08 (mo) */}
                 <Polygon
                   positions={duongBaoPolygonPositions}
-                  pathOptions={{ color: R012_COLORS.primaryDark, weight: 2, fillOpacity: 0.08 }}
+                  pathOptions={{
+                    color: R012_COLORS.statusSuccess,
+                    weight: 2,
+                    dashArray: "6 4",
+                    fillColor: R012_COLORS.statusSuccess,
+                    fillOpacity: 0.08,
+                  }}
                 />
               </LayersControl.Overlay>
             )}
@@ -533,19 +753,19 @@ const PreviewMapHo: React.FC<PreviewMapHoProps> = ({ data }) => {
                 BAT BUOC o day: NanLayer render NHIEU Polyline (1 component composite, khong phai 1 layer
                 Leaflet don le), LayersControl.Overlay chi chap nhan DUNG 1 layer con - LayerGroup gom nhieu
                 layer thanh 1 don vi bat/tat duoc */}
-            {danhSachDinhDuongBao.length > 0 && (
+            {coNan && (
               <LayersControl.Overlay name="Nan (ty le %HO tung tram)" checked>
                 <LayerGroup>
                   <NanLayer tam={[tamLat, tamLon]} diem={danhSachDinhDuongBao} />
                 </LayerGroup>
               </LayersControl.Overlay>
             )}
-            {l1Positions.length >= 2 && (
+            {coL1 && (
               <LayersControl.Overlay name="Vong L1" checked={false}>
                 <Polyline positions={l1Positions} pathOptions={{ color: R012_COLORS.chartCrDay, weight: 3 }} />
               </LayersControl.Overlay>
             )}
-            {l2Positions.length >= 2 && (
+            {coL2 && (
               <LayersControl.Overlay name="Vong L2" checked={false}>
                 <Polyline positions={l2Positions} pathOptions={{ color: R012_COLORS.primaryLight, weight: 3 }} />
               </LayersControl.Overlay>
@@ -555,12 +775,15 @@ const PreviewMapHo: React.FC<PreviewMapHoProps> = ({ data }) => {
 
         {thieuTile && <ThieuTileOverlay />}
 
-        {/* B1: khung thong tin co dinh (ten tinh/KV) - goc tren-trai, luon hien (khong can click X) */}
+        {/* SUA (11/10/2026, B1, yeu cau truc tiep user): khung thong tin ten tinh/KV - DOI xuong DUOI nut
+            zoom (truoc do dat top:8 de LEN NGAY TREN nut zoom cua Leaflet, cung o goc tren-trai -> bi che).
+            Nut zoom mac dinh cua Leaflet: margin-top 10px + 2 nut 26px/nut = ~62px - dat top:80 de chac chan
+            khong con de len nhau du lam tron/border nho */}
         {x.ten_tinh && (
           <div
             style={{
               position: "absolute",
-              top: 8,
+              top: 80,
               left: 8,
               background: "rgba(255,255,255,0.92)",
               padding: "6px 10px",
@@ -577,7 +800,15 @@ const PreviewMapHo: React.FC<PreviewMapHoProps> = ({ data }) => {
           </div>
         )}
 
-        <Legend />
+        <Legend
+          coXUocLuong={coViTriUocLuongRieng}
+          coTongDaiRieng={hienThiTongDaiRieng}
+          coViTriUocLuongCell={coViTriUocLuongCell}
+          coDuongBao={coDuongBao}
+          coNan={coNan}
+          coL1={coL1}
+          coL2={coL2}
+        />
       </div>
 
       <div style={{ marginTop: "0.5rem", display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
