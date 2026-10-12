@@ -10,6 +10,10 @@
 export const X_CO_LABELS: Record<string, string> = {
   TOA_DO_DUNG_CHUNG: "Tram CRAN: vi tri cell uoc luong tu HO",
   HO_DI_XA: "UE cua tram chuyen di xa bat thuong",
+  // THEM (12/10/2026, BE commit 9811c42) - X la IBS: phan_lop_delaunay() tra l1_l2=[] NGAY (giong X CRAN ve
+  // ket qua), B chon THUAN theo HO (bo qua gating vung Z/KHONG_XAC_DINH) - xem domain/services/
+  // ho_cell_selector.py muc "X LA IBS"
+  TRAM_IBS: "Tram IBS: khong ve vong, chon cell theo HO",
 };
 
 // chuyen mang "co" (PreviewCrResponse.x_co) thanh danh sach nhan hien thi - rieng ma "IT_DU_LIEU" duoc KHAI
@@ -40,13 +44,24 @@ export const CELL_CO_LABELS: Record<string, string> = {
   CAN_GHEP_TEN: "Chua co ten cell",
 };
 
-// layer: "L1"|"L2"|"Z"|"KHONG_XAC_DINH" (domain/services/ho_delaunay.py) - dung chung cho AffectedCellItem.layer/
-// CrCellItem.layer/QuanHeDayDuItem.layer. CHI "KHONG_XAC_DINH" can dich, L1/L2/Z giu nguyen (da la nhan ro nghia)
+// layer: "L1"|"L2"|"Z"|"KHONG_XAC_DINH"|"IBS"|"SMALL_CELL" (2 gia tri sau THEM 12/10/2026, BE commit
+// 9811c42 - tram DICH la IBS/SMALL_CELL, xem domain/services/ho_cell_selector.py::CellUngVien.layer) -
+// dung chung cho AffectedCellItem.layer/CrCellItem.layer/QuanHeDayDuItem.layer. L1/L2/Z giu nguyen (da la
+// nhan ro nghia), 3 gia tri con lai can dich
 export function layNhanLayer(layer: string | null | undefined): string {
   if (!layer) {
     return "-";
   }
-  return layer === "KHONG_XAC_DINH" ? "Khong xac dinh" : layer;
+  switch (layer) {
+    case "KHONG_XAC_DINH":
+      return "Khong xac dinh";
+    case "IBS":
+      return "IBS (trong nha)";
+    case "SMALL_CELL":
+      return "Small cell";
+    default:
+      return layer;
+  }
 }
 
 // % dang fraction 0-1 (CHUA nhan 100, xem WHY tai cac field pct_ho/pct_trong_sector/sr/ty_le_ho_tin_cay

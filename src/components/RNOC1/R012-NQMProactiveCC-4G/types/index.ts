@@ -386,6 +386,21 @@ export interface QuanHeDayDuItem {
 // ve ban do xem truoc CR (X/CRAN/L1/L2/tram bi anh huong/duong bao). CHI co gia tri khi nguon_du_lieu la HO
 // (null cho nhanh CDS) - xem TriggerCrUseCase._xay_du_lieu_ban_do() ben BE
 
+// THEM (12/10/2026, yeu cau truc tiep user, PHAN LOAI TRAM) - nhom hien thi suy tu domain/services/
+// loai_tram.py::nhom_loai_tram() ben BE (gom 8 ky tu loai tram THAT M/W/B/E/X/R/F/S/P thanh 4 nhom). OPTIONAL
+// o MOI noi dung field nay (StationMapPoint/BanDoXBlock/BanDoDiemTram/BanDoTramBiAnhHuong/BanDoDuongBaoDiem) -
+// XAC NHAN qua doc truc tiep source BE 12/10/2026:
+//   - /stations/map: StationsMapResponse.columns DA liet ke "loai_tram" (cot thu 7) NHUNG
+//     GetStationsMapUseCase.execute() HIEN VAN CHI tra 6 gia tri/dong (CHUA them loai_tram vao row) - tram
+//     cung tinh se LUON nhan loai_tram=undefined cho toi khi BE sua dong code nay them gia tri thu 7, DU
+//     field da khai bao trong schema (BUG BE, da bao cao cho nguoi dung).
+//   - ban_do (X/L1/L2/tram_bi_anh_huong/duong_bao): application/trigger_cr_use_case.py::_xay_du_lieu_ban_do()
+//     HIEN CHUA wire field nay vao BAT KY cau truc nao (0 hit "loai_tram" trong toan bo file) - se LUON
+//     undefined cho toi khi BE bo sung. Viet FE truoc (optional, fallback an toan) de tu dong hoat dong KHI
+//     BE hoan thien, KHONG can sua FE them lan nua - giong quy uoc da ap dung nhieu lan truoc trong module nay
+//     (vd band/sector cua CrCellItem, vendor cua StationItem...).
+export type LoaiTram = "MACRO" | "IBS" | "SMALL_CELL" | "KHAC";
+
 // 1 vi tri uoc luong cua 1 "cell" CRAN - LUU Y: "lcr" o day la source_sector (0-9, DAI DIEN CA NHOM cell
 // cung sector sau buoc gop 09/10/2026), KHONG PHAI ten/DN 1 cell cu the - BE KHONG tra cell_name o day
 // (xem models/cell_vi_tri_uoc_luong.py ben BE, "lcr" KHONG PHAI LNCEL local id goc)
@@ -422,6 +437,8 @@ export interface BanDoXBlock {
   tam_lat: number | null;
   tam_lon: number | null;
   tam_la_tong_dai: boolean;
+  // THEM (12/10/2026) - loai tram CUA CHINH X - xem WHY day du o LoaiTram (dau file)
+  loai_tram?: LoaiTram;
 }
 
 // 1 diem tram trong vong L1/L2 quanh X - xem TriggerCrUseCase._diem_tram_phan_lop() ben BE
@@ -430,6 +447,8 @@ export interface BanDoDiemTram {
   ten: string | null;
   lat: number | null;
   lon: number | null;
+  // THEM (12/10/2026) - xem WHY day du o LoaiTram (dau file)
+  loai_tram?: LoaiTram;
 }
 
 // 1 cell (lan can) trong nhom "tram bi anh huong" - vi tri CO THE khong xac dinh duoc (tram dich la
@@ -451,6 +470,8 @@ export interface BanDoTramBiAnhHuong {
   lon: number | null;
   tong_pct_ho: number; // tong pct_ho cua TOAN BO cell thuoc tram nay - CO THE > 1 (nhieu sector cua X cung HO sang)
   cells: BanDoCellAnhHuong[];
+  // THEM (12/10/2026) - xem WHY day du o LoaiTram (dau file)
+  loai_tram?: LoaiTram;
 }
 
 // SUA (yeu cau truc tiep user, 10/10/2026) - THAY THE HOAN TOAN convex hull cu (bao_loi(), da XOA ben BE)
@@ -468,6 +489,8 @@ export interface BanDoDuongBaoDiem {
   // true CHI KHI day la diem X duoc chen them lam 1 dinh (xem x_tren_vien) - moi diem BINH THUONG (tram bi
   // anh huong) deu KHONG co key nay (undefined), KHONG phai false
   la_x?: boolean;
+  // THEM (12/10/2026) - xem WHY day du o LoaiTram (dau file)
+  loai_tram?: LoaiTram;
 }
 
 export interface BanDoDuongBao {
@@ -1007,6 +1030,11 @@ export interface StationMapPoint {
   lon: number | null;
   vendor: string;
   toa_do_dung_chung: boolean; // true = tram CRAN (TOA_DO_DUNG_CHUNG), xem domain/services/ho_delaunay.py ben BE
+  // THEM (12/10/2026) - cot thu 7 BE DA khai bao trong StationsMapResponse.columns, nhung
+  // GetStationsMapUseCase.execute() HIEN VAN CHUA them gia tri nay vao tung dong (BUG BE, xem WHY day du o
+  // LoaiTram trong file nay) - LUON undefined cho toi khi BE sua, R012Service.getStationsMap() tra cuu qua
+  // ten cot (indexOf) nen tu dong nhan dung gia tri khi BE bo sung, khong can sua FE them
+  loai_tram?: LoaiTram;
 }
 
 // dung cho GET /api/v1/jobs/runs - response phan trang {total, page, size, data}, y het PhieuHistoryResponse

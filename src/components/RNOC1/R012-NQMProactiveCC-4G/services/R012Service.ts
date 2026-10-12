@@ -105,6 +105,12 @@ export const getStationsMap = async (ma_tinh: string): Promise<StationMapPoint[]
     const iLon = idx('lon');
     const iVendor = idx('vendor');
     const iCran = idx('toa_do_dung_chung');
+    // THEM (12/10/2026) - cot "loai_tram" (THEM moi ben BE, xem WHY day du o LoaiTram trong types/index.ts -
+    // BE hien CO khai bao cot nay trong columns NHUNG CHUA dien gia tri vao tung dong, nen row[iLoaiTram]
+    // LUON undefined cho toi khi BE sua). idx() tra -1 neu cot chua ton tai trong columns -> row[-1] cung la
+    // undefined (JS), nen 1 dong code nay xu ly dung CA 2 truong hop (cot chua khai bao / cot khai bao nhung
+    // row thieu gia tri) ma khong can if/else rieng
+    const iLoaiTram = idx('loai_tram');
     return res.rows.map((row) => ({
       tram_id: String(row[iTramId]),
       ten: String(row[iTen]),
@@ -112,6 +118,7 @@ export const getStationsMap = async (ma_tinh: string): Promise<StationMapPoint[]
       lon: row[iLon] as number | null,
       vendor: String(row[iVendor]),
       toa_do_dung_chung: Boolean(row[iCran]),
+      loai_tram: row[iLoaiTram] as StationMapPoint['loai_tram'],
     }));
   } catch (error) {
     throw error;
