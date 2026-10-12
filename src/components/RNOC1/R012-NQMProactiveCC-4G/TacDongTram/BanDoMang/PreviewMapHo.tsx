@@ -8,7 +8,7 @@
 // Delaunay ben BE), nan ty le %HO va duong bao hinh sao quanh X - xem
 // TriggerCrUseCase._xay_du_lieu_ban_do()/domain/services/geo_utils.py::duong_bao_hinh_sao() ben BE de biet
 // CHINH XAC tung field nay duoc tinh nhu the nao.
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -119,6 +119,87 @@ const NHAN_HINH_TRAM: Record<LoaiTram, string> = {
   SMALL_CELL: "Small cell",
   KHAC: "Khac",
 };
+
+// === MAC DINH LOP BAN DO + NHO LUA CHON (THEM 12/10/2026, yeu cau truc tiep user) ===
+// Ten CHINH XAC cua tung overlay (PHAI khop 100% voi props "name=" truyen cho moi LayersControl.Overlay
+// ben duoi) - dung LAM KHOA luu localStorage (xem WHY o docLuaChonDaLuu()). Khai bao hang so rieng (khong
+// ghi chuoi lap lai nhieu noi) de tranh go sai lech giua noi dang ky overlay va noi doc/ghi localStorage.
+const TEN_LOP_DUONG_BAO = "Duong bao vung anh huong";
+const TEN_LOP_NAN = "Nan (ty le %HO tung tram)";
+const TEN_LOP_PHAN_TRAM_CELL = "% theo cell";
+const TEN_LOP_L1 = "Vong L1";
+const TEN_LOP_L2 = "Vong L2";
+function tenLopTramCungTinh(hinh: LoaiTram): string {
+  return `Tram cung tinh - ${NHAN_HINH_TRAM[hinh]}`;
+}
+
+// Mac dinh LAN DAU (yeu cau truc tiep user) - BAT: duong bao/nan/L1/tram cung tinh Macro; TAT: % theo
+// cell/L2/tram cung tinh IBS-Small cell-Khac
+const MAC_DINH_LOP: Record<string, boolean> = {
+  [TEN_LOP_DUONG_BAO]: true,
+  [TEN_LOP_NAN]: true,
+  [TEN_LOP_L1]: true,
+  [TEN_LOP_L2]: false,
+  [TEN_LOP_PHAN_TRAM_CELL]: false,
+  [tenLopTramCungTinh("MACRO")]: true,
+  [tenLopTramCungTinh("IBS")]: false,
+  [tenLopTramCungTinh("SMALL_CELL")]: false,
+  [tenLopTramCungTinh("KHAC")]: false,
+};
+
+// khoa RIENG cho ban do R012 (khong trung voi localStorage key nao khac trong toan bo app) - "v1" de danh
+// cho truong hop sau nay doi cau truc du lieu luu (them lop moi, doi ten...) can invalidate cache cu
+const R012_MAP_LAYERS_STORAGE_KEY = "r012_preview_map_ho_layers_v1";
+
+// Doc lua chon DA LUU tu localStorage - BOC try/catch THEO YEU CAU: localStorage co the nem loi (private
+// browsing mode cua Safari cu chan hoan toan, quota exceeded...) hoac du lieu JSON hong (vd nguoi dung tu
+// sua tay trong DevTools) - MOI truong hop loi deu phai tra ve {} (coi nhu chua luu gi) THAY VI de loi
+// lam vo (crash) ca trang ban do
+function docLuaChonDaLuu(): Record<string, boolean> {
+  try {
+    const raw = window.localStorage.getItem(R012_MAP_LAYERS_STORAGE_KEY);
+    if (!raw) {
+      return {};
+    }
+    const parsed: unknown = JSON.parse(raw);
+    if (parsed && typeof parsed === "object") {
+      return parsed as Record<string, boolean>;
+    }
+    return {};
+  } catch {
+    return {};
+  }
+}
+
+// Ghi 1 lua chon MOI (giu nguyen cac lua chon khac da luu truoc do) - CUNG boc try/catch, im lang bo qua
+// neu localStorage loi (KHONG throw lam gian doan thao tac bat/tat cua nguoi dung)
+function luuLuaChon(ten: string, bat: boolean): void {
+  try {
+    const hienTai = docLuaChonDaLuu();
+    hienTai[ten] = bat;
+    window.localStorage.setItem(R012_MAP_LAYERS_STORAGE_KEY, JSON.stringify(hienTai));
+  } catch {
+    // im lang - khong lam gian doan trai nghiem bat/tat lop cua nguoi dung chi vi khong luu duoc
+  }
+}
+
+function xoaLuaChonDaLuu(): void {
+  try {
+    window.localStorage.removeItem(R012_MAP_LAYERS_STORAGE_KEY);
+  } catch {
+    // im lang
+  }
+}
+
+// Trang thai checked THAT SU cua 1 overlay - uu tien lua chon DA LUU (neu co), fallback ve MAC_DINH_LOP khi
+// chua tung luu (lan dau mo ban do, hoac sau khi bam "Mac dinh")
+function layTrangThaiLop(ten: string): boolean {
+  const daLuu = docLuaChonDaLuu();
+  if (Object.prototype.hasOwnProperty.call(daLuu, ten)) {
+    return daLuu[ten];
+  }
+  return MAC_DINH_LOP[ten] ?? false;
+}
 
 // marker do CHAC CHAN cho X (tram goc bi tat, vi tri la CHINH toa do RIMS/khong phai CRAN hoac CRAN nhung
 // khong uoc luong duoc) - SUA (12/10/2026): THAY buildDotIcon/buildDashedDotIcon cu (chi hinh tron) bang
@@ -291,6 +372,19 @@ function layChiTietCellTheoTram(
     })
     .sort((a, b) => b.pct_trong_sector - a.pct_trong_sector); // % cao nhat len dau cho de doc
 }
+
+// THEM (12/10/2026, yeu cau truc tiep user) - "nho lua chon bat/tat" cua nguoi dung vao localStorage. Leaflet
+// tu ban su kien 'overlayadd'/'overlayremove' TREN CHINH MAP INSTANCE moi khi 1 overlay cua LayersControl
+// duoc bat/tat (ke ca khi NOC tu click, KHONG rieng goi qua code) - "e.name" la DUNG chuoi da truyen cho
+// prop "name=" cua LayersControl.Overlay, nen dung THANG lam khoa luu, khong can bang tra rieng. Component
+// RIENG vi useMapEvents BAT BUOC goi trong con chau cua MapContainer (cung ly do voi NanLayer ben duoi)
+const LayerStateListener: React.FC = () => {
+  useMapEvents({
+    overlayadd: (e) => luuLuaChon(e.name, true),
+    overlayremove: (e) => luuLuaChon(e.name, false),
+  });
+  return null;
+};
 
 // lop "Nan" (THEM 10/10/2026, yeu cau truc tiep user) - tia duong thang tu TAM den TUNG dinh duong bao
 // (polygon neu co, hoac doan neu duong bao khong du 3 diem de tao polygon - CA 2 truong hop deu dung CHUNG
@@ -760,6 +854,42 @@ const PreviewMapHo: React.FC<PreviewMapHoProps> = ({ data }) => {
   // tham chieu map instance THAT cua Leaflet - dung cho nut "Xem toan vung anh huong" (fitBounds thu cong,
   // KHONG qua prop "bounds" cua MapContainer vi ban do nay mo mac dinh o zoom co dinh tren X, xem B7)
   const mapRef = useRef<LeafletMap | null>(null);
+  // THEM (12/10/2026) - tham chieu instance L.Control.Layers THAT (de chen nut "Mac dinh" truc tiep vao
+  // panel cua no, xem useEffect ben duoi) + bo dem tang MOI LAN bam "Mac dinh" de EP MapContainer remount
+  // (key doi) - checked cua LayersControl.Overlay CHI doc 1 LAN LUC MOUNT (khong tu dong cap nhat lai neu
+  // doi prop sau do), nen cach DUY NHAT "ve lai mac dinh" sau khi da xoa localStorage la remount toan bo
+  // MapContainer de no doc lai layTrangThaiLop() tu dau
+  const layersControlRef = useRef<L.Control.Layers | null>(null);
+  const [soLanResetLop, setSoLanResetLop] = useState<number>(0);
+
+  // THEM (12/10/2026, yeu cau truc tiep user: "them nut nho 'Mac dinh' TRONG bang Layer") - Leaflet
+  // Control.Layers la 1 widget DOM thuan (khong phai component React), LayersControl cua react-leaflet CHI
+  // chap nhan children la LayersControl.Overlay/BaseLayer (khong the chen <button> React thuong vao giua).
+  // Cach DUNG de "chen 1 nut vao TRONG panel that su cua no" la thao tac THANG vao DOM cua control qua ref -
+  // "_section" la <section> chua danh sach overlay (xem node_modules/leaflet/dist/leaflet-src.js::
+  // Control.Layers._initLayout(), thuoc tinh PRIVATE nen phai ep kieu any). Chay lai moi khi MapContainer
+  // remount (doi tram HOAC bam "Mac dinh" - ca 2 deu doi key cua MapContainer) vi ref gan lai instance MOI.
+  useEffect(() => {
+    const control = layersControlRef.current as unknown as { _section?: HTMLElement } | null;
+    const section = control?._section;
+    if (!section) {
+      return undefined;
+    }
+    const nutMacDinh = L.DomUtil.create("button", "r012-layer-reset-btn", section);
+    nutMacDinh.type = "button";
+    nutMacDinh.textContent = "Mac dinh";
+    const xuLyBam = (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      xoaLuaChonDaLuu();
+      setSoLanResetLop((v) => v + 1);
+    };
+    nutMacDinh.addEventListener("click", xuLyBam);
+    return () => {
+      nutMacDinh.removeEventListener("click", xuLyBam);
+      nutMacDinh.remove();
+    };
+  }, [data.tram_goc.tram_id, soLanResetLop]);
 
   // ban_do LUON co gia tri o day - NetworkMap.tsx (noi GOI component nay) da kiem tra data.ban_do truoc khi
   // render <PreviewMapHo>, nhung TypeScript khong suy duoc qua ranh gioi component nen van phai tu guard lai
@@ -925,6 +1055,26 @@ const PreviewMapHo: React.FC<PreviewMapHoProps> = ({ data }) => {
         .r012-preview-map-ho .leaflet-control-layers-toggle::after {
           content: "Layer";
         }
+        /* THEM (12/10/2026) - nut "Mac dinh" chen truc tiep vao panel cua LayersControl qua DOM ref (xem
+           useEffect goi L.DomUtil.create trong PreviewMapHo) - dat CUOI danh sach overlay, ngan cach bang
+           duong ke mo o tren de ro day la 1 HANH DONG (reset), khong phai 1 overlay co the bat/tat */
+        .r012-preview-map-ho .r012-layer-reset-btn {
+          display: block;
+          width: 100%;
+          margin-top: 6px;
+          padding-top: 6px;
+          border: none;
+          border-top: 1px solid ${R012_COLORS.tableBorder};
+          background: none;
+          color: ${R012_COLORS.primaryDark};
+          font-size: 12px;
+          font-weight: 600;
+          text-align: left;
+          cursor: pointer;
+        }
+        .r012-preview-map-ho .r012-layer-reset-btn:hover {
+          text-decoration: underline;
+        }
       `}</style>
       <div className="r012-preview-map-ho" style={{ position: "relative" }}>
         <MapContainer
@@ -939,12 +1089,18 @@ const PreviewMapHo: React.FC<PreviewMapHoProps> = ({ data }) => {
           // treo trinh duyet, Leaflet mac dinh dung SVG (1 DOM node/hinh) se qua nang voi so luong nay
           preferCanvas
           style={{ height: "500px", width: "100%" }}
-          key={`preview-ho-${data.tram_goc.tram_id}`}
+          // THEM (12/10/2026) - "-${soLanResetLop}" EP MapContainer remount MOI LAN bam "Mac dinh" (xem
+          // useEffect chen nut o tren) - checked cua LayersControl.Overlay chi doc 1 lan luc mount, remount
+          // la cach DUY NHAT de no doc lai layTrangThaiLop() (localStorage da bi xoa) tu dau
+          key={`preview-ho-${data.tram_goc.tram_id}-${soLanResetLop}`}
           whenCreated={(map) => {
             mapRef.current = map;
           }}
         >
           <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} eventHandlers={eventHandlers} />
+          {/* THEM (12/10/2026) - lang nghe su kien bat/tat overlay cua Leaflet de tu dong luu vao
+              localStorage, xem WHY day du o dinh nghia component LayerStateListener */}
+          <LayerStateListener />
 
           {/* SUA (12/10/2026, PHAN LOAI TRAM, yeu cau truc tiep user): tram cung tinh CHUYEN vao trong
               LayersControl ben duoi (4 nhom rieng theo loai_tram, bat/tat DOC LAP - xem "Bang Layer them
@@ -1061,7 +1217,7 @@ const PreviewMapHo: React.FC<PreviewMapHoProps> = ({ data }) => {
               mac dinh (checked=false) - DUNG theo yeu cau. Bo qua hoan toan 1 overlay (khong dang ky) khi
               khong du du lieu de ve, thay vi dang ky voi layer rong (LayersControl.Overlay can CHINH XAC 1
               layer con, khong chiu duoc Fragment/null) */}
-          <LayersControl position="topright">
+          <LayersControl ref={layersControlRef} position="topright">
             {/* THEM (12/10/2026, PHAN LOAI TRAM, yeu cau truc tiep user): "Bang Layer them bat/tat tram
                 cung tinh THEO TUNG LOAI (mac dinh hien tat ca)" - 4 overlay RIENG (1/nhom), checked MAC
                 DINH (hien tat ca theo yeu cau), NOC tu tat tung nhom neu muon. Bo qua nhom RONG (khong dang
@@ -1069,7 +1225,11 @@ const PreviewMapHo: React.FC<PreviewMapHoProps> = ({ data }) => {
             {(Object.keys(tramCungTinhTheoNhom) as LoaiTram[])
               .filter((hinh) => tramCungTinhTheoNhom[hinh].length > 0)
               .map((hinh) => (
-                <LayersControl.Overlay key={hinh} name={`Tram cung tinh - ${NHAN_HINH_TRAM[hinh]}`} checked>
+                <LayersControl.Overlay
+                  key={hinh}
+                  name={tenLopTramCungTinh(hinh)}
+                  checked={layTrangThaiLop(tenLopTramCungTinh(hinh))}
+                >
                   <LayerGroup>
                     {tramCungTinhTheoNhom[hinh].map((t) => (
                       <TramCungTinhMarker key={t.tram_id} t={t} hinh={hinh} khuVuc={x.khu_vuc} />
@@ -1082,7 +1242,7 @@ const PreviewMapHo: React.FC<PreviewMapHoProps> = ({ data }) => {
                 types/index.ts). x_tren_vien=true (X la 1 dinh cua polygon nay) KHONG can xu ly gi rieng -
                 ve DUNG mang nay la tu nhien ra hinh quat, giong yeu cau "van ve binh thuong" */}
             {coDuongBao && (
-              <LayersControl.Overlay name="Duong bao vung anh huong" checked>
+              <LayersControl.Overlay name={TEN_LOP_DUONG_BAO} checked={layTrangThaiLop(TEN_LOP_DUONG_BAO)}>
                 {/* SUA (11/10/2026, B6, yeu cau truc tiep user): NET DUT (dashArray) + mau rieng (statusSuccess,
                     xanh la - KHAC han primaryDark cua "Nan" net lien ben duoi) de 2 lop phan biet ro rang khi
                     cung hien 1 luc, khong con dung CHUNG 1 mau nhu truoc. fillOpacity GIU NGUYEN ~0.08 (mo) */}
@@ -1104,7 +1264,7 @@ const PreviewMapHo: React.FC<PreviewMapHoProps> = ({ data }) => {
                 Leaflet don le), LayersControl.Overlay chi chap nhan DUNG 1 layer con - LayerGroup gom nhieu
                 layer thanh 1 don vi bat/tat duoc */}
             {coNan && (
-              <LayersControl.Overlay name="Nan (ty le %HO tung tram)" checked>
+              <LayersControl.Overlay name={TEN_LOP_NAN} checked={layTrangThaiLop(TEN_LOP_NAN)}>
                 <LayerGroup>
                   <NanLayer tam={[tamLat, tamLon]} diem={danhSachDinhDuongBao} />
                 </LayerGroup>
@@ -1127,7 +1287,7 @@ const PreviewMapHo: React.FC<PreviewMapHoProps> = ({ data }) => {
                 gay hieu lam la 2 noi "khong khop". Nay DUNG CHUNG layChiTietCellTheoTram nen cell o 2 sector
                 se RA DUNG 2 dong o CA 2 noi, nhat quan hoan toan. */}
             {coPhanTramTheoCell && (
-              <LayersControl.Overlay name="% theo cell" checked={false}>
+              <LayersControl.Overlay name={TEN_LOP_PHAN_TRAM_CELL} checked={layTrangThaiLop(TEN_LOP_PHAN_TRAM_CELL)}>
                 <LayerGroup>
                   {banDo.tram_bi_anh_huong.map(
                     (t) =>
@@ -1164,7 +1324,7 @@ const PreviewMapHo: React.FC<PreviewMapHoProps> = ({ data }) => {
                 Polyline noi cac diem, khong co marker rieng tung tram) - LayerGroup BAT BUOC vi gio co 2
                 loai layer con (Polyline + nhieu Marker) can bat/tat CUNG LUC nhu 1 don vi */}
             {coL1 && (
-              <LayersControl.Overlay name="Vong L1" checked={false}>
+              <LayersControl.Overlay name={TEN_LOP_L1} checked={layTrangThaiLop(TEN_LOP_L1)}>
                 <LayerGroup>
                   <Polyline positions={l1Positions} pathOptions={{ color: R012_COLORS.chartCrDay, weight: 3 }} />
                   {banDo.l1.map((d) => renderDiemTramMarker(d, "L1", R012_COLORS.chartCrDay))}
@@ -1172,7 +1332,7 @@ const PreviewMapHo: React.FC<PreviewMapHoProps> = ({ data }) => {
               </LayersControl.Overlay>
             )}
             {coL2 && (
-              <LayersControl.Overlay name="Vong L2" checked={false}>
+              <LayersControl.Overlay name={TEN_LOP_L2} checked={layTrangThaiLop(TEN_LOP_L2)}>
                 <LayerGroup>
                   <Polyline positions={l2Positions} pathOptions={{ color: R012_COLORS.primaryLight, weight: 3 }} />
                   {banDo.l2.map((d) => renderDiemTramMarker(d, "L2", R012_COLORS.primaryLight))}
