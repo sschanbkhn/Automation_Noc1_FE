@@ -25,10 +25,18 @@ import {
 } from "react-leaflet";
 import L, { Map as LeafletMap } from "leaflet";
 import { Button, Tag } from "antd";
-import { PreviewCrResponse, BanDoCellAnhHuong, BanDoDuongBaoDiem, AffectedCellItem } from "../../types";
+import {
+  PreviewCrResponse,
+  BanDoCellAnhHuong,
+  BanDoDuongBaoDiem,
+  BanDoTramBiAnhHuong,
+  AffectedCellItem,
+  CrCellItem,
+  QuanHeDayDuItem,
+} from "../../types";
 import { R012_COLORS } from "../../theme";
 import { useStationsMap } from "../../hooks/useStationsMap";
-import { layDanhSachNhanXCo, formatPctHo } from "../../helpers/hoLabels";
+import { layDanhSachNhanXCo, formatPctHo, layNhanLayer, CELL_CO_LABELS } from "../../helpers/hoLabels";
 // SUA (11/10/2026, loi runtime sau deploy 9463f85) - import TU mapCommon.tsx (KHONG con tu "./NetworkMap"
 // nua) - xem WHY day du trong chinh file mapCommon.tsx: NetworkMap.tsx import PreviewMapHo.tsx (file nay),
 // neu file nay LAI import nguoc tu "./NetworkMap" se tao VONG LAP import giua 2 file, gay crash "buildDotIcon
@@ -164,6 +172,68 @@ function layNhanLayerTramBiAnhHuong(layer: string | null): string {
     return "-";
   }
   return layer === "KHONG_XAC_DINH" ? "Khong xac dinh (CRAN)" : layer;
+}
+
+// THEM (12/10/2026, yeu cau truc tiep user) - chi tiet % HO THEO TUNG CELL cua 1 tram bi anh huong, LAY
+// THANG tu du lieu BE da tra (KHONG tinh lai):
+//   - data.quan_he_day_du (QuanHeDayDuItem[]) - nguon CHINH, GIU CA cac sector "phu" TRUOC dedup (xem
+//     domain/services/ho_cell_selector.py comment dong "quan_he_day_du (THEM 08/10/2026)") - 1 cell co the
+//     xuat hien NHIEU LAN neu nhieu sector cua X cung HO sang no, moi lan la 1 dong rieng (dung y "S<sector>
+//     > cell <lcr>" - the hien RO quan he tu sector nao). Loc theo target_enb === Number(tram.tram_id) vi
+//     target_enb CHINH LA LNBTS cua tram dich (= tram_id).
+//   - data.cells_chay_cr (CrCellItem[]) - tra cuu "vai tro CR" (action_type: "rsboost"|"qrxlevmin") theo
+//     cell_name, CHI co gia tri khi cell nay THAT SU nam trong nhanh B (12/47 vd).
+//   - data.cells_bi_anh_huong (AffectedCellItem[]) - tra cuu co "BAT_THUONG"/"CAN_GHEP_TEN" theo cell_name.
+// cell_name cua tung dong: tra tu BanDoCellAnhHuong (t.cells, ban_do) theo target_lcr - day la noi DUY NHAT
+// map (target_enb,target_lcr) -> cell_name THAT (quan_he_day_du khong tu co cell_name).
+interface ChiTietCellTheoSector {
+  sector: number;
+  target_lcr: number;
+  cell_name: string | null;
+  pct_trong_sector: number;
+  so_ho: number;
+  sr: number | null;
+  layer: string;
+  vai_tro_cr: string | null;
+  co: string[];
+}
+
+function layChiTietCellTheoTram(
+  t: BanDoTramBiAnhHuong,
+  quanHeDayDu: QuanHeDayDuItem[],
+  cellsChayCr: CrCellItem[],
+  cellsBiAnhHuong: AffectedCellItem[]
+): ChiTietCellTheoSector[] {
+  const tramIdSo = Number(t.tram_id);
+  const cellNameTheoLcr = new Map<number, string | null>();
+  t.cells.forEach((c) => cellNameTheoLcr.set(c.target_lcr, c.cell_name));
+
+  return quanHeDayDu
+    .filter((q) => q.target_enb === tramIdSo)
+    .map((q): ChiTietCellTheoSector => {
+      const cellName = cellNameTheoLcr.get(q.target_lcr) ?? null;
+      const crCell = cellName ? cellsChayCr.find((c) => c.cell_name === cellName) : undefined;
+      const affectedCell = cellName ? cellsBiAnhHuong.find((c) => c.cell_name === cellName) : undefined;
+      const co = affectedCell?.co ? [...affectedCell.co] : [];
+      // cell_name null (CAN_GHEP_TEN - BE khong resolve duoc ten/DN, xem AffectedCellItem trong
+      // types/index.ts) - gan truc tiep co nay, KHONG tra cuu duoc qua cells_bi_anh_huong (key cell_name
+      // cung la null o do, co the trung voi cell CAN_GHEP_TEN KHAC trong cung tram - KHONG tin cay de match)
+      if (cellName === null && !co.includes("CAN_GHEP_TEN")) {
+        co.push("CAN_GHEP_TEN");
+      }
+      return {
+        sector: q.sector,
+        target_lcr: q.target_lcr,
+        cell_name: cellName,
+        pct_trong_sector: q.pct_trong_sector,
+        so_ho: q.ho_attempt,
+        sr: q.ho_sr,
+        layer: q.layer,
+        vai_tro_cr: crCell?.action_type ?? null,
+        co,
+      };
+    })
+    .sort((a, b) => b.pct_trong_sector - a.pct_trong_sector); // % cao nhat len dau cho de doc
 }
 
 // lop "Nan" (THEM 10/10/2026, yeu cau truc tiep user) - tia duong thang tu TAM den TUNG dinh duong bao
@@ -510,6 +580,11 @@ const PreviewMapHo: React.FC<PreviewMapHoProps> = ({ data }) => {
   const coNan = danhSachDinhDuongBao.length > 0;
   const coL1 = l1Positions.length >= 2;
   const coL2 = l2Positions.length >= 2;
+  // THEM (12/10/2026, B3, yeu cau truc tiep user) - lop "% theo cell" CHI dang ky khi co it nhat 1 tram bi
+  // anh huong co toa do VA co it nhat 1 cell (t.cells.length>0) de hien nhan
+  const coPhanTramTheoCell = banDo.tram_bi_anh_huong.some(
+    (t) => t.lat !== null && t.lon !== null && t.cells.length > 0
+  );
 
   return (
     <div>
@@ -519,8 +594,11 @@ const PreviewMapHo: React.FC<PreviewMapHoProps> = ({ data }) => {
           NetworkMap.tsx: 2 anh do duoc import TRUC TIEP qua JS nen KHONG phu thuoc CSS url() resolution).
           THAY vi do webpack asset-pipeline cho 1 file CSS cua thu vien ngoai (rui ro, kho kiem chung lai
           bang mat), DUNG PHUONG AN DON GIAN HON da duoc chinh user chap thuan: thay the hoan toan background-
-          image bang nut CHU "Lop" qua CSS thuan (scope rieng duoi class r012-preview-map-ho de KHONG anh
-          huong ban do khac trong module neu sau nay co them LayersControl o cho khac) */}
+          image bang nut CHU qua CSS thuan (scope rieng duoi class r012-preview-map-ho de KHONG anh huong
+          ban do khac trong module neu sau nay co them LayersControl o cho khac).
+          SUA (12/10/2026, yeu cau truc tiep user): doi chu nut tu "Lop" -> "Layer" (ten CAC LOP ben trong
+          - "Nan", "Duong bao vung anh huong", "Vong L1/L2", "% theo cell" - GIU NGUYEN tieng Viet khong
+          dau nhu cu, CHI doi DUY NHAT chu tren nut bam o goc tren-phai) */}
       <style>{`
         .r012-preview-map-ho .leaflet-control-layers-toggle {
           background-image: none;
@@ -533,7 +611,7 @@ const PreviewMapHo: React.FC<PreviewMapHoProps> = ({ data }) => {
           color: #333;
         }
         .r012-preview-map-ho .leaflet-control-layers-toggle::after {
-          content: "Lop";
+          content: "Layer";
         }
       `}</style>
       <div className="r012-preview-map-ho" style={{ position: "relative" }}>
@@ -637,7 +715,25 @@ const PreviewMapHo: React.FC<PreviewMapHoProps> = ({ data }) => {
                   {/* SUA (11/10/2026, B10, yeu cau truc tiep user) - Layer gio lay TU DU LIEU BE THAT
                       (data.cells_bi_anh_huong, xem layLayerCuaTramTuBE) thay vi tu suy tu l1/l2. Khoang cach
                       km VAN tu FE tinh (BE chua co field nay, xem WHY day du o tinhKhoangCachKm) */}
-                  <Tooltip>{`${t.ten ?? t.tram_id} - ${layNhanLayerTramBiAnhHuong(layLayerCuaTramTuBE(t.tram_id, data.cells_bi_anh_huong))}, ${tinhKhoangCachKm(tamLat, tamLon, t.lat, t.lon).toFixed(1)} km - tong ${formatPctHo(t.tong_pct_ho)} HO`}</Tooltip>
+                  {/* SUA (12/10/2026, yeu cau truc tiep user) - % HO THEO TUNG CELL: dong dau van la tong %
+                      HO cua CA tram ("<x>% tong HO cua tram tat"), sau do MOI dong la 1 quan he sector->cell
+                      rieng (xem layChiTietCellTheoTram - lay THANG tu quan_he_day_du/cells_chay_cr/
+                      cells_bi_anh_huong, KHONG tinh lai gi them) */}
+                  <Tooltip>
+                    <div>{`${formatPctHo(t.tong_pct_ho)} tong HO cua tram tat`}</div>
+                    {layChiTietCellTheoTram(
+                      t,
+                      data.quan_he_day_du ?? [],
+                      data.cells_chay_cr,
+                      data.cells_bi_anh_huong
+                    ).map((c) => (
+                      <div key={`${c.sector}-${c.target_lcr}`}>
+                        {`S${c.sector} > cell ${c.cell_name ?? c.target_lcr}  ${formatPctHo(c.pct_trong_sector)}`}
+                        {c.vai_tro_cr && ` - CR ${c.vai_tro_cr}`}
+                        {c.co.length > 0 && ` [${c.co.map((ma) => CELL_CO_LABELS[ma] ?? ma).join(", ")}]`}
+                      </div>
+                    ))}
+                  </Tooltip>
                   <Popup>
                     <div>
                       <strong>{t.ten ?? t.tram_id}</strong>
@@ -646,15 +742,40 @@ const PreviewMapHo: React.FC<PreviewMapHoProps> = ({ data }) => {
                     <div>Layer: {layNhanLayerTramBiAnhHuong(layLayerCuaTramTuBE(t.tram_id, data.cells_bi_anh_huong))}</div>
                     <div>Khoang cach: {tinhKhoangCachKm(tamLat, tamLon, t.lat, t.lon).toFixed(1)} km</div>
                     <div>Tong % HO: {formatPctHo(t.tong_pct_ho)}</div>
-                    <ul style={{ paddingLeft: "1rem", margin: "4px 0 0" }}>
-                      {t.cells
-                        .filter((c) => !c.khong_xac_dinh_vi_tri)
-                        .map((c) => (
-                          <li key={`${c.target_enb}-${c.target_lcr}`}>
-                            {c.cell_name ?? `enb ${c.target_enb} / lcr ${c.target_lcr}`}: {formatPctHo(c.pct_ho)}
-                          </li>
+                    {/* SUA (12/10/2026): THAY the <ul> cu (chi ten cell + %) bang 1 bang chi tiet day du hon
+                        - sector, % trong sector, so HO, SR, layer, vai tro CR - dung chung
+                        layChiTietCellTheoTram voi Tooltip o tren (1 nguon du lieu duy nhat, khong lech nhau) */}
+                    <table style={{ marginTop: "6px", borderCollapse: "collapse", fontSize: "0.72rem" }}>
+                      <thead>
+                        <tr>
+                          <th style={{ textAlign: "left", padding: "2px 6px 2px 0" }}>Cell</th>
+                          <th style={{ textAlign: "right", padding: "2px 6px" }}>Sector</th>
+                          <th style={{ textAlign: "right", padding: "2px 6px" }}>% sector</th>
+                          <th style={{ textAlign: "right", padding: "2px 6px" }}>So HO</th>
+                          <th style={{ textAlign: "right", padding: "2px 6px" }}>SR</th>
+                          <th style={{ textAlign: "left", padding: "2px 6px" }}>Layer</th>
+                          <th style={{ textAlign: "left", padding: "2px 0 2px 6px" }}>Vai tro CR</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {layChiTietCellTheoTram(
+                          t,
+                          data.quan_he_day_du ?? [],
+                          data.cells_chay_cr,
+                          data.cells_bi_anh_huong
+                        ).map((c) => (
+                          <tr key={`${c.sector}-${c.target_lcr}`}>
+                            <td style={{ padding: "2px 6px 2px 0" }}>{c.cell_name ?? `LCR ${c.target_lcr}`}</td>
+                            <td style={{ textAlign: "right", padding: "2px 6px" }}>{c.sector}</td>
+                            <td style={{ textAlign: "right", padding: "2px 6px" }}>{formatPctHo(c.pct_trong_sector)}</td>
+                            <td style={{ textAlign: "right", padding: "2px 6px" }}>{c.so_ho}</td>
+                            <td style={{ textAlign: "right", padding: "2px 6px" }}>{formatPctHo(c.sr)}</td>
+                            <td style={{ padding: "2px 6px" }}>{layNhanLayer(c.layer)}</td>
+                            <td style={{ padding: "2px 0 2px 6px" }}>{c.vai_tro_cr ?? "-"}</td>
+                          </tr>
                         ))}
-                    </ul>
+                      </tbody>
+                    </table>
                   </Popup>
                 </CircleMarker>
               )
@@ -757,6 +878,56 @@ const PreviewMapHo: React.FC<PreviewMapHoProps> = ({ data }) => {
               <LayersControl.Overlay name="Nan (ty le %HO tung tram)" checked>
                 <LayerGroup>
                   <NanLayer tam={[tamLat, tamLon]} diem={danhSachDinhDuongBao} />
+                </LayerGroup>
+              </LayersControl.Overlay>
+            )}
+            {/* SUA (12/10/2026, yeu cau truc tiep user) - lop "% theo cell": nhan nho CANH diem tram bi anh
+                huong, MOI cell 1 dong (GOP trong 1 Tooltip permanent DUY NHAT moi tram - cac dong xep chong
+                THEO KHOI block HTML binh thuong nen tu nhien KHONG de len nhau, khong can tinh offset px
+                thu cong cho tung cell). MAC DINH TAT (checked={false}) theo yeu cau - GIU NGUYEN nhan theo
+                tram (Nan, o tren) khong doi gi.
+                SUA so voi ban truoc: dung CUNG 1 nguon/1 LOAI % voi Tooltip/Popup chi tiet o tren
+                (layChiTietCellTheoTram, nguon goc quan_he_day_du - GIU CA cac sector "phu" TRUOC dedup,
+                xem WHY day du o layChiTietCellTheoTram) - KHONG con dung t.cells/pct_ho (BanDoCellAnhHuong)
+                nhu ban truoc. LY DO: pct_ho trong t.cells la % cua DUY NHAT 1 sector "thang" sau dedup
+                xuyen-sector (BE giu sector CO %HO CAO NHAT cho moi cell, cac sector "phu" khac BI LOAI khoi
+                gia tri nay - xem domain/services/ho_cell_selector.py dong "Dedup xuyen sector: cell o nhieu
+                sector -> 1 lan, GIU sector co % HO CAO NHAT"), KHAC voi dinh nghia % trong Tooltip/Popup
+                (moi quan he sector->cell la 1 dong RIENG, khong dedup) - dung t.cells se cho sai lech: 1 cell
+                nhan tu 2 sector se CHI hien 1 dong (sector thang) o lop ban do nay nhung 2 dong o Tooltip,
+                gay hieu lam la 2 noi "khong khop". Nay DUNG CHUNG layChiTietCellTheoTram nen cell o 2 sector
+                se RA DUNG 2 dong o CA 2 noi, nhat quan hoan toan. */}
+            {coPhanTramTheoCell && (
+              <LayersControl.Overlay name="% theo cell" checked={false}>
+                <LayerGroup>
+                  {banDo.tram_bi_anh_huong.map(
+                    (t) =>
+                      t.lat !== null &&
+                      t.lon !== null &&
+                      t.cells.length > 0 && (
+                        <CircleMarker
+                          key={t.tram_id}
+                          center={[t.lat, t.lon]}
+                          radius={1}
+                          pathOptions={{ opacity: 0, fillOpacity: 0 }}
+                        >
+                          <Tooltip permanent direction="right" offset={[10, 0]} opacity={0.9}>
+                            <div style={{ fontSize: "0.65rem", lineHeight: 1.4 }}>
+                              {layChiTietCellTheoTram(
+                                t,
+                                data.quan_he_day_du ?? [],
+                                data.cells_chay_cr,
+                                data.cells_bi_anh_huong
+                              ).map((c) => (
+                                <div key={`${c.sector}-${c.target_lcr}`}>
+                                  {`S${c.sector} > cell ${c.cell_name ?? c.target_lcr}: ${formatPctHo(c.pct_trong_sector)}`}
+                                </div>
+                              ))}
+                            </div>
+                          </Tooltip>
+                        </CircleMarker>
+                      )
+                  )}
                 </LayerGroup>
               </LayersControl.Overlay>
             )}
