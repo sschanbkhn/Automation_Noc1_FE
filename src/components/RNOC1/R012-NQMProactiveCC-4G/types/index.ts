@@ -299,6 +299,14 @@ export interface AffectedCellItem {
   sr?: number | null; // ty le thanh cong HO (0-1, CHUA nhan 100) trung binh co trong so
   layer?: string | null; // "L1"|"L2"|"Z"|"KHONG_XAC_DINH" - xem domain/services/ho_delaunay.py
   co?: string[]; // ma co dinh: "BAT_THUONG"|"CAN_GHEP_TEN" (co the rong [], co the nhieu ma cung luc)
+  // 2 field MOI (THEM 12/10/2026, yeu cau truc tiep user, BE chua deploy tai .196) - xem api/schemas/
+  // cr_schemas.py::AffectedCellItem ben BE. sector = sector DA GAN cho cell (sector co %HO cao nhat trong cac
+  // sector cung nhan HO ve cell nay), sectors_khac = cac sector PHU KHAC (ngoai "sector") cung nhan HO sang
+  // cell nay (co the rong []). Ly do co ca 2: pct_ho/so_ho cua cell dang tinh theo mau so CUA "sector", NEU
+  // khong co 2 field nay FE se khong biet, de tuong %HO lech giua cac cell la do loi du lieu trong khi thuc
+  // ra la do khac sector (khac mau so) - xem WHY day du o schema BE
+  sector?: number | null;
+  sectors_khac?: number[];
 }
 
 // dung cho POST /api/v1/cr/preview, field tram_bi_anh_huong - 1 tram lan can bi anh huong (KHONG kem danh

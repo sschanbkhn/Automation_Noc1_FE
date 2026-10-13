@@ -39,7 +39,7 @@ import {
 } from "../../types";
 import { R012_COLORS } from "../../theme";
 import { useStationsMap } from "../../hooks/useStationsMap";
-import { layDanhSachNhanXCo, formatPctHo, layNhanLayer, CELL_CO_LABELS } from "../../helpers/hoLabels";
+import { layDanhSachNhanXCo, formatPctHo, formatSrPercent, layNhanLayer, CELL_CO_LABELS } from "../../helpers/hoLabels";
 // SUA (11/10/2026, loi runtime sau deploy 9463f85) - import TU mapCommon.tsx (KHONG con tu "./NetworkMap"
 // nua) - xem WHY day du trong chinh file mapCommon.tsx: NetworkMap.tsx import PreviewMapHo.tsx (file nay),
 // neu file nay LAI import nguoc tu "./NetworkMap" se tao VONG LAP import giua 2 file, gay crash "buildDotIcon
@@ -577,7 +577,9 @@ const TramBiAnhHuongMarker: React.FC<{
               <td style={{ textAlign: "right", padding: "2px 6px" }}>{c.sector}</td>
               <td style={{ textAlign: "right", padding: "2px 6px" }}>{formatPctHo(c.pct_trong_sector)}</td>
               <td style={{ textAlign: "right", padding: "2px 6px" }}>{c.so_ho}</td>
-              <td style={{ textAlign: "right", padding: "2px 6px" }}>{formatPctHo(c.sr)}</td>
+              {/* SUA (14/10/2026, yeu cau truc tiep user) - formatSrPercent() KHONG nhan lai 100 (BE da tra
+                  san dang phan tram, vd 99.82) - xem WHY day du trong hoLabels.ts */}
+              <td style={{ textAlign: "right", padding: "2px 6px" }}>{formatSrPercent(c.sr)}</td>
               <td style={{ padding: "2px 6px" }}>{layNhanLayer(c.layer)}</td>
               <td style={{ padding: "2px 0 2px 6px" }}>{c.vai_tro_cr ?? "-"}</td>
             </tr>

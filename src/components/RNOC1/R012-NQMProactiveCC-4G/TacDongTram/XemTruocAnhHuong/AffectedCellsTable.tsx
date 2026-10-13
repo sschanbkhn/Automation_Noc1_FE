@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { OneLineCell } from "../../common/r012TableStyle";
-import { Button, Pagination, Tag } from "antd";
+import { Button, Pagination, Tag, Tooltip } from "antd";
 import {
   createColumnHelper,
   useReactTable,
@@ -19,7 +19,7 @@ import { R012_COLORS } from "../../theme";
 // <th> dung chung cho MOI bang co sort trong module (click header + mui ten huong sort)
 import { SortableHeaderCell } from "../../common/SortableHeaderCell";
 // nhan hien thi cho ma co dinh cua nhanh HO (BUOC 4b, 08/10/2026) - xem WHY day du trong chinh file do
-import { CELL_CO_LABELS, formatPctHo, layNhanLayer } from "../../helpers/hoLabels";
+import { CELL_CO_LABELS, CELL_CO_TOOLTIPS, formatPctHo, formatSrPercent, layNhanLayer } from "../../helpers/hoLabels";
 
 // dinh dang timestamp DDMMYYYY_HHMM cho ten file export - dung DUNG quy uoc da dung o CellParamsByHuong.tsx
 // va AffectedStationsTable.tsx. KHONG tach thanh helper dung chung vi ham chi 8 dong, tach som se la
@@ -39,13 +39,21 @@ interface CellRow {
   // ten/ma tram - xem WHY day du o AffectedCellItem (types/index.ts)
   cell_name: string | null;
   tram_id: string | null; // ma tram cha - tram_id cua tram_bi_anh_huong chua cell nay
-  huong_id: string | null;
+  // SUA (14/10/2026, yeu cau truc tiep user) - BO huong_id/cot "Huong": day la field CDS cu, nhanh HO LUON
+  // tra None (xem preview_cr_use_case.py::_cell_ung_vien_to_cell() ben BE: "huong_id=None, # HO khong co
+  // khai niem huong_id CDS") nen cot nay luon hien "-" vo nghia.
   // 5 field OPTIONAL THEM (BUOC 4b) - undefined/[] cho nhanh CDS (BE cu)
   pct_ho?: number | null;
   so_ho?: number | null;
   sr?: number | null;
   layer?: string | null;
   co?: string[];
+  // 2 field MOI (THEM 12/10/2026, yeu cau truc tiep user) - BE vua bo sung sector/sectors_khac vao
+  // AffectedCellItem (DA DOI CHIEU truc tiep api/schemas/cr_schemas.py - thay cho deviation da bao cao
+  // truoc day la bang nay khong co field sector). sector = sector DA GAN cho cell (%HO cao nhat), sectors_khac
+  // = cac sector PHU KHAC cung nhan HO sang cell nay (co the rong [])
+  sector?: number | null;
+  sectors_khac?: number[];
 }
 
 const columnHelper = createColumnHelper<CellRow>();
@@ -65,12 +73,13 @@ const AffectedCellsTable: React.FC<AffectedCellsTableProps> = ({ previewData }) 
       previewData.cells_bi_anh_huong.map((c) => ({
         cell_name: c.cell_name,
         tram_id: c.tram_id,
-        huong_id: c.huong_id,
         pct_ho: c.pct_ho,
         so_ho: c.so_ho,
         sr: c.sr,
         layer: c.layer,
         co: c.co,
+        sector: c.sector,
+        sectors_khac: c.sectors_khac,
       })),
     [previewData]
   );
@@ -107,41 +116,79 @@ const AffectedCellsTable: React.FC<AffectedCellsTableProps> = ({ previewData }) 
         header: "Ma tram (lan can)",
         cell: (info) => info.getValue() ?? "-", // SUA (BUOC 4b) - co the null cung voi cell_name (cell CAN_GHEP_TEN)
       }),
-      columnHelper.accessor("huong_id", {
-        header: "Huong",
-        cell: (info) => info.getValue() ?? "-", // co the null theo schema AffectedCellItem
+      // cot "Sector (tram tat)" (THEM 14/10/2026, yeu cau truc tiep user) - sector CUA TRAM TAT (X) da duoc
+      // GAN cho cell nay (sector co %HO cao nhat trong cac sector cung nhan HO sang cell nay). Neu
+      // sectors_khac khong rong - cell nay CUNG nhan HO tu (cac) sector phu khac - hien them nhan nho
+      // "(+S..)" kem tooltip, de nguoi dung hieu TAI SAO %HO/So lan HO cua cell co the lech giua cac cell
+      // KHAC sector (khac mau so tinh %, khong phai loi du lieu - xem WHY day du o AffectedCellItem)
+      columnHelper.accessor("sector", {
+        header: "Sector (tram tat)",
+        cell: (info) => {
+          const sector = info.getValue();
+          if (sector === null || sector === undefined) {
+            return "-";
+          }
+          const sectorsKhac = info.row.original.sectors_khac;
+          if (!sectorsKhac || sectorsKhac.length === 0) {
+            return sector;
+          }
+          return (
+            <>
+              {sector}{" "}
+              <Tooltip
+                title={`Cell nay cung nhan HO tu sector ${sectorsKhac.join(", ")}`}
+              >
+                <span style={{ color: R012_COLORS.primary, cursor: "help", fontSize: "0.85em" }}>
+                  {`(+${sectorsKhac.map((s) => `S${s}`).join(", ")})`}
+                </span>
+              </Tooltip>
+            </>
+          );
+        },
       }),
       // 4 cot MOI (BUOC 4b, 08/10/2026, BE chua deploy) - "—" khi undefined (nhanh CDS/BE cu chua tra)
       columnHelper.accessor("pct_ho", {
-        header: "% HO",
+        // SUA (14/10/2026, yeu cau truc tiep user) - doi ten de khong nham voi "% tong HO cua tram tat"
+        // hien tren ban do (PreviewMapHo.tsx) - cot nay la % TRONG SECTOR cua rieng cell nay
+        header: "% HO trong sector",
         cell: (info) => formatPctHo(info.getValue()),
       }),
       columnHelper.accessor("so_ho", {
-        header: "So HO",
+        header: "So lan HO",
         cell: (info) => info.getValue() ?? "—",
       }),
       columnHelper.accessor("sr", {
+        // SUA (14/10/2026, yeu cau truc tiep user) - formatSrPercent() KHONG nhan lai 100 (BE da tra san
+        // dang phan tram, vd 99.82) - xem WHY day du trong hoLabels.ts
         header: "SR",
-        cell: (info) => formatPctHo(info.getValue()),
+        cell: (info) => formatSrPercent(info.getValue()),
       }),
       columnHelper.accessor("layer", {
         header: "Layer",
         cell: (info) => layNhanLayer(info.getValue()),
       }),
+      // SUA (14/10/2026, yeu cau truc tiep user) - doi ten cot "Co" -> "Flag" (ro nghia hon: day la co HIEU
+      // CHINH/CANH BAO chat luong cell, khong phai "co" chung chung). O rong de TRANG HOAN TOAN (KHONG hien
+      // "—") - "—" de danh rieng cho truong hop field hoan toan chua co du lieu (nhanh CDS cu), khac voi
+      // "co day du lieu nhung mang rong" (nhanh HO, cell binh thuong, khong co flag nao) o day. Moi Tag boc
+      // trong Tooltip giai thich DAY DU dieu kien that (CELL_CO_TOOLTIPS, dong bo voi
+      // domain/services/ho_cell_selector.py) - xem WHY day du o hoLabels.ts
       columnHelper.accessor("co", {
-        header: "Co",
+        header: "Flag",
         enableSorting: false, // mang Tag, khong co thu tu sap xep tu nhien
         cell: (info) => {
           const co = info.getValue();
           if (!co || co.length === 0) {
-            return "—";
+            return "";
           }
           return (
             <>
               {co.map((ma) => (
-                <Tag key={ma} color="orange">
-                  {CELL_CO_LABELS[ma] ?? ma}
-                </Tag>
+                <Tooltip key={ma} title={CELL_CO_TOOLTIPS[ma] ?? ""}>
+                  <Tag color="orange" style={{ cursor: "help" }}>
+                    {CELL_CO_LABELS[ma] ?? ma}
+                  </Tag>
+                </Tooltip>
               ))}
             </>
           );
@@ -163,18 +210,24 @@ const AffectedCellsTable: React.FC<AffectedCellsTableProps> = ({ previewData }) 
   });
 
   // export TOAN BO rows (khong chi trang dang xem) - MIRROR cac cot dang hien tren bang (THEM 5 cot HO,
-  // BUOC 4b). gia tri % de RAW (0-1, khong *100) trong Excel - de nguoi dung tu dinh dang % trong Excel
-  // thay vi FE tu nhan 100 (tranh nham don vi neu ho doi chieu lai voi so lieu goc)
+  // BUOC 4b). gia tri pct_ho_trong_sector de RAW (0-1, khong *100) trong Excel - de nguoi dung tu dinh dang
+  // % trong Excel thay vi FE tu nhan 100 (tranh nham don vi neu ho doi chieu lai voi so lieu goc).
+  // SUA (14/10/2026, yeu cau truc tiep user) - BO cot huong_id (xem WHY day du o CellRow); doi ten
+  // so_ho->so_lan_ho, pct_ho->pct_ho_trong_sector cho khop ten cot hien thi tren bang. "sr" GIU RAW (BE da
+  // tra san dang phan tram, KHONG can FE doi gi khi xuat Excel - xem WHY day du o hoLabels.ts::formatSrPercent).
+  // THEM sector/sectors_khac (dong bo cot "Sector (tram tat)" moi tren bang); doi ten co -> flag, dung DUNG
+  // nhan hien thi tren bang (CELL_CO_LABELS) thay vi ma goc, rong -> "" (khong "-", dong bo cach hien tren bang)
   const handleExportExcel = () => {
     const exportRows = rows.map((r) => ({
       ma_tram: r.tram_id ?? "-",
       cell_name: r.cell_name ?? "(chua co ten cell)",
-      huong_id: r.huong_id ?? "-",
-      pct_ho: r.pct_ho ?? "",
-      so_ho: r.so_ho ?? "",
+      sector: r.sector ?? "",
+      sectors_khac: r.sectors_khac && r.sectors_khac.length > 0 ? r.sectors_khac.map((s) => `S${s}`).join(", ") : "",
+      pct_ho_trong_sector: r.pct_ho ?? "",
+      so_lan_ho: r.so_ho ?? "",
       sr: r.sr ?? "",
       layer: layNhanLayer(r.layer),
-      co: r.co && r.co.length > 0 ? r.co.map((ma) => CELL_CO_LABELS[ma] ?? ma).join(", ") : "-",
+      flag: r.co && r.co.length > 0 ? r.co.map((ma) => CELL_CO_LABELS[ma] ?? ma).join(", ") : "",
     }));
     const worksheet = XLSX.utils.json_to_sheet(exportRows);
     const workbook = XLSX.utils.book_new();

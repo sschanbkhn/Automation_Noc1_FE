@@ -14,7 +14,7 @@ import { PreviewCrResponse, QuanHeDayDuItem } from "../../types";
 import { R012_COLORS } from "../../theme";
 // <th> dung chung cho MOI bang co sort trong module (click header + mui ten huong sort)
 import { SortableHeaderCell } from "../../common/SortableHeaderCell";
-import { formatPctHo, layNhanLayer } from "../../helpers/hoLabels";
+import { formatPctHo, formatSrPercent, layNhanLayer } from "../../helpers/hoLabels";
 
 const columnHelper = createColumnHelper<QuanHeDayDuItem>();
 
@@ -44,17 +44,23 @@ const QuanHeDayDuTable: React.FC<QuanHeDayDuTableProps> = ({ previewData }) => {
         enableSorting: false,
         cell: (info) => pagination.pageIndex * pagination.pageSize + info.row.index + 1,
       }),
-      columnHelper.accessor("sector", { header: "Sector (X)" }),
+      // SUA (14/10/2026, yeu cau truc tiep user) - "Sector (X)" -> "Sector (tram tat)" de dong bo CACH GOI
+      // voi AffectedCellsTable.tsx/CrCellsTable.tsx (X CHINH LA tram tat, cung 1 khai niem, khac ten goi)
+      columnHelper.accessor("sector", { header: "Sector (tram tat)" }),
       columnHelper.accessor("target_enb", { header: "Tram dich (ENB)" }),
       columnHelper.accessor("target_lcr", { header: "LCR dich" }),
       columnHelper.accessor("pct_trong_sector", {
-        header: "% trong sector",
+        // SUA (14/10/2026) - them "HO" cho dong bo ten voi 2 bang kia ("% HO trong sector"), truoc day
+        // thieu chu "HO" ("% trong sector") de nham la % cua thu khac
+        header: "% HO trong sector",
         cell: (info) => formatPctHo(info.getValue()),
       }),
-      columnHelper.accessor("ho_attempt", { header: "So HO" }),
+      columnHelper.accessor("ho_attempt", { header: "So lan HO" }),
       columnHelper.accessor("ho_sr", {
+        // SUA (14/10/2026, yeu cau truc tiep user) - formatSrPercent() KHONG nhan lai 100 (BE da tra san
+        // dang phan tram, vd 99.82) - xem WHY day du trong hoLabels.ts
         header: "SR",
-        cell: (info) => formatPctHo(info.getValue()),
+        cell: (info) => formatSrPercent(info.getValue()),
       }),
       columnHelper.accessor("layer", {
         header: "Layer",

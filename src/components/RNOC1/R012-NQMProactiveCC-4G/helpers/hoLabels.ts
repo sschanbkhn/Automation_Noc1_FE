@@ -38,10 +38,23 @@ export function layDanhSachNhanXCo(co: string[], sectorsItDuLieu: number[] | und
   return ket_qua;
 }
 
-// "co" cua 1 cell trong AffectedCellItem.co (bang A - Cell bi anh huong)
+// "co" cua 1 cell trong AffectedCellItem.co (bang A - Cell bi anh huong). SUA (14/10/2026, yeu cau truc
+// tiep user) - cot hien thi doi ten "Co" -> "Flag" (xem noi dung o cac bang/popup ban do dung chung nguon
+// nay), nhan DOI theo noi dung moi (giai thich RO cell co chay CR hay khong thay vi chi noi "bat thuong")
 export const CELL_CO_LABELS: Record<string, string> = {
-  BAT_THUONG: "Bat thuong",
-  CAN_GHEP_TEN: "Chua co ten cell",
+  BAT_THUONG: "Xa tram tat, khong chay CR",
+  CAN_GHEP_TEN: "Chua co trong cell_infor, khong chay CR",
+};
+
+// giai thich DAY DU cho tung ma Flag - hien qua tooltip khi re chuot vao o Flag (bang A/popup ban do), KHONG
+// hien thang tren o (qua dai) - noi dung LAY DUNG tu yeu cau truc tiep user (dong bo CHINH XAC voi dieu kien
+// that o domain/services/ho_cell_selector.py::NGUONG_VUNG_Z_PCT=0.20/NGUONG_VUNG_Z_SR=95.0 - DA DOI CHIEU,
+// xem WHY chi tiet o AffectedCellsTable.tsx noi dung cot Flag)
+export const CELL_CO_TOOLTIPS: Record<string, string> = {
+  BAT_THUONG:
+    "Cell nam ngoai vong L1/L2 cua tram tat va nhan it HO (< 20% sector) hoac HO hay that bai (SR < 95%). Van danh gia chat luong, khong chinh tham so.",
+  CAN_GHEP_TEN:
+    "Khong tim thay cell trong cell_infor (tram moi hoac du lieu chua cap nhat). Khong chay CR, khong danh gia duoc.",
 };
 
 // layer: "L1"|"L2"|"Z"|"KHONG_XAC_DINH"|"IBS"|"SMALL_CELL" (2 gia tri sau THEM 12/10/2026, BE commit
@@ -64,11 +77,31 @@ export function layNhanLayer(layer: string | null | undefined): string {
   }
 }
 
-// % dang fraction 0-1 (CHUA nhan 100, xem WHY tai cac field pct_ho/pct_trong_sector/sr/ty_le_ho_tin_cay
-// trong types/index.ts) -> chuoi "xx.x%". null/undefined -> "-"
+// % dang fraction 0-1 (CHUA nhan 100) -> chuoi "xx.x%". Dung cho pct_ho/pct_trong_sector/ty_le_ho_tin_cay
+// (ca 3 deu la TY LE SO LUONG/SO LUONG - vd pct = attempt/tong_goc, xem domain/services/ho_cell_selector.py -
+// phep chia 2 so nguyen nen luon ra 0-1). SUA (14/10/2026, yeu cau truc tiep user) - TRUOC DAY comment nay
+// GOM CA "sr" vao danh sach field dung ham nay, nhung da XAC NHAN LAI qua doc source BE that
+// (adapters/netact/import_ho_neighbor.py::sr = float(row[i_sr]) doc THANG tu cot "Adj Inter eNB HO SR" cua
+// file NetAct xuat ra, KHONG chia lai cho 100 - NetAct xuat SR o dang PHAN TRAM SAN (vd 99.82), KHAC ban
+// chat voi pct_ho/pct_trong_sector/ty_le_ho_tin_cay la ty le dem duoc) - "sr"/"ho_sr" PHAI dung
+// formatSrPercent() rieng ben duoi, KHONG duoc dung ham nay (se nhan sai them 100 lan, vd 99.82 -> "9982.0%")
+// null/undefined -> "-"
 export function formatPctHo(value: number | null | undefined): string {
   if (value === null || value === undefined) {
     return "-";
   }
   return `${(value * 100).toFixed(1)}%`;
+}
+
+// SUA (14/10/2026, yeu cau truc tiep user) - SR (AffectedCellItem.sr/CrCellItem.sr/QuanHeDayDuItem.ho_sr) LA
+// MOT NGOAI LE: BE da tra SAN o dang PHAN TRAM (vd 99.82, DOC THANG tu cot "Adj Inter eNB HO SR" trong file
+// NetAct xuat ra - xem adapters/netact/import_ho_neighbor.py ben BE, KHONG co phep chia nao cho 100 trong
+// toan bo pipeline doc/gop du lieu) - KHAC HAN pct_ho/pct_trong_sector/ty_le_ho_tin_cay (nhung ty le dem
+// duoc, 0-1, PHAI dung formatPctHo() o tren). Ham nay CHI dinh dang lai (2 chu so thap phan, dau phay thay
+// dau cham theo quy uoc tieng Viet - "99,82%") - TUYET DOI KHONG nhan lai 100. null/undefined -> "-"
+export function formatSrPercent(value: number | null | undefined): string {
+  if (value === null || value === undefined) {
+    return "-";
+  }
+  return `${value.toFixed(2).replace(".", ",")}%`;
 }

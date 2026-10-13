@@ -144,13 +144,15 @@ const TacDongTram: React.FC = () => {
           children: <CellNgoaiPhamViTable previewData={previewData} />,
         });
       }
-      // muc "Quan he day du" (BUOC 4b, 08/10/2026) - CHI them khi THAT SU co du lieu (nhanh HO), giong
+      // muc "Neighbor day du" (BUOC 4b, 08/10/2026; doi ten tu "Quan he day du" 14/10/2026, yeu cau truc
+      // tiep user - CHI doi NHAN hien thi, component/key noi bo GIU NGUYEN "quan-he-day-du"/QuanHeDayDuTable
+      // de khong keo theo thay doi khong can thiet) - CHI them khi THAT SU co du lieu (nhanh HO), giong
       // quy uoc "Cell bi loai khoi pham vi" ngay tren - thu gon theo mac dinh (KHONG nam trong
       // defaultActiveKey), NOC tu bam mo rong khi can xem (yeu cau "bang thu gon, bam mo rong")
       if (previewData.quan_he_day_du && previewData.quan_he_day_du.length > 0) {
         items.push({
           key: "quan-he-day-du",
-          label: `Quan he day du (${previewData.quan_he_day_du.length})`,
+          label: `Neighbor day du (${previewData.quan_he_day_du.length})`,
           children: <QuanHeDayDuTable previewData={previewData} />,
         });
       }
@@ -231,7 +233,11 @@ const TacDongTram: React.FC = () => {
             showIcon
             message={
               <>
-                Co cua tram {previewData.tram_goc.tram_name ?? previewData.tram_goc.tram_id}:{" "}
+                {/* SUA (14/10/2026, yeu cau truc tiep user) - CHI doi NHAN hien thi "Co" -> "Flag" (dong bo
+                    tu voi cot "Flag" cua cell o cac bang/ban do) + "tram X" -> "tram tat" (dong bo cach goi
+                    voi "Sector (tram tat)"). KHONG doi ten field/bien (x_co, X_CO_LABELS giu nguyen) - day
+                    la khai niem Flag cua TRAM GOC (X), KHAC voi Flag cua TUNG CELL (CELL_CO_LABELS) */}
+                Flag cua tram tat {previewData.tram_goc.tram_name ?? previewData.tram_goc.tram_id}:{" "}
                 {/* "IT_DU_LIEU" duoc khai trien thanh 1 nhan/sector qua sectors_it_du_lieu (THEM 10/10/2026) -
                     xem layDanhSachNhanXCo() de biet WHY khong con dung X_CO_LABELS truc tiep o day */}
                 {layDanhSachNhanXCo(previewData.x_co, previewData.sectors_it_du_lieu).map((nhan) => (

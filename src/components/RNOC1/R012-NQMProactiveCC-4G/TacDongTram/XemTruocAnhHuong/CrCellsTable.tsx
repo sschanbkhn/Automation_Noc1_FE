@@ -19,7 +19,7 @@ import { R012_COLORS } from "../../theme";
 // <th> dung chung cho MOI bang co sort trong module (click header + mui ten huong sort)
 import { SortableHeaderCell } from "../../common/SortableHeaderCell";
 // nhan hien thi cho ma co dinh/format % cua nhanh HO (BUOC 4b, 08/10/2026) - xem WHY day du trong chinh file do
-import { formatPctHo, layNhanLayer } from "../../helpers/hoLabels";
+import { formatPctHo, formatSrPercent, layNhanLayer } from "../../helpers/hoLabels";
 
 // dinh dang timestamp DDMMYYYY_HHMM cho ten file export - dung DUNG quy uoc da dung o cac bang preview
 // khac. KHONG tach thanh helper dung chung vi ham chi 8 dong, tach som se la premature abstraction
@@ -133,16 +133,20 @@ const CrCellsTable: React.FC<CrCellsTableProps> = ({ previewData }) => {
       // KHONG co cot "Co" nhu AffectedCellsTable: 1 cell vao duoc B nghia la KHONG BAT_THUONG/CAN_GHEP_TEN
       // (xem WHY day du o CrCellItem, types/index.ts)
       columnHelper.accessor("pct_ho", {
-        header: "% HO",
+        // SUA (14/10/2026, yeu cau truc tiep user) - doi ten de khong nham voi "% tong HO cua tram tat"
+        // hien tren ban do (PreviewMapHo.tsx)
+        header: "% HO trong sector",
         cell: (info) => formatPctHo(info.getValue()),
       }),
       columnHelper.accessor("so_ho", {
-        header: "So HO",
+        header: "So lan HO",
         cell: (info) => info.getValue() ?? "—",
       }),
       columnHelper.accessor("sr", {
+        // SUA (14/10/2026, yeu cau truc tiep user) - formatSrPercent() KHONG nhan lai 100 (BE da tra san
+        // dang phan tram, vd 99.82) - xem WHY day du trong hoLabels.ts
         header: "SR",
-        cell: (info) => formatPctHo(info.getValue()),
+        cell: (info) => formatSrPercent(info.getValue()),
       }),
       columnHelper.accessor("layer", {
         header: "Layer",
@@ -203,9 +207,11 @@ const CrCellsTable: React.FC<CrCellsTableProps> = ({ previewData }) => {
       cell_name: r.cell_name,
       band: r.band ?? "-",
       sector: r.sector ?? "-",
-      // 4 cot MOI (BUOC 4b) - gia tri % de RAW (0-1, khong *100), giong quy uoc export AffectedCellsTable.tsx
-      pct_ho: r.pct_ho ?? "",
-      so_ho: r.so_ho ?? "",
+      // 4 cot MOI (BUOC 4b) - gia tri pct_ho_trong_sector de RAW (0-1, khong *100), giong quy uoc export
+      // AffectedCellsTable.tsx. SUA (14/10/2026) - doi ten cho khop cot hien thi, "sr" GIU RAW (BE da tra
+      // san dang phan tram - xem WHY day du o hoLabels.ts::formatSrPercent)
+      pct_ho_trong_sector: r.pct_ho ?? "",
+      so_lan_ho: r.so_ho ?? "",
       sr: r.sr ?? "",
       layer: layNhanLayer(r.layer),
       action_type: r.action_type ?? "-",
