@@ -39,7 +39,14 @@ import {
 } from "../../types";
 import { R012_COLORS } from "../../theme";
 import { useStationsMap } from "../../hooks/useStationsMap";
-import { layDanhSachNhanXCo, formatPctHo, formatSrPercent, layNhanLayer, CELL_CO_LABELS } from "../../helpers/hoLabels";
+import {
+  layDanhSachNhanXCo,
+  formatPctHo,
+  formatSoLuong,
+  formatSrPercent,
+  layNhanLayer,
+  CELL_CO_LABELS,
+} from "../../helpers/hoLabels";
 // SUA (11/10/2026, loi runtime sau deploy 9463f85) - import TU mapCommon.tsx (KHONG con tu "./NetworkMap"
 // nua) - xem WHY day du trong chinh file mapCommon.tsx: NetworkMap.tsx import PreviewMapHo.tsx (file nay),
 // neu file nay LAI import nguoc tu "./NetworkMap" se tao VONG LAP import giua 2 file, gay crash "buildDotIcon
@@ -133,23 +140,26 @@ function tenLopTramCungTinh(hinh: LoaiTram): string {
   return `Tram cung tinh - ${NHAN_HINH_TRAM[hinh]}`;
 }
 
-// Mac dinh LAN DAU (yeu cau truc tiep user) - BAT: duong bao/nan/L1/tram cung tinh Macro; TAT: % theo
-// cell/L2/tram cung tinh IBS-Small cell-Khac
+// SUA (14/10/2026, user chot mac dinh MOI) - BAT: duong bao/nan/L1/L2 (TRUOC DAY L2 TAT, nay BAT cung voi
+// L1); TAT: % theo cell/tram cung tinh CA 4 hinh (TRUOC DAY rieng Macro BAT, nay TAT CA - mac dinh "sach",
+// chi hien vong anh huong/nan, nguoi dung tu bat tram cung tinh khi can doi chieu ngu canh)
 const MAC_DINH_LOP: Record<string, boolean> = {
   [TEN_LOP_DUONG_BAO]: true,
   [TEN_LOP_NAN]: true,
   [TEN_LOP_L1]: true,
-  [TEN_LOP_L2]: false,
+  [TEN_LOP_L2]: true,
   [TEN_LOP_PHAN_TRAM_CELL]: false,
-  [tenLopTramCungTinh("MACRO")]: true,
+  [tenLopTramCungTinh("MACRO")]: false,
   [tenLopTramCungTinh("IBS")]: false,
   [tenLopTramCungTinh("SMALL_CELL")]: false,
   [tenLopTramCungTinh("KHAC")]: false,
 };
 
-// khoa RIENG cho ban do R012 (khong trung voi localStorage key nao khac trong toan bo app) - "v1" de danh
-// cho truong hop sau nay doi cau truc du lieu luu (them lop moi, doi ten...) can invalidate cache cu
-const R012_MAP_LAYERS_STORAGE_KEY = "r012_preview_map_ho_layers_v1";
+// khoa RIENG cho ban do R012 (khong trung voi localStorage key nao khac trong toan bo app). SUA (14/10/2026,
+// yeu cau truc tiep user) - v1 -> v2: doi MAC_DINH_LOP (xem comment tren) nen PHAI invalidate lua chon da luu
+// cu - neu giu nguyen key v1, nguoi dung da tung bat/tat lop (vd Tram cung tinh Macro=true) se tiep tuc thay
+// gia tri CU trong localStorage thay vi mac dinh MOI, khong dat duoc muc dich "moi nguoi nhan mac dinh moi"
+const R012_MAP_LAYERS_STORAGE_KEY = "r012_preview_map_ho_layers_v2";
 
 // Doc lua chon DA LUU tu localStorage - BOC try/catch THEO YEU CAU: localStorage co the nem loi (private
 // browsing mode cua Safari cu chan hoan toan, quota exceeded...) hoac du lieu JSON hong (vd nguoi dung tu
@@ -576,7 +586,8 @@ const TramBiAnhHuongMarker: React.FC<{
               <td style={{ padding: "2px 6px 2px 0" }}>{c.cell_name ?? `LCR ${c.target_lcr}`}</td>
               <td style={{ textAlign: "right", padding: "2px 6px" }}>{c.sector}</td>
               <td style={{ textAlign: "right", padding: "2px 6px" }}>{formatPctHo(c.pct_trong_sector)}</td>
-              <td style={{ textAlign: "right", padding: "2px 6px" }}>{c.so_ho}</td>
+              {/* SUA (14/10/2026, yeu cau truc tiep user) - formatSoLuong() them dau CHAM ngan nghin */}
+              <td style={{ textAlign: "right", padding: "2px 6px" }}>{formatSoLuong(c.so_ho)}</td>
               {/* SUA (14/10/2026, yeu cau truc tiep user) - formatSrPercent() KHONG nhan lai 100 (BE da tra
                   san dang phan tram, vd 99.82) - xem WHY day du trong hoLabels.ts */}
               <td style={{ textAlign: "right", padding: "2px 6px" }}>{formatSrPercent(c.sr)}</td>

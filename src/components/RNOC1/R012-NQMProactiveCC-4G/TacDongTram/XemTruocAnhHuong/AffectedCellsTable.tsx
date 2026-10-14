@@ -19,7 +19,14 @@ import { R012_COLORS } from "../../theme";
 // <th> dung chung cho MOI bang co sort trong module (click header + mui ten huong sort)
 import { SortableHeaderCell } from "../../common/SortableHeaderCell";
 // nhan hien thi cho ma co dinh cua nhanh HO (BUOC 4b, 08/10/2026) - xem WHY day du trong chinh file do
-import { CELL_CO_LABELS, CELL_CO_TOOLTIPS, formatPctHo, formatSrPercent, layNhanLayer } from "../../helpers/hoLabels";
+import {
+  CELL_CO_LABELS,
+  CELL_CO_TOOLTIPS,
+  formatPctHo,
+  formatSoLuong,
+  formatSrPercent,
+  layNhanLayer,
+} from "../../helpers/hoLabels";
 
 // dinh dang timestamp DDMMYYYY_HHMM cho ten file export - dung DUNG quy uoc da dung o CellParamsByHuong.tsx
 // va AffectedStationsTable.tsx. KHONG tach thanh helper dung chung vi ham chi 8 dong, tach som se la
@@ -154,8 +161,9 @@ const AffectedCellsTable: React.FC<AffectedCellsTableProps> = ({ previewData }) 
         cell: (info) => formatPctHo(info.getValue()),
       }),
       columnHelper.accessor("so_ho", {
+        // SUA (14/10/2026, yeu cau truc tiep user) - formatSoLuong() them dau CHAM ngan nghin (quy uoc so VN)
         header: "So lan HO",
-        cell: (info) => info.getValue() ?? "—",
+        cell: (info) => formatSoLuong(info.getValue()),
       }),
       columnHelper.accessor("sr", {
         // SUA (14/10/2026, yeu cau truc tiep user) - formatSrPercent() KHONG nhan lai 100 (BE da tra san

@@ -14,7 +14,7 @@ import { PreviewCrResponse, QuanHeDayDuItem } from "../../types";
 import { R012_COLORS } from "../../theme";
 // <th> dung chung cho MOI bang co sort trong module (click header + mui ten huong sort)
 import { SortableHeaderCell } from "../../common/SortableHeaderCell";
-import { formatPctHo, formatSrPercent, layNhanLayer } from "../../helpers/hoLabels";
+import { formatPctHo, formatSoLuong, formatSrPercent, layNhanLayer } from "../../helpers/hoLabels";
 
 const columnHelper = createColumnHelper<QuanHeDayDuItem>();
 
@@ -55,7 +55,12 @@ const QuanHeDayDuTable: React.FC<QuanHeDayDuTableProps> = ({ previewData }) => {
         header: "% HO trong sector",
         cell: (info) => formatPctHo(info.getValue()),
       }),
-      columnHelper.accessor("ho_attempt", { header: "So lan HO" }),
+      // SUA (14/10/2026, yeu cau truc tiep user) - formatSoLuong() them dau CHAM ngan nghin (quy uoc so VN),
+      // dong bo voi 2 bang A/B (truoc day cot nay hien so RAW, khong dinh dang)
+      columnHelper.accessor("ho_attempt", {
+        header: "So lan HO",
+        cell: (info) => formatSoLuong(info.getValue()),
+      }),
       columnHelper.accessor("ho_sr", {
         // SUA (14/10/2026, yeu cau truc tiep user) - formatSrPercent() KHONG nhan lai 100 (BE da tra san
         // dang phan tram, vd 99.82) - xem WHY day du trong hoLabels.ts

@@ -77,20 +77,31 @@ export function layNhanLayer(layer: string | null | undefined): string {
   }
 }
 
-// % dang fraction 0-1 (CHUA nhan 100) -> chuoi "xx.x%". Dung cho pct_ho/pct_trong_sector/ty_le_ho_tin_cay
-// (ca 3 deu la TY LE SO LUONG/SO LUONG - vd pct = attempt/tong_goc, xem domain/services/ho_cell_selector.py -
-// phep chia 2 so nguyen nen luon ra 0-1). SUA (14/10/2026, yeu cau truc tiep user) - TRUOC DAY comment nay
-// GOM CA "sr" vao danh sach field dung ham nay, nhung da XAC NHAN LAI qua doc source BE that
-// (adapters/netact/import_ho_neighbor.py::sr = float(row[i_sr]) doc THANG tu cot "Adj Inter eNB HO SR" cua
-// file NetAct xuat ra, KHONG chia lai cho 100 - NetAct xuat SR o dang PHAN TRAM SAN (vd 99.82), KHAC ban
-// chat voi pct_ho/pct_trong_sector/ty_le_ho_tin_cay la ty le dem duoc) - "sr"/"ho_sr" PHAI dung
-// formatSrPercent() rieng ben duoi, KHONG duoc dung ham nay (se nhan sai them 100 lan, vd 99.82 -> "9982.0%")
+// ham DUNG CHUNG cho MOI dinh dang % trong module (SUA 14/10/2026, yeu cau truc tiep user: "dinh dang so
+// dong nhat... dung chung 1 ham format") - value da o DUNG DON VI PHAN TRAM roi (vd 34.5 nghia la 34,5%,
+// KHONG phai 0.345), ham CHI lo phan hien thi (dau PHAY theo quy uoc so VN thay dau CHAM, so chu so thap
+// phan TRUYEN VAO - 2 ham public ben duoi moi chiu trach nhiem quy value ve dung don vi % truoc khi goi ham
+// nay, vi pct_ho/pct_trong_sector la fraction 0-1 can *100 con sr da san dang %, xem WHY day du o 2 ham do)
+function formatPercent(value: number | null | undefined, soChuSoThapPhan: number): string {
+  if (value === null || value === undefined) {
+    return "-";
+  }
+  return `${value.toFixed(soChuSoThapPhan).replace(".", ",")}%`;
+}
+
+// % dang fraction 0-1 (CHUA nhan 100) -> chuoi "xx,x%" (1 chu so thap phan, dau phay). Dung cho
+// pct_ho/pct_trong_sector/ty_le_ho_tin_cay (ca 3 deu la TY LE SO LUONG/SO LUONG - vd pct = attempt/tong_goc,
+// xem domain/services/ho_cell_selector.py - phep chia 2 so nguyen nen luon ra 0-1). DA XAC NHAN qua doc
+// source BE that (adapters/netact/import_ho_neighbor.py::sr = float(row[i_sr]) doc THANG tu cot "Adj Inter
+// eNB HO SR" cua file NetAct xuat ra, KHONG chia lai cho 100 - NetAct xuat SR o dang PHAN TRAM SAN, vd 99.82)
+// - KHAC ban chat voi pct_ho/pct_trong_sector/ty_le_ho_tin_cay la ty le dem duoc - "sr"/"ho_sr" PHAI dung
+// formatSrPercent() rieng ben duoi, KHONG duoc dung ham nay (se nhan sai them 100 lan, vd 99.82 -> "9.982,0%")
 // null/undefined -> "-"
 export function formatPctHo(value: number | null | undefined): string {
   if (value === null || value === undefined) {
     return "-";
   }
-  return `${(value * 100).toFixed(1)}%`;
+  return formatPercent(value * 100, 1);
 }
 
 // SUA (14/10/2026, yeu cau truc tiep user) - SR (AffectedCellItem.sr/CrCellItem.sr/QuanHeDayDuItem.ho_sr) LA
@@ -100,8 +111,20 @@ export function formatPctHo(value: number | null | undefined): string {
 // duoc, 0-1, PHAI dung formatPctHo() o tren). Ham nay CHI dinh dang lai (2 chu so thap phan, dau phay thay
 // dau cham theo quy uoc tieng Viet - "99,82%") - TUYET DOI KHONG nhan lai 100. null/undefined -> "-"
 export function formatSrPercent(value: number | null | undefined): string {
+  return formatPercent(value, 2);
+}
+
+// dinh dang SO DEM DUOC (so lan HO: AffectedCellItem.so_ho/CrCellItem.so_ho/QuanHeDayDuItem.ho_attempt) - dau
+// CHAM ngan nghin (quy uoc so VN cho so nguyen, vd 99.837) - NGUOC voi dau PHAY dung cho phan tram
+// (formatPercent o tren). Tu viet grouping thay vi toLocaleString("vi-VN") de AN TOAN/XAC DINH (khong phu
+// thuoc Intl locale-data cua moi trinh duyet/runtime - cung triet ly voi formatPercent da viet tay). Excel
+// GIU gia tri SO RAW (khong qua ham nay) - chi man hinh moi can dinh dang hien thi. null/undefined -> "-"
+export function formatSoLuong(value: number | null | undefined): string {
   if (value === null || value === undefined) {
     return "-";
   }
-  return `${value.toFixed(2).replace(".", ",")}%`;
+  const phanNguyen = Math.trunc(value);
+  const amDau = phanNguyen < 0;
+  const nhom = Math.abs(phanNguyen).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return amDau ? `-${nhom}` : nhom;
 }

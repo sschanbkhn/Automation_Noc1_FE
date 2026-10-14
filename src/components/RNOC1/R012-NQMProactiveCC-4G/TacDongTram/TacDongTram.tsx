@@ -214,19 +214,12 @@ const TacDongTram: React.FC = () => {
             anh huong live network", xem comment OssSeDung trong types/index.ts). optional + null deu an:
             BE .196 chua deploy truong nay (undefined), hoac BE tra null that su khi khong con cell nao
             route duoc OSS nao - ca 2 truong hop deu khong co gi de hien */}
-        {/* "Nguon du lieu" + "Co cua tram X" (BUOC 4b, 08/10/2026, yeu cau truc tiep user) - CHI co khi tram
-            nay chay nhanh HO (nguon_du_lieu luon co gia tri cho nhanh HO, undefined cho nhanh CDS). Dat
-            NGOAI Collapse (luon hien) giong "NetAct se dung" ben duoi - day la ngu canh NOC can biet NGAY
+        {/* "Co cua tram X" (BUOC 4b, 08/10/2026, yeu cau truc tiep user) - CHI co khi tram nay chay nhanh HO.
+            Dat NGOAI Collapse (luon hien) giong "NetAct se dung" ben duoi - day la ngu canh NOC can biet NGAY
             TRUOC khi doc cac bang/ban do o duoi (vd biet truoc sao X la CRAN hay sao sector nao it du lieu),
-            khong nen giau trong 1 muc Collapse mac dinh thu gon */}
-        {previewData?.nguon_du_lieu && (
-          <Alert
-            type="info"
-            showIcon
-            message={`Nguon du lieu: ${previewData.nguon_du_lieu}`}
-            style={{ marginBottom: "0.5rem" }}
-          />
-        )}
+            khong nen giau trong 1 muc Collapse mac dinh thu gon.
+            SUA (14/10/2026, yeu cau truc tiep user) - DA BO han Alert "Nguon du lieu: ..." (BE cung dang bo
+            truong nguon_du_lieu) - KHONG con hien dong nay nua, KHONG de lai khung trong */}
         {previewData?.x_co && previewData.x_co.length > 0 && (
           <Alert
             type="warning"
