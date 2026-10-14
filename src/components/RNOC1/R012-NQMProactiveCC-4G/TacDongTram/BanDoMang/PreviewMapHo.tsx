@@ -938,11 +938,20 @@ const PreviewMapHo: React.FC<PreviewMapHoProps> = ({ data }) => {
     }, []);
   }, [banDo]);
 
-  // vong L1/L2 (B6 cu) - BE da sap theo goc quanh X (sap_theo_goc), FE KHONG sort lai. Loc bo diem thieu toa
-  // do truoc, roi KHEP KIN bang cach noi lai diem dau vao cuoi (Polyline KHONG tu khep kin nhu Polygon)
+  // vong L1/L2 (B6 cu). SUA (15/10/2026, yeu cau truc tiep user "VONG L1/L2 MOI") - UU TIEN l1_vong/l2_vong
+  // (THEM moi, OPTIONAL) khi BE co tra: danh_sach da la "vong hinh sao" DUNG thu tu/co the chen X lam dinh
+  // (xem WHY day du o BanDoVong, types/index.ts) - CHI can map toa do, khong loc lat/lon null (danh_sach
+  // CHAC CHAN co toa do, khac BanDoDiemTram cho phep null). KHONG co (BE cu, chua deploy) -> fallback NGUYEN
+  // CACH CU: tu banDo.l1/l2 (list), BE da sap theo goc quanh X (sap_theo_goc), FE KHONG sort lai, loc bo diem
+  // thieu toa do. CA 2 nhanh deu KHEP KIN bang cach noi lai diem dau vao cuoi (Polyline KHONG tu khep kin
+  // nhu Polygon)
   const l1Positions = useMemo((): [number, number][] => {
     if (!banDo) {
       return [];
+    }
+    if (banDo.l1_vong) {
+      const toa_do: [number, number][] = banDo.l1_vong.danh_sach.map((d) => [d.lat, d.lon]);
+      return toa_do.length >= 2 ? [...toa_do, toa_do[0]] : toa_do;
     }
     const diem = banDo.l1.filter((d): d is typeof d & { lat: number; lon: number } => d.lat !== null && d.lon !== null);
     const toa_do: [number, number][] = diem.map((d) => [d.lat, d.lon]);
@@ -952,6 +961,10 @@ const PreviewMapHo: React.FC<PreviewMapHoProps> = ({ data }) => {
   const l2Positions = useMemo((): [number, number][] => {
     if (!banDo) {
       return [];
+    }
+    if (banDo.l2_vong) {
+      const toa_do: [number, number][] = banDo.l2_vong.danh_sach.map((d) => [d.lat, d.lon]);
+      return toa_do.length >= 2 ? [...toa_do, toa_do[0]] : toa_do;
     }
     const diem = banDo.l2.filter((d): d is typeof d & { lat: number; lon: number } => d.lat !== null && d.lon !== null);
     const toa_do: [number, number][] = diem.map((d) => [d.lat, d.lon]);

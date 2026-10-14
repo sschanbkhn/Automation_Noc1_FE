@@ -515,10 +515,42 @@ export interface BanDoDuongBao {
   x_tren_vien: boolean;
 }
 
+// 1 diem trong l1_vong/l2_vong.danh_sach (THEM 15/10/2026, yeu cau truc tiep user "VONG L1/L2 MOI") - CUNG
+// hinh dang voi BanDoDiemTram (l1/l2 list cu), THEM "la_x": BE dung CHUNG thuat toan "vong hinh sao" voi
+// duong_bao_hinh_sao() (xem BanDoDuongBaoDiem/BanDoDuongBao) nen CO THE chen X lam 1 dinh khi
+// x_tren_vien=true. KHAC BanDoDuongBaoDiem o cho KHONG co pct_ho (L1/L2 khong gan voi %HO cua cell nao ca -
+// day la phan loai THEO KHOANG CACH/Delaunay, khac khai niem voi "duong bao vung bi anh huong")
+export interface BanDoVongDiem {
+  tram_id: string;
+  ten: string | null;
+  lat: number;
+  lon: number;
+  loai_tram?: LoaiTram;
+  // true CHI KHI day la diem X duoc BE chen them lam 1 dinh (xem x_tren_vien) - moi diem BINH THUONG (tram
+  // L1/L2 that) deu KHONG co key nay (undefined), KHONG phai false
+  la_x?: boolean;
+}
+
+// THEM (15/10/2026, yeu cau truc tiep user "VONG L1/L2 MOI") - l1_vong/l2_vong: THU TU VE DUNG cho vong
+// L1/L2 (thay vai tro "sap theo goc tren list phang" cu bang thuat toan "vong hinh sao" giong duong_bao -
+// co the CHEN X lam dinh khi khoang trong goc giua 2 diem lien tiep > 180 do, xem WHY day du o
+// domain/services/geo_utils.py::duong_bao_hinh_sao() ben BE). OPTIONAL: BE cu (truoc 15/10/2026) KHONG co 2
+// field nay - FE PHAI fallback ve ve TU l1/l2 (list) nhu truoc khi thieu (xem PreviewMapHo.tsx). danh_sach
+// LUON la list (khong null) - khi < 3 diem BE tu tra lai CHINH list goc (chua chen X, x_tren_vien=false)
+export interface BanDoVong {
+  danh_sach: BanDoVongDiem[];
+  x_tren_vien: boolean;
+}
+
 export interface PreviewBanDo {
   x: BanDoXBlock;
-  l1: BanDoDiemTram[]; // da sap theo goc quanh X (BE tu sap, FE KHONG sort lai) - dung de ve Polyline khep kin
+  l1: BanDoDiemTram[]; // da sap theo goc quanh X (BE tu sap, FE KHONG sort lai) - dung de ve marker tung tram
   l2: BanDoDiemTram[]; // cung quy uoc voi l1
+  // l1_vong/l2_vong (THEM 15/10/2026) - OPTIONAL, SONG SONG voi l1/l2 (KHONG thay the): dung de VE VONG
+  // Polyline (thu tu/X-lam-dinh CHINH XAC hon), con l1/l2 (list) VAN GIU NGUYEN cho marker tung tram L1/L2
+  // (xem PreviewMapHo.tsx::renderDiemTramMarker - KHONG doi nguon du lieu cho marker)
+  l1_vong?: BanDoVong;
+  l2_vong?: BanDoVong;
   tram_bi_anh_huong: BanDoTramBiAnhHuong[];
   duong_bao: BanDoDuongBao;
 }
