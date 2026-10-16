@@ -26,4 +26,23 @@ export const CR_STATUS_COLOR: Record<string, { list: string; badge: string }> = 
   PARTIAL_SUCCESS: { list: "orange", badge: "orange" },
   KHONG_DU_DU_LIEU: { list: "purple", badge: "purple" },
   PENDING: { list: "blue", badge: "blue" },
+  // THEM 16/10/2026 (yeu cau truc tiep user) - trang thai MOI, tach khoi FAILED (xem WHY day du o
+  // domain/entities/cr_session.py::CrStatus.KHONG_CHAY ben BE): loi xay ra TRUOC buoc 13 "SSH: Upload+
+  // Import+Provision" (chua tung gui lenh len NetAct, vd thieu du lieu HO/XML loi cau hinh) - "mau VANG",
+  // CO CHU DICH KHAC mau do cua FAILED (do = NetAct/mang that su co van de, vang = can sua du
+  // lieu/cau hinh truoc khi thu lai, 2 nguyen nhan khac nhau NOC can phan biet duoc bang mat ngay tren bang)
+  KHONG_CHAY: { list: "gold", badge: "gold" },
 };
+
+// NHAN hien thi rieng cho KHONG_CHAY (THEM 16/10/2026, yeu cau truc tiep user: "nhan 'Khong chay'") - MOI
+// trang thai khac VAN hien NGUYEN VAN chuoi enum tho tu BE (vd "DONE"/"FAILED"/"RUNNING"...), giu dung thiet
+// ke cu (KHONG dich toan bo 9 trang thai, chi them 1 ngoai le cho trang thai MOI nay theo yeu cau). Dung
+// chung cho CA 2 noi hien Tag trang thai (SessionHistoryList.tsx bang danh sach, EvaluationDetail.tsx badge
+// chi tiet) qua layNhanTrangThaiCr() ben duoi, tranh 2 noi lech nhau
+const CR_STATUS_LABEL: Record<string, string> = {
+  KHONG_CHAY: "Khong chay",
+};
+
+export function layNhanTrangThaiCr(status: string): string {
+  return CR_STATUS_LABEL[status] ?? status;
+}

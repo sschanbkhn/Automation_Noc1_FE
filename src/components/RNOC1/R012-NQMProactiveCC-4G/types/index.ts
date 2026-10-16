@@ -159,6 +159,10 @@ export interface SessionListItem {
   // chua chay CR hoac dat du dieu kien. Chi tiet TUNG cell + ly do nam o CellParamDetailItem.ngoai_dieu_kien_moi
   // (GET /sessions/{id}). Optional: BE .196 hien CHUA deploy truong nay (da doi chieu openapi.json 04/10/2026)
   so_cell_ngoai_dieu_kien_moi?: number;
+  // ma_loi (THEM 16/10/2026, yeu cau truc tiep user) - error_code cua DomainError gay FAILED/KHONG_CHAY (vd
+  // "KHONG_CO_DU_LIEU_HO", xem domain/errors.py ben BE). null o session DONE/PARTIAL_SUCCESS va o session cu
+  // (chay truoc migration nay, BE KHONG backfill). Optional: BE .196 hien CHUA deploy truong nay
+  ma_loi?: string | null;
 }
 
 // dung cho GET /api/v1/sessions - response tra ve danh sach session kem tong so
@@ -197,6 +201,9 @@ export interface CrLogItem {
   message: string | null; // thong diep chi tiet, co the null theo schema
   pct: number | null; // phan tram tien do, co the null theo schema
   created_at: string | null; // thoi diem ghi log dang ISO date-time (UTC, co hau to Z), co the null theo schema
+  // ma_loi (THEM 16/10/2026, yeu cau truc tiep user) - CHI co gia tri o dong status="failed" gay
+  // FAILED/KHONG_CHAY cho cr_session (xem models/cr_log.py ben BE), null o cac dong khac (running/success)
+  ma_loi?: string | null;
 }
 
 // dung cho GET /api/v1/sessions/{session_id}, field affected_cells - them 22072026 (Phuong an B, DA DUYET
@@ -234,6 +241,8 @@ export interface SessionDetailResponse {
   qos_after: number | null; // diem QoS sau CR, co the null theo schema
   executed_at: string | null; // thoi diem thuc thi dang ISO date-time, co the null theo schema
   evaluated_at: string | null; // thoi diem danh gia dang ISO date-time, co the null theo schema
+  // ma_loi (THEM 16/10/2026, yeu cau truc tiep user) - xem chu y day du o SessionListItem.ma_loi
+  ma_loi?: string | null;
   cell_params: CellParamDetailItem[]; // danh sach cell DA CHAY CR, mac dinh mang rong theo schema
   affected_cells: SessionAffectedCellItem[]; // TOAN BO cell BI ANH HUONG cua session (Phan 3, Buoc 2) - mac dinh mang rong theo schema
   cr_logs: CrLogItem[]; // danh sach log tien trinh CR, mac dinh mang rong theo schema

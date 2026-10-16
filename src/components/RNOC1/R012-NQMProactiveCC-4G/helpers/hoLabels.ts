@@ -57,10 +57,12 @@ export const CELL_CO_TOOLTIPS: Record<string, string> = {
     "Khong tim thay cell trong cell_infor (tram moi hoac du lieu chua cap nhat). Khong chay CR, khong danh gia duoc.",
 };
 
-// layer: "L1"|"L2"|"Z"|"KHONG_XAC_DINH"|"IBS"|"SMALL_CELL" (2 gia tri sau THEM 12/10/2026, BE commit
-// 9811c42 - tram DICH la IBS/SMALL_CELL, xem domain/services/ho_cell_selector.py::CellUngVien.layer) -
-// dung chung cho AffectedCellItem.layer/CrCellItem.layer/QuanHeDayDuItem.layer. L1/L2/Z giu nguyen (da la
-// nhan ro nghia), 3 gia tri con lai can dich
+// layer: "L1"|"L1_CUNG_SITE"|"L2"|"Z"|"KHONG_XAC_DINH"|"IBS"|"SMALL_CELL" (2 gia tri IBS/SMALL_CELL THEM
+// 12/10/2026, BE commit 9811c42 - tram DICH la IBS/SMALL_CELL; L1_CUNG_SITE THEM 16/10/2026, yeu cau truc
+// tiep user, xem domain/services/ho_delaunay.py::L1_CUNG_SITE ben BE - tram CUNG CUM/site voi X, VAN la L1
+// ve thuat toan nhung can nhan RIENG de NOC biet day la tram CUNG SITE, khong qua Delaunay) - dung chung cho
+// AffectedCellItem.layer/CrCellItem.layer/QuanHeDayDuItem.layer. L1/L2/Z giu nguyen (da la nhan ro nghia),
+// cac gia tri con lai can dich
 export function layNhanLayer(layer: string | null | undefined): string {
   if (!layer) {
     return "-";
@@ -72,6 +74,8 @@ export function layNhanLayer(layer: string | null | undefined): string {
       return "IBS (trong nha)";
     case "SMALL_CELL":
       return "Small cell";
+    case "L1_CUNG_SITE":
+      return "L1 (cung site)";
     default:
       return layer;
   }

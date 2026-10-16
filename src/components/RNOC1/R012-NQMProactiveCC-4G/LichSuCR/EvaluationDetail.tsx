@@ -39,7 +39,7 @@ import { formatDateTime } from "../helpers/formatDateTime";
 // mau badge trang thai - GOP VE 1 hang so dung chung voi SessionHistoryList.tsx (27092026), xem
 // crSessionStatus.ts de biet day du 9 trang thai + ly do tach mau list/badge (DONE/EVALUATED/FAILED dung
 // mau KHAC voi bang danh sach, CO CHU DICH - xem comment trong file do)
-import { CR_STATUS_COLOR } from "./crSessionStatus";
+import { CR_STATUS_COLOR, layNhanTrangThaiCr } from "./crSessionStatus";
 
 interface EvaluationDetailProps {
   sessionId: number | null;
@@ -120,10 +120,18 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
           <Descriptions.Item label="Hanh dong">{data.action}</Descriptions.Item>
           {/* badge mau thay cho text thuong, dung DUNG gia tri status that tu BE (khong bia them gia tri) */}
           <Descriptions.Item label="Trang thai">
-            <Tag color={CR_STATUS_COLOR[data.status]?.badge ?? "default"}>{data.status}</Tag>
+            <Tag color={CR_STATUS_COLOR[data.status]?.badge ?? "default"}>{layNhanTrangThaiCr(data.status)}</Tag>
           </Descriptions.Item>
           <Descriptions.Item label="Thoi gian thuc thi">{formatDateTime(data.executed_at)}</Descriptions.Item>
           <Descriptions.Item label="Thoi gian danh gia">{formatDateTime(data.evaluated_at)}</Descriptions.Item>
+          {/* THEM 16/10/2026 (yeu cau truc tiep user) - hien ma_loi (neu co) trong chi tiet session. CHI co
+              gia tri o session FAILED/KHONG_CHAY, undefined/null o cac trang thai khac - render co dieu kien,
+              KHONG them hang trong cho MOI session */}
+          {data.ma_loi && (
+            <Descriptions.Item label="Ma loi" span={2}>
+              <Tag color="red">{data.ma_loi}</Tag>
+            </Descriptions.Item>
+          )}
           {/* span={2}: chiem tron 1 hang rieng (xem ly do day du o comment dau khoi Descriptions) - hien
               NGUYEN VEN ten plan, cho phep xuong dong TU NHIEN (chi ngat o khoang trang/dau "_" that su
               can thiet) neu van dai hon 1 hang, khong can rut gon */}

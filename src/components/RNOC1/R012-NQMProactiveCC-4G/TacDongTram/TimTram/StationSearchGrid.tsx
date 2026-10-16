@@ -180,6 +180,16 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
     "Tram co the khong co tram lan can, hoac CDS khong tra du lieu. Vui long thu lai."
   );
 
+  // THEM 16/10/2026 (yeu cau truc tiep user) - doc error_code THAT tu response (KHAC voi previewErrorMessage
+  // o tren, chi lay "message" de hien van ban) de biet CHINH XAC day co phai loi KHONG_CO_DU_LIEU_HO khong -
+  // DA XAC NHAN qua doc truc tiep api/middleware/error_handler.py ben BE: response co dang
+  // {error_code, message, session_id}, "KHONG_CO_DU_LIEU_HO" -> HTTP 422 (domain/errors.py::HoNoDataError).
+  // Loi nay nghia la KHONG THE chay CR duoc (thieu du lieu HO dang tin cay cho tram nay) - PHAI khoa nut
+  // Trigger CR thay vi chi canh bao suong, tranh NOC bam vao roi lai nhan loi tuong tu o buoc trigger that
+  const previewErrorCode = (previewMutation.error as { response?: { data?: { error_code?: string } } } | null)
+    ?.response?.data?.error_code;
+  const khongCoDuLieuHo = previewMutation.isError && previewErrorCode === "KHONG_CO_DU_LIEU_HO";
+
   // khai bao cot bang dung DUNG cac field co that trong StationItem (types/index.ts) - khong bia them cot
   // STT khong phai field tu BE, chi la so thu tu hien thi tinh theo vi tri dong + trang hien tai
   const columns = useMemo(
@@ -413,7 +423,10 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
       {selectedStation && (
         <div style={{ marginTop: "1rem" }}>
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
-            <Button type="primary" onClick={() => onTriggerCr(selectedStation)}>
+            {/* THEM 16/10/2026 (yeu cau truc tiep user) - KHOA nut khi xem truoc bao loi KHONG_CO_DU_LIEU_HO
+                (thieu du lieu HO dang tin cay, KHONG THE chay CR duoc cho tram nay - xem khongCoDuLieuHo o
+                tren) - ly do hien NGAY CANH nut qua <span> ben duoi, khong can bam de biet tai sao bi khoa */}
+            <Button type="primary" disabled={khongCoDuLieuHo} onClick={() => onTriggerCr(selectedStation)}>
               Trigger CR cho tram {selectedStation.tram_name}
             </Button>
             {/* loading state: CDS co the mat vai giay den gan 1 phut de tra ve tram_lan_can (timeout FE da tang
@@ -429,12 +442,20 @@ const StationSearchGrid: React.FC<StationSearchGridProps> = ({ onTriggerCr, onSe
                 Dang tai du lieu tu CDS, co the mat den 1 phut...
               </span>
             )}
+            {/* THEM 16/10/2026 - ly do khoa nut Trigger CR, lay DUNG message that tu BE (previewErrorMessage,
+                KHONG tu viet lai chuoi rieng) - dat NGAY CANH 2 nut theo yeu cau, khong phai o Alert phia duoi */}
+            {khongCoDuLieuHo && (
+              <span style={{ color: R012_COLORS.dangerRed, fontWeight: 600 }}>{previewErrorMessage}</span>
+            )}
           </div>
           {/* error state: preview that bai (vd tram khong co tram lan can / CDS loi - da xac nhan qua goi that
               tram_id khong hop le tra HTTP 502 CDS_API_ERROR o Buoc 0) - hien ro cho NOC, KHONG de im lang.
               Toast loi chung da co san qua interceptor r012Request.ts, Alert nay THEM chi tiet ngay tai cho
-              bam nut de NOC khong phai nhin ra ngoai toast (toast se tu bien mat sau vai giay) */}
-          {previewMutation.isError && (
+              bam nut de NOC khong phai nhin ra ngoai toast (toast se tu bien mat sau vai giay).
+              SUA (16/10/2026) - CHI hien Alert nay cho cac loi KHAC KHONG_CO_DU_LIEU_HO: loi do da co rieng
+              1 dong ly do NGAY CANH nut Trigger CR o tren (khongCoDuLieuHo), hien THEM Alert giong het se
+              trung lap 2 lan cung 1 thong diep tren cung 1 man hinh */}
+          {previewMutation.isError && !khongCoDuLieuHo && (
             <Alert
               type="warning"
               message="Khong xem truoc duoc anh huong"

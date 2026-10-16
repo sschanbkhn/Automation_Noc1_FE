@@ -19,7 +19,7 @@ import { SessionListItem, SessionListResponse, SessionsQueryParams } from "../ty
 import EvaluationDetail from "./EvaluationDetail";
 // mau Tag theo trang thai session - GOP VE 1 hang so dung chung voi EvaluationDetail.tsx (27092026), xem
 // crSessionStatus.ts de biet day du 9 trang thai + ly do tach mau list/badge
-import { CR_STATUS_COLOR } from "./crSessionStatus";
+import { CR_STATUS_COLOR, layNhanTrangThaiCr } from "./crSessionStatus";
 // token mau dung chung toan module - xem theme.ts de biet ly do chon tung gia tri
 import { R012_COLORS } from "../theme";
 // dinh dang thoi gian dung CHUNG toan module (ep UTC->GMT+7) - xem ly do trong file helper
@@ -37,10 +37,13 @@ const columnHelper = createColumnHelper<SessionListItem>();
 // tat ca trang thai trong CR_STATUS_COLOR (crSessionStatus.ts) vao, vi cac trang thai con lai la buoc
 // danh gia/xu ly sau CR, ngoai pham vi bo loc nay). value "" nghia la "Tat ca" - KHONG gui param status len
 // BE khi chon muc nay
+// SUA (16/10/2026, yeu cau truc tiep user) - THEM KHONG_CHAY (tach khoi FAILED, xem WHY day du o
+// crSessionStatus.ts) vao bo loc, cung nhom voi FAILED (ca 2 deu la "session khong hoan thanh duoc")
 const STATUS_FILTER_OPTIONS = [
   { value: "", label: "Tat ca" },
   { value: "DONE", label: "DONE" },
   { value: "FAILED", label: "FAILED" },
+  { value: "KHONG_CHAY", label: "Khong chay" },
   { value: "RUNNING", label: "RUNNING" },
 ];
 
@@ -271,7 +274,7 @@ const SessionHistoryList: React.FC<SessionHistoryListProps> = ({ yeuCauLocTram =
           const soNgoaiDieuKien = info.row.original.so_cell_ngoai_dieu_kien_moi;
           return (
             <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap" }}>
-              <Tag color={CR_STATUS_COLOR[status]?.list ?? "default"}>{status}</Tag>
+              <Tag color={CR_STATUS_COLOR[status]?.list ?? "default"}>{layNhanTrangThaiCr(status)}</Tag>
               {/* THEM 04/10/2026 - dat CUNG O voi Trang thai (khong tach cot rieng): hau het session co gia
                   tri nay = 0 (dat du dieu kien), tach cot se tao mot cot gan nhu luon trong, giong cach
                   "phan_loai_loi" da lam o PhieuHistoryTable.tsx */}
@@ -297,10 +300,14 @@ const SessionHistoryList: React.FC<SessionHistoryListProps> = ({ yeuCauLocTram =
         enableSorting: false, // cot hanh dong, khong co gia tri de sort
         cell: (info) => {
           const row = info.row.original;
-          // CHI session FAILED moi hien nut - dung dieu kien BE dat ra (cac trang thai khac bi tra 409).
+          // CHI session FAILED/KHONG_CHAY moi hien nut - dung dieu kien BE dat ra (cac trang thai khac bi tra
+          // 409). SUA (16/10/2026, yeu cau truc tiep user) - THEM KHONG_CHAY: da doi chieu truc tiep
+          // application/xoa_session_use_case.py::_TRANG_THAI_XOA_DUOC = (CrStatus.FAILED, CrStatus.KHONG_CHAY)
+          // ben BE (mo rong 16/10/2026 khi them trang thai nay) - thieu nhanh nay se an mat nut Xoa cho
+          // session KHONG_CHAY du BE da cho phep, LECH voi BE that.
           // AN han thay vi hien nut disabled: day la nut XOA VINH VIEN, mot nut xoa mo mo o moi dong se
           // moi nguoi ta bam thu, trong khi tuyet dai da so dong khong bao gio duoc phep xoa
-          if (row.status !== "FAILED") {
+          if (row.status !== "FAILED" && row.status !== "KHONG_CHAY") {
             return <span style={{ color: "#bfbfbf" }}>-</span>;
           }
           return (

@@ -62,6 +62,13 @@ const CrLogTimeline: React.FC<CrLogTimelineProps> = ({ crLogs }) => {
         <div style={{ color: "#595959", fontSize: "0.8rem" }}>{formatDateTime(log.created_at)}</div>
         {/* message co the null (vd loi ha tang bat ngo khong kem thong diep ro) - chi render khi co */}
         {log.message && <div style={{ marginTop: "2px" }}>{log.message}</div>}
+        {/* THEM 16/10/2026 (yeu cau truc tiep user) - hien ma_loi tren dong log loi. CHI dong status="failed"
+            gay FAILED/KHONG_CHAY cho cr_session moi co gia tri (xem WHY day du o CrLogItem, types/index.ts) */}
+        {log.ma_loi && (
+          <div style={{ marginTop: "2px" }}>
+            <Tag color="red">{log.ma_loi}</Tag>
+          </div>
+        )}
       </div>
     ),
   }));
