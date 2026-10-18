@@ -433,6 +433,17 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
                   Vuot 2 phieu/sector (luat moi)
                 </Tag>
               )}
+              {/* THEM 18/10/2026 (yeu cau truc tiep user, BE commit e636357) - phieu SUCCESS xuat TRUOC khi BE
+                  lam tron TB/lech 2 chu so, ma tinh lai theo luat hien hanh thi cell KHONG CON la Khong dat.
+                  Tag CAM (dung chung mau "orange" voi Tag Vuot 2 phieu/sector ngay tren) - xem WHY day du o
+                  vuot_luat_lam_tron trong types/index.ts */}
+              {info.row.original.vuot_luat_lam_tron === true && (
+                <Tooltip title="Theo luat hien hanh (lam tron 2 chu so) cell nay khong con Khong dat">
+                  <Tag color="orange" style={{ marginInlineEnd: 0, cursor: "help" }}>
+                    Xuat theo luat cu
+                  </Tag>
+                </Tooltip>
+              )}
             </div>
           );
         },

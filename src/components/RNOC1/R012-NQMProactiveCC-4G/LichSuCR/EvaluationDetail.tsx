@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Alert, Card, Collapse, Descriptions, Empty, Segmented, Spin, Tag } from "antd";
+import { Alert, Button, Card, Collapse, Descriptions, Empty, Segmented, Spin, Tag, message } from "antd";
 import type { CollapseProps } from "antd";
-import { getSessionDetail } from "../services/R012Service";
+import { getSessionDetail, xuatHauKiemExcel } from "../services/R012Service";
 import { SessionDetailResponse } from "../types";
+// doc message loi THAT tu BE thay vi loi chung cua axios - xem WHY day du trong chinh file do
+import { layThongBaoLoi } from "../helpers/layThongBaoLoi";
 // XOA QoeQosCharts (Viec 2, 23072026 xac nhan voi user): 2 khoi "QoE (nguon: SOC)"/"QoS (nguon: CTS)" LUON
 // rong vi phu thuoc qoe_snapshot/qos_snapshot - job evaluate_cr_use_case CHI chay sau khi session du 21
 // ngay (EVALUATION_DAYS), nen component nay chiem cho vo ich trong toan bo thoi gian truoc do. Da co chart
@@ -55,6 +57,10 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
   // State nay cung chinh la cong tac LAZY cho QoE - xem comment tai cho dung ben duoi
   const [mucDanhGia, setMucDanhGia] = useState<string>(MUC_QOS);
 
+  // trang thai nut "Xuat hau kiem" (THEM 18/10/2026, yeu cau truc tiep user) - RIENG cho session nay (khac
+  // nut cung ten o SessionHistoryList.tsx, noi xuat theo khoang ngay thay vi 1 session)
+  const [dangXuatHauKiem, setDangXuatHauKiem] = useState<boolean>(false);
+
   // tu goi API rieng theo sessionId (khong nhan du lieu san tu SessionHistoryList) - giu component doc lap,
   // dung chung queryKey voi cac noi khac de TanStack Query tu dung chung cache cho cung 1 session
   const { data, isLoading, isError } = useQuery<SessionDetailResponse>({
@@ -81,6 +87,21 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
   if (isError || !data) {
     return <Alert type="error" message="Khong tai duoc chi tiet session" />;
   }
+
+  // THEM 18/10/2026 (yeu cau truc tiep user) - "Xuat hau kiem" cho DUNG session nay (?session_id=, khac nut
+  // cung ten o SessionHistoryList.tsx xuat theo khoang ngay). Dat SAU guard isLoading/isError: can data.id
+  const handleXuatHauKiem = async () => {
+    setDangXuatHauKiem(true);
+    try {
+      await xuatHauKiemExcel({ session_id: data.id });
+    } catch (error) {
+      // xuatHauKiemExcel KHONG qua r012Request nen KHONG co Notification loi tu dong qua interceptor -
+      // PHAI tu hien o day, dung CHUNG layThongBaoLoi voi moi noi khac trong module
+      message.error(layThongBaoLoi(error, "Xuat hau kiem that bai, vui long thu lai"));
+    } finally {
+      setDangXuatHauKiem(false);
+    }
+  };
 
   // Viec 6: gom cac khoi noi dung thanh Collapse (antd Collapse ban moi dung prop "items", KHONG con dung
   // <Collapse.Panel> children nhu ban cu da deprecated) - mac dinh CHI mo muc dau tien ("Thong tin tram"),
@@ -262,6 +283,13 @@ const EvaluationDetail: React.FC<EvaluationDetailProps> = ({ sessionId }) => {
   return (
     <Card
       title={<span style={{ color: "#fff", fontWeight: 600 }}>Chi tiet session CR</span>}
+      // THEM 18/10/2026 (yeu cau truc tiep user) - nut "Xuat hau kiem" rieng cho session nay, dat o header
+      // Card (extra) - vi tri tu nhien cho 1 hanh dong CAP SESSION, khong gan voi muc Collapse nao cu the
+      extra={
+        <Button onClick={handleXuatHauKiem} loading={dangXuatHauKiem}>
+          Xuat hau kiem
+        </Button>
+      }
       bordered
       // boxShadow mem dat o root Card (khong phai styles.body) de bao quanh toan bo khoi Card - gia tri
       // cardShadow hoc tu khao sat R003, xem ly do chon trong theme.ts

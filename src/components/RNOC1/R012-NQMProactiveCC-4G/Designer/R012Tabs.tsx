@@ -4,32 +4,54 @@ import TacDongTram from "../TacDongTram/TacDongTram";
 import LichSuCR from "../LichSuCR/LichSuCR";
 import CellXau from "../CellXau/CellXau";
 import LichSuPhieu from "../LichSuPhieu/LichSuPhieu";
-import { YeuCauLocTram } from "../LichSuCR/SessionHistoryList";
+import { YeuCauLocTram, YeuCauMoSession } from "../LichSuCR/SessionHistoryList";
+import Dashboard from "../Dashboard/Dashboard";
 // CSS bo cuc dung CHUNG cho moi bang trong module - nhung DUNG 1 LAN o day (goc module) thay vi lap lai
 // the <style> trong 12 file bang. Xem ly do day du trong common/r012TableStyle.tsx
 import { R012TableStyle } from "../common/r012TableStyle";
 
-// key cua tab "Lich su CR" - dat thanh hang so vi gio co cho khac (dieu huong tu tab Lich su phieu) tro
-// toi no, go lech chinh ta se lam nut bam khong ra tab nao ma cung khong bao loi gi
+// key cua tab "Lich su CR" - dat thanh hang so vi gio co cho khac (dieu huong tu tab Lich su phieu, VA GIO
+// CA tab Dashboard) tro toi no, go lech chinh ta se lam nut bam khong ra tab nao ma cung khong bao loi gi
 const KEY_TAB_LICH_SU_CR = "tab2";
+// key tab "Dashboard" (THEM 18/10/2026, yeu cau truc tiep user: "dau tien trong R012Tabs")
+const KEY_TAB_DASHBOARD = "tab-dashboard";
 
 const R012Tabs: React.FC = () => {
   // Tabs chuyen tu KHONG dieu khien (defaultActiveKey) sang CO dieu khien: can doi tab bang CODE khi nguoi
-  // dung bam ma tram o muc "Tien trinh" cua tab Lich su phieu. defaultActiveKey chi co tac dung o lan
-  // render dau, khong doi tab theo lenh duoc
+  // dung bam ma tram o muc "Tien trinh" cua tab Lich su phieu (hoac muc "Can xu ly" cua tab Dashboard).
+  // defaultActiveKey chi co tac dung o lan render dau, khong doi tab theo lenh duoc.
+  // GIU NGUYEN "tab1" (Tac dong tram) la tab mo mac dinh - yeu cau "Dashboard dau tien" (18/10/2026) la VI
+  // TRI trong danh sach tab (items, xem duoi), KHONG phai doi tab NOC thay khi vao module. Doi landing tab
+  // la 1 thay doi hanh vi quan trong (lech thoi quen NOC dang bam "Tac dong tram" dau tien moi ngay) ma
+  // yeu cau khong noi ro - KHONG tu suy dien, chi lam dung pham vi da yeu cau.
   const [activeKey, setActiveKey] = useState<string>("tab1");
 
   // Yeu cau loc gui sang tab Lich su CR. Mang theo "seq" tang dan chu khong chi tramId: bam lai DUNG ma
   // tram vua bam se khong lam prop doi gia tri -> useEffect ben SessionHistoryList khong chay lai ->
   // nguoi dung bam ma khong thay gi xay ra
   const [yeuCauLocTram, setYeuCauLocTram] = useState<YeuCauLocTram | null>(null);
+  // THEM 18/10/2026 - yeu cau MO THANG 1 session, gui tu tab Dashboard (muc "Can xu ly") - cung quy uoc
+  // "seq" voi yeuCauLocTram o tren
+  const [yeuCauMoSession, setYeuCauMoSession] = useState<YeuCauMoSession | null>(null);
 
   const handleXemLichSuCR = useCallback((tramId: string) => {
     setYeuCauLocTram((truoc) => ({ tramId, seq: (truoc?.seq ?? 0) + 1 }));
     setActiveKey(KEY_TAB_LICH_SU_CR);
   }, []);
 
+  // THEM 18/10/2026 (yeu cau truc tiep user, "bam -> mo session trong Lich su CR") - truyen xuong Dashboard
+  // qua prop onMoSessionTrongLichSuCR
+  const handleMoSessionTrongLichSuCR = useCallback((sessionId: number) => {
+    setYeuCauMoSession((truoc) => ({ sessionId, seq: (truoc?.seq ?? 0) + 1 }));
+    setActiveKey(KEY_TAB_LICH_SU_CR);
+  }, []);
+
   const items = [
+    {
+      key: KEY_TAB_DASHBOARD,
+      label: "Dashboard",
+      children: <Dashboard onMoSessionTrongLichSuCR={handleMoSessionTrongLichSuCR} />,
+    },
     {
       key: "tab1",
       label: "Tác động trạm",
@@ -38,7 +60,7 @@ const R012Tabs: React.FC = () => {
     {
       key: KEY_TAB_LICH_SU_CR,
       label: "Lịch sử CR",
-      children: <LichSuCR yeuCauLocTram={yeuCauLocTram} />,
+      children: <LichSuCR yeuCauLocTram={yeuCauLocTram} yeuCauMoSession={yeuCauMoSession} />,
       // 03102026, yeu cau truc tiep user: bo loc tram (o tim/trang thai/khoang ngay trong
       // SessionHistoryList.tsx) dang bi "nho" qua cac lan chuyen tab, vi antd Tabs MAC DINH giu nguyen cac
       // tab khong active trong DOM (khong unmount) nen state loc cu khong bao gio bi xoa. destroyOnHidden

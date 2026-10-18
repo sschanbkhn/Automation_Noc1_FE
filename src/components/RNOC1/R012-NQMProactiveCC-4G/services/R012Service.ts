@@ -1,6 +1,12 @@
 // import instance axios rieng cua R012 da duoc cau hinh san (base url tro toi FastAPI, interceptor gan Authorization va xu ly 401)
 // duong dan tuong doi da kiem tra dung vi tri file thuc te: services/R012Service.ts -> src/services/r012Request.ts la 4 cap thu muc
 import r012Request from '../../../../services/r012Request';
+// axios + Cookie DUNG RIENG cho xuatHauKiemExcel() ben duoi (THEM 18/10/2026) - KHONG dung r012Request vi
+// interceptor response cua no LUON unwrap response.data (xem services/r012Request.ts dong 28-29), se mat het
+// response.headers TRUOC khi ham do kip doc Content-Disposition de lay ten file - xem WHY day du tai noi khai
+// bao hauKiemBlobRequest
+import axios from 'axios';
+import { Cookie } from 'helpers/cookie';
 import {
   StationsQueryParams,
   StationListResponse,
@@ -31,6 +37,9 @@ import {
   ChayXuatPhieuAutoResponse,
   StationsMapResponse,
   StationMapPoint,
+  HauKiemExcelParams,
+  DashboardQueryParams,
+  DashboardTongQuanResponse,
 } from '../types';
 
 // axios 0.21.x (ban dang dung, xem package.json) tu serialize 1 param kieu MANG thanh "vendor[]=A&vendor[]=B"
@@ -403,3 +412,91 @@ export const evaluateCr = async (): Promise<EvaluateCrResponse> => {
 // GET /api/v1/cr/stream/{session_id} la SSE (Server-Sent Events), response schema rong vi khong phai JSON thuong
 // khong viet ham axios cho endpoint nay vi axios se buffer toan bo response thay vi doc tung event theo dong chay
 // endpoint nay se duoc goi bang EventSource truc tiep trong hooks/useSseStream.ts (chua lam trong buoc nay, xem Buoc 5)
+
+// ham goi GET /api/v1/dashboard/tong-quan - tong quan toan module R012 (THEM 18/10/2026, xem WHY day du o
+// DashboardTongQuanResponse, types/index.ts). 3 param mang (khu_vuc/ma_tinh/netact) can CUNG paramsSerializer
+// voi /stations (serializeStationsParams o tren) - FastAPI doi dang lap lai key THUONG ("khu_vuc=KV1&khu_vuc=
+// KV2"), khac dang "khu_vuc[]=" mac dinh cua axios 0.21.x
+export const getDashboardTongQuan = async (
+  params: DashboardQueryParams
+): Promise<DashboardTongQuanResponse> => {
+  try {
+    // endpoint nay chi doc DB (khong goi CDS/CTS/CEM) nen giu timeout ngan hon mac dinh 60s cua ca instance
+    const data: any = await r012Request.get('/dashboard/tong-quan', {
+      params,
+      timeout: 30000,
+      paramsSerializer: serializeStationsParams,
+    });
+    return data as DashboardTongQuanResponse;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// instance axios RIENG CHI phuc vu xuatHauKiemExcel() ben duoi - KHONG dung r012Request (interceptor response
+// cua no o services/r012Request.ts LUON unwrap response.data truoc khi tra ve cho noi goi, mat het
+// response.headers - ham nay can .headers de doc Content-Disposition lay ten file BE dat). KHONG sua
+// r012Request.ts (theo yeu cau) - instance nay copy Y HET cau hinh can thiet (baseURL + header Authorization)
+// nhung KHONG gan interceptor response nao, giu nguyen AxiosResponse day du
+const hauKiemBlobRequest = axios.create({
+  baseURL: process.env.R012_API_URL || 'http://127.0.0.1:8000/api/v1',
+  timeout: 60000,
+});
+hauKiemBlobRequest.interceptors.request.use((config) => {
+  config.headers['Authorization'] = 'Bearer ' + Cookie.getCookie('Token');
+  return config;
+});
+
+// doc ten file tu header Content-Disposition - BE tra dang `attachment; filename="ten_file.xlsx"` (DA XAC
+// NHAN qua doc truc tiep api/routers/hau_kiem.py ben BE, KHONG dung dang RFC5987 "filename*="), regex CHI
+// can khop dang nay. null neu header thieu/dang la (vd proxy trung gian strip header) - fallback ten file o
+// noi goi ham nay (xuatHauKiemExcel)
+function layTenFileTuContentDisposition(contentDisposition: string | undefined): string | null {
+  if (!contentDisposition) {
+    return null;
+  }
+  const match = contentDisposition.match(/filename="?([^";]+)"?/i);
+  return match ? match[1] : null;
+}
+
+// ham goi GET /api/v1/hau-kiem/excel - xuat Excel hau kiem (THEM 18/10/2026), tra ve FILE (blob) kem ten file
+// qua header Content-Disposition (xem WHY day du o HauKiemExcelParams, types/index.ts). Tu tai file ve may
+// nguoi dung qua the <a download> tam thoi, giong pattern o cac noi khac cua app (vd RnocR008Service.tsx)
+export const xuatHauKiemExcel = async (params: HauKiemExcelParams): Promise<void> => {
+  try {
+    const response = await hauKiemBlobRequest.get('/hau-kiem/excel', {
+      params,
+      responseType: 'blob',
+      paramsSerializer: serializeStationsParams,
+    });
+    const tenFile = layTenFileTuContentDisposition(response.headers['content-disposition']) ?? 'hau_kiem.xlsx';
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', tenFile);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (error: any) {
+    // SUA (18/10/2026, yeu cau truc tiep user, "KIEM 1 DIEM") - responseType:'blob' ap dung cho CA response
+    // THANH CONG LAN LOI cua CUNG 1 request (axios khong tu phan biet duoc truoc khi nhan response): khi BE
+    // tra 4xx/5xx, body that su la JSON {error_code, message, session_id} (api/middleware/error_handler.py)
+    // nhung bi "boc" thanh 1 Blob thay vi object da parse san nhu moi loi khac trong module (qua
+    // r012Request, KHONG dung responseType:'blob'). Neu KHONG tu doc lai o day, layThongBaoLoi() o noi goi
+    // se khong thay duoc error.response.data.message (chi thay 1 object Blob ro khong co field nao) va roi
+    // vao thong bao axios chung chung ("Request failed with status code 422") thay vi ly do THAT tu BE.
+    // Tu doc blob.text() -> JSON.parse() roi GAN DE error.response.data truoc khi nem lai, de noi goi dung
+    // CHUNG duoc layThongBaoLoi nhu moi loi khac, khong can sua gi them o phia goi.
+    if (error?.response?.data instanceof Blob) {
+      try {
+        const text: string = await error.response.data.text();
+        error.response.data = JSON.parse(text);
+      } catch {
+        // blob khong phai JSON hop le (vd loi ha tang/proxy tra HTML) - giu nguyen Blob, layThongBaoLoi se
+        // tu fallback ve error.message chung thay vi crash o day
+      }
+    }
+    throw error;
+  }
+};

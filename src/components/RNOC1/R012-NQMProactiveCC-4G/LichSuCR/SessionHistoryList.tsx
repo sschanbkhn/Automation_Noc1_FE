@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, Button, DatePicker, Input, Modal, Pagination, Select, Spin, Tag, message } from "antd";
+import { Alert, Button, DatePicker, Input, Modal, Pagination, Select, Spin, Tag, Tooltip, message } from "antd";
 import dayjs, { Dayjs } from "dayjs";
 import {
   createColumnHelper,
@@ -14,7 +14,7 @@ import { SortableHeaderCell } from "../common/SortableHeaderCell";
 // dung debounce co san tu lodash (da la dependency co san trong package.json, StationSearchGrid.tsx cung
 // dung cach nay) thay vi tu viet lai setTimeout/clearTimeout - tranh trung lap logic da duoc test san
 import debounce from "lodash/debounce";
-import { getSessions, xoaSession } from "../services/R012Service";
+import { getSessions, xoaSession, xuatHauKiemExcel } from "../services/R012Service";
 import { SessionListItem, SessionListResponse, SessionsQueryParams } from "../types";
 import EvaluationDetail from "./EvaluationDetail";
 // mau Tag theo trang thai session - GOP VE 1 hang so dung chung voi EvaluationDetail.tsx (27092026), xem
@@ -56,11 +56,22 @@ export interface YeuCauLocTram {
   seq: number;
 }
 
-interface SessionHistoryListProps {
-  yeuCauLocTram?: YeuCauLocTram | null;
+// THEM 18/10/2026 (yeu cau truc tiep user) - yeu cau MO THANG 1 session (khac yeuCauLocTram chi LOC danh
+// sach): tab Dashboard (muc "Can xu ly" - qua han xuat phieu / Khong chay) biet CHINH XAC session id can mo,
+// khac voi tab Lich su phieu (chi biet tram_id, phai loc danh sach roi NOC tu bam dong can xem). "seq" cung
+// ly do voi YeuCauLocTram.seq: bam lai DUNG session vua mo se khong lam prop doi gia tri object (chi doi
+// field con), useEffect se khong chay lai
+export interface YeuCauMoSession {
+  sessionId: number;
+  seq: number;
 }
 
-const SessionHistoryList: React.FC<SessionHistoryListProps> = ({ yeuCauLocTram = null }) => {
+interface SessionHistoryListProps {
+  yeuCauLocTram?: YeuCauLocTram | null;
+  yeuCauMoSession?: YeuCauMoSession | null;
+}
+
+const SessionHistoryList: React.FC<SessionHistoryListProps> = ({ yeuCauLocTram = null, yeuCauMoSession = null }) => {
   const [page, setPage] = useState<number>(1);
   // 10 dong/trang (yeu cau truc tiep user) - CO Y khac default 20 cua BE (schema SessionsQueryParams):
   // bang nay nam ngay dau tab, 20 dong lam phai cuon het man hinh moi thay Pagination. Van gui size=10
@@ -124,6 +135,18 @@ const SessionHistoryList: React.FC<SessionHistoryListProps> = ({ yeuCauLocTram =
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [yeuCauLocTram?.seq]);
 
+  // Nhan yeu cau MO THANG 1 session tu Dashboard (muc "Can xu ly") - chi can gan selectedSessionId, Modal
+  // chi tiet (dieu khien boi bien nay, xem JSX cuoi file) tu mo, KHONG can loc/doi gi o danh sach ben duoi
+  // (EvaluationDetail trong Modal tu goi API rieng theo sessionId, doc lap voi state loc/phan trang cua bang)
+  useEffect(() => {
+    if (!yeuCauMoSession) {
+      return;
+    }
+    setSelectedSessionId(yeuCauMoSession.sessionId);
+    // phu thuoc vao seq (KHONG phai ca object) - cung ly do voi effect yeuCauLocTram o tren
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [yeuCauMoSession?.seq]);
+
   // chuyen dateRange sang from/to dang ISO de goi API - 'to' PHAI la CUOI ngay (endOf day, 23:59:59.999)
   // chu KHONG phai 00:00:00 cua ngay ket thuc, neu khong se bi thieu toan bo du lieu trong ngay cuoi cung
   // duoc chon (bai hoc lap lai tu API CTS truoc do - cung 1 loai loi "cut mat 1 ngay" da tung gap)
@@ -148,6 +171,45 @@ const SessionHistoryList: React.FC<SessionHistoryListProps> = ({ yeuCauLocTram =
   const handleStatusFilterChange = (value: string) => {
     setStatusFilter(value);
     setPage(1);
+  };
+
+  // tu_ngay/den_ngay RIENG cho xuatHauKiemExcel (THEM 18/10/2026) - KHONG dung lai fromParam/toParam o tren:
+  // /hau-kiem/excel nhan `date` ("YYYY-MM-DD" ngay lich GMT+7), KHAC han /sessions nhan `datetime` (ISO) -
+  // gui ISO vao day se bi FastAPI tu choi 422 (sai kieu). Cung dateRange goc, chi khac cach format khi gui len
+  const { tuNgayHauKiem, denNgayHauKiem } = useMemo(() => {
+    if (!dateRange) {
+      return { tuNgayHauKiem: undefined as string | undefined, denNgayHauKiem: undefined as string | undefined };
+    }
+    const [start, end] = dateRange;
+    return { tuNgayHauKiem: start.format("YYYY-MM-DD"), denNgayHauKiem: end.format("YYYY-MM-DD") };
+  }, [dateRange]);
+
+  // dang goi GET /hau-kiem/excel hay khong - rieng voi dangXoaId (khac hanh dong, khac nut)
+  const [dangXuatHauKiem, setDangXuatHauKiem] = useState<boolean>(false);
+
+  // THEM 18/10/2026 (yeu cau truc tiep user) - nut "Xuat hau kiem" o tab Lich su CR (danh sach): xuat theo
+  // KHOANG NGAY + bo loc trang thai DANG CHON (statusFilter), KHONG theo 1 session rieng (khac nut tuong tu o
+  // EvaluationDetail.tsx, noi xuat theo session_id). BAT BUOC co ca tu_ngay va den_ngay (xem WHY day du o
+  // HauKiemExcelParams, types/index.ts - BE tra 422 neu thieu 1 trong 2 khi khong co session_id) - nut nay bi
+  // KHOA cho den khi nguoi dung chon khoang ngay (xem disabled o JSX ben duoi)
+  const handleXuatHauKiem = async () => {
+    if (!tuNgayHauKiem || !denNgayHauKiem) {
+      return;
+    }
+    setDangXuatHauKiem(true);
+    try {
+      await xuatHauKiemExcel({
+        tu_ngay: tuNgayHauKiem,
+        den_ngay: denNgayHauKiem,
+        trang_thai: statusFilter ? [statusFilter] : undefined,
+      });
+    } catch (error) {
+      // ham xuatHauKiemExcel KHONG qua r012Request nen KHONG co Notification loi tu dong qua interceptor -
+      // PHAI tu hien o day, dung CHUNG layThongBaoLoi voi moi noi khac trong module
+      message.error(layThongBaoLoi(error, "Xuat hau kiem that bai, vui long thu lai"));
+    } finally {
+      setDangXuatHauKiem(false);
+    }
   };
 
   // Goi THAT DELETE /api/v1/sessions/{id}. Tach rieng khoi handleXacNhanXoa ben duoi: ham nay chi lo goi
@@ -396,6 +458,14 @@ const SessionHistoryList: React.FC<SessionHistoryListProps> = ({ yeuCauLocTram =
           style={{ width: "160px" }}
         />
         <Button onClick={handleClearFilters}>Xoa loc</Button>
+        {/* THEM 18/10/2026 (yeu cau truc tiep user) - xuat Excel hau kiem theo khoang ngay + trang thai
+            DANG LOC. KHOA khi chua chon khoang ngay (BE bat buoc ca tu_ngay va den_ngay khi khong co
+            session_id - xem WHY day du o handleXuatHauKiem) - Tooltip giai thich ly do bi khoa */}
+        <Tooltip title={!dateRange ? "Chon khoang ngay truoc khi xuat" : undefined}>
+          <Button onClick={handleXuatHauKiem} loading={dangXuatHauKiem} disabled={!dateRange}>
+            Xuat hau kiem
+          </Button>
+        </Tooltip>
       </div>
 
       {isLoading && <Spin tip="Dang tai lich su CR..." />}

@@ -19,13 +19,16 @@ import { PhieuHistoryItem, PhieuHistoryResponse } from "../../types";
 import { R012_COLORS } from "../../theme";
 // doc message loi THAT tu BE thay vi loi chung cua axios - xem WHY day du trong chinh file do
 import { layThongBaoLoi } from "../../helpers/layThongBaoLoi";
-import { moTaCuaSoBang, moTaSoNgay } from "../../helpers/cuaSoNgay";
+import { moTaCuaSoBang, moTaNguonSoLieu, moTaSoNgay, soNgayCuaSo } from "../../helpers/cuaSoNgay";
 import { SortableHeaderCell } from "../../common/SortableHeaderCell";
 import { getLichSuPhieu, xuatPhieu, getQosCells } from "../../services/R012Service";
 // Ket luan DAT/KHONG DAT do BE tinh va tra ve (xem QosCellItem trong types/index.ts) - FE khong con
 // ham danh gia nao. qosEvaluation.ts nay chi con phuc vu chart 15 ngay (muc 4) va chi lam phep tinh
 // thuan tuy, khong con hang so nghiep vu.
 import { QosCellItem, QosCellsResponse, SessionAffectedCellItem } from "../../types";
+// nhan/mau "Ket luan" + dinh dang diem so DUNG CHUNG voi bang QoE (QoeCellsTable.tsx) - xem WHY day du
+// trong chinh file do ("QoS va QoE hien thi DOI XUNG o moi cho", yeu cau truc tiep user 18/10/2026)
+import { KET_QUA_TAG, KET_QUA_FILTER_OPTIONS, formatDiemSo } from "./ketQuaDanhGia";
 
 // trang thai nut "Xuat phieu" theo TUNG cell (khoa theo cell_name) - RIENG voi dong du lieu (ket qua danh
 // gia QoS thuan, khong lien quan xuat phieu) vi 1 cell co the duoc TINH LAI danh gia (nut "Tinh lai danh
@@ -46,26 +49,6 @@ export function formatTimestampForFileName(date: Date): string {
   const min = pad(date.getMinutes());
   return `${dd}${mm}${yyyy}_${hh}${min}`;
 }
-
-// SUA (yeu cau truc tiep user, khop tieu chi MOI phia BE) - BO "ACTION_TAG"/"ACTION_FILTER_OPTIONS" rieng
-// (Tieu chi 2 "Can xu ly" cu) - chi con 1 Tag/filter "Ket luan" DUY NHAT, dua tren chenh lech TB truoc/sau.
-// Khoa doi tu "INSUFFICIENT" sang "INSUFFICIENT_DATA" - dung gia tri BE tra ve
-// (domain/services/evaluation_service.py dong 76), khong con enum rieng cua FE.
-// Record<string,...> + fallback o cho dung: BE khai bao ket_qua la str tu do nen gia tri moi van hien
-// duoc nguyen van thay vi lam vo bang
-const CONCLUSION_TAG: Record<string, { label: string; color: string }> = {
-  PASS: { label: "DAT", color: "green" },
-  FAIL: { label: "KHONG DAT", color: "red" },
-  INSUFFICIENT_DATA: { label: "Chua du du lieu", color: "default" },
-};
-
-// "" nghia la "Tat ca" - khong loc theo Ket luan, giong quy uoc STATUS_FILTER_OPTIONS o SessionHistoryList.tsx
-const CONCLUSION_FILTER_OPTIONS = [
-  { value: "", label: "Tat ca ket luan" },
-  { value: "PASS", label: "DAT" },
-  { value: "FAIL", label: "KHONG DAT" },
-  { value: "INSUFFICIENT_DATA", label: "Chua du du lieu" },
-];
 
 const columnHelper = createColumnHelper<QosCellItem>();
 
@@ -318,34 +301,27 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
       // bang QoS truoc day thi khong - gio BE tra so_ngay_* cho ca hai nen hien nhu nhau
       columnHelper.accessor("avg_before", {
         header: "TB truoc CR",
-        cell: (info) => {
-          const v = info.getValue();
-          return (
-            <Tooltip title={`Tinh tu ${moTaSoNgay(info.row.original.so_ngay_before, cuaSo?.before)} co du lieu`}>
-              {v !== null ? v.toFixed(2) : "-"}
-            </Tooltip>
-          );
-        },
+        // SUA (18/10/2026, yeu cau truc tiep user) - formatDiemSo() thay v.toFixed(2): dau PHAY thay dau
+        // CHAM (quy uoc so VN) - xem WHY day du (vi sao KHONG dung "%"): ./ketQuaDanhGia.ts
+        cell: (info) => (
+          <Tooltip title={`Tinh tu ${moTaSoNgay(info.row.original.so_ngay_before, cuaSo?.before)} co du lieu`}>
+            {formatDiemSo(info.getValue())}
+          </Tooltip>
+        ),
       }),
       columnHelper.accessor("avg_after", {
         header: "TB sau CR",
-        cell: (info) => {
-          const v = info.getValue();
-          return (
-            <Tooltip title={`Tinh tu ${moTaSoNgay(info.row.original.so_ngay_after, cuaSo?.after)} co du lieu`}>
-              {v !== null ? v.toFixed(2) : "-"}
-            </Tooltip>
-          );
-        },
+        cell: (info) => (
+          <Tooltip title={`Tinh tu ${moTaSoNgay(info.row.original.so_ngay_after, cuaSo?.after)} co du lieu`}>
+            {formatDiemSo(info.getValue())}
+          </Tooltip>
+        ),
       }),
       // BE tra delta = avg_before - avg_after, DUONG = TUT (sua 03/10/2026) - doi ten cot cho ro chieu,
       // tranh nguoi doc hieu nham dau "+"/"-" nguoc
       columnHelper.accessor("delta", {
         header: "Chenh lech (truoc - sau)",
-        cell: (info) => {
-          const v = info.getValue();
-          return v !== null ? v.toFixed(2) : "-";
-        },
+        cell: (info) => formatDiemSo(info.getValue()),
       }),
       columnHelper.accessor("ket_qua", {
         header: "Ket luan",
@@ -354,9 +330,36 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
         cell: (info) => {
           const v = info.getValue();
           // fallback: BE khai bao ket_qua la str tu do nen gia tri moi van hien nguyen van
-          const tag = CONCLUSION_TAG[v] ?? { label: v, color: "default" };
+          const tag = KET_QUA_TAG[v] ?? { label: v, color: "default" };
           return <Tag color={tag.color}>{tag.label}</Tag>;
         },
+      }),
+      // 3 cot MOI (18/10/2026, yeu cau truc tiep user: "QoS va QoE hien thi DOI XUNG o moi cho") - BE vua
+      // them diem_thap_nhat_sau/so_ngay_dat_sau vao QosCellItem (truoc day CHI QoeCellItem co) de 2 bang
+      // doi xung hoan toan - xem WHY day du o QosCellItem (types/index.ts)
+      columnHelper.display({
+        id: "so_ngay_co_du_lieu_sau_cr",
+        header: "So ngay co du lieu sau CR",
+        enableSorting: false, // gia tri hop (n/mau so), sort theo chuoi hien thi khong co y nghia
+        cell: (info) => {
+          const row = info.row.original;
+          const mauSo = cuaSo?.after ? soNgayCuaSo(cuaSo.after) : "?";
+          return (
+            <Tooltip title={`Cua so sau CR: ${moTaSoNgay(row.so_ngay_after, cuaSo?.after)}`}>
+              {`${row.so_ngay_after}/${mauSo}`}
+            </Tooltip>
+          );
+        },
+      }),
+      columnHelper.accessor("diem_thap_nhat_sau", {
+        // Diem TB co the dat trong khi van co ngay tut sau rat sau - cot nay de lo cai do (giong bang QoE)
+        header: "Diem thap nhat sau",
+        cell: (info) => formatDiemSo(info.getValue()),
+      }),
+      columnHelper.accessor("so_ngay_dat_sau", {
+        header: "So ngay dat",
+        // hien dang "x/y" (so ngay dat / tong so ngay co du lieu sau CR) - giong het cach bang QoE da lam
+        cell: (info) => `${info.getValue() ?? 0}/${info.row.original.so_ngay_after}`,
       }),
       columnHelper.display({
         id: "xuat_phieu",
@@ -439,7 +442,8 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
   });
 
   // export theo DUNG danh sach dang hien (da loc theo Ket luan) - NOC loc "KHONG DAT" roi export se ra dung
-  // file chi chua cell khong dat, hop ly hon export ca 47 cell moi lan
+  // file chi chua cell khong dat, hop ly hon export ca 47 cell moi lan. Gia tri SO giu RAW (khong qua
+  // formatDiemSo) - de nguoi dung tu dinh dang trong Excel, giong quy uoc da dung o cac bang preview khac
   const handleExportExcel = () => {
     const exportRows = filteredRows.map((r) => ({
       cell_name: r.cell_name,
@@ -447,7 +451,11 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
       tb_truoc: r.avg_before ?? "",
       tb_sau: r.avg_after ?? "",
       chenh_lech: r.delta ?? "",
-      ket_luan: (CONCLUSION_TAG[r.ket_qua] ?? { label: r.ket_qua }).label,
+      ket_luan: (KET_QUA_TAG[r.ket_qua] ?? { label: r.ket_qua }).label,
+      // 3 cot MOI (18/10/2026) - dong bo voi 3 cot moi them tren bang (xem WHY day du o useMemo "columns")
+      so_ngay_co_du_lieu_sau_cr: r.so_ngay_after,
+      diem_thap_nhat_sau: r.diem_thap_nhat_sau ?? "",
+      so_ngay_dat_sau: `${r.so_ngay_dat_sau ?? 0}/${r.so_ngay_after}`,
     }));
     const worksheet = XLSX.utils.json_to_sheet(exportRows);
     const workbook = XLSX.utils.book_new();
@@ -463,6 +471,15 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
       {moTaCuaSoBang(cuaSo?.ngayCr, cuaSo?.before, cuaSo?.after) && (
         <div style={{ color: "#8c8c8c", fontSize: "0.85rem", marginBottom: "0.5rem" }}>
           {moTaCuaSoBang(cuaSo?.ngayCr, cuaSo?.before, cuaSo?.after)}
+        </div>
+      )}
+      {/* THEM (18/10/2026, yeu cau truc tiep user) - ghi nho nguon so lieu: BE "MOT NGUON SO LIEU" (commit
+          e636357) co the doc tu snapshot da luu luc danh gia thay vi goi truc tiep CTS moi lan xem - xem WHY
+          day du o helpers/cuaSoNgay.ts::moTaNguonSoLieu. CHI hien khi da co qosData (giong dieu kien
+          moTaCuaSoBang o tren) - chua tai xong hoac khong co affected_cells thi chua co gi de ghi nho */}
+      {qosData && (
+        <div style={{ color: "#8c8c8c", fontSize: "0.85rem", marginBottom: "0.5rem" }}>
+          {moTaNguonSoLieu(qosData.ngay_chup_snapshot)}
         </div>
       )}
 
@@ -483,7 +500,7 @@ const QosEvaluationTable: React.FC<QosEvaluationTableProps> = ({ sessionId, affe
             <Select
               value={conclusionFilter}
               onChange={setConclusionFilter}
-              options={CONCLUSION_FILTER_OPTIONS}
+              options={KET_QUA_FILTER_OPTIONS}
               style={{ width: 180 }}
             />
             <Button onClick={handleExportExcel} disabled={filteredRows.length === 0}>

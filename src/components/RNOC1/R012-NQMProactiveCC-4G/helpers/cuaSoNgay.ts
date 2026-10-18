@@ -28,6 +28,16 @@ export const moTaSoNgay = (soNgayThucTe: number, cs: CuaSoNgay | undefined): str
   return `${soNgayThucTe}/${soNgayCuaSo(cs)} ngay (${ngayNgan(cs.tu)}-${ngayNgan(cs.den)})`;
 };
 
+// SUA (18/10/2026, yeu cau truc tiep user, BE commit e636357 "MOT NGUON SO LIEU") - BE gio DOC SNAPSHOT da
+// luu luc danh gia (ngay_chup_snapshot) thay vi LUON goi truc tiep CTS/CEM nhu truoc. Dong ghi nho nay cho
+// nguoi dung biet so lieu dang xem la "anh chup" tai 1 thoi diem co dinh hay la "truc tiep" ngay luc bam Xem
+// (vd CTS/CEM co the da doi gia tri sau thoi diem chup). null = BE chua co snapshot (session chua danh gia
+// lan nao / BE cu truoc 18/10/2026) -> van goi truc tiep nhu hanh vi cu
+export const moTaNguonSoLieu = (ngayChupSnapshot: string | null | undefined): string =>
+  ngayChupSnapshot
+    ? `So lieu tai thoi diem danh gia ${dayjs(ngayChupSnapshot).format("DD/MM/YYYY")}`
+    : "So lieu lay truc tiep";
+
 // Mot dong tom tat cua so cua ca bang, dat duoi tieu de: "Ngay CR 13/08 - cua so truoc 06-12/08, sau 14-20/08"
 export const moTaCuaSoBang = (
   ngayCr: string | undefined,
