@@ -4,7 +4,11 @@
 // trang thai moi se de bi sua 1 noi quen noi kia, hien mau khac nhau cho cung 1 trang thai.
 //
 // CAP NHAT theo hop dong BE moi: DA BO HAN DRY_RUN (khong con che do chay thu -> khong con trang thai nay),
-// va THEM 2 trang thai "khong xuat" ben duoi.
+// va THEM 3 trang thai "khong xuat" ben duoi (THEM KHONG_XUAT_DA_CO_PHIEU_THANG 20/10/2026, doc truc tiep
+// domain/value_objects/trang_thai_phieu.py::TRANG_THAI_LOC - truoc day FE thieu gia tri nay nen loc theo no
+// se bi BE tra 422).
+import { MAU } from "../Dashboard/dashboardConstants";
+
 export const PHIEU_STATUS_COLORS: Record<string, string> = {
   SUCCESS: "success", // xanh la - xuat phieu that thanh cong
   FAILED: "error", // do - CTS tu choi / loi khi xuat
@@ -24,6 +28,10 @@ export const PHIEU_STATUS_COLORS: Record<string, string> = {
   // can xu ly. Cung dong nhat voi cach 2 bang danh gia QoS/QoE to mau ket luan INSUFFICIENT - cung mot
   // chuyen "may khong ket luan duoc" thi cung mot mau
   KHONG_XUAT_THIEU_DU_LIEU: "default",
+  // XAM (default) - cell DA co phieu SUCCESS trong cung thang, job CO Y khong xuat trung (chong trung chu
+  // khong phai su co). Giong ly do chon "default" cho KHONG_XUAT_THIEU_DU_LIEU o tren: khong co viec gi de
+  // nguoi truc phai sua, to mau canh bao se lam loang nhung dong that su can xu ly
+  KHONG_XUAT_DA_CO_PHIEU_THANG: "default",
 };
 
 // Nhan tieng Viet NGAN cho 3 trang thai KHONG_XUAT_* - CHI 3 gia tri nay co nhan rieng, khong dich SUCCESS/FAILED/
@@ -35,6 +43,17 @@ export const PHIEU_STATUS_LABELS: Record<string, string> = {
   KHONG_XUAT_VUOT_GIOI_HAN: "Vuot gioi han",
   KHONG_XUAT_HET_LUOT_THU: "Het luot thu",
   KHONG_XUAT_THIEU_DU_LIEU: "Khong du du lieu",
+  KHONG_XUAT_DA_CO_PHIEU_THANG: "Da co phieu thang", // THEM 20/10/2026
+};
+
+// ly do NGAN cho tung trang thai KHONG_XUAT_* (THEM 20/10/2026, yeu cau truc tiep user: "Phieu khong gui
+// CTS (<ly do theo trang thai>)") - dich ngan gon tu Y_NGHIA_TRANG_THAI ben BE
+// (domain/value_objects/trang_thai_phieu.py), dung trong PhieuDetailModal.tsx khi an bang request_payload
+export const LY_DO_KHONG_XUAT: Record<string, string> = {
+  KHONG_XUAT_THIEU_DU_LIEU: "khong du ngay du lieu QoS/QoE de ket luan",
+  KHONG_XUAT_VUOT_GIOI_HAN: "vuot tran so phieu moi sector cua tram tat",
+  KHONG_XUAT_HET_LUOT_THU: "da POST het so lan thu cho phep van loi",
+  KHONG_XUAT_DA_CO_PHIEU_THANG: "cell da co phieu thanh cong trong cung thang",
 };
 
 // ==== NGUON KHONG DAT (cot cr_phieu.nguon_khong_dat, BE commit 8f54b09) ====
@@ -68,7 +87,33 @@ export const PHIEU_STATUS_FILTER_OPTIONS = [
   { value: "KHONG_XUAT_VUOT_GIOI_HAN", label: PHIEU_STATUS_LABELS.KHONG_XUAT_VUOT_GIOI_HAN },
   { value: "KHONG_XUAT_HET_LUOT_THU", label: PHIEU_STATUS_LABELS.KHONG_XUAT_HET_LUOT_THU },
   { value: "KHONG_XUAT_THIEU_DU_LIEU", label: PHIEU_STATUS_LABELS.KHONG_XUAT_THIEU_DU_LIEU },
+  // THEM 20/10/2026 (yeu cau truc tiep user) - gia tri thu 7, THIEU truoc day se bi BE tra 422 khi loc (xem
+  // domain/value_objects/trang_thai_phieu.py::TRANG_THAI_LOC, da doc truc tiep de xac nhan du 7 gia tri)
+  { value: "KHONG_XUAT_DA_CO_PHIEU_THANG", label: PHIEU_STATUS_LABELS.KHONG_XUAT_DA_CO_PHIEU_THANG },
 ];
+
+// mau Tag theo NHOM trang thai (THEM 20/10/2026, yeu cau truc tiep user: "cot trang thai hien Tag theo
+// nhom_trang_thai ... Mau lay tu BO_MAU dang dung") - DUNG CHUNG 1 bo mau voi Dashboard qua MAU
+// (dashboardConstants.ts) thay vi tu dinh nghia rieng 1 bo mau khac cho module nay. KHAC PHIEU_STATUS_COLORS
+// o tren (mau rieng cho TUNG trang_thai, 6-7 gia tri) - day la mau theo 4 NHOM GOP (THANH_CONG/LOI/
+// CHO_XUAT_TAY/null=PENDING), dung cho DUNG cot "Trang thai" cua bang danh sach (PhieuHistoryTable) va muc
+// "Nhom trang thai" trong modal chi tiet (PhieuDetailModal) - 2 cho nay can "nhin luot la biet nhom nao",
+// khac voi PHIEU_STATUS_COLORS van giu de phan biet SAC THAI trong CUNG 1 nhom (vd 3 ly do KHONG_XUAT_* o
+// JobRunDetailModal).
+export const MAU_THEO_NHOM_TRANG_THAI: Record<string, string> = {
+  THANH_CONG: MAU.success.dam,
+  LOI: MAU.critical.dam,
+  CHO_XUAT_TAY: MAU.warning.dam,
+};
+// nhom_trang_thai = null (PENDING) -> "flow" (yeu cau truc tiep user)
+export const MAU_NHOM_PENDING = MAU.flow.dam;
+
+export const NHAN_NHOM_TRANG_THAI: Record<string, string> = {
+  THANH_CONG: "Thanh cong",
+  LOI: "Loi",
+  CHO_XUAT_TAY: "Cho xuat tay",
+};
+export const NHAN_NHOM_PENDING = "Dang xu ly (PENDING)";
 
 // ==== PHAN LOAI LOI CTS (BE 7982ed7) ====
 // Truoc day CA HAI loai loi deu hien ra mot dong FAILED giong het nhau, nen nguoi van hanh khong biet

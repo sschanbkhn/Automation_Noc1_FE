@@ -701,6 +701,33 @@ export interface PhieuHistoryQueryParams {
   // nao, va goi thu ?nguon=RAC (gia tri rac) van tra HTTP 200 -> FastAPI dang BO QUA param nay chu khong
   // validate. Nghia la den khi BE duoc deploy lai, gui param nay KHONG LOI nhung cung KHONG loc gi
   nguon?: NguonKhongDat;
+  // 4 bo loc THEM 20/10/2026 (yeu cau truc tiep user) - THEO TRAM CUA CELL, giong dung quy uoc cua
+  // GET /phieu/excel (api/routers/phieu.py). TAI THOI DIEM THEM: GET /phieu (BANG danh sach, KHAC
+  // /phieu/excel) CHUA nhan 4 tham so nay (da doc truc tiep signature list_phieu() - chi co session_id/
+  // trang_thai/q/tu_ngay/den_ngay/page/size/sort_by/order/nguon). User xac nhan BE dang duoc bo sung them
+  // de dung CHUNG ham loc voi /phieu/excel - KHAI BAO TRUOC va LUON gui len, cho den khi BE deploy thi tu
+  // co tac dung ma KHONG phai sua lai FE (giong cach se lam khi gui param "nguon" o tren truoc day). KHONG
+  // tu loc client - xem AskUserQuestion da hoi/duoc tra loi trong phien lam viec nay neu can doi chieu.
+  khu_vuc?: string[]; // "KV1"|"KV2"|"KV3"
+  ma_tinh?: string[];
+  vendor?: string[]; // "NOKIA"|"ERICSSON"|"HUAWEI"|"ZTE"
+  phuong_an?: string[]; // "1"|"2" (He thong/Hien truong)
+}
+
+// dung cho GET /api/v1/phieu/excel - KHAC PhieuHistoryQueryParams o cho KHONG co page/size/sort_by/order
+// (endpoint xuat TOAN BO dong khop, khong phan trang - da doc truc tiep xuat_excel_phieu() trong
+// api/routers/phieu.py) - BAT BUOC session_id HOAC du ca tu_ngay+den_ngay (BE tra 422 neu thieu ca 2)
+export interface PhieuExcelQueryParams {
+  session_id?: number;
+  trang_thai?: string;
+  q?: string;
+  tu_ngay?: string;
+  den_ngay?: string;
+  nguon?: NguonKhongDat;
+  khu_vuc?: string[];
+  ma_tinh?: string[];
+  vendor?: string[];
+  phuong_an?: string[];
 }
 
 // 3 gia tri cot cr_phieu.nguon_khong_dat (BE commit 8f54b09): cell bi phat hien khong dat qua chi so nao.
@@ -775,6 +802,14 @@ export interface PhieuHistoryItem {
   // null cho dong KHONG phai SUCCESS (giong quy uoc vuot_2_phieu_sector o tren) - tinh LUC DOC, KHONG phai
   // cot co san trong DB (xem application/phieu_lam_tron.py ben BE)
   vuot_luat_lam_tron?: boolean | null;
+  // THEM 20/10/2026 (BE "THEM 19/10/2026" theo docs/API_CONTRACTS.md) - tinh LUC DOC
+  // (domain/value_objects/trang_thai_phieu.py), KHONG phai cot DB:
+  //   phuong_an: "He thong"|"Hien truong" tu request_payload.PhuongAnXuLyDuKien, null voi dong KHONG_XUAT_*
+  //     (khong co payload that nen khong co gia tri de doc)
+  //   nhom_trang_thai: "THANH_CONG"|"LOI"|"CHO_XUAT_TAY", null = PENDING (trang thai tam, KHONG thuoc nhom
+  //     nao - xem WHY day du trong chinh file BE tren, PENDING keo dai la bat thuong)
+  phuong_an?: string | null;
+  nhom_trang_thai?: string | null;
 }
 
 // dung cho GET /api/v1/phieu - response phan trang. KHAC SessionListResponse ({total, data}): endpoint nay
@@ -1127,21 +1162,35 @@ export interface HauKiemExcelParams {
   trang_thai?: string[]; // trang_thai cua cr_session (DONE/FAILED/KHONG_CHAY/...), KHONG lien quan trang_thai phieu
 }
 
-// ===== GET /api/v1/dashboard/tong-quan (THEM 18/10/2026, BE commit ca62dba/e636357) =====
-// QUAN TRONG: BE KHONG co Pydantic response model cho endpoint nay (xac nhan qua doc truc tiep BE - response
-// la 1 dict dung tay trong application/dashboard_use_case.py, KHONG co file api/schemas/dashboard_schemas.py
-// nao ca) - cac type duoi day la NGUON DUY NHAT doi chieu duoc, lay TRUC TIEP tu doc dashboard_use_case.py +
-// adapters/postgres/dashboard_repo.py. Neu sau nay BE them Pydantic model, PHAI doi chieu lai type nay, vi
-// hien tai hoan toan khong co openapi.json nao mo ta no.
-export interface DashboardQueryParams {
-  tu_ngay: string; // "YYYY-MM-DD", BAT BUOC - BE khong co default, thieu se 422
+// ===== GET /api/v1/dashboard/* (LAM LAI 18/10/2026, yeu cau truc tiep user, doi chieu truc tiep BE commit
+// 124b72b tren main) =====
+// QUAN TRONG: BE KHONG co Pydantic response model cho ca 5 endpoint dashboard (xac nhan qua doc truc tiep
+// api/routers/dashboard.py + application/dashboard_use_case.py: moi ham khai bao "-> dict", response la dict
+// dung tay, KHONG co api/schemas/dashboard_schemas.py nao ca) - cac type duoi day la NGUON DUY NHAT doi
+// chieu duoc. Neu sau nay BE them Pydantic model, PHAI doi chieu lai type nay.
+//
+// SUA LON (18/10/2026) so voi ban truoc (BE commit ca62dba/e636357, da LAM LAI toan bo o commit 124b72b):
+//  - theo_nhom: BO "netact", THEM "vendor" (dashboard_use_case.py: test ten la
+//    "test_theo_nhom_vendor_thay_netact" - "vendor replaces netact")
+//  - THEM 2 endpoint moi: GET /dashboard/bo-loc (danh sach lua chon cho dropdown) va GET /dashboard/chi-tiet
+//    (+ /dashboard/chi-tiet/excel) de khoan sau tu card/chi so nho ra danh sach cu the
+//  - THEM query param chi_tiet_thoi_gian ("ngay"|"tuan") dieu khien do chi tiet cua xu_huong[] - LUU Y day la
+//    PARAM, duoc ECHO LAI nguyen van o response (khong phai 1 khoi du lieu rieng)
+//  - xu_huong[]: doi "tuan" -> "moc" (ten field chung cho ca ngay/tuan), THEM so_cell_khong_dat_qos/qoe
+export interface DashboardFilterParams {
+  tu_ngay: string; // "YYYY-MM-DD", BAT BUOC - BE khong co default, thieu se 422 (tu_ngay > den_ngay cung 422)
   den_ngay: string; // "YYYY-MM-DD", BAT BUOC
-  khu_vuc?: string[]; // "KV1"|"KV2"|"KV3"
-  ma_tinh?: string[];
-  netact?: string[]; // oss_instance_id - BE goi la "netact" o param nay (KHAC "oss_instance_id" o noi khac)
+  khu_vuc?: string[]; // "KV1"|"KV2"|"KV3" - BE whitelist Literal, gia tri ngoai 3 cai nay bi 422
+  ma_tinh?: string[]; // chuoi tu do, BE KHONG whitelist (khac khu_vuc/vendor)
+  vendor?: string[]; // "NOKIA"|"ERICSSON"|"HUAWEI"|"ZTE" - BE whitelist Literal (LUU Y: "UNKNOWN" KHONG duoc
+  // chap nhan lam gia tri LOC du no CO THE xuat hien trong theo_nhom.vendor tra ve)
+  chi_tiet_thoi_gian?: "ngay" | "tuan"; // mac dinh "ngay" o BE neu khong gui - dieu khien do chi tiet xu_huong
 }
 
-// so session theo trang_thai (dashboard_use_case.py::_ty_le lan can) - dang_chay GOP ca PENDING+RUNNING,
+// dung cho GET /api/v1/dashboard/tong-quan + /dashboard/excel (2 endpoint nhan CHUNG 1 bo tham so)
+export type DashboardQueryParams = DashboardFilterParams;
+
+// so session theo trang_thai (dashboard_use_case.py::_chi_so) - dang_chay GOP ca PENDING+RUNNING,
 // khac = so_session - tong 5 muc con lai (vd EVAL_PENDING/KHONG_DU_DU_LIEU/EVALUATING/EVALUATED)
 export interface DashboardTrangThaiCount {
   DONE: number;
@@ -1160,7 +1209,8 @@ export interface DashboardTong {
 }
 
 // ty_le = round(so*100/tong, 1) - DA LA % SAN (DUNG CHUNG cong thuc voi evaluation_service.py), KHONG phai
-// fraction 0-1 - DA XAC NHAN qua doc truc tiep dashboard_use_case.py::_ty_le(). null khi tong=0 (chia cho 0)
+// fraction 0-1 - DA XAC NHAN qua doc truc tiep dashboard_use_case.py::_ty_le(). null khi tong=0 (chia cho 0,
+// KHAC voi 0% that su - 2 thong tin khac nhau, xem comment goc cua BE "_ty_le")
 export interface DashboardTyLe {
   so: number;
   ty_le: number | null;
@@ -1172,8 +1222,8 @@ export interface DashboardHauKiemChiSo {
   // khong_dat.so = tb_sau_duoi_muc + lech_qua_nguong (2 LY DO khong dat, khong loai tru nhau ve mat khai
   // niem nhung BE dem rieng tung ly do de FE hien chi tiet thay vi chi 1 con so gop)
   khong_dat: DashboardTyLe & {
-    tb_sau_duoi_muc: number; // TB sau CR duoi nguong toi thieu (KD_SAN)
-    lech_qua_nguong: number; // chenh lech truoc/sau vuot nguong cho phep (KD_LECH)
+    tb_sau_duoi_muc: number; // TB sau CR duoi nguong toi thieu (KD_SAN, ly_do="duoi_muc" o /dashboard/chi-tiet)
+    lech_qua_nguong: number; // chenh lech truoc/sau vuot nguong cho phep (KD_LECH, ly_do="tut")
   };
   thieu_du_lieu: DashboardTyLe;
 }
@@ -1193,25 +1243,34 @@ export interface DashboardPhieu {
   loi: number; // trang_thai='FAILED'
 }
 
-// 1 dong trong bang "theo nhom" (khu_vuc/ma_tinh/netact) - CUNG HINH DANG voi 3 khoi tong/hau_kiem/phieu o
-// cap response, chi SCOPE theo 1 gia tri nhom
+// 1 dong trong bang "theo nhom" (khu_vuc/ma_tinh/vendor) - CUNG HINH DANG voi 3 khoi tong/hau_kiem/phieu o
+// cap response, chi SCOPE theo 1 gia tri nhom. ten_tinh/khu_vuc CHI co o nhom "ma_tinh" (THEM qua lambda rieng
+// o dashboard_use_case.py, xem _nhom()) - undefined o nhom khu_vuc/vendor
 export interface DashboardNhomRow {
-  // KV1|KV2|KV3|KHONG_XAC_DINH (nhom khu_vuc) hoac ma tinh/oss_instance_id THAT (nhom ma_tinh/netact)
+  // khu_vuc: "KV1"|"KV2"|"KV3"|"KHONG_XAC_DINH" (tram khong map duoc khu vuc)
+  // ma_tinh: ma tinh THAT (vd "HNI")
+  // vendor: "NOKIA"|"ERICSSON"|"HUAWEI"|"ZTE"|"UNKNOWN"
   gia_tri: string;
+  ten_tinh?: string | null; // CHI co o nhom ma_tinh - null neu ma khong map duoc ten
+  khu_vuc?: string | null; // CHI co o nhom ma_tinh - null neu ma khong map duoc khu vuc
   tong: DashboardTong;
   hau_kiem: DashboardHauKiem;
   phieu: DashboardPhieu;
 }
 
-// 1 diem trong bieu do xu huong theo tuan - "tuan" la NGAY THU HAI dau tuan ISO (Postgres
-// date_trunc('week', ...)::date), KHONG phai nhan "Tuan 1/2/3" - DA XAC NHAN qua doc truc tiep
-// adapters/postgres/dashboard_repo.py, FE tu dinh dang lai thanh nhan ngan khi ve truc X
+// 1 diem trong bieu do xu huong - "moc" la 1 ngay HOAC 1 tuan tuy chi_tiet_thoi_gian dang chon (tuan = ngay
+// THU HAI dau tuan ISO, Postgres date_trunc('week', ...)::date) - mang GAP-FILLED DAY DU theo tu_ngay/den_ngay
+// (moi moc deu xuat hien ke ca khong co du lieu, KHONG chi liet ke moc co du lieu) - DA XAC NHAN qua doc truc
+// tiep dashboard_use_case.py::_cac_moc()/_diem_xu_huong(). ty_le_dat_qos/qoe = null (KHONG phai 0) khi khong
+// co mau o moc do - FE PHAI ve DUT NET tai cac diem null, KHONG noi/ve ve 0 (xem Dashboard/ ben duoi)
 export interface DashboardXuHuongDiem {
-  tuan: string; // "YYYY-MM-DD"
-  so_session: number;
+  moc: string; // "YYYY-MM-DD"
+  so_cr: number;
+  so_phieu: number;
   ty_le_dat_qos: number | null;
   ty_le_dat_qoe: number | null;
-  so_phieu: number;
+  so_cell_khong_dat_qos: number;
+  so_cell_khong_dat_qoe: number;
 }
 
 export interface DashboardSessionQuaHan {
@@ -1248,14 +1307,139 @@ export interface DashboardCanXuLy {
 export interface DashboardTongQuanResponse {
   tu_ngay: string;
   den_ngay: string;
+  chi_tiet_thoi_gian: "ngay" | "tuan"; // echo lai param da gui (hoac mac dinh "ngay" neu khong gui)
   tong: DashboardTong;
   hau_kiem: DashboardHauKiem;
   phieu: DashboardPhieu;
   theo_nhom: {
     khu_vuc: DashboardNhomRow[];
     ma_tinh: DashboardNhomRow[];
-    netact: DashboardNhomRow[];
+    vendor: DashboardNhomRow[];
   };
   xu_huong: DashboardXuHuongDiem[];
   can_xu_ly: DashboardCanXuLy;
+}
+
+// ===== GET /api/v1/dashboard/bo-loc (THEM 18/10/2026) - danh sach lua chon cho dropdown FE, DISTINCT tu
+// bang tram. KHONG nhan tham so nao. Day la nguon DUY NHAT cho mapping tinh -> khu vuc (moi phan tu ma_tinh
+// tu mang theo khu_vuc cua chinh no, KHONG co endpoint mapping rieng) =====
+export interface DashboardBoLocMaTinh {
+  ma: string; // vd "HNI"
+  ten: string | null; // vd "Ha Noi" - null neu ma khong map duoc (du lieu DB cu/sai)
+  khu_vuc: string | null; // "KV1"|"KV2"|"KV3" - null neu ma khong map duoc
+}
+
+export interface DashboardBoLocResponse {
+  khu_vuc: string[]; // LUON ["KV1","KV2","KV3"] co dinh - MANG CHUOI PHANG, KHONG phai {ma,ten} nhu ma_tinh
+  ma_tinh: DashboardBoLocMaTinh[];
+  vendor: string[]; // DISTINCT vendor THAT co trong DB (KHONG co "UNKNOWN" - cot nguon da loc null/rong truoc)
+}
+
+// ===== GET /api/v1/dashboard/chi-tiet (+ /dashboard/chi-tiet/excel) - khoan sau tu 1 card/chi so nho ra
+// danh sach cu the (THEM 18/10/2026). "loai" la THAM SO (khong phai 1 phan cua filter object) quyet dinh
+// toan bo hinh dang dong tra ve - DA XAC NHAN CHINH XAC 5 gia tri qua doc truc tiep api/routers/dashboard.py
+// (_Loai), KHAC HOAN TOAN voi cac gia tri "qos_dat"/"khong_chay"/"thanh_cong" da gia dinh truoc khi doc BE
+// that - day la 1 vi du CU THE cho nguyen tac "verify spec against live BE" =====
+export type DashboardChiTietLoai = "cr" | "qos" | "qoe" | "phieu" | "can_xu_ly";
+
+export interface DashboardChiTietParams extends DashboardFilterParams {
+  loai: DashboardChiTietLoai;
+  // "Loc con theo loai card" (dashboard.py::_loc_con) - tham so KHONG thuoc loai dang xem bi BE AM THAM bo
+  // qua (khong phai 422), nen FE CO THE gui du ca 4 tham so duoi day ma khong can tu loai truoc
+  trang_thai?: string[]; // ap dung loai="cr" (trang_thai cr_session) hoac loai="phieu" (trang_thai phieu)
+  ket_qua?: Array<"DAT" | "KHONG_DAT" | "INSUFFICIENT_DATA">; // CHI ap dung loai="qos"|"qoe"
+  ly_do?: Array<"duoi_muc" | "tut">; // CHI ap dung loai="qos"|"qoe" - duoi_muc=KD_SAN, tut=KD_LECH
+  phuong_an?: Array<"1" | "2">; // CHI ap dung loai="phieu" - "1"=He thong, "2"=Hien truong
+  // THEM (19/10/2026, BE commit a67505e/0e946b7 tren main) - tim kiem + sap xep THAT O SERVER (truoc day BE
+  // KHONG co, FE phai tu loc/sap xep tren tap da tai - DA XAC NHAN LAI qua doc truc tiep BE that, BE gio da
+  // trien khai day du, xem WHY o api/routers/dashboard.py::_tim_sap_xep/_TimSapXep).
+  q?: string; // tim tu do, KHONG phan biet hoa/thuong/dau (BE tu bo dau), toi da 100 ky tu (BE gioi han)
+  // PHAI la 1 trong COT_SAP_XEP_THEO_LOAI[loai] (dashboardHelpers.ts, COPY CHINH XAC tu BE
+  // domain/ports/outbound/repo_ports.py::COT_SAP_XEP_DASHBOARD) - gui cot ngoai danh sach nay BE tra 422 kem
+  // danh sach cot hop le. undefined = BE tu sap theo cot ngay cua loai (ngay_cr/ngay_xuat/ngay)
+  sap_xep?: string;
+  chieu?: "asc" | "desc"; // mac dinh "desc" o BE neu khong gui
+  // phan trang - KHONG co o /dashboard/chi-tiet/excel (luon lay HET, kich_thuoc=None o BE)
+  trang?: number; // mac dinh 1, >= 1
+  // SUA (19/10/2026, BE commit 0e946b7) - TRAN XUONG 200 (truoc la 500) - "phan trang THAT o SQL, 1 trang
+  // lon hon la dau hieu FE dang keo het ve loc phia client" (trich nguyen van comment BE). FE values hop le:
+  // 10|20|50|100|200 (theo yeu cau truc tiep user, Pagination.pageSizeOptions o DashboardChiTietModal.tsx)
+  kich_thuoc?: number;
+}
+
+// dung cho GET /dashboard/chi-tiet/excel - GIONG DashboardChiTietParams nhung BO han trang/kich_thuoc (BE
+// luon xuat TOAN BO dong khop bo loc, khong phan trang khi xuat Excel)
+export type DashboardChiTietExcelParams = Omit<DashboardChiTietParams, "trang" | "kich_thuoc">;
+
+// loai="cr" - 1 dong = 1 session CR (dashboard_repo.py SQL key "cr" + ten_tinh/khu_vuc THEM o use-case)
+export interface DashboardChiTietCrRow {
+  session_id: number;
+  ngay_cr: string | null;
+  tram_id: string;
+  tram_name: string | null;
+  ma_tinh: string | null;
+  vendor_tram: string;
+  status: string;
+  ma_loi: string | null;
+  so_cell_cr: number;
+  so_cell_anh_huong: number;
+  ten_tinh: string | null;
+  khu_vuc: string | null;
+}
+
+// loai="qos"|"qoe" - 1 dong = 1 cell (dashboard_repo.py SQL key "cell"). tb_truoc/tb_sau/lech la float|null
+// (null khi ket_qua="INSUFFICIENT_DATA"). ly_do null khi ket_qua KHONG phai "KHONG_DAT"
+export interface DashboardChiTietCellRow {
+  session_id: number;
+  ngay_cr: string | null;
+  tram_id: string;
+  tram_name: string | null;
+  cell_name: string;
+  vendor_cell: string;
+  tb_truoc: number | null;
+  tb_sau: number | null;
+  lech: number | null;
+  ket_qua: "DAT" | "KHONG_DAT" | "INSUFFICIENT_DATA";
+  ly_do: "duoi_muc" | "tut" | null;
+  so_ngay_co_du_lieu: number;
+  ma_phieu: string | null; // string_agg - co the gom nhieu ma phieu cach nhau boi dau phan cach BE dung
+}
+
+// loai="phieu" - 1 dong = 1 phieu (dashboard_repo.py SQL key "phieu"). phuong_an la gia tri THO "1"|"2"
+// (nhan "He thong"/"Hien truong" CHI duoc dien giai o Excel ben BE, JSON tra RAW - FE tu dich khi hien)
+export interface DashboardChiTietPhieuRow {
+  ma_phieu: string;
+  session_id: number;
+  cell_name: string;
+  vendor_cell: string;
+  phuong_an: "1" | "2" | null;
+  trang_thai: string;
+  ngay_xuat: string | null;
+}
+
+// loai="can_xu_ly" - UNION 2 nhanh, phan biet qua "loai" (LUU Y: gia tri UPPERCASE
+// "QUA_HAN_XUAT_PHIEU"|"KHONG_CHAY", KHAC voi loai cap tham so dang lowercase "can_xu_ly" - 2 khai niem
+// "loai" khac nhau, de nham)
+export interface DashboardChiTietCanXuLyRow {
+  loai: "QUA_HAN_XUAT_PHIEU" | "KHONG_CHAY";
+  session_id: number;
+  tram_id: string;
+  tram_name: string | null;
+  status: string;
+  ngay: string | null;
+  ma_loi: string | null;
+}
+
+export type DashboardChiTietRow =
+  | DashboardChiTietCrRow
+  | DashboardChiTietCellRow
+  | DashboardChiTietPhieuRow
+  | DashboardChiTietCanXuLyRow;
+
+export interface DashboardChiTietResponse {
+  loai: DashboardChiTietLoai;
+  tong: number; // TONG so dong KHOP bo loc (khong phai so dong cua trang hien tai)
+  trang: number;
+  kich_thuoc: number;
+  dong: DashboardChiTietRow[];
 }

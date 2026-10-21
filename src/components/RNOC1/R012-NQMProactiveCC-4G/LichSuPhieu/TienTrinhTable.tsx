@@ -30,6 +30,10 @@ import {
   TIEN_TRINH_TAT_CA,
   layParamTienTrinh,
 } from "./tienTrinh";
+// THEM 20/10/2026 (yeu cau truc tiep user, phat hien qua grep "Ngay CR tu" - file nay la "Man Lich su CR"
+// THAT SU khop dung mo ta goc cua user (1 hang, KHONG co nut xuat), KHAC voi SessionHistoryList.tsx (co nut
+// "Xuat hau kiem") ma truoc day bi nham la cung 1 man) - dung chung bo cuc ThanhBoLoc voi 3 man con lai
+import ThanhBoLoc, { BO_LOC_RONG, CumNut, oRongCoGian } from "../common/ThanhBoLoc";
 
 const { RangePicker } = DatePicker;
 
@@ -214,28 +218,23 @@ const TienTrinhTable: React.FC<TienTrinhTableProps> = ({ onXemLichSuCR }) => {
 
   return (
     <div>
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          gap: "12px",
-          padding: "12px",
-          marginBottom: "1rem",
-          backgroundColor: R012_COLORS.tableRowAlt,
-          border: `1px solid ${R012_COLORS.primaryPale}`,
-          borderRadius: "8px",
-        }}
-      >
+      {/* LAM LAI 20/10/2026 (yeu cau truc tiep user) - day MOI DUNG la "Man Lich su CR" theo dung mo ta goc
+          (1 hang, KHONG nut xuat): dung chung ThanhBoLoc + BO_LOC_RONG + oRongCoGian (co lai/gian theo be
+          rong THAT cua khung, xem WHY day du o common/ThanhBoLoc.tsx) voi 3 man con lai, Input.Search +
+          enterButton (xem WHY day du o SessionHistoryList.tsx, khong lap lai o day) */}
+      <ThanhBoLoc style={{ backgroundColor: R012_COLORS.tableRowAlt, border: `1px solid ${R012_COLORS.primaryPale}` }}>
         <RangePicker
           value={dateRange}
           onChange={handleDateRangeChange}
           format="DD/MM/YYYY"
           placeholder={["Ngay CR tu", "den"]}
+          size="middle"
+          style={oRongCoGian(BO_LOC_RONG.rangePicker)}
         />
         <Input.Search
           placeholder="Tim theo ma tram / ten tram"
           allowClear
+          enterButton
           // value theo searchInput (cap nhat ngay tung phim) chu KHONG phai searchTerm (tre 400ms), de o
           // input khong bi giat khi go
           value={searchInput}
@@ -244,17 +243,23 @@ const TienTrinhTable: React.FC<TienTrinhTableProps> = ({ onXemLichSuCR }) => {
             setSearchInput(value);
             debouncedApplySearch(value);
           }}
-          style={{ flex: "1 1 220px", minWidth: "180px", maxWidth: "260px" }}
+          size="middle"
+          style={oRongCoGian(BO_LOC_RONG.timKiem)}
         />
         <Select
           value={tienTrinhFilter}
           onChange={handleTienTrinhFilterChange}
           options={TIEN_TRINH_FILTER_OPTIONS}
-          style={{ width: "190px" }}
+          size="middle"
+          style={oRongCoGian(BO_LOC_RONG.selectCoTienTo)}
           prefix="Tien trinh:"
         />
-        <Button onClick={handleClearFilters}>Xoa loc</Button>
-      </div>
+        <CumNut>
+          <Button onClick={handleClearFilters} size="middle">
+            Xoa loc
+          </Button>
+        </CumNut>
+      </ThanhBoLoc>
 
       {isLoading && <Spin tip="Dang tai tien trinh..." />}
 

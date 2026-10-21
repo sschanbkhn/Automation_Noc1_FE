@@ -27,6 +27,7 @@ import { formatDateTime } from "../helpers/formatDateTime";
 // doc message loi THAT tu BE thay vi loi chung cua axios - xem WHY day du trong chinh file do
 import { layThongBaoLoi } from "../helpers/layThongBaoLoi";
 import { OneLineCell } from "../common/r012TableStyle";
+import ThanhBoLoc, { BO_LOC_RONG, CumNut, oRongCoGian } from "../common/ThanhBoLoc";
 
 const { RangePicker } = DatePicker;
 
@@ -39,12 +40,19 @@ const columnHelper = createColumnHelper<SessionListItem>();
 // BE khi chon muc nay
 // SUA (16/10/2026, yeu cau truc tiep user) - THEM KHONG_CHAY (tach khoi FAILED, xem WHY day du o
 // crSessionStatus.ts) vao bo loc, cung nhom voi FAILED (ca 2 deu la "session khong hoan thanh duoc")
+//
+// SUA (20/10/2026, yeu cau truc tiep user) - nhan tieng Viet KHONG dau cho DONE/FAILED/RUNNING (truoc day
+// hien NGUYEN VAN ma tho "DONE"/"FAILED"/"RUNNING"). CHI doi nhan trong 4 OPTION LOC nay (khong dung lai/doi
+// layNhanTrangThaiCr() cua crSessionStatus.ts): ham do CO CHU Y giu nguyen RAW cho moi trang thai tru
+// KHONG_CHAY (xem WHY day du o chinh file do - "KHONG dich toan bo 9 trang thai"), dung cho ca Tag trong
+// BANG danh sach lan badge trong EvaluationDetail.tsx - doi hanh vi cua ham do se lam ca 2 noi KHAC doi theo,
+// ngoai pham vi yeu cau lan nay (chi noi ve 1 Select loc o day)
 const STATUS_FILTER_OPTIONS = [
   { value: "", label: "Tat ca" },
-  { value: "DONE", label: "DONE" },
-  { value: "FAILED", label: "FAILED" },
+  { value: "DONE", label: "Thanh cong" },
+  { value: "FAILED", label: "That bai" },
   { value: "KHONG_CHAY", label: "Khong chay" },
-  { value: "RUNNING", label: "RUNNING" },
+  { value: "RUNNING", label: "Dang chay" },
 ];
 
 // Yeu cau loc san 1 tram, do TAB KHAC gui sang (tab "Lich su phieu" > muc "Tien trinh", bam vao ma tram).
@@ -407,30 +415,27 @@ const SessionHistoryList: React.FC<SessionHistoryListProps> = ({ yeuCauLocTram =
 
   return (
     <div>
-      {/* thanh cong cu loc: khoang ngay + tim theo tram + xoa loc - nen/vien dung token xanh duong tu theme.ts
-          de dong bo voi mau bang ben duoi, KHONG bia mau moi ngoai bang mau da chot cua module */}
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          gap: "12px",
-          padding: "12px",
-          marginBottom: "1rem",
-          backgroundColor: R012_COLORS.tableRowAlt,
-          border: `1px solid ${R012_COLORS.primaryPale}`,
-          borderRadius: "8px",
-        }}
-      >
+      {/* thanh cong cu loc: khoang ngay + tim theo tram + trang thai + xoa loc + xuat hau kiem - LAM LAI
+          20/10/2026 (yeu cau truc tiep user muc 0/1/2/4). size="middle" (32px, SUA tu "large" 40px - dong
+          bo CHIEU CAO voi tab "Tac dong tram": da doc truc tiep StationSearchGrid.tsx, moi Input/Button o do
+          KHONG khai bao size nao ca = mac dinh "middle" cua antd) */}
+      <ThanhBoLoc style={{ backgroundColor: R012_COLORS.tableRowAlt, border: `1px solid ${R012_COLORS.primaryPale}` }}>
         <RangePicker
           value={dateRange}
           onChange={handleDateRangeChange}
           format="DD/MM/YYYY"
           placeholder={["Tu ngay", "Den ngay"]}
+          size="middle"
+          style={oRongCoGian(BO_LOC_RONG.rangePicker)}
         />
+        {/* Input.Search + enterButton (yeu cau truc tiep user: "size=middle enterButton - bo kieu Input +
+            Button ghep tay") - enterButton ve 1 KHOI nut tim rieng gan LIEN voi o nhap (khac dang mac dinh
+            chi co icon kinh lup nam BEN TRONG o nhap), dam bao input+nut LUON cung 1 chieu cao vi la 1
+            compound component duy nhat cua antd, khong con 2 manh rieng co the lech nhau */}
         <Input.Search
           placeholder="Tim theo ma tram / ten tram"
           allowClear
+          enterButton
           // value dieu khien boi searchInput (cap nhat ngay) chu KHONG phai searchTerm (cap nhat tre 400ms),
           // de o input luon hien dung ky tu vua go, khong bi giat/tre do cho debounce
           value={searchInput}
@@ -439,34 +444,36 @@ const SessionHistoryList: React.FC<SessionHistoryListProps> = ({ yeuCauLocTram =
             setSearchInput(value);
             debouncedApplySearch(value);
           }}
-          // KHONG dat width co dinh 260px nhu truoc: nut "Xoa loc" luon la phan tu CUOI cua thanh loc nay,
-          // nen khi tong be rong 4 o vuot khung thi chinh no bi flexWrap day xuong dong 2 (thanh loc cua
-          // SessionHistoryList rong hon cua PhieuHistoryTable vi co them RangePicker). Cho o tim CO GIAN
-          // (co the co lai toi 180px) de phan thieu duoc bu tu day - 4 o giu duoc tren CUNG 1 HANG o moi
-          // be rong man hinh thuc te, thay vi tach hang. Van giu flexWrap o container lam duong lui cho
-          // man hinh cuc hep
-          style={{ flex: "1 1 220px", minWidth: "180px", maxWidth: "260px" }}
+          size="middle"
+          style={oRongCoGian(BO_LOC_RONG.timKiem)}
         />
-        {/* Select loc trang thai - dung options tinh san (STATUS_FILTER_OPTIONS). KHONG tu style border rieng:
-            RangePicker/Input.Search canh ben cung dang de mau xanh duong mac dinh cua antd theme (chua co
-            ConfigProvider tuy chinh trong app), giu Select nhu vay la DONG BO voi 2 o loc con lai, tu them
-            borderColor vao day se lam RIENG Select noi bat khac mau thay vi giong nhau */}
+        {/* Select loc trang thai - them tien to "Tien trinh:" (yeu cau truc tiep user: Select nay loc
+            DONE/FAILED/KHONG_CHAY/RUNNING - DUNG la trang thai TIEN TRINH cua session CR, khong phai ket
+            qua danh gia hau kiem, nen dat ten "Tien trinh" cho dung y nghia) */}
         <Select
           value={statusFilter}
           onChange={handleStatusFilterChange}
           options={STATUS_FILTER_OPTIONS}
-          style={{ width: "160px" }}
+          size="middle"
+          style={oRongCoGian(BO_LOC_RONG.selectCoTienTo)}
+          prefix="Tien trinh:"
         />
-        <Button onClick={handleClearFilters}>Xoa loc</Button>
-        {/* THEM 18/10/2026 (yeu cau truc tiep user) - xuat Excel hau kiem theo khoang ngay + trang thai
-            DANG LOC. KHOA khi chua chon khoang ngay (BE bat buoc ca tu_ngay va den_ngay khi khong co
-            session_id - xem WHY day du o handleXuatHauKiem) - Tooltip giai thich ly do bi khoa */}
-        <Tooltip title={!dateRange ? "Chon khoang ngay truoc khi xuat" : undefined}>
-          <Button onClick={handleXuatHauKiem} loading={dangXuatHauKiem} disabled={!dateRange}>
-            Xuat hau kiem
+        {/* CumNut (THEM lan 4) - "Xoa loc" + "Xuat hau kiem" boc CHUNG 1 cum, LUON di cung nhau khi
+            flex-wrap day xuong hang moi - xem WHY day du o common/ThanhBoLoc.tsx::CumNut */}
+        <CumNut>
+          <Button onClick={handleClearFilters} size="middle">
+            Xoa loc
           </Button>
-        </Tooltip>
-      </div>
+          {/* THEM 18/10/2026 (yeu cau truc tiep user) - xuat Excel hau kiem theo khoang ngay + trang thai
+              DANG LOC. KHOA khi chua chon khoang ngay (BE bat buoc ca tu_ngay va den_ngay khi khong co
+              session_id - xem WHY day du o handleXuatHauKiem) - Tooltip giai thich ly do bi khoa */}
+          <Tooltip title={!dateRange ? "Chon khoang ngay truoc khi xuat" : undefined}>
+            <Button onClick={handleXuatHauKiem} loading={dangXuatHauKiem} disabled={!dateRange} size="middle">
+              Xuat hau kiem
+            </Button>
+          </Tooltip>
+        </CumNut>
+      </ThanhBoLoc>
 
       {isLoading && <Spin tip="Dang tai lich su CR..." />}
 

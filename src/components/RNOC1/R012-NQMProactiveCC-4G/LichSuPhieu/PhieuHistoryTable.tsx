@@ -27,25 +27,37 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import debounce from "lodash/debounce";
 // <th> dung chung cho MOI bang co sort trong module (click header + mui ten huong sort)
 import { SortableHeaderCell } from "../common/SortableHeaderCell";
-import { getLichSuPhieu, xuatPhieu, xoaPhieu } from "../services/R012Service";
-import { NguonKhongDat, PhieuHistoryItem, PhieuHistoryResponse } from "../types";
+import { getDashboardBoLoc, getLichSuPhieu, xuatPhieu, xuatPhieuExcel, xoaPhieu } from "../services/R012Service";
+import { DashboardBoLocResponse, NguonKhongDat, PhieuHistoryItem, PhieuHistoryResponse } from "../types";
 import { R012_COLORS } from "../theme";
 // dinh dang thoi gian dung CHUNG toan module (ep UTC->GMT+7) - xem ly do trong file helper
 import { formatDateTime } from "../helpers/formatDateTime";
 // doc message loi THAT tu BE thay vi loi chung cua axios - xem WHY day du trong chinh file do
 import { layThongBaoLoi } from "../helpers/layThongBaoLoi";
 import {
-  PHIEU_STATUS_COLORS,
   PHIEU_STATUS_FILTER_OPTIONS,
   PHIEU_STATUS_LABELS,
   NGUON_FILTER_OPTIONS,
   NGUON_KHONG_DAT_LABELS,
   PHAN_LOAI_LOI_TAG,
+  MAU_THEO_NHOM_TRANG_THAI,
+  MAU_NHOM_PENDING,
 } from "./phieuStatus";
 import PhieuDetailModal from "./PhieuDetailModal";
 import { OneLineCell } from "../common/r012TableStyle";
+// THEM 20/10/2026 (yeu cau truc tiep user, muc 1) - "dung lai SelectTimKiemNhieu cua Dashboard" (tim khong
+// dau, chon nhieu) thay vi tu viet lai 1 Select rieng cho module nay
+import SelectTimKiemNhieu from "../Dashboard/SelectTimKiemNhieu";
+import ThanhBoLoc, { BO_LOC_RONG, CumNut, oRongCoGian } from "../common/ThanhBoLoc";
 
 const { RangePicker } = DatePicker;
+
+// options co dinh cho bo loc "Phuong an" (He thong/Hien truong) - gia tri "1"/"2" KHOP DUNG
+// domain/value_objects/trang_thai_phieu.py::PHUONG_AN ben BE (da doc truc tiep), KHONG tu dat ma khac
+const PHUONG_AN_OPTIONS = [
+  { value: "1", label: "He thong" },
+  { value: "2", label: "Hien truong" },
+];
 
 // danh sach muc so dong/trang dung CHUNG cho ca 2 ngu canh cua bang. Khai bao TUONG MINH (khong de antd tu
 // quyet dinh) de moi ban antd deu ra cung 1 danh sach, va de KHONG co muc nao vuot le=200 cua BE
@@ -80,6 +92,53 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
   // LUU Y: BE tren .196:8080 CHUA trien khai param nay (xem PhieuHistoryQueryParams.nguon trong
   // types/index.ts) - gui len khong loi nhung cung chua loc gi cho den khi BE duoc deploy lai
   const [nguonFilter, setNguonFilter] = useState<string>("");
+
+  // 4 bo loc THEM 20/10/2026 (yeu cau truc tiep user, muc 1) - THEO TRAM CUA CELL, giong dung bo loc cua
+  // GET /phieu/excel. GUI len CA GET /phieu (bang) LAN /phieu/excel (xuat) theo dung xac nhan cua user: BE
+  // dang duoc bo sung THEM 4 tham so nay vao GET /phieu de dung CHUNG 1 ham loc voi /phieu/excel - gui TRUOC
+  // o day se KHONG loi (FastAPI bo qua param thua) va tu co tac dung ngay khi BE deploy, khong phai sua lai
+  // FE lan nua. KHONG tu loc o CLIENT (da xac nhan truc tiep qua AskUserQuestion trong phien lam viec nay).
+  const [khuVucFilter, setKhuVucFilter] = useState<string[]>([]);
+  const [maTinhFilter, setMaTinhFilter] = useState<string[]>([]);
+  const [vendorFilter, setVendorFilter] = useState<string[]>([]);
+  const [phuongAnFilter, setPhuongAnFilter] = useState<string[]>([]);
+
+  // danh sach lua chon Khu vuc/Tinh/Vendor - DUNG CHUNG 1 nguon voi Dashboard (GET /dashboard/bo-loc, CUNG
+  // queryKey nen TanStack Query dung chung 1 cache, khong goi API 2 lan cho cung 1 du lieu) - day la nguon
+  // DUY NHAT cho mapping tinh -> khu vuc trong ca module (xem Dashboard/DashboardFilters.tsx)
+  const { data: boLoc } = useQuery<DashboardBoLocResponse>({
+    queryKey: ["r012", "dashboard-bo-loc"],
+    queryFn: getDashboardBoLoc,
+    staleTime: 10 * 60 * 1000,
+  });
+  const khuVucOptions = useMemo(() => (boLoc?.khu_vuc ?? []).map((kv) => ({ label: kv, value: kv })), [boLoc]);
+  const vendorOptions = useMemo(() => (boLoc?.vendor ?? []).map((v) => ({ label: v, value: v })), [boLoc]);
+  // chon Khu vuc -> CHI con tinh thuoc khu vuc do (dong bo CACH LAM voi Dashboard/DashboardFilters.tsx)
+  const tinhOptions = useMemo(() => {
+    const list = boLoc?.ma_tinh ?? [];
+    const daLoc = khuVucFilter.length > 0 ? list.filter((t) => t.khu_vuc && khuVucFilter.includes(t.khu_vuc)) : list;
+    return daLoc.map((t) => ({ label: `${t.ma} - ${t.ten ?? t.ma}`, value: t.ma }));
+  }, [boLoc, khuVucFilter]);
+
+  const handleKhuVucFilterChange = (v: string[]) => {
+    setKhuVucFilter(v);
+    setPage(1);
+  };
+  const handleMaTinhFilterChange = (v: string[]) => {
+    setMaTinhFilter(v);
+    setPage(1);
+  };
+  const handleVendorFilterChange = (v: string[]) => {
+    setVendorFilter(v);
+    setPage(1);
+  };
+  const handlePhuongAnFilterChange = (v: string[]) => {
+    setPhuongAnFilter(v);
+    setPage(1);
+  };
+
+  // dang xuat Excel (THEM 20/10/2026, yeu cau truc tiep user muc 2)
+  const [dangXuatExcel, setDangXuatExcel] = useState<boolean>(false);
 
   // cell_name dang goi POST /phieu - dung de disable RIENG nut cua dong do trong luc cho response. Khoa theo
   // cell_name (khong phai vi tri hang) vi sort/loc/phan trang lam vi tri hang doi, con cell_name la khoa
@@ -233,7 +292,38 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
     setSearchTerm("");
     debouncedApplySearch.cancel(); // huy lan go dang cho, neu khong no se ghi de searchTerm rong sau 400ms
     setDateRange(null);
+    setKhuVucFilter([]);
+    setMaTinhFilter([]);
+    setVendorFilter([]);
+    setPhuongAnFilter([]);
     setPage(1);
+  };
+
+  // Goi GET /api/v1/phieu/excel - xuat Excel theo DUNG bo loc dang chon tren man hinh (yeu cau truc tiep
+  // user, muc 2). Nut goi ham nay LUON di kem dieu kien disabled=!tuNgay||!denNgay (xem JSX ben duoi) nen
+  // o day khong can kiem tra lai, nhung van giu 1 lop chan de code khong phu thuoc hoan toan vao UI
+  const handleXuatExcel = async () => {
+    if (!tuNgay || !denNgay) {
+      return;
+    }
+    setDangXuatExcel(true);
+    try {
+      await xuatPhieuExcel({
+        tu_ngay: tuNgay,
+        den_ngay: denNgay,
+        trang_thai: statusFilter || undefined,
+        q: qParam,
+        nguon: (nguonFilter || undefined) as NguonKhongDat | undefined,
+        khu_vuc: khuVucFilter.length > 0 ? khuVucFilter : undefined,
+        ma_tinh: maTinhFilter.length > 0 ? maTinhFilter : undefined,
+        vendor: vendorFilter.length > 0 ? vendorFilter : undefined,
+        phuong_an: phuongAnFilter.length > 0 ? phuongAnFilter : undefined,
+      });
+    } catch (error) {
+      message.error(layThongBaoLoi(error, "Xuat Excel that bai, vui long thu lai"));
+    } finally {
+      setDangXuatExcel(false);
+    }
   };
 
   // Goi THAT POST /api/v1/phieu cho 1 dong. Tach rieng khoi handleXacNhanXuat ben duoi de phan ranh ro:
@@ -366,6 +456,12 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
       denNgay,
       sortBy,
       sortOrder,
+      // 4 bo loc MOI (THEM 20/10/2026) - xem WHY day du o khai bao state phia tren: GET /phieu CHUA nhan
+      // may param nay o thoi diem viet, nhung van dua vao queryKey de BE deploy xong la tu goi lai dung
+      khuVucFilter,
+      maTinhFilter,
+      vendorFilter,
+      phuongAnFilter,
     ],
     queryFn: () =>
       getLichSuPhieu({
@@ -380,6 +476,14 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
         size,
         sort_by: sortBy,
         order: sortOrder,
+        // GUI TRUOC (THEM 20/10/2026, yeu cau truc tiep user) - GET /phieu CHUA nhan 4 tham so nay o thoi
+        // diem viet (da doc truc tiep api/routers/phieu.py de xac nhan), BE dang duoc bo sung de dung CHUNG
+        // ham loc voi /phieu/excel. Gui len KHONG loi (FastAPI bo qua param thua) va tu co tac dung khi BE
+        // deploy xong, khong phai sua lai FE - giong cach da lam truoc day voi param "nguon"
+        khu_vuc: khuVucFilter.length > 0 ? khuVucFilter : undefined,
+        ma_tinh: maTinhFilter.length > 0 ? maTinhFilter : undefined,
+        vendor: vendorFilter.length > 0 ? vendorFilter : undefined,
+        phuong_an: phuongAnFilter.length > 0 ? phuongAnFilter : undefined,
       }),
   });
 
@@ -413,9 +517,15 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
           const phanLoai = info.row.original.phan_loai_loi
             ? PHAN_LOAI_LOI_TAG[info.row.original.phan_loai_loi]
             : undefined;
+          // SUA 20/10/2026 (yeu cau truc tiep user, muc 3) - mau Tag GIO lay theo nhom_trang_thai (4 nhom
+          // gop: THANH_CONG/LOI/CHO_XUAT_TAY/null=PENDING), KHONG con theo TUNG trang_thai rieng le nhu
+          // PHIEU_STATUS_COLORS (van giu nguyen de dung cho Tag "phan loai" canh ben va cac noi khac - xem
+          // phieuStatus.ts). Nhan chu hien thi KHONG doi (van la PHIEU_STATUS_LABELS theo trang_thai that)
+          const nhom = info.row.original.nhom_trang_thai;
+          const mauTheoNhom = nhom ? MAU_THEO_NHOM_TRANG_THAI[nhom] ?? MAU_NHOM_PENDING : MAU_NHOM_PENDING;
           return (
             <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap" }}>
-              <Tag color={PHIEU_STATUS_COLORS[status] ?? "default"} style={{ marginInlineEnd: 0 }}>
+              <Tag color={mauTheoNhom} style={{ marginInlineEnd: 0 }}>
                 {PHIEU_STATUS_LABELS[status] ?? status}
               </Tag>
               {phanLoai && (
@@ -455,6 +565,14 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
         // KHONG cho sort cot nay: sort theo ma phieu khong co y nghia nghiep vu, va cung tranh gui gia tri
         // sort_by chua duoc xac nhan nam trong enum cua BE
         enableSorting: false,
+      }),
+      // cot "Phuong an" (THEM 20/10/2026, yeu cau truc tiep user muc 3) - He thong/Hien truong, null voi dong
+      // KHONG_XUAT_* (khong co payload that de doc PhuongAnXuLyDuKien - xem phuong_an trong types/index.ts).
+      // KHONG sort duoc: day la truong TINH LUC DOC o BE, khong phai cot DB, khong nam trong enum sort_by
+      columnHelper.accessor("phuong_an", {
+        header: "Phuong an",
+        enableSorting: false,
+        cell: (info) => info.getValue() ?? "-",
       }),
       // Cot "Nguon" - cell nay bi phat hien khong dat qua chi so nao (QoS / QoE / ca hai). Tu khi QoE ngang
       // hang QoS, 1 dong phieu khong con tu noi len duoc no sinh ra tu dau, ma do la thu can biet dau tien
@@ -634,60 +752,100 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
   return (
     <div>
       {shouldShowFilters && (
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "center",
-            gap: "12px",
-            padding: "12px",
-            marginBottom: "1rem",
-            backgroundColor: R012_COLORS.tableRowAlt,
-            border: `1px solid ${R012_COLORS.primaryPale}`,
-            borderRadius: "8px",
-          }}
-        >
-          <Select
-            value={statusFilter}
-            onChange={handleStatusFilterChange}
-            options={PHIEU_STATUS_FILTER_OPTIONS}
-            style={{ width: "200px" }}
-            prefix="Trang thai:"
-          />
-          {/* Select loc theo NGUON. Co prefix "Nguon:" vi dat canh Select trang thai o tren, 2 o Select tron
-              giong nhau se khong biet o nao loc cai gi neu chua bam mo (cung ly do da them prefix cho o kia) */}
-          <Select
-            value={nguonFilter}
-            onChange={handleNguonFilterChange}
-            options={NGUON_FILTER_OPTIONS}
-            style={{ width: "160px" }}
-            prefix="Nguon:"
-          />
-          <Input.Search
-            // Placeholder liet ke ca 3 thu tim duoc - nguoi dung khong phai doan, cung khong phai chon
-            // truoc "tim theo gi" (o nay tu nhan dang theo kieu du lieu go vao, xem oTimLaSo o tren)
-            placeholder="Tim theo cell / ma phieu / so session"
-            allowClear
-            // value theo searchInput (cap nhat ngay tung phim) chu KHONG phai searchTerm (tre 400ms), de o
-            // input khong bi giat/tre khi go
-            value={searchInput}
-            onChange={(e) => {
-              const value = e.target.value;
-              setSearchInput(value);
-              debouncedApplySearch(value);
+        <>
+          {/* LAM LAI 20/10/2026 (yeu cau truc tiep user muc 0/1/3), SUA LAI LAN 2 (do that vung noi dung
+          ~1050px o 1366px, khong phai be rong man hinh): 9 o KHONG vua 1 hang nen tach 2 HANG CO CHU DICH (2
+          <ThanhBoLoc> rieng, KHONG dua vao flex-wrap tu dong). Hang 1 = ngay + tim + trang thai + nguon
+          (~970px). "Phuong an" CHUYEN xuong hang 2 (yeu cau truc tiep user lan 2: "chuyen Phuong an xuong
+          hang 2") de hang 1 gon lai 4 o thay vi 5, hang 2 = Khu vuc/Tinh/Vendor/Phuong an (4 o, 170px/o, hep
+          hon "select" 180 cua Dashboard) + xoa loc/xuat Excel (~1000px). Ngay dua len DAU hang 1 (truoc day o
+          cuoi) de giong thu tu Dashboard/SessionHistoryList: [ngay][tim][loc...] - nhat quan giua 4 man. */}
+          <ThanhBoLoc style={{ backgroundColor: R012_COLORS.tableRowAlt, border: `1px solid ${R012_COLORS.primaryPale}`, marginBottom: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }}>
+            <RangePicker
+              value={dateRange}
+              onChange={handleDateRangeChange}
+              // dinh dang HIEN THI quen thuoc cua NOC; gia tri GUI LEN BE duoc format rieng thanh YYYY-MM-DD
+              // o useMemo ben tren, khong lien quan toi format nay
+              format="DD/MM/YYYY"
+              placeholder={["Tu ngay", "Den ngay"]}
+              size="middle"
+              // rangePicker (basis 260/min 220, GIONG 3 man con lai - BO_LOC_RONG lan 5 gop ve 1 bang chung
+              // duy nhat, khong con rieng tung man) - gian/co lai tu dong theo be rong THAT cua khung
+              style={oRongCoGian(BO_LOC_RONG.rangePicker)}
+            />
+            {/* Input.Search + enterButton - xem WHY day du o SessionHistoryList.tsx (noi dung giai thich
+                giong het, khong lap lai o day) */}
+            <Input.Search
+              // Placeholder liet ke ca 3 thu tim duoc - nguoi dung khong phai doan, cung khong phai chon
+              // truoc "tim theo gi" (o nay tu nhan dang theo kieu du lieu go vao, xem oTimLaSo o tren)
+              placeholder="Tim theo cell / ma phieu / so session"
+              allowClear
+              enterButton
+              // value theo searchInput (cap nhat ngay tung phim) chu KHONG phai searchTerm (tre 400ms), de o
+              // input khong bi giat/tre khi go
+              value={searchInput}
+              onChange={(e) => {
+                const value = e.target.value;
+                setSearchInput(value);
+                debouncedApplySearch(value);
+              }}
+              size="middle"
+              style={oRongCoGian(BO_LOC_RONG.timKiem)}
+            />
+            <Select
+              value={statusFilter}
+              onChange={handleStatusFilterChange}
+              options={PHIEU_STATUS_FILTER_OPTIONS}
+              size="middle"
+              style={oRongCoGian(BO_LOC_RONG.selectCoTienTo)}
+              prefix="Trang thai:"
+            />
+            {/* Select loc theo NGUON. Co prefix "Nguon:" vi dat canh Select trang thai, 2 o Select tron giong
+                nhau se khong biet o nao loc cai gi neu chua bam mo (cung ly do da them prefix cho o kia) */}
+            <Select
+              value={nguonFilter}
+              onChange={handleNguonFilterChange}
+              options={NGUON_FILTER_OPTIONS}
+              size="middle"
+              style={oRongCoGian(BO_LOC_RONG.selectCoTienTo)}
+              prefix="Nguon:"
+            />
+          </ThanhBoLoc>
+          {/* Hang 2: 3 bo loc THEO TRAM CUA CELL (THEM 20/10/2026, yeu cau truc tiep user muc 1 - dung lai
+          SelectTimKiemNhieu cua Dashboard). Gui len CA bang (GET /phieu) LAN xuat Excel (/phieu/excel) - xem
+          WHY day du o khai bao state khuVucFilter/maTinhFilter/vendorFilter phia tren. marginTop:"-1px" de 2
+          hang CHUNG 1 duong vien giua (khong co khe ho mau trang lo ra giua 2 khoi) */}
+          <ThanhBoLoc
+            style={{
+              backgroundColor: R012_COLORS.tableRowAlt,
+              border: `1px solid ${R012_COLORS.primaryPale}`,
+              borderTopLeftRadius: 0,
+              borderTopRightRadius: 0,
+              marginTop: "-1px",
             }}
-            style={{ flex: "1 1 220px", minWidth: "180px", maxWidth: "260px" }}
-          />
-          <RangePicker
-            value={dateRange}
-            onChange={handleDateRangeChange}
-            // dinh dang HIEN THI quen thuoc cua NOC; gia tri GUI LEN BE duoc format rieng thanh YYYY-MM-DD
-            // o useMemo ben tren, khong lien quan toi format nay
-            format="DD/MM/YYYY"
-            placeholder={["Tu ngay", "Den ngay"]}
-          />
-          <Button onClick={handleClearFilters}>Xoa loc</Button>
-        </div>
+          >
+            <SelectTimKiemNhieu placeholder="Khu vuc" options={khuVucOptions} value={khuVucFilter} onChange={handleKhuVucFilterChange} style={oRongCoGian(BO_LOC_RONG.select)} />
+            <SelectTimKiemNhieu placeholder="Tinh" options={tinhOptions} value={maTinhFilter} onChange={handleMaTinhFilterChange} style={oRongCoGian(BO_LOC_RONG.select)} />
+            <SelectTimKiemNhieu placeholder="Vendor" options={vendorOptions} value={vendorFilter} onChange={handleVendorFilterChange} style={oRongCoGian(BO_LOC_RONG.select)} />
+            {/* "Phuong an" CHUYEN xuong hang 2 (yeu cau truc tiep user lan 2) - truoc o hang 1 */}
+            <SelectTimKiemNhieu placeholder="Phuong an" options={PHUONG_AN_OPTIONS} value={phuongAnFilter} onChange={handlePhuongAnFilterChange} style={oRongCoGian(BO_LOC_RONG.select)} />
+            {/* CumNut - "Xoa loc" + "Xuat Excel" boc CHUNG 1 cum, LUON di cung nhau khi flex-wrap day xuong
+                hang moi - xem WHY day du o common/ThanhBoLoc.tsx::CumNut */}
+            <CumNut>
+              <Button onClick={handleClearFilters} size="middle">
+                Xoa loc
+              </Button>
+              {/* Nut Xuat Excel (THEM 20/10/2026, yeu cau truc tiep user muc 2) - disabled khi CHUA chon
+              khoang ngay: BE /phieu/excel bat buoc session_id HOAC du ca tu_ngay+den_ngay (422 neu thieu ca
+              2), man hinh nay KHONG truyen session_id nen tu_ngay/den_ngay la dieu kien BAT BUOC duy nhat */}
+              <Tooltip title={!tuNgay || !denNgay ? "Chon khoang ngay de xuat Excel" : undefined}>
+                <Button onClick={handleXuatExcel} loading={dangXuatExcel} disabled={!tuNgay || !denNgay} size="middle">
+                  Xuat Excel
+                </Button>
+              </Tooltip>
+            </CumNut>
+          </ThanhBoLoc>
+        </>
       )}
 
       {isLoading && <Spin tip="Dang tai lich su phieu..." />}
@@ -761,7 +919,14 @@ const PhieuHistoryTable: React.FC<PhieuHistoryTableProps> = ({ sessionId, showFi
               // MOI bo loc deu chay tren BE nen "rong" chi con 1 nghia: khong ban ghi nao khop. Khong con
               // phai phan biet "rong that" voi "rong do loc client trong trang" nhu ban cu
               description={
-                searchTerm || statusFilter || nguonFilter || dateRange
+                searchTerm ||
+                statusFilter ||
+                nguonFilter ||
+                dateRange ||
+                khuVucFilter.length > 0 ||
+                maTinhFilter.length > 0 ||
+                vendorFilter.length > 0 ||
+                phuongAnFilter.length > 0
                   ? "Khong co phieu nao khop bo loc"
                   : "Chua co phieu nao"
               }

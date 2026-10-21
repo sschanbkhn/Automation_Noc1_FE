@@ -1,12 +1,21 @@
 import React, { useMemo } from "react";
-import { Alert, Descriptions, Empty, Modal, Tag } from "antd";
+import { Alert, Button, Collapse, Descriptions, Empty, Modal, Tag, message } from "antd";
+import { CopyOutlined } from "@ant-design/icons";
 import { PhieuHistoryItem } from "../types";
 import { R012_COLORS } from "../theme";
 // dinh dang thoi gian dung CHUNG toan module (ep UTC->GMT+7) - xem ly do trong file helper
 import { formatDateTime } from "../helpers/formatDateTime";
-// mau Tag trang thai phieu - khai bao 1 lan o PhieuHistoryTable roi import lai vao day, tranh 2 file tu
+// mau Tag trang thai phieu - khai bao 1 lan o phieuStatus.ts roi import lai vao day, tranh 2 file tu
 // dinh nghia 2 bang mau roi lech nhau khi sau nay them trang thai moi
-import { PHIEU_STATUS_COLORS, PHIEU_STATUS_LABELS } from "./phieuStatus";
+import {
+  PHIEU_STATUS_COLORS,
+  PHIEU_STATUS_LABELS,
+  MAU_THEO_NHOM_TRANG_THAI,
+  MAU_NHOM_PENDING,
+  NHAN_NHOM_TRANG_THAI,
+  NHAN_NHOM_PENDING,
+  LY_DO_KHONG_XUAT,
+} from "./phieuStatus";
 
 interface PhieuDetailModalProps {
   // null = Modal dang dong. Nhan NGUYEN dong du lieu tu bang thay vi goi lai API theo id: GET /phieu da tra
@@ -71,6 +80,31 @@ const sectionTitleStyle: React.CSSProperties = {
   color: R012_COLORS.primaryDark,
 };
 
+// NHAN tieng Viet cho 13 field DE HIEU y nghia trong request_payload (THEM 20/10/2026, yeu cau truc tiep
+// user muc 4) - CHI 13 field nay co nhan rieng, dich TU DANH SACH nguoi dung giao (KHONG tu doan y nghia cac
+// field con lai). Thu tu khai bao = thu tu hien thi (yeu cau truc tiep user liet ke theo 1 thu tu co chu
+// dich: Nam/Thang -> Cell/Tram -> QoS/QoE -> Phuong an -> Noi dung -> Vendor/Dia ly)
+const NHAN_FIELD_PAYLOAD: Record<string, string> = {
+  Nam: "Nam",
+  Thang: "Thang",
+  TenCell: "Ten cell",
+  SiteName: "Tram cua cell",
+  Qos: "QoS gui CTS (min 7 ngay sau)",
+  Qoe: "QoE gui CTS (min 7 ngay sau)",
+  SoChiTieuVP: "So chi tieu khong dat",
+  PhuongAnXuLyDuKien: "Phuong an xu ly (1 He thong / 2 Hien truong)",
+  NoiDung: "Noi dung",
+  Vendor: "Vendor",
+  ProvinceCode: "Ma tinh",
+  BuildingCode: "Ma CSHT",
+  BuildingName: "Don vi quan ly",
+};
+
+// 4 trang thai "job CO Y khong xuat" - request_payload cua nhom nay CHI la 1 marker noi bo (KHONG phai
+// payload SaveCellClm that gui CTS, vi chua tung goi CTS lan nao) - yeu cau truc tiep user: "payload chi la
+// marker -> hien thong bao ... an bang payload"
+const laPhieuKhongXuat = (trangThai: string): boolean => trangThai.startsWith("KHONG_XUAT_");
+
 const PhieuDetailModal: React.FC<PhieuDetailModalProps> = ({ phieu, onClose }) => {
   // useMemo dat TRUOC moi return som de khong vi pham Rules of Hooks (thu tu hook phai on dinh moi render);
   // phieu=null luc Modal dong nen 2 gia tri nay chi la null, khong ton chi phi
@@ -81,6 +115,18 @@ const PhieuDetailModal: React.FC<PhieuDetailModalProps> = ({ phieu, onClose }) =
   // duyet thang Object.entries de bat ky field nao BE them/bot sau nay deu tu hien, khong phai sua FE theo
   const payloadEntries = useMemo(() => (payloadObj ? Object.entries(payloadObj) : []), [payloadObj]);
 
+  // tach 2 nhom (THEM 20/10/2026, yeu cau truc tiep user muc 4): "truong chinh" (13 field co nhan de hieu,
+  // hien THEO DUNG THU TU nguoi dung giao - KHONG theo thu tu tho cua payload) va "truong co dinh" (cac key
+  // con lai, chua ro y nghia, GIU TEN GOC - khong tu dat nhan, thu gon mac dinh de khong choan cho)
+  const truongChinh = useMemo(
+    () =>
+      Object.keys(NHAN_FIELD_PAYLOAD)
+        .filter((key) => payloadObj && key in payloadObj)
+        .map((key) => [key, (payloadObj as Record<string, unknown>)[key]] as [string, unknown]),
+    [payloadObj]
+  );
+  const truongConDinh = useMemo(() => payloadEntries.filter(([key]) => !(key in NHAN_FIELD_PAYLOAD)), [payloadEntries]);
+
   // response_body cua CTS co dang {isError, code, message, data} - tach 4 field dau ra Descriptions cho de
   // doc, chi de rieng "data" duoi dang JSON tho. Kiem tra bang "in" tren tung field thay vi ep kieu, vi
   // response_body co the la loi gateway khong theo dang CTS (luc do rot xuong nhanh hien nguyen JSON)
@@ -88,6 +134,16 @@ const PhieuDetailModal: React.FC<PhieuDetailModalProps> = ({ phieu, onClose }) =
     () => !!responseObj && ("isError" in responseObj || "code" in responseObj || "message" in responseObj),
     [responseObj]
   );
+
+  const handleSaoChepJson = async () => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(payloadObj, null, 2));
+      message.success("Da sao chep JSON vao clipboard");
+    } catch {
+      // trinh duyet chan quyen clipboard (vd khong phai HTTPS/localhost, hoac nguoi dung tu choi quyen)
+      message.error("Khong sao chep duoc (trinh duyet chan quyen clipboard)");
+    }
+  };
 
   return (
     <Modal
@@ -99,7 +155,8 @@ const PhieuDetailModal: React.FC<PhieuDetailModalProps> = ({ phieu, onClose }) =
     >
       {phieu !== null && (
         <div>
-          {/* 1. Thong tin chung cua phieu - lay THANG tu dong du lieu, khong tinh toan lai gi */}
+          {/* 1. Thong tin chung cua phieu - lay THANG tu dong du lieu, khong tinh toan lai gi. THEM "Phuong
+              an" + "Nhom trang thai" canh "Trang thai" (yeu cau truc tiep user muc 4) */}
           <Descriptions
             column={2}
             bordered
@@ -117,6 +174,16 @@ const PhieuDetailModal: React.FC<PhieuDetailModalProps> = ({ phieu, onClose }) =
             </Descriptions.Item>
             <Descriptions.Item label="Ma phieu">{phieu.phieu_id ?? "-"}</Descriptions.Item>
             <Descriptions.Item label="Session CR">{phieu.cr_session_id ?? "-"}</Descriptions.Item>
+            <Descriptions.Item label="Phuong an">{phieu.phuong_an ?? "-"}</Descriptions.Item>
+            <Descriptions.Item label="Nhom trang thai">
+              {phieu.nhom_trang_thai ? (
+                <Tag color={MAU_THEO_NHOM_TRANG_THAI[phieu.nhom_trang_thai] ?? MAU_NHOM_PENDING}>
+                  {NHAN_NHOM_TRANG_THAI[phieu.nhom_trang_thai] ?? phieu.nhom_trang_thai}
+                </Tag>
+              ) : (
+                <Tag color={MAU_NHOM_PENDING}>{NHAN_NHOM_PENDING}</Tag>
+              )}
+            </Descriptions.Item>
             <Descriptions.Item label="Thoi diem" span={2}>
               {formatDateTime(phieu.created_at)}
             </Descriptions.Item>
@@ -136,25 +203,69 @@ const PhieuDetailModal: React.FC<PhieuDetailModalProps> = ({ phieu, onClose }) =
             />
           )}
 
-          {/* 3. request_payload - bang key-value cac field gui sang CTS */}
-          <div style={sectionTitleStyle}>Du lieu gui CTS (request_payload)</div>
-          {payloadEntries.length > 0 ? (
-            <Descriptions
-              column={2}
-              bordered
-              size="small"
-              labelStyle={{ width: 180, whiteSpace: "nowrap", fontWeight: 600 }}
-              // ten field CTS kieu "SaveCellClmRequest" khong co khoang trang -> phai cho ngat GIUA tu,
-              // neu khong se day cot gia tri hep lai (bai hoc tu EvaluationDetail.tsx: cot bi ep hep se
-              // lam gia tri ngan bi ngat vun)
-              contentStyle={{ wordBreak: "break-word" }}
-            >
-              {payloadEntries.map(([key, value]) => (
-                <Descriptions.Item key={key} label={key}>
-                  {formatFieldValue(value)}
-                </Descriptions.Item>
-              ))}
-            </Descriptions>
+          {/* 3. request_payload - SUA 20/10/2026 (yeu cau truc tiep user muc 4): 4 trang thai KHONG_XUAT_*
+              CHUA TUNG goi CTS nen request_payload chi la 1 marker noi bo, KHONG phai 28 field SaveCellClm
+              that - an bang payload, hien 1 thong bao ro ly do thay vi bay 1 bang gan nhu vo nghia */}
+          <div style={{ ...sectionTitleStyle, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span>Du lieu gui CTS (request_payload)</span>
+            {!laPhieuKhongXuat(phieu.trang_thai) && payloadEntries.length > 0 && (
+              <Button size="small" icon={<CopyOutlined />} onClick={handleSaoChepJson}>
+                Sao chep JSON
+              </Button>
+            )}
+          </div>
+          {laPhieuKhongXuat(phieu.trang_thai) ? (
+            <Alert
+              type="info"
+              showIcon
+              message={`Phieu khong gui CTS (${LY_DO_KHONG_XUAT[phieu.trang_thai] ?? "job chu dong bo qua, xem trang thai"})`}
+            />
+          ) : payloadEntries.length > 0 ? (
+            <>
+              <Descriptions
+                column={2}
+                bordered
+                size="small"
+                labelStyle={{ width: 200, whiteSpace: "nowrap", fontWeight: 600 }}
+                // ten field CTS kieu "SaveCellClmRequest" khong co khoang trang -> phai cho ngat GIUA tu,
+                // neu khong se day cot gia tri hep lai (bai hoc tu EvaluationDetail.tsx: cot bi ep hep se
+                // lam gia tri ngan bi ngat vun)
+                contentStyle={{ wordBreak: "break-word" }}
+              >
+                {truongChinh.map(([key, value]) => (
+                  <Descriptions.Item
+                    key={key}
+                    label={
+                      <div>
+                        <div>{NHAN_FIELD_PAYLOAD[key]}</div>
+                        {/* ten goc NHO ben duoi nhan de hieu (yeu cau truc tiep user: "hien nhan de doc + ten
+                            goc nho ben duoi") - doi chieu nhanh voi CTS khi can, khong phai doan nguoc tu
+                            nhan tieng Viet */}
+                        <div style={{ fontSize: "0.7rem", fontWeight: 400, color: "#8c8c8c" }}>{key}</div>
+                      </div>
+                    }
+                  >
+                    {formatFieldValue(value)}
+                  </Descriptions.Item>
+                ))}
+              </Descriptions>
+              {truongConDinh.length > 0 && (
+                <Collapse ghost style={{ marginTop: "8px" }}>
+                  {/* "Truong co dinh" - cac key con lai CHUA RO y nghia (yeu cau truc tiep user: "giu ten
+                      goc, KHONG tu dat nhan") - thu gon MAC DINH de khong choan cho nhung van xem duoc khi
+                      can doi chieu CTS, khac 13 truong chinh o tren la thu NOC can doc ngay */}
+                  <Collapse.Panel header={`Truong co dinh (${truongConDinh.length})`} key="fixed">
+                    <Descriptions column={2} bordered size="small" labelStyle={{ width: 180, whiteSpace: "nowrap", fontWeight: 600 }}>
+                      {truongConDinh.map(([key, value]) => (
+                        <Descriptions.Item key={key} label={key}>
+                          {formatFieldValue(value)}
+                        </Descriptions.Item>
+                      ))}
+                    </Descriptions>
+                  </Collapse.Panel>
+                </Collapse>
+              )}
+            </>
           ) : (
             <Empty description="Khong co du lieu request_payload" image={Empty.PRESENTED_IMAGE_SIMPLE} />
           )}

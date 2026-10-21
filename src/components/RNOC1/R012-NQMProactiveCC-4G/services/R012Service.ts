@@ -22,6 +22,7 @@ import {
   XuatPhieuResponse,
   PhieuHistoryQueryParams,
   PhieuHistoryResponse,
+  PhieuExcelQueryParams,
   SyncRimsResponse,
   SyncNetactResponse,
   EvaluateCrResponse,
@@ -40,6 +41,10 @@ import {
   HauKiemExcelParams,
   DashboardQueryParams,
   DashboardTongQuanResponse,
+  DashboardBoLocResponse,
+  DashboardChiTietParams,
+  DashboardChiTietExcelParams,
+  DashboardChiTietResponse,
 } from '../types';
 
 // axios 0.21.x (ban dang dung, xem package.json) tu serialize 1 param kieu MANG thanh "vendor[]=A&vendor[]=B"
@@ -311,7 +316,15 @@ export const xuatPhieu = async (sessionId: number, cellName: string): Promise<Xu
 export const getLichSuPhieu = async (params?: PhieuHistoryQueryParams): Promise<PhieuHistoryResponse> => {
   try {
     // endpoint nay khong goi CDS/CTS (chi doc lich su phieu da luu trong DB) nen giu timeout ngan hon
-    const data: any = await r012Request.get('/phieu', { params, timeout: 30000 });
+    //
+    // SUA 20/10/2026 (yeu cau truc tiep user, BE commit 43d259e them khu_vuc/ma_tinh/vendor/phuong_an) -
+    // THEM paramsSerializer: serializeStationsParams. LOI THAT da tim thay truoc khi sua: ham nay truoc do
+    // KHONG co dong nay, nen axios 0.21.x (ban dang dung) TU serialize 4 param MANG moi thanh dang
+    // "vendor[]=NOKIA&vendor[]=ERICSSON" (xem comment day du o serializeStationsParams phia tren) - FastAPI
+    // khai bao "vendor: list[...] = Query(...)" CHI nhan dang lap lai key THUONG ("vendor=NOKIA&vendor=
+    // ERICSSON"), "vendor[]" la 1 TEN PARAM KHAC nen bi am tham BO QUA (khong loi, nhung cung khong loc gi
+    // ca) - dung CHINH loi da gap va sua cho /dashboard/tong-quan, /dashboard/chi-tiet truoc day.
+    const data: any = await r012Request.get('/phieu', { params, timeout: 30000, paramsSerializer: serializeStationsParams });
     return data as PhieuHistoryResponse;
   } catch (error) {
     throw error;
@@ -413,10 +426,24 @@ export const evaluateCr = async (): Promise<EvaluateCrResponse> => {
 // khong viet ham axios cho endpoint nay vi axios se buffer toan bo response thay vi doc tung event theo dong chay
 // endpoint nay se duoc goi bang EventSource truc tiep trong hooks/useSseStream.ts (chua lam trong buoc nay, xem Buoc 5)
 
-// ham goi GET /api/v1/dashboard/tong-quan - tong quan toan module R012 (THEM 18/10/2026, xem WHY day du o
-// DashboardTongQuanResponse, types/index.ts). 3 param mang (khu_vuc/ma_tinh/netact) can CUNG paramsSerializer
-// voi /stations (serializeStationsParams o tren) - FastAPI doi dang lap lai key THUONG ("khu_vuc=KV1&khu_vuc=
-// KV2"), khac dang "khu_vuc[]=" mac dinh cua axios 0.21.x
+// ham goi GET /api/v1/dashboard/bo-loc (THEM 18/10/2026) - danh sach lua chon cho 3 Select cua bo loc (khu
+// vuc/tinh/vendor), KHONG nhan tham so nao. Day la nguon DUY NHAT cho mapping tinh -> khu vuc (xem WHY day du
+// o DashboardBoLocResponse, types/index.ts)
+export const getDashboardBoLoc = async (): Promise<DashboardBoLocResponse> => {
+  try {
+    // endpoint nay chi doc DISTINCT tu bang tram (khong goi CDS/CTS/CEM) nen giu timeout ngan
+    const data: any = await r012Request.get('/dashboard/bo-loc', { timeout: 30000 });
+    return data as DashboardBoLocResponse;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// ham goi GET /api/v1/dashboard/tong-quan - tong quan toan module R012 (THEM 18/10/2026, LAM LAI hoan toan
+// 18/10/2026 theo schema BE moi commit 124b72b - xem WHY day du o DashboardTongQuanResponse, types/index.ts).
+// 3 param mang (khu_vuc/ma_tinh/vendor) can CUNG paramsSerializer voi /stations (serializeStationsParams o
+// tren) - FastAPI doi dang lap lai key THUONG ("khu_vuc=KV1&khu_vuc=KV2"), khac dang "khu_vuc[]=" mac dinh
+// cua axios 0.21.x
 export const getDashboardTongQuan = async (
   params: DashboardQueryParams
 ): Promise<DashboardTongQuanResponse> => {
@@ -433,59 +460,91 @@ export const getDashboardTongQuan = async (
   }
 };
 
-// instance axios RIENG CHI phuc vu xuatHauKiemExcel() ben duoi - KHONG dung r012Request (interceptor response
-// cua no o services/r012Request.ts LUON unwrap response.data truoc khi tra ve cho noi goi, mat het
-// response.headers - ham nay can .headers de doc Content-Disposition lay ten file BE dat). KHONG sua
-// r012Request.ts (theo yeu cau) - instance nay copy Y HET cau hinh can thiet (baseURL + header Authorization)
-// nhung KHONG gan interceptor response nao, giu nguyen AxiosResponse day du
-const hauKiemBlobRequest = axios.create({
+// ham goi GET /api/v1/dashboard/chi-tiet (THEM 18/10/2026) - khoan sau tu 1 card/chi so nho ra danh sach cu
+// the (session/cell/phieu/can_xu_ly tuy "loai" - xem WHY day du o DashboardChiTietParams, types/index.ts).
+// LUU Y: BE endpoint nay KHONG co tham so tim kiem tu do (q) - o tim/sort/phan trang cua Modal chi tiet
+// (Dashboard/DashboardChiTietModal.tsx) PHAI xu ly phia FE tren tap da tai (toi da kich_thuoc=500/lan)
+export const getDashboardChiTiet = async (
+  params: DashboardChiTietParams
+): Promise<DashboardChiTietResponse> => {
+  try {
+    const data: any = await r012Request.get('/dashboard/chi-tiet', {
+      params,
+      timeout: 30000,
+      paramsSerializer: serializeStationsParams,
+    });
+    return data as DashboardChiTietResponse;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// instance axios RIENG CHI phuc vu tai file Excel (taiFileBlob ben duoi) - KHONG dung r012Request (interceptor
+// response cua no o services/r012Request.ts LUON unwrap response.data truoc khi tra ve cho noi goi, mat het
+// response.headers - can .headers de doc Content-Disposition lay ten file BE dat). KHONG sua r012Request.ts
+// (theo yeu cau) - instance nay copy Y HET cau hinh can thiet (baseURL + header Authorization) nhung KHONG
+// gan interceptor response nao, giu nguyen AxiosResponse day du. Dat ten CHUNG (khong con rieng "hauKiem")
+// vi gio dung cho CA 3 endpoint tai file: /hau-kiem/excel, /dashboard/excel, /dashboard/chi-tiet/excel
+const r012BlobRequest = axios.create({
   baseURL: process.env.R012_API_URL || 'http://127.0.0.1:8000/api/v1',
   timeout: 60000,
 });
-hauKiemBlobRequest.interceptors.request.use((config) => {
+r012BlobRequest.interceptors.request.use((config) => {
   config.headers['Authorization'] = 'Bearer ' + Cookie.getCookie('Token');
   return config;
 });
 
-// doc ten file tu header Content-Disposition - BE tra dang `attachment; filename="ten_file.xlsx"` (DA XAC
-// NHAN qua doc truc tiep api/routers/hau_kiem.py ben BE, KHONG dung dang RFC5987 "filename*="), regex CHI
-// can khop dang nay. null neu header thieu/dang la (vd proxy trung gian strip header) - fallback ten file o
-// noi goi ham nay (xuatHauKiemExcel)
+// doc ten file tu header Content-Disposition - UU TIEN dang RFC 5987 "filename*=UTF-8''..." (ho tro ten co
+// dau tieng Viet, encode phan tram) NEU CO, roi moi roi xuong dang don gian `filename="ten_file.xlsx"` (THEM
+// 19/10/2026, yeu cau truc tiep user muc 5: "ho tro ca filename*=UTF-8''..."). 1 Content-Disposition CO THE
+// chua CA 2 dang cung luc (vd `attachment; filename="bao_cao.xlsx"; filename*=UTF-8''b%C3%A1o_c%C3%A1o.xlsx`)
+// - dang filename* la ten THAT (co dau), dang filename= chi la fallback ASCII cho client cu nen phai thu dang
+// filename* TRUOC. null neu header thieu/rong (vd BE khong tra Content-Disposition, hoac trinh duyet khong
+// cho JS doc duoc header nay do thieu Access-Control-Expose-Headers tren response CORS - xem bao cao rieng
+// gui nguoi dung ve van de nay, KHONG sua duoc o day vi la cau hinh BE) - fallback ten file o noi goi
 function layTenFileTuContentDisposition(contentDisposition: string | undefined): string | null {
   if (!contentDisposition) {
     return null;
+  }
+  const matchRfc5987 = contentDisposition.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
+  if (matchRfc5987) {
+    try {
+      return decodeURIComponent(matchRfc5987[1].trim());
+    } catch {
+      // gia tri encode hong (vd BE ghep sai %) - roi xuong thu dang filename="..." thuong ben duoi
+    }
   }
   const match = contentDisposition.match(/filename="?([^";]+)"?/i);
   return match ? match[1] : null;
 }
 
-// ham goi GET /api/v1/hau-kiem/excel - xuat Excel hau kiem (THEM 18/10/2026), tra ve FILE (blob) kem ten file
-// qua header Content-Disposition (xem WHY day du o HauKiemExcelParams, types/index.ts). Tu tai file ve may
-// nguoi dung qua the <a download> tam thoi, giong pattern o cac noi khac cua app (vd RnocR008Service.tsx)
-export const xuatHauKiemExcel = async (params: HauKiemExcelParams): Promise<void> => {
+// ham DUNG CHUNG tai 1 file Excel ve may nguoi dung (THEM 18/10/2026, gop tu 3 ban gan giong het nhau truoc
+// do thanh 1 ham duy nhat - tranh sua loi phai sua lap 3 noi). tenFileMacDinh dung khi response thieu/hong
+// header Content-Disposition
+async function taiFileBlob<T extends object>(url: string, params: T, tenFileMacDinh: string): Promise<void> {
   try {
-    const response = await hauKiemBlobRequest.get('/hau-kiem/excel', {
+    const response = await r012BlobRequest.get(url, {
       params,
       responseType: 'blob',
       paramsSerializer: serializeStationsParams,
     });
-    const tenFile = layTenFileTuContentDisposition(response.headers['content-disposition']) ?? 'hau_kiem.xlsx';
-    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const tenFile = layTenFileTuContentDisposition(response.headers['content-disposition']) ?? tenFileMacDinh;
+    const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
-    link.href = url;
+    link.href = blobUrl;
     link.setAttribute('download', tenFile);
     document.body.appendChild(link);
     link.click();
     link.remove();
-    window.URL.revokeObjectURL(url);
+    window.URL.revokeObjectURL(blobUrl);
   } catch (error: any) {
     // SUA (18/10/2026, yeu cau truc tiep user, "KIEM 1 DIEM") - responseType:'blob' ap dung cho CA response
     // THANH CONG LAN LOI cua CUNG 1 request (axios khong tu phan biet duoc truoc khi nhan response): khi BE
     // tra 4xx/5xx, body that su la JSON {error_code, message, session_id} (api/middleware/error_handler.py)
-    // nhung bi "boc" thanh 1 Blob thay vi object da parse san nhu moi loi khac trong module (qua
-    // r012Request, KHONG dung responseType:'blob'). Neu KHONG tu doc lai o day, layThongBaoLoi() o noi goi
-    // se khong thay duoc error.response.data.message (chi thay 1 object Blob ro khong co field nao) va roi
-    // vao thong bao axios chung chung ("Request failed with status code 422") thay vi ly do THAT tu BE.
+    // nhung bi "boc" thanh 1 Blob thay vi object da parse san nhu moi loi khac trong module (qua r012Request,
+    // KHONG dung responseType:'blob'). Neu KHONG tu doc lai o day, layThongBaoLoi() o noi goi se khong thay
+    // duoc error.response.data.message (chi thay 1 object Blob ro khong co field nao) va roi vao thong bao
+    // axios chung chung ("Request failed with status code 422") thay vi ly do THAT tu BE.
     // Tu doc blob.text() -> JSON.parse() roi GAN DE error.response.data truoc khi nem lai, de noi goi dung
     // CHUNG duoc layThongBaoLoi nhu moi loi khac, khong can sua gi them o phia goi.
     if (error?.response?.data instanceof Blob) {
@@ -499,4 +558,32 @@ export const xuatHauKiemExcel = async (params: HauKiemExcelParams): Promise<void
     }
     throw error;
   }
+}
+
+// ham goi GET /api/v1/hau-kiem/excel - xuat Excel hau kiem cho 1 session hoac 1 khoang ngay (THEM 18/10/2026,
+// xem WHY day du o HauKiemExcelParams, types/index.ts)
+export const xuatHauKiemExcel = (params: HauKiemExcelParams): Promise<void> =>
+  taiFileBlob('/hau-kiem/excel', params, 'hau_kiem.xlsx');
+
+// ham goi GET /api/v1/dashboard/excel - xuat Excel TOAN BO dashboard tong quan theo bo loc dang chon (THEM
+// 18/10/2026)
+export const xuatDashboardExcel = (params: DashboardQueryParams): Promise<void> =>
+  taiFileBlob('/dashboard/excel', params, 'dashboard.xlsx');
+
+// ham goi GET /api/v1/dashboard/chi-tiet/excel - xuat Excel danh sach chi tiet dang xem trong Modal (THEM
+// 18/10/2026) - CUNG bo loc + loc con voi Modal dang hien, KHONG kem trang/kich_thuoc (BE tu xuat HET)
+export const xuatDashboardChiTietExcel = (params: DashboardChiTietExcelParams): Promise<void> =>
+  taiFileBlob('/dashboard/chi-tiet/excel', params, `dashboard_${params.loai}.xlsx`);
+
+// ham goi GET /api/v1/phieu/excel - xuat Excel lich su phieu theo dung bo loc dang xem o man danh sach (THEM
+// 20/10/2026, yeu cau truc tiep user). Ten file MAC DINH mo phong dung quy uoc BE (api/routers/phieu.py:
+// "phieu_<tu>_den_<den>_<ts>.xlsx" hoac "phieu_session_<id>_<ts>.xlsx") - CHI dung khi trinh duyet KHONG doc
+// duoc Content-Disposition that tu BE (vd thieu Access-Control-Expose-Headers, da xac nhan truc tiep qua
+// main.py CORSMiddleware o 1 lan sua truoc - xem WHY day du o taiFileBlob/layTenFileTuContentDisposition)
+export const xuatPhieuExcel = (params: PhieuExcelQueryParams): Promise<void> => {
+  const tenMacDinh =
+    params.tu_ngay && params.den_ngay
+      ? `phieu_${params.tu_ngay}_den_${params.den_ngay}.xlsx`
+      : `phieu_session_${params.session_id}.xlsx`;
+  return taiFileBlob('/phieu/excel', params, tenMacDinh);
 };
